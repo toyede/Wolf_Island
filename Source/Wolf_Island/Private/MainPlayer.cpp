@@ -5,6 +5,8 @@
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
+#include "Camera/CameraComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 
 
 // Sets default values
@@ -12,6 +14,19 @@ AMainPlayer::AMainPlayer()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+
+	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>("FirstPersonCamera");
+	ThirdPersonCamera = CreateDefaultSubobject<UCameraComponent>("ThirdPersonCamera");
+	SpringArm = CreateDefaultSubobject<USpringArmComponent>("SpringArm");
+
+	//메시에 카메라 붙이기
+	FirstPersonCamera->SetupAttachment(GetMesh());
+	//컨트롤러 마우스 위치 입력을 카메라 입력에 반영
+	FirstPersonCamera->bUsePawnControlRotation = true;
+	
+	SpringArm->SetupAttachment(GetMesh());
+	ThirdPersonCamera->SetupAttachment(SpringArm);
+	
 
 }
 
@@ -26,6 +41,8 @@ void AMainPlayer::BeginPlay()
 void AMainPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	UE_LOG(LogTemp, Warning, TEXT("bUsePawnControlRotation: %s"),
+	FirstPersonCamera->bUsePawnControlRotation ? TEXT("true") : TEXT("false"));
 
 }
 
@@ -47,6 +64,10 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 		// 시야
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AMainPlayer::Look);
+
+
+		//인칭 변환 테스트 키
+		EnhancedInputComponent->BindAction(SlideAction, ETriggerEvent::Started, this, &AMainPlayer::SwitchCamera);
 	}
 
 }
@@ -90,3 +111,29 @@ void AMainPlayer::Move(const FInputActionValue& Value)
 	}
 }
 
+void AMainPlayer::Run()
+{
+}
+
+void AMainPlayer::ToggleCrouch()
+{
+}
+
+void AMainPlayer::ToggleInventory()
+{
+}
+
+void AMainPlayer::SwitchCamera()
+{
+	if (IsFirstPerson)
+	{
+		FirstPersonCamera->SetActive(false);
+		ThirdPersonCamera->SetActive(true);
+		IsFirstPerson = false;
+	} else
+	{
+		FirstPersonCamera->SetActive(true);
+		ThirdPersonCamera->SetActive(false);
+		IsFirstPerson = true;
+	}
+}

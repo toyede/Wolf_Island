@@ -18,6 +18,15 @@ public:
 	// Sets default values for this character's properties
 	AMainPlayer();
 
+	UPROPERTY(EditAnywhere)
+	class UCameraComponent* FirstPersonCamera;
+	
+	UPROPERTY(EditAnywhere)
+	UCameraComponent* ThirdPersonCamera;
+	
+	UPROPERTY(EditAnywhere)
+	class USpringArmComponent* SpringArm;
+	
 	//입력 관력 변수
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputMappingContext* InputMappingContext;
@@ -50,8 +59,12 @@ public:
 	UInputAction* InventoryAction;
 
 	//상태 관련 변수 (뛰는 중인지, ~~하는 중인지 등등)
+	//뛰는 중인지
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
-	bool isRunning;
+	bool IsRunning;
+	//1인칭 카메라인지
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	bool IsFirstPerson = true;
 	
 protected:
 	// Called when the game starts or when spawned
@@ -75,4 +88,8 @@ public:
 	void ToggleCrouch();
 
 	void ToggleInventory();
+
+	void SwitchCamera();
 };
+
+
