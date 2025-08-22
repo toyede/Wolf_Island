@@ -5,8 +5,10 @@
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
+#include "StatusComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 
 // Sets default values
@@ -15,18 +17,36 @@ AMainPlayer::AMainPlayer()
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+	StatusComponent = CreateDefaultSubobject<UStatusComponent>("StatusComponent");
+
 	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>("FirstPersonCamera");
 	ThirdPersonCamera = CreateDefaultSubobject<UCameraComponent>("ThirdPersonCamera");
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>("SpringArm");
 
+	GetMesh()->SetRelativeTransform(
+		FTransform(
+			FRotator(0, -90, 0),
+			FVector(0,0,-90)
+			));
+	
 	//메시에 카메라 붙이기
 	FirstPersonCamera->SetupAttachment(GetMesh());
 	//컨트롤러 마우스 위치 입력을 카메라 입력에 반영
 	FirstPersonCamera->bUsePawnControlRotation = true;
+	FirstPersonCamera->SetRelativeTransform(
+		FTransform(
+			FRotator(0, 90, 0),
+			FVector(0,20,170)
+			));
 	
 	SpringArm->SetupAttachment(GetMesh());
-	ThirdPersonCamera->SetupAttachment(SpringArm);
+	SpringArm->SetRelativeTransform(
+		FTransform(
+			FRotator(-20, 90, 0),
+			FVector(0,0,150)
+			));
 	
+	ThirdPersonCamera->SetupAttachment(SpringArm);
 
 }
 
@@ -34,7 +54,12 @@ AMainPlayer::AMainPlayer()
 void AMainPlayer::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	//상태 델리게이트 바인딩
+	StatusComponent->OnStaminaZero.AddDynamic(this, &AMainPlayer::Run);
+
+	StatusComponent->StartHunger();
+	StatusComponent->StartHydration();
 }
 
 // Called every frame
@@ -61,11 +86,17 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 		// 이동
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AMainPlayer::Move);
-
+		
 		// 시야
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AMainPlayer::Look);
 
+		//달리기
+		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Started, this, &AMainPlayer::Run);
+		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Completed, this, &AMainPlayer::Run);
 
+		//웅크리기
+		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &AMainPlayer::ToggleCrouch);
+		
 		//인칭 변환 테스트 키
 		EnhancedInputComponent->BindAction(SlideAction, ETriggerEvent::Started, this, &AMainPlayer::SwitchCamera);
 	}
@@ -113,10 +144,39 @@ void AMainPlayer::Move(const FInputActionValue& Value)
 
 void AMainPlayer::Run()
 {
+	//뛰는 중이 아니면
+	if (!IsRunning)
+	{
+		//스태미나 0이면 암것도 안하기
+		if (StatusComponent->CurrentStamina <= 0) return;
+		
+		GetCharacterMovement()->MaxWalkSpeed = 900.0f;
+		StatusComponent->StopStamina();
+		StatusComponent->StartStamina();
+		IsRunning = true;
+	} else
+	{
+		GetCharacterMovement()->MaxWalkSpeed = 600.0f;
+		StatusComponent->StopStamina();
+		StatusComponent->StartRecoverStamina();
+		IsRunning = false;
+	}
 }
 
 void AMainPlayer::ToggleCrouch()
 {
+	//웅크리는 중이면
+	if (IsCrouching)
+	{
+		UnCrouch();
+		GetCharacterMovement()->MaxWalkSpeed = 600.0f;
+		IsCrouching = false;
+	} else
+	{
+		Crouch();
+		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
+		IsCrouching = true;
+	}
 }
 
 void AMainPlayer::ToggleInventory()

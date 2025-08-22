@@ -17,7 +17,8 @@ class WOLF_ISLAND_API AMainPlayer : public ACharacter
 public:
 	// Sets default values for this character's properties
 	AMainPlayer();
-
+	
+	//컴포넌트
 	UPROPERTY(EditAnywhere)
 	class UCameraComponent* FirstPersonCamera;
 	
@@ -27,7 +28,10 @@ public:
 	UPROPERTY(EditAnywhere)
 	class USpringArmComponent* SpringArm;
 	
-	//입력 관력 변수
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UStatusComponent* StatusComponent;
+	
+	//입력 관련 변수
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputMappingContext* InputMappingContext;
 
@@ -61,7 +65,16 @@ public:
 	//상태 관련 변수 (뛰는 중인지, ~~하는 중인지 등등)
 	//뛰는 중인지
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
-	bool IsRunning;
+	bool IsRunning = false;
+	
+	//웅크리는 중인지
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	bool IsCrouching = false;
+
+	//슬라이딩 중인지
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	bool IsSliding = false;
+	
 	//1인칭 카메라인지
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsFirstPerson = true;
@@ -78,17 +91,23 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	virtual void NotifyControllerChanged() override;
-	
-	void Look(const FInputActionValue& Value);
 
+	UFUNCTION()
+	void Look(const FInputActionValue& Value);
+	
+	UFUNCTION()
 	void Move(const FInputActionValue& Value);
 
+	UFUNCTION()
 	void Run();
 
+	UFUNCTION()
 	void ToggleCrouch();
 
+	UFUNCTION()
 	void ToggleInventory();
 
+	UFUNCTION()
 	void SwitchCamera();
 };
 
