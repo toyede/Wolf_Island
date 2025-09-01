@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Wolf_Island/Public/StatusComponent.h"
+#include "Wolf_Island/Public/Components/StatusComponent.h"
 
 // Sets default values for this component's properties
 UStatusComponent::UStatusComponent()
