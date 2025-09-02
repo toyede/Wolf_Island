@@ -30,6 +30,7 @@ void UStatusComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	// ...
 }
 
+//체력 증가 함수
 void UStatusComponent::IncreaseHP(float amount)
 {
 	CurrentHP += amount;
@@ -40,6 +41,7 @@ void UStatusComponent::IncreaseHP(float amount)
 	}
 }
 
+//체력 감소 함수
 void UStatusComponent::DecreaseHP(float amount)
 {
 	CurrentHP -= amount;
@@ -51,6 +53,7 @@ void UStatusComponent::DecreaseHP(float amount)
 	}
 }
 
+//스태미나 증가 함수
 void UStatusComponent::IncreaseStamina(float amount)
 {
 	CurrentStamina += amount;
@@ -61,6 +64,7 @@ void UStatusComponent::IncreaseStamina(float amount)
 	}
 }
 
+//스태미나 감소 함수
 void UStatusComponent::DecreaseStamina(float amount)
 {
 	CurrentStamina -= amount;
@@ -72,6 +76,7 @@ void UStatusComponent::DecreaseStamina(float amount)
 	}
 }
 
+//배고픔 증가 함수
 void UStatusComponent::IncreaseHunger(float amount)
 {
 	CurrentHunger += amount;
@@ -82,6 +87,7 @@ void UStatusComponent::IncreaseHunger(float amount)
 	}
 }
 
+//배고픔 감소 함수
 void UStatusComponent::DecreaseHunger(float amount)
 {
 	CurrentHunger -= amount;
@@ -93,6 +99,7 @@ void UStatusComponent::DecreaseHunger(float amount)
 	}
 }
 
+//수분 증가 함수
 void UStatusComponent::IncreaseHydration(float amount)
 {
 	CurrentHydration += amount;
@@ -103,6 +110,7 @@ void UStatusComponent::IncreaseHydration(float amount)
 	}
 }
 
+//수분 감소 함수
 void UStatusComponent::DecreaseHydration(float amount)
 {
 	CurrentHydration -= amount;
@@ -114,8 +122,11 @@ void UStatusComponent::DecreaseHydration(float amount)
 	}
 }
 
+//스태미나 감소 시작 함수
+//타이머를 등록하여 시작
 void UStatusComponent::StartStamina()
 {
+	GetWorld()->GetTimerManager().ClearTimer(StaminaRecoverTimer);
 	GetWorld()->GetTimerManager().SetTimer(
 		StaminaTimer,
 		[this]()
@@ -127,15 +138,19 @@ void UStatusComponent::StartStamina()
 	);
 }
 
+//스태미나 감소 중단 함수
+//타이머를 클리어시켜 중단
 void UStatusComponent::StopStamina()
 {
 	GetWorld()->GetTimerManager().ClearTimer(StaminaTimer);
 }
 
+//스태미나 회복 시작 함수
+//타이머를 등록하여 시작
 void UStatusComponent::RecoverStamina()
 {
 	GetWorld()->GetTimerManager().SetTimer(
-		StaminaTimer,
+		StaminaRecoverTimer,
 		[this]()
 		{
 			IncreaseStamina(StaminaRecoverAmount);
@@ -145,10 +160,11 @@ void UStatusComponent::RecoverStamina()
 	);
 }
 
+//스태미나 회복 시작 타이머 시작 함수
 void UStatusComponent::StartRecoverStamina()
 {
 	GetWorld()->GetTimerManager().SetTimer(
-		StaminaTimer,
+		StaminaRecoverTimer,
 		this,
 		&UStatusComponent::RecoverStamina,
 		StaminaRecoverDelay,
@@ -156,6 +172,12 @@ void UStatusComponent::StartRecoverStamina()
 	);
 }
 
+void UStatusComponent::StopRecoverStamina()
+{
+	GetWorld()->GetTimerManager().ClearTimer(StaminaRecoverTimer);
+}
+
+//배고픔 감소 시작 함수
 void UStatusComponent::StartHunger()
 {
 	GetWorld()->GetTimerManager().SetTimer(
@@ -169,11 +191,13 @@ void UStatusComponent::StartHunger()
 	);
 }
 
+//배고픔 감소 중단 함수
 void UStatusComponent::StopHunger()
 {
 	GetWorld()->GetTimerManager().ClearTimer(HungerTimer);
 }
 
+//수분 감소 시작 함수
 void UStatusComponent::StartHydration()
 {
 	GetWorld()->GetTimerManager().SetTimer(
@@ -187,6 +211,7 @@ void UStatusComponent::StartHydration()
 	);
 }
 
+//수분 감소 중단 함수
 void UStatusComponent::StopHydration()
 {
 	GetWorld()->GetTimerManager().ClearTimer(HydrationTimer);

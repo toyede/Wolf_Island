@@ -56,10 +56,16 @@ public:
 
 	//타이머
 	//스태미나 타이머
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
 	FTimerHandle StaminaTimer;
+	//스태미나 회복 타이머
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
+	FTimerHandle StaminaRecoverTimer;
 	//배고픔 타이머
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
 	FTimerHandle HungerTimer;
 	//수분 타이머
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
 	FTimerHandle HydrationTimer;
 
 	//스태미나 배고픔 수분 감소율
@@ -126,6 +132,8 @@ public:
 	void RecoverStamina();
 	UFUNCTION(BlueprintCallable)
 	void StartRecoverStamina();
+	UFUNCTION(BlueprintCallable)
+	void StopRecoverStamina();
 	
 	//배고픔 실시간 감소 시작 정지 함수
 	UFUNCTION(BlueprintCallable)

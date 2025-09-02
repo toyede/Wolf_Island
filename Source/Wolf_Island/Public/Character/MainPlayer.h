@@ -102,6 +102,9 @@ public:
 	void Run();
 
 	UFUNCTION()
+	void StopRun();
+
+	UFUNCTION()
 	void ToggleCrouch();
 
 	UFUNCTION()

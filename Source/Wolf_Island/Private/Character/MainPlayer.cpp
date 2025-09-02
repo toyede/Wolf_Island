@@ -56,7 +56,7 @@ void AMainPlayer::BeginPlay()
 	Super::BeginPlay();
 
 	//상태 델리게이트 바인딩
-	StatusComponent->OnStaminaZero.AddDynamic(this, &AMainPlayer::Run);
+	StatusComponent->OnStaminaZero.AddDynamic(this, &AMainPlayer::StopRun);
 
 	StatusComponent->StartHunger();
 	StatusComponent->StartHydration();
@@ -92,7 +92,7 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 		//달리기
 		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Started, this, &AMainPlayer::Run);
-		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Completed, this, &AMainPlayer::Run);
+		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Completed, this, &AMainPlayer::StopRun);
 
 		//웅크리기
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &AMainPlayer::ToggleCrouch);
@@ -142,6 +142,9 @@ void AMainPlayer::Move(const FInputActionValue& Value)
 	}
 }
 
+//Shift 누른 상태로 Run -> 스태미나 소진 -> Run 상태 유지
+//특정 시간 후 스태미나 회복 -> Shift 떼면 스태미나 소진
+
 void AMainPlayer::Run()
 {
 	//뛰는 중이 아니면
@@ -154,13 +157,21 @@ void AMainPlayer::Run()
 		StatusComponent->StopStamina();
 		StatusComponent->StartStamina();
 		IsRunning = true;
-	} else
-	{
-		GetCharacterMovement()->MaxWalkSpeed = 600.0f;
-		StatusComponent->StopStamina();
-		StatusComponent->StartRecoverStamina();
-		IsRunning = false;
 	}
+}
+
+void AMainPlayer::StopRun()
+{	
+	GetCharacterMovement()->MaxWalkSpeed = 600.0f;
+	//스태미나 감소 중단
+	StatusComponent->StopStamina();
+	//스태미나 회복 타이머가 실행 중이 아니면
+	if (!GetWorld()->GetTimerManager().TimerExists(StatusComponent->StaminaRecoverTimer))
+	{
+		//스태미나 회복 타이머 실행
+		StatusComponent->StartRecoverStamina();
+	}
+	IsRunning = false;
 }
 
 void AMainPlayer::ToggleCrouch()
