@@ -9,6 +9,7 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Interaction/InteractionInterface.h"
 
 
 // Sets default values
@@ -206,5 +207,33 @@ void AMainPlayer::SwitchCamera()
 		FirstPersonCamera->SetActive(true);
 		ThirdPersonCamera->SetActive(false);
 		IsFirstPerson = true;
+	}
+}
+
+void AMainPlayer::CheckInteraction()
+{
+	//플레이어 시야 카메라 체크
+	if (FirstPersonCamera)
+	{
+		//트레이스 시작 지점
+		FVector TraceStart{ FirstPersonCamera->GetComponentLocation() };
+		//트레이스 종료 지점
+		FVector TraceEnd{ TraceStart + (FirstPersonCamera->GetForwardVector() * InteractionCheckDistance) };
+		
+		//자기 메쉬에 안부딪히게 설정
+		FCollisionQueryParams QueryParams;
+		QueryParams.AddIgnoredActor(this);
+		//충돌 결과 변수
+		FHitResult HitResult;
+
+		//라인트레이스 실행 후 부딪혔나?
+		if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECC_Visibility, QueryParams))
+		{
+			//부딪힌 액터가 인터랙션 인터페이스를 가지고 있나?
+			if (HitResult.GetActor()->GetClass()->ImplementsInterface(UInteractionInterface::StaticClass()))
+			{
+				
+			}
+		}
 	}
 }

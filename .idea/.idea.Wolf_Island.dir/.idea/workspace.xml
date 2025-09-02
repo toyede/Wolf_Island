@@ -7,13 +7,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="367b04d5-c3d9-4599-86e8-ad54ff3b4b47" name="변경" comment="">
-      <change beforePath="$PROJECT_DIR$/Content/JSY/Character/BP_MainPlayer.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/JSY/Character/BP_MainPlayer.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Private/Character/MainPlayer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Private/Character/MainPlayer.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Private/Components/StatusComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Private/Components/StatusComponent.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Public/Character/MainPlayer.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Public/Character/MainPlayer.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Public/Components/StatusComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Public/Components/StatusComponent.h" afterDir="false" />
-    </list>
+    <list default="true" id="367b04d5-c3d9-4599-86e8-ad54ff3b4b47" name="변경" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -131,6 +125,7 @@
       <workItem from="1756708131118" duration="1653000" />
       <workItem from="1756780061630" duration="17000" />
       <workItem from="1756780236159" duration="3657000" />
+      <workItem from="1756795897015" duration="506000" />
     </task>
     <servers />
   </component>

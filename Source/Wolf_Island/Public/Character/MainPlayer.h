@@ -78,6 +78,9 @@ public:
 	//1인칭 카메라인지
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsFirstPerson = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction")
+	float InteractionCheckDistance = 300.0f;
 	
 protected:
 	// Called when the game starts or when spawned
@@ -112,6 +115,9 @@ public:
 
 	UFUNCTION()
 	void SwitchCamera();
+
+	UFUNCTION()
+	void CheckInteraction();
 };
 
 
