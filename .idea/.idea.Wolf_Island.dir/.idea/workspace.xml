@@ -7,7 +7,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="367b04d5-c3d9-4599-86e8-ad54ff3b4b47" name="변경" comment="" />
+    <list default="true" id="367b04d5-c3d9-4599-86e8-ad54ff3b4b47" name="변경" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.Wolf_Island.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Wolf_Island.dir/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/JSY/Character/BP_MainPlayer.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/JSY/Character/BP_MainPlayer.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Private/Character/MainPlayer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Private/Character/MainPlayer.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Private/Interaction/InteractableActor.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Private/Interaction/InteractableActor.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Public/Components/StatusComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Public/Components/StatusComponent.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Public/Interaction/InteractableActor.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Public/Interaction/InteractableActor.h" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -16,7 +23,20 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/Source/Wolf_Island/Private/Character/MainPlayer.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Source/Wolf_Island/Private/Components/StatusComponent.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Source/Wolf_Island/Private/Interaction/InteractableActor.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Source/Wolf_Island/Private/Interaction/InteractionInterface.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Source/Wolf_Island/Public/Character/MainPlayer.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Source/Wolf_Island/Public/Components/StatusComponent.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Source/Wolf_Island/Public/Interaction/InteractableActor.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Source/Wolf_Island/Public/Interaction/InteractionInterface.h" root0="FORCE_HIGHLIGHTING" />
+  </component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="true" />
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="Toolset" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 5
 }</component>
@@ -29,6 +49,7 @@
   &quot;keyToString&quot;: {
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;Uproject.Wolf_Island.executor&quot;: &quot;Run&quot;,
     &quot;git-widget-placeholder&quot;: &quot;JSY&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
@@ -126,6 +147,8 @@
       <workItem from="1756780061630" duration="17000" />
       <workItem from="1756780236159" duration="3657000" />
       <workItem from="1756795897015" duration="506000" />
+      <workItem from="1756962386791" duration="2940000" />
+      <workItem from="1756965387756" duration="1109000" />
     </task>
     <servers />
   </component>

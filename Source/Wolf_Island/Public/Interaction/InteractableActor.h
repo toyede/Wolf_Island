@@ -33,10 +33,4 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE float GetInteractionDuration() { return InteractableData.InteractionDuration; };
-
-	//에디터 상에서만 실행
-#if WITH_EDITOR
-	//프로퍼티가 바뀌었을 때 실행되는 함수
-	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-#endif
 };

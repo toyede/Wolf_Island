@@ -96,7 +96,7 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AMainPlayer::Look);
 
 		//달리기
-		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Started, this, &AMainPlayer::Run);
+		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Triggered, this, &AMainPlayer::Run);
 		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Completed, this, &AMainPlayer::StopRun);
 
 		//웅크리기
@@ -128,12 +128,6 @@ void AMainPlayer::NotifyControllerChanged()
 
 void AMainPlayer::StartJump()
 {
-	//달리는 중 점프하면 스태미나 감소 중단
-	if (IsRunning)
-	{
-		StatusComponent->StopStamina();
-	}
-
 	//스태미나가 0이면 점프 불가
 	if (StatusComponent->CurrentStamina <= JumpConsumeAmount)
 	{
@@ -146,9 +140,35 @@ void AMainPlayer::StartJump()
 		return;
 	}
 	
+	//달리는 중 점프하면 스태미나 감소 중단
+	if (IsRunning)
+	{
+		StatusComponent->StopStamina();
+	}
+
+	//점프 시 스태미나 회복 중단
+	StatusComponent->StopRecoverStamina();
+	//점프 스태미나 소모
 	StatusComponent->DecreaseStamina(JumpConsumeAmount);
 	
 	Jump();
+}
+
+//착지 시 함수
+void AMainPlayer::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+
+	//달리는 중이면 스태미나 감소 시작
+	if (IsRunning)
+	{
+		StatusComponent->StartStamina();
+	} else
+	{
+		if(!GetWorld()->GetTimerManager().IsTimerActive(StatusComponent->StaminaRecoverTimer)){
+			StatusComponent->StartRecoverStamina();
+		}
+	}
 }
 
 //시야 함수
@@ -180,25 +200,48 @@ void AMainPlayer::Move(const FInputActionValue& Value)
 
 //Shift 누른 상태로 Run -> 스태미나 소진 -> Run 상태 유지
 //특정 시간 후 스태미나 회복 -> Shift 떼면 스태미나 소진
-
 void AMainPlayer::Run()
-{
-	//뛰는 중이 아니면
-	if (!IsRunning)
-	{
-		//스태미나 0이면 암것도 안하기
-		if (StatusComponent->CurrentStamina <= 0) return;
-		
-		GetCharacterMovement()->MaxWalkSpeed = 900.0f;
-		StatusComponent->StopStamina();
+{	
+	//속도가 있는가? -> 뛰는 중인가?
+	if (GetVelocity().Size() > 0){
 
-		//이동 속도가 0 초과일 때만 스태미나 감소
-		if (GetVelocity().Size() > 0)
+		//낙하 중이면 달리기 불가
+		if (GetMovementComponent()->IsFalling())
 		{
-			StatusComponent->StartStamina();
+			if(IsRunning){
+				//스태미나 감소 중단
+				StatusComponent->StopStamina();
+				StatusComponent->StartRecoverStamina();
+				IsRunning = false;
+			}
+			return;
 		}
 		
-		IsRunning = true;
+		if(!IsRunning){
+			//스태미나 0이면 암것도 안하기
+			if (StatusComponent->CurrentStamina <= 0) return;
+	
+			GetCharacterMovement()->MaxWalkSpeed = 900.0f;
+			StatusComponent->StopStamina();
+
+			//이동 속도가 0 초과일 때만 스태미나 감소
+			if (GetVelocity().Size() > 0)
+			{
+				StatusComponent->StartStamina();
+			}
+	
+			IsRunning = true;
+		}
+
+	} else {
+
+		if(IsRunning){
+			//스태미나 감소 중단
+			StatusComponent->StopStamina();
+			StatusComponent->StartRecoverStamina();
+			IsRunning = false;
+		}
+
 	}
 }
 
@@ -248,15 +291,6 @@ void AMainPlayer::SwitchCamera()
 		FirstPersonCamera->SetActive(true);
 		ThirdPersonCamera->SetActive(false);
 		IsFirstPerson = true;
-	}
-}
-
-void AMainPlayer::Landed(const FHitResult& Hit)
-{
-	Super::Landed(Hit);
-	if (IsRunning)
-	{
-		StatusComponent->StartStamina();
 	}
 }
 

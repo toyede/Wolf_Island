@@ -123,7 +123,7 @@ public:
 	void DecreaseHydration(float amount);
 	//-----------------------------------//
 
-	//스태미나 감소 시작 정지 함수
+	//스태미나 감소, 회복 시작 정지 함수
 	UFUNCTION(BlueprintCallable)
 	void StartStamina();
 	UFUNCTION(BlueprintCallable)
