@@ -49,19 +49,23 @@ AMainPlayer::AMainPlayer()
 			));
 	
 	ThirdPersonCamera->SetupAttachment(SpringArm);
-
 }
 
 // Called when the game starts or when spawned
 void AMainPlayer::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	InteractableData.InteractionDuration = InteractionDuration;
+	
+	if(StatusComponent){
+		//상태 델리게이트 바인딩
+		StatusComponent->OnStaminaZero.AddDynamic(this, &AMainPlayer::StopRun);
 
-	//상태 델리게이트 바인딩
-	StatusComponent->OnStaminaZero.AddDynamic(this, &AMainPlayer::StopRun);
-
-	StatusComponent->StartHunger();
-	StatusComponent->StartHydration();
+		//배고픔, 수분 감소 시작
+		StatusComponent->StartHunger();
+		StatusComponent->StartHydration();
+	}
 }
 
 // Called every frame
@@ -306,7 +310,7 @@ void AMainPlayer::CheckInteraction()
 		FVector TraceEnd{ TraceStart + (FirstPersonCamera->GetForwardVector() * InteractionCheckDistance) };
 
 		//라인 트레이스 디버그 라인
-		DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, false, 1.0f);
+		//DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, false, 1.0f);
 		
 		//자기 메쉬에 안부딪히게 설정
 		FCollisionQueryParams QueryParams;
@@ -320,11 +324,11 @@ void AMainPlayer::CheckInteraction()
 			//부딪힌 액터가 인터랙션 인터페이스를 가지고 있나?
 			if (HitResult.GetActor()->GetClass()->ImplementsInterface(UInteractionInterface::StaticClass()))
 			{
-				//UE_LOG(LogTemp, Warning, TEXT("It has interface."));
+				UE_LOG(LogTemp, Warning, TEXT("It has interface."));
 				//부딪힌 액터가 현재 인터랙터블 데이터와 다르다면
 				if (HitResult.GetActor() != InteractionData.CurrentInteractable)
 				{
-					//UE_LOG(LogTemp, Warning, TEXT("FoundInteractable"));
+					UE_LOG(LogTemp, Warning, TEXT("FoundInteractable"));
 					//TargetInteractable에 결과물 넣기
 					FoundInteractable(HitResult.GetActor());
 					return;
@@ -423,7 +427,7 @@ void AMainPlayer::BeginInteract()
 				if (TargetInteractionInterface->InteractableData.CanInteract)
 				{
 					//인터랙션 실행
-					Interact();
+					Interaction();
 				}
 			}
 			//꾹 누르는 인터랙션이면
@@ -432,7 +436,7 @@ void AMainPlayer::BeginInteract()
 				//인터랙션 실행 시간 만큼 대기 후 인터랙션 실행
 				GetWorldTimerManager().SetTimer(InteractionTimer,
 					this,
-					&AMainPlayer::Interact,
+					&AMainPlayer::Interaction,
 					TargetInteractionInterface->InteractableData.InteractionDuration,
 					false);
 			}
@@ -455,7 +459,7 @@ void AMainPlayer::EndInteract()
 	}
 }
 
-void AMainPlayer::Interact()
+void AMainPlayer::Interaction()
 {
 	//인터랙션 타이머 클리어
 	GetWorldTimerManager().ClearTimer(InteractionTimer);

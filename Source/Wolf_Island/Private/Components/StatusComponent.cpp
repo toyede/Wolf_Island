@@ -3,6 +3,8 @@
 
 #include "Wolf_Island/Public/Components/StatusComponent.h"
 
+#include "GameFramework/CharacterMovementComponent.h"
+
 // Sets default values for this component's properties
 UStatusComponent::UStatusComponent()
 {
@@ -35,9 +37,16 @@ void UStatusComponent::IncreaseHP(float amount)
 {
 	CurrentHP += amount;
 
+	//초과 방지
 	if (CurrentHP > MaxHP)
 	{
 		CurrentHP = MaxHP;
+	}
+	//음수 방지
+	if (CurrentHP <= 0)
+	{
+		CurrentHP = 0;
+		OnHPZero.Broadcast();
 	}
 }
 
@@ -46,6 +55,12 @@ void UStatusComponent::DecreaseHP(float amount)
 {
 	CurrentHP -= amount;
 
+	//초과 방지
+	if (CurrentHP > MaxHP)
+	{
+		CurrentHP = MaxHP;
+	}
+	//음수 방지
 	if (CurrentHP <= 0)
 	{
 		CurrentHP = 0;
@@ -56,19 +71,30 @@ void UStatusComponent::DecreaseHP(float amount)
 //스태미나 증가 함수
 void UStatusComponent::IncreaseStamina(float amount)
 {
-	CurrentStamina += amount;
-
+	//초과 방지
 	if (CurrentStamina > MaxStamina)
 	{
 		CurrentStamina = MaxStamina;
+	}
+	//음수 방지
+	if (CurrentStamina <= 0)
+	{
+		CurrentStamina = 0;
+		OnStaminaZero.Broadcast();
 	}
 }
 
 //스태미나 감소 함수
 void UStatusComponent::DecreaseStamina(float amount)
 {
-	CurrentStamina -= amount;
+	CurrentStamina -= amount * AmountMultiplier;
 
+	//초과 방지
+	if (CurrentStamina > MaxStamina)
+	{
+		CurrentStamina = MaxStamina;
+	}
+	//음수 방지
 	if (CurrentStamina <= 0)
 	{
 		CurrentStamina = 0;
@@ -81,17 +107,30 @@ void UStatusComponent::IncreaseHunger(float amount)
 {
 	CurrentHunger += amount;
 
+	//초과 방지
 	if (CurrentHunger > MaxHunger)
 	{
 		CurrentHunger = MaxHunger;
+	}
+	//음수 방지
+	if (CurrentHunger <= 0)
+	{
+		CurrentHunger = 0;
+		OnHungerZero.Broadcast();
 	}
 }
 
 //배고픔 감소 함수
 void UStatusComponent::DecreaseHunger(float amount)
 {
-	CurrentHunger -= amount;
+	CurrentHunger -= amount * AmountMultiplier;
 
+	//초과 방지
+	if (CurrentHunger > MaxHunger)
+	{
+		CurrentHunger = MaxHunger;
+	}
+	//음수 방지
 	if (CurrentHunger <= 0)
 	{
 		CurrentHunger = 0;
@@ -104,21 +143,100 @@ void UStatusComponent::IncreaseHydration(float amount)
 {
 	CurrentHydration += amount;
 
+	//초과 방지
 	if (CurrentHydration > MaxHydration)
 	{
 		CurrentHydration = MaxHydration;
+	}
+	//음수 방지
+	if (CurrentHydration <= 0)
+	{
+		CurrentHydration = 0;
+		OnHydrationZero.Broadcast();
 	}
 }
 
 //수분 감소 함수
 void UStatusComponent::DecreaseHydration(float amount)
 {
-	CurrentHydration -= amount;
+	CurrentHydration -= amount * AmountMultiplier;
 
+	//초과 방지
+	if (CurrentHydration > MaxHydration)
+	{
+		CurrentHydration = MaxHydration;
+	}
+	//음수 방지
 	if (CurrentHydration <= 0)
 	{
 		CurrentHydration = 0;
 		OnHydrationZero.Broadcast();
+	}
+}
+
+void UStatusComponent::IncreaseWeight(float amount)
+{
+	CurrentWeight += amount;
+
+	//초과 방지
+	if (CurrentWeight > MaxWeight)
+	{
+		CurrentWeight = MaxWeight;
+	}
+	//음수 방지
+	if (CurrentWeight <= 0)
+	{
+		CurrentWeight = 0;
+	}
+
+	//무게에 따른 감소율 증가분 설정
+	if (CurrentWeight == 100.0f)
+	{
+		AmountMultiplier = 1.5f;
+	}
+	else if (CurrentWeight >= 75.0f)
+	{
+		AmountMultiplier = 1.2f;
+	}
+	else if (CurrentWeight >= 50.0f)
+	{
+		AmountMultiplier = 1.1f;
+	} else
+	{
+		AmountMultiplier = 1.0f;
+	}
+}
+
+void UStatusComponent::DecreaseWeight(float amount)
+{
+	CurrentWeight -= amount;
+
+	//초과 방지
+	if (CurrentWeight > MaxWeight)
+	{
+		CurrentWeight = MaxWeight;
+	}
+	//음수 방지
+	if (CurrentWeight <= 0)
+	{
+		CurrentWeight = 0;
+	}
+
+	//무게에 따른 감소율 증가분 설정
+	if (CurrentWeight == 100.0f)
+	{
+		AmountMultiplier = 1.5f;
+	}
+	else if (CurrentWeight >= 75.0f)
+	{
+		AmountMultiplier = 1.2f;
+	}
+	else if (CurrentWeight >= 50.0f)
+	{
+		AmountMultiplier = 1.1f;
+	} else
+	{
+		AmountMultiplier = 1.0f;
 	}
 }
 
@@ -132,6 +250,9 @@ void UStatusComponent::StartStamina()
 		[this]()
 		{
 			DecreaseStamina(StaminaDecreaseAmount);
+
+			DecreaseHydration(HydrationAmountWhileRunning);
+			DecreaseHunger(HungerAmountWhileRunning);
 		},
 		StaminaDecreaseRate,
 		true
@@ -217,3 +338,10 @@ void UStatusComponent::StopHydration()
 	GetWorld()->GetTimerManager().ClearTimer(HydrationTimer);
 }
 
+void UStatusComponent::DebugGetStatus(float& Stamina, float& Hunger, float& Hydration, float& Weight)
+{
+	Stamina = CurrentStamina;
+	Hunger = CurrentHunger;
+	Hydration = CurrentHydration;
+	Weight = CurrentWeight;
+}
