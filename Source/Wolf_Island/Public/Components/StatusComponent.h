@@ -41,6 +41,9 @@ public:
 	float CurrentStamina = 100.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
 	float MaxStamina = 100.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	float DeadLineStamina = 5.0f;
+	float TempMaxStamina = 0.0f;
 
 	//배고픔
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
@@ -86,6 +89,9 @@ public:
 	//수분 사망 타이머
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
 	FTimerHandle HydrationDeathTimer;
+	//강제 휴식 타이머
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
+	FTimerHandle ForcedRestTimer;
 
 	//스태미나 감소 주기
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
@@ -102,6 +108,9 @@ public:
 	//스태미나 회복 대기 시간(초)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
 	float StaminaRecoverDelay = 5.0f;
+	//스태미나 강제 휴식 시간(초)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	float ForcedRestTime = 15.0f;
 
 	//배고픔 감소 주기
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
@@ -112,6 +121,9 @@ public:
 	//달리기 중 배고픔 감소량
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
 	float HungerAmountWhileRunning = 0.033f;
+	//배고픔 사망 타이머 시간(초)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	float HungerDeathRate = 60.0f;
 
 	//수분 감소 주기
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
@@ -122,6 +134,9 @@ public:
 	//달리기 중 수분 감소향
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
 	float HydrationAmountWhileRunning = 0.033f;
+	//수분 사망 타이머 시간(초)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	float HydrationDeathRate = 30.0f;
 
 protected:
 	// Called when the game starts
@@ -182,12 +197,32 @@ public:
 	void StartHunger();
 	UFUNCTION(BlueprintCallable)
 	void StopHunger();
+	//배고픔 사망 타이머 작동 정지 함수
+	UFUNCTION(BlueprintCallable)
+	void StartHungerDeath();
+	UFUNCTION(BlueprintCallable)
+	void StopHungerDeath();
 
 	//수분 실시간 감소 시작 정지 함수
 	UFUNCTION(BlueprintCallable)
 	void StartHydration();
 	UFUNCTION(BlueprintCallable)
 	void StopHydration();
+	//수분 사망 타이머 작동 정지 함수
+	UFUNCTION(BlueprintCallable)
+	void StartHydrationDeath();
+	UFUNCTION(BlueprintCallable)
+	void StopHydrationDeath();
+
+	//강제 휴식 함수
+	UFUNCTION(BlueprintCallable)
+	void ForcedRest();
+	//입력 차단 함수
+	UFUNCTION(BlueprintCallable)
+	void DisableController();
+	//입력 허용 함수
+	UFUNCTION(BlueprintCallable)
+	void EnableController();
 
 	//디버그 함수
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Debug")

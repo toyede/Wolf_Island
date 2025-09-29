@@ -4,6 +4,7 @@
 #include "Wolf_Island/Public/Components/StatusComponent.h"
 
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values for this component's properties
 UStatusComponent::UStatusComponent()
@@ -20,7 +21,13 @@ UStatusComponent::UStatusComponent()
 void UStatusComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	//스태미나 다 쓰면 15초 이동 불가
+	OnStaminaZero.AddDynamic(this, &UStatusComponent::ForcedRest);
+	//배고픔 0일 시
+	OnHungerZero.AddDynamic(this, &UStatusComponent::StartHungerDeath);
+	//수분 0일 시
+	OnHydrationZero.AddDynamic(this, &UStatusComponent::StartHydrationDeath);
 }
 
 
@@ -35,7 +42,7 @@ void UStatusComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 //체력 증가 함수
 void UStatusComponent::IncreaseHP(float amount)
 {
-	CurrentHP += amount;
+	CurrentHP += FMath::Abs(amount);
 
 	//초과 방지
 	if (CurrentHP > MaxHP)
@@ -53,7 +60,7 @@ void UStatusComponent::IncreaseHP(float amount)
 //체력 감소 함수
 void UStatusComponent::DecreaseHP(float amount)
 {
-	CurrentHP -= amount;
+	CurrentHP -= FMath::Abs(amount);
 
 	//초과 방지
 	if (CurrentHP > MaxHP)
@@ -71,6 +78,8 @@ void UStatusComponent::DecreaseHP(float amount)
 //스태미나 증가 함수
 void UStatusComponent::IncreaseStamina(float amount)
 {
+	CurrentStamina += FMath::Abs(amount) * AmountMultiplier;
+	
 	//초과 방지
 	if (CurrentStamina > MaxStamina)
 	{
@@ -87,7 +96,7 @@ void UStatusComponent::IncreaseStamina(float amount)
 //스태미나 감소 함수
 void UStatusComponent::DecreaseStamina(float amount)
 {
-	CurrentStamina -= amount * AmountMultiplier;
+	CurrentStamina -= FMath::Abs(amount) * AmountMultiplier;
 
 	//초과 방지
 	if (CurrentStamina > MaxStamina)
@@ -105,7 +114,8 @@ void UStatusComponent::DecreaseStamina(float amount)
 //배고픔 증가 함수
 void UStatusComponent::IncreaseHunger(float amount)
 {
-	CurrentHunger += amount;
+	CurrentHunger += FMath::Abs(amount);
+	StopHungerDeath();
 
 	//초과 방지
 	if (CurrentHunger > MaxHunger)
@@ -123,7 +133,7 @@ void UStatusComponent::IncreaseHunger(float amount)
 //배고픔 감소 함수
 void UStatusComponent::DecreaseHunger(float amount)
 {
-	CurrentHunger -= amount * AmountMultiplier;
+	CurrentHunger -= FMath::Abs(amount) * AmountMultiplier;
 
 	//초과 방지
 	if (CurrentHunger > MaxHunger)
@@ -141,7 +151,8 @@ void UStatusComponent::DecreaseHunger(float amount)
 //수분 증가 함수
 void UStatusComponent::IncreaseHydration(float amount)
 {
-	CurrentHydration += amount;
+	CurrentHydration += FMath::Abs(amount);
+	StopHydrationDeath();
 
 	//초과 방지
 	if (CurrentHydration > MaxHydration)
@@ -159,7 +170,7 @@ void UStatusComponent::IncreaseHydration(float amount)
 //수분 감소 함수
 void UStatusComponent::DecreaseHydration(float amount)
 {
-	CurrentHydration -= amount * AmountMultiplier;
+	CurrentHydration -= FMath::Abs(amount) * AmountMultiplier;
 
 	//초과 방지
 	if (CurrentHydration > MaxHydration)
@@ -176,7 +187,7 @@ void UStatusComponent::DecreaseHydration(float amount)
 
 void UStatusComponent::IncreaseWeight(float amount)
 {
-	CurrentWeight += amount;
+	CurrentWeight += FMath::Abs(amount);
 
 	//초과 방지
 	if (CurrentWeight > MaxWeight)
@@ -209,7 +220,7 @@ void UStatusComponent::IncreaseWeight(float amount)
 
 void UStatusComponent::DecreaseWeight(float amount)
 {
-	CurrentWeight -= amount;
+	CurrentWeight -= FMath::Abs(amount);
 
 	//초과 방지
 	if (CurrentWeight > MaxWeight)
@@ -318,6 +329,62 @@ void UStatusComponent::StopHunger()
 	GetWorld()->GetTimerManager().ClearTimer(HungerTimer);
 }
 
+//배고픔 0일 시 일정 시간 후 사망, 스태미나 5 고정
+void UStatusComponent::StartHungerDeath()
+{
+	//이미 0이 되서 실행 중인 사망 타이머가 있으면 아무 것도 안함
+	if (GetWorld()->GetTimerManager().IsTimerActive(HungerDeathTimer)) return;
+	
+	//스태미나 5로 고정
+	TempMaxStamina = MaxStamina;
+	MaxStamina = DeadLineStamina;
+	CurrentStamina = MaxStamina;
+
+	if (GetWorld()->GetTimerManager().IsTimerActive(StaminaRecoverTimer))
+	{
+		GetWorld()->GetTimerManager().ClearTimer(StaminaRecoverTimer);
+	}
+	
+	GetWorld()->GetTimerManager().SetTimer(
+		HungerDeathTimer,
+		[this]()
+		{
+			DecreaseHP(MaxHP);
+		},
+		HungerDeathRate,
+		false
+		);
+}
+
+void UStatusComponent::StopHungerDeath()
+{
+	GetWorld()->GetTimerManager().ClearTimer(HungerDeathTimer);
+	MaxStamina = TempMaxStamina;
+	StartRecoverStamina();
+}
+
+//수분 0일 시 일정 시간 후 사망
+void UStatusComponent::StartHydrationDeath()
+{
+	//이미 0이 되서 실행 중인 사망 타이머가 있으면 아무 것도 안함
+	if (GetWorld()->GetTimerManager().IsTimerActive(HydrationDeathTimer)) return;
+	
+	GetWorld()->GetTimerManager().SetTimer(
+		HydrationDeathTimer,
+		[this]()
+		{
+			DecreaseHP(MaxHP);
+		},
+		HydrationDeathRate,
+		false
+		);
+}
+
+void UStatusComponent::StopHydrationDeath()
+{
+	GetWorld()->GetTimerManager().ClearTimer(HydrationDeathTimer);
+}
+
 //수분 감소 시작 함수
 void UStatusComponent::StartHydration()
 {
@@ -336,6 +403,48 @@ void UStatusComponent::StartHydration()
 void UStatusComponent::StopHydration()
 {
 	GetWorld()->GetTimerManager().ClearTimer(HydrationTimer);
+}
+
+void UStatusComponent::ForcedRest()
+{
+	DisableController();
+	
+	GetWorld()->GetTimerManager().SetTimer(
+		ForcedRestTimer,
+		this,
+		&UStatusComponent::EnableController,
+		ForcedRestTime,
+		false
+	);
+
+}
+
+void UStatusComponent::DisableController()
+{
+	APawn* Owner = Cast<APawn>(GetOwner());
+	if (Owner)
+	{
+		APlayerController* Controller = Cast<APlayerController>(Owner->GetController());
+
+		if (Controller)
+		{
+			Owner->DisableInput(Controller);
+		}
+	}
+}
+
+void UStatusComponent::EnableController()
+{
+	APawn* Owner = Cast<APawn>(GetOwner());
+	if (Owner)
+	{
+		APlayerController* Controller = Cast<APlayerController>(Owner->GetController());
+
+		if (Controller)
+		{
+			Owner->EnableInput(Controller);
+		}
+	}	
 }
 
 void UStatusComponent::DebugGetStatus(float& Stamina, float& Hunger, float& Hydration, float& Weight)

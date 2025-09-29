@@ -97,9 +97,17 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsFirstPerson = true;
 
+	//공격 소모 스태미나
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	float AttackConsumeAmount = 1.0f;
+
 	//점프 소모 스태미나
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	float JumpConsumeAmount = 1.0f;
+
+	//슬라이딩 소모 스태미나
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	float SlideConsumeAmount  = 2.0f;
 
 	//인터랙션 관련 변수===============================================================
 	//인터랙션 타이머 - 꾹 누르는 인터랙션을 위한 것
