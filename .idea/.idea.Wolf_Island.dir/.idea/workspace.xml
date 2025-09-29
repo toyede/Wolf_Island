@@ -8,13 +8,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="367b04d5-c3d9-4599-86e8-ad54ff3b4b47" name="변경" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.Wolf_Island.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Wolf_Island.dir/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Config/DefaultEngine.ini" beforeDir="false" afterPath="$PROJECT_DIR$/Config/DefaultEngine.ini" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/item/DT_Wolfitem.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/DT_Wolfitem.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/item/ItemMesh/pan/Circle.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/ItemMesh/pan/Circle.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/item/ItemMesh/stones/vdjkbfmiw_LOD0_TIER0_000.uasset" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/item/TestItem.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/TestItem.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/ItemDataStruct.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/ItemDataStruct.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -153,7 +147,7 @@
       <workItem from="1759114228273" duration="2000" />
       <workItem from="1759114299262" duration="1188000" />
       <workItem from="1759118253421" duration="1579000" />
-      <workItem from="1759141345154" duration="2657000" />
+      <workItem from="1759141345154" duration="3253000" />
     </task>
     <servers />
   </component>
