@@ -31,6 +31,9 @@ struct FItemData : public FTableRowBase
 	int Hungry;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int Weight;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int Durability;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
