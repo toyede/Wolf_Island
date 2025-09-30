@@ -38,10 +38,16 @@ struct FItemData : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int Overlap;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FString Text;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UStaticMesh* Mesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UBlueprint* BPMesh;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+   	UTexture* UITexture;
 };

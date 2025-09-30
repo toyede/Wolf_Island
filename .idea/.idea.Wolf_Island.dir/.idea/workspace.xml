@@ -8,7 +8,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="367b04d5-c3d9-4599-86e8-ad54ff3b4b47" name="변경" comment="">
-      <change beforePath="$PROJECT_DIR$/Content/item/TestItem.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/TestItem.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.Wolf_Island.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Wolf_Island.dir/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/item/ItemMesh/leaf/SM_leaf.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/ItemMesh/leaf/SM_leaf.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/ItemDataStruct.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/ItemDataStruct.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -148,6 +150,7 @@
       <workItem from="1759114299262" duration="1188000" />
       <workItem from="1759118253421" duration="1579000" />
       <workItem from="1759141345154" duration="3253000" />
+      <workItem from="1759204980261" duration="89000" />
     </task>
     <servers />
   </component>
