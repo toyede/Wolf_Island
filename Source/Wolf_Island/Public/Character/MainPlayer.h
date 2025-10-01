@@ -37,14 +37,8 @@ public:
 	AMainPlayer();
 	
 	//컴포넌트=========================================================================
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UCameraComponent* FirstPersonCamera;
-	
-	UPROPERTY(EditAnywhere)
-	UCameraComponent* ThirdPersonCamera;
-	
-	UPROPERTY(EditAnywhere)
-	class USpringArmComponent* SpringArm;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UStatusComponent* StatusComponent;
@@ -97,6 +91,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsFirstPerson = true;
 
+	//행동불능 상태인지
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	bool IsInability = false;
+
 	//공격 소모 스태미나
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	float AttackConsumeAmount = 1.0f;
@@ -128,6 +126,10 @@ public:
 	//꾹 누르기 인터랙션 시간
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction")
 	float InteractionDuration = 0.0f;
+
+	//애님 몽타주======================================================================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Anim")
+	class UAnimMontage* SlideMontage;
 	
 protected:
 	// Called when the game starts or when spawned
@@ -166,7 +168,11 @@ public:
 	void ToggleInventory();
 
 	UFUNCTION()
-	void SwitchCamera();
+	void Sliding();
+
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
+	void OnDeath();
+	void OnDeath_Implementation();
 
 	//인터랙션 관련 함수===================================================
 	//인터랙션 체크 함수 - 라인트레이스로 인터랙션 액터 체크

@@ -8,7 +8,7 @@
 #include "MaterialHLSLTree.h"
 #include "Components/StatusComponent.h"
 #include "Camera/CameraComponent.h"
-#include "GameFramework/SpringArmComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Interaction/InteractionInterface.h"
 
@@ -22,8 +22,6 @@ AMainPlayer::AMainPlayer()
 	StatusComponent = CreateDefaultSubobject<UStatusComponent>("StatusComponent");
 
 	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>("FirstPersonCamera");
-	ThirdPersonCamera = CreateDefaultSubobject<UCameraComponent>("ThirdPersonCamera");
-	SpringArm = CreateDefaultSubobject<USpringArmComponent>("SpringArm");
 
 	GetMesh()->SetRelativeTransform(
 		FTransform(
@@ -32,23 +30,15 @@ AMainPlayer::AMainPlayer()
 			));
 	
 	//메시에 카메라 붙이기
-	FirstPersonCamera->SetupAttachment(GetMesh());
+	FirstPersonCamera->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, "headSocket");
 	//컨트롤러 마우스 위치 입력을 카메라 입력에 반영
 	FirstPersonCamera->bUsePawnControlRotation = true;
+	
 	FirstPersonCamera->SetRelativeTransform(
 		FTransform(
-			FRotator(0, 90, 0),
-			FVector(0,20,170)
+			FRotator(-90, 90, 90),
+			FVector(0,10,0)
 			));
-	
-	SpringArm->SetupAttachment(GetMesh());
-	SpringArm->SetRelativeTransform(
-		FTransform(
-			FRotator(-20, 90, 0),
-			FVector(0,0,150)
-			));
-	
-	ThirdPersonCamera->SetupAttachment(SpringArm);
 }
 
 // Called when the game starts or when spawned
@@ -61,6 +51,9 @@ void AMainPlayer::BeginPlay()
 	if(StatusComponent){
 		//상태 델리게이트 바인딩
 		StatusComponent->OnStaminaZero.AddDynamic(this, &AMainPlayer::StopRun);
+
+		//죽음 바인딩
+		StatusComponent->OnHPZero.AddDynamic(this, &AMainPlayer::OnDeath_Implementation);
 
 		//배고픔, 수분 감소 시작
 		StatusComponent->StartHunger();
@@ -105,10 +98,10 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 		//웅크리기
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &AMainPlayer::ToggleCrouch);
-		
-		//인칭 변환 테스트 키 -- 폐기
-		//EnhancedInputComponent->BindAction(SlideAction, ETriggerEvent::Started, this, &AMainPlayer::SwitchCamera);
 
+		//슬라이딩
+		EnhancedInputComponent->BindAction(SlideAction, ETriggerEvent::Started, this, &AMainPlayer::Sliding);
+		
 		//인터랙션
 		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AMainPlayer::BeginInteract);
 		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Completed, this, &AMainPlayer::EndInteract);
@@ -162,6 +155,20 @@ void AMainPlayer::StartJump()
 void AMainPlayer::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
+
+	float FallForce = FMath::Abs(GetVelocity().Z);
+	UE_LOG(LogTemp, Warning, TEXT("%f"), FallForce);
+	
+	if (FallForce > 1000.0f)
+	{
+		if (FallForce > 3000.0f)
+		{
+			StatusComponent->DecreaseHP(StatusComponent->MaxHP);
+		} else
+		{
+			StatusComponent->DecreaseHP(FallForce*0.03f);
+		}
+	}
 
 	//달리는 중이면 스태미나 감소 시작
 	if (IsRunning)
@@ -251,7 +258,7 @@ void AMainPlayer::Run()
 
 void AMainPlayer::StopRun()
 {	
-	GetCharacterMovement()->MaxWalkSpeed = 600.0f;
+	GetCharacterMovement()->MaxWalkSpeed = 300.0f;
 	//스태미나 감소 중단
 	StatusComponent->StopStamina();
 	//스태미나 회복 타이머가 실행 중이 아니면
@@ -269,12 +276,12 @@ void AMainPlayer::ToggleCrouch()
 	if (IsCrouching)
 	{
 		UnCrouch();
-		GetCharacterMovement()->MaxWalkSpeed = 600.0f;
+		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
 		IsCrouching = false;
 	} else
 	{
 		Crouch();
-		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
+		GetCharacterMovement()->MaxWalkSpeed = 150.0f;
 		IsCrouching = true;
 	}
 }
@@ -283,19 +290,23 @@ void AMainPlayer::ToggleInventory()
 {
 }
 
-void AMainPlayer::SwitchCamera()
+void AMainPlayer::Sliding()
 {
-	if (IsFirstPerson)
+	//달리기 중이고 슬라이딩을 하지 않는 경우에만 가능
+	if (IsRunning&&!IsSliding)
 	{
-		FirstPersonCamera->SetActive(false);
-		ThirdPersonCamera->SetActive(true);
-		IsFirstPerson = false;
-	} else
-	{
-		FirstPersonCamera->SetActive(true);
-		ThirdPersonCamera->SetActive(false);
-		IsFirstPerson = true;
+		StatusComponent->DecreaseStamina(SlideConsumeAmount);
+		IsSliding = true;
+		GetCapsuleComponent()->SetCapsuleHalfHeight(30);
+		PlayAnimMontage(SlideMontage);
+		GetCapsuleComponent()->SetCapsuleHalfHeight(88);
+		IsSliding = false;
 	}
+}
+
+void AMainPlayer::OnDeath_Implementation()
+{
+	UE_LOG(LogTemp, Display, TEXT("Player Dead"));
 }
 
 void AMainPlayer::CheckInteraction()
@@ -324,11 +335,11 @@ void AMainPlayer::CheckInteraction()
 			//부딪힌 액터가 인터랙션 인터페이스를 가지고 있나?
 			if (HitResult.GetActor()->GetClass()->ImplementsInterface(UInteractionInterface::StaticClass()))
 			{
-				UE_LOG(LogTemp, Warning, TEXT("It has interface."));
+				//UE_LOG(LogTemp, Warning, TEXT("It has interface."));
 				//부딪힌 액터가 현재 인터랙터블 데이터와 다르다면
 				if (HitResult.GetActor() != InteractionData.CurrentInteractable)
 				{
-					UE_LOG(LogTemp, Warning, TEXT("FoundInteractable"));
+					//UE_LOG(LogTemp, Warning, TEXT("FoundInteractable"));
 					//TargetInteractable에 결과물 넣기
 					FoundInteractable(HitResult.GetActor());
 					return;

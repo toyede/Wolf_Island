@@ -226,5 +226,5 @@ public:
 
 	//디버그 함수
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Debug")
-	void DebugGetStatus(float& Stamina, float& Hunger, float& Hydration, float& Weight);
+	void DebugGetStatus(float &HP, float& Stamina, float& Hunger, float& Hydration, float& Weight);
 };

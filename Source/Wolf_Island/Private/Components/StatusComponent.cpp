@@ -78,6 +78,8 @@ void UStatusComponent::DecreaseHP(float amount)
 //스태미나 증가 함수
 void UStatusComponent::IncreaseStamina(float amount)
 {
+	UE_LOG(LogTemp, Warning, TEXT("AMOUNT : %f"), FMath::Abs(amount) * AmountMultiplier);
+	UE_LOG(LogTemp, Warning, TEXT("MAX STAMINA : %f"), MaxStamina);
 	CurrentStamina += FMath::Abs(amount) * AmountMultiplier;
 	
 	//초과 방지
@@ -407,16 +409,18 @@ void UStatusComponent::StopHydration()
 
 void UStatusComponent::ForcedRest()
 {
-	DisableController();
-	
-	GetWorld()->GetTimerManager().SetTimer(
-		ForcedRestTimer,
-		this,
-		&UStatusComponent::EnableController,
-		ForcedRestTime,
-		false
-	);
-
+	if (!GetWorld()->GetTimerManager().IsTimerActive(ForcedRestTimer))
+	{
+		DisableController();
+		
+		GetWorld()->GetTimerManager().SetTimer(
+			ForcedRestTimer,
+			this,
+			&UStatusComponent::EnableController,
+			ForcedRestTime,
+			false
+		);
+	}
 }
 
 void UStatusComponent::DisableController()
@@ -444,11 +448,14 @@ void UStatusComponent::EnableController()
 		{
 			Owner->EnableInput(Controller);
 		}
-	}	
+	}
+	
+	RecoverStamina();
 }
 
-void UStatusComponent::DebugGetStatus(float& Stamina, float& Hunger, float& Hydration, float& Weight)
+void UStatusComponent::DebugGetStatus(float &HP, float& Stamina, float& Hunger, float& Hydration, float& Weight)
 {
+	HP = CurrentHP;
 	Stamina = CurrentStamina;
 	Hunger = CurrentHunger;
 	Hydration = CurrentHydration;
