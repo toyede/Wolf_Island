@@ -360,9 +360,12 @@ void UStatusComponent::StartHungerDeath()
 
 void UStatusComponent::StopHungerDeath()
 {
-	GetWorld()->GetTimerManager().ClearTimer(HungerDeathTimer);
-	MaxStamina = TempMaxStamina;
-	StartRecoverStamina();
+	if (GetWorld()->GetTimerManager().IsTimerActive(HungerDeathTimer))
+	{
+		GetWorld()->GetTimerManager().ClearTimer(HungerDeathTimer);
+		MaxStamina = TempMaxStamina;
+		StartRecoverStamina();
+	}
 }
 
 //수분 0일 시 일정 시간 후 사망
