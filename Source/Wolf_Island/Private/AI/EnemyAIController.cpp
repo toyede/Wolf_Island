@@ -34,7 +34,6 @@ AEnemyAIController::AEnemyAIController()
     AIPerceptionComp->ConfigureSense(*HearingConfig);
     AIPerceptionComp->SetDominantSense(SightConfig->GetSenseImplementation());
 
-    // 콜백 바인딩
     AIPerceptionComp->OnTargetPerceptionUpdated.AddDynamic(this, &AEnemyAIController::OnTargetPerceptionUpdated);
 }
 
@@ -65,8 +64,7 @@ void AEnemyAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus St
         if (Stimulus.Type == UAISense::GetSenseID<UAISense_Sight>())
         {
             GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, TEXT("Sight Sensed"));
-            SetStateAsAttacking();
-            BlackboardComp->SetValueAsObject(AttackTargetKey, PlayerPawn);
+            SetStateAsAttacking(PlayerPawn);
         }
     }
     else
@@ -83,8 +81,13 @@ void AEnemyAIController::SetStateAsPassive()
     BlackboardComp->SetValueAsEnum(EnemyStateKey, static_cast<uint8>(EnemyState));
 }
 
-void AEnemyAIController::SetStateAsAttacking()
+void AEnemyAIController::SetStateAsAttacking(AActor* Actor)
 {
+    APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
     EnemyState = EEnemyState::Attacking;
     BlackboardComp->SetValueAsEnum(EnemyStateKey, static_cast<uint8>(EnemyState));
+    if (PlayerPawn != nullptr)
+    {
+        BlackboardComp->SetValueAsObject(AttackTargetKey, PlayerPawn);
+    }
 }

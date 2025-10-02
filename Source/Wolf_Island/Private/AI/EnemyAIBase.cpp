@@ -6,6 +6,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "AI/EnemyAIController.h"
+#include "Animation/AnimInstance.h"
 
 AEnemyAIBase::AEnemyAIBase()
 {
@@ -50,4 +51,5 @@ void AEnemyAIBase::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 }
+
 

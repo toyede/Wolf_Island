@@ -69,7 +69,7 @@ protected:
 	void SetStateAsPassive();
 
 	UFUNCTION()
-	void SetStateAsAttacking();
+	void SetStateAsAttacking(AActor* Actor);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI");
 	EEnemyState EnemyState;
