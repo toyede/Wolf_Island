@@ -126,16 +126,13 @@ void AMainPlayer::NotifyControllerChanged()
 void AMainPlayer::StartJump()
 {
 	//스태미나가 0이면 점프 불가
-	if (StatusComponent->CurrentStamina <= JumpConsumeAmount)
-	{
-		return;
-	}
+	if (StatusComponent->CurrentStamina <= JumpConsumeAmount) return;
 
 	//낙하 중(점프 중) 이면 점프 불가
-	if (GetCharacterMovement()->IsFalling())
-	{
-		return;
-	}
+	if (GetCharacterMovement()->IsFalling()) return;
+
+	//슬라이딩 중이면 점프 불가
+	if (IsSliding) return;
 	
 	//달리는 중 점프하면 스태미나 감소 중단
 	if (IsRunning)
@@ -432,7 +429,7 @@ void AMainPlayer::BeginInteract()
 			TargetInteractionInterface->BeginInteract();
 
 			//즉시 인터랙션이 가능하면 (꾹 누르는 인터랙션이 아니면)
-			if (FMath::IsNearlyZero(TargetInteractionInterface->InteractableData.InteractionDuration, 0.1f))
+			if (TargetInteractionInterface->InteractableData.InteractionDuration == 0.0f)
 			{
 				//인터랙션 가능 상태인지 확인
 				if (TargetInteractionInterface->InteractableData.CanInteract)
