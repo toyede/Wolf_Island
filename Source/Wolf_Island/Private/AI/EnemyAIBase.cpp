@@ -7,6 +7,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "AI/EnemyAIController.h"
 #include "Animation/AnimInstance.h"
+#include "BehaviorTree/BlackboardComponent.h"
+
 
 AEnemyAIBase::AEnemyAIBase()
 {
@@ -19,7 +21,8 @@ AEnemyAIBase::AEnemyAIBase()
 
     // Movement 
     UCharacterMovementComponent* MoveComp = GetCharacterMovement();
-    MoveComp->bOrientRotationToMovement = true;      
+    MoveComp->bUseControllerDesiredRotation = true;
+    MoveComp->bOrientRotationToMovement = false;      
     MoveComp->RotationRate = FRotator(0.f, 540.f, 0.f);
     MoveComp->JumpZVelocity = 600.f;
     MoveComp->AirControl = 0.2f;
@@ -50,6 +53,29 @@ void AEnemyAIBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void AEnemyAIBase::ChangeForm(EEnemyForm Form)
+{
+    switch (Form)
+    {
+    case EEnemyForm::Human:
+        if (HumanMesh) GetMesh()->SetSkeletalMesh(HumanMesh);
+        break;
+    case EEnemyForm::Wolf:
+        if (WolfMesh) GetMesh()->SetSkeletalMesh(WolfMesh);
+        break;
+
+    default:
+        break;
+    }
+
+    AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController());
+
+    if (AICon && AICon->GetBlackboardComponent())
+    {
+        AICon->GetBlackboardComponent()->SetValueAsEnum(AICon->EnemyFormKey, (uint8)Form);
+    }
 }
 
 

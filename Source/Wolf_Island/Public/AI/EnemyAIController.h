@@ -25,6 +25,17 @@ enum class EEnemyState : uint8
 	Attacking UMETA(DisplayName = "Attacking")
 };
 
+UENUM(BlueprintType)
+enum class EBossState : uint8
+{
+	Idle UMETA(DisplayName = "Idle"),
+	Move UMETA(DisplayName = "Move"),
+	ThrowAttack UMETA(DisplayName = "ThrowAttack"),
+	Rush UMETA(DisplayName = "Rush")
+};
+
+class AEnemyAIBase;
+
 UCLASS()
 class WOLF_ISLAND_API AEnemyAIController : public AAIController
 {
@@ -63,14 +74,30 @@ protected:
 	FName EnemyStateKey = "State";
 
 	UFUNCTION()
-	void OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus);
+	void OnPerceptionUpdated(const TArray<AActor*>& UpdatedActors);
+
+	//UFUNCTION()
+	//void OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus);
 
 	UFUNCTION()
-	void SetStateAsPassive();
+	bool CanSensedActor(AActor* Actor, FAIStimulus& LastStimulus);
 
 	UFUNCTION()
 	void SetStateAsAttacking(AActor* Actor);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI");
 	EEnemyState EnemyState;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
+	AEnemyAIBase* ControlledEnemy;
+
+	FTimerHandle HearingReactTimer;
+
+public:
+	UPROPERTY(EditDefaultsOnly, Category = "AI")
+	FName EnemyFormKey = "Form";
+
+	UFUNCTION()
+	void SetStateAsPassive();
 };
+

@@ -8,7 +8,7 @@
 
 UBTD_CheckDistance::UBTD_CheckDistance()
 {
-	MaxDistance = 500.f; // 디폴트값
+	MaxDistance = 500.f; // default
 }
 
 bool UBTD_CheckDistance::CalculateRawConditionValue(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) const
@@ -16,9 +16,8 @@ bool UBTD_CheckDistance::CalculateRawConditionValue(UBehaviorTreeComponent& Owne
 	UBlackboardComponent* BlackboardComp = OwnerComp.GetBlackboardComponent();
 	if (!BlackboardComp) return false;
 
-	// Player Actor 가져오기
 	AActor* PlayerActor = Cast<AActor>(BlackboardComp->GetValueAsObject(PlayerKey.SelectedKeyName));
-	// Boss = 이 데코레이터를 실행하는 AI의 Pawn
+
 	APawn* AIPawn = OwnerComp.GetAIOwner() ? OwnerComp.GetAIOwner()->GetPawn() : nullptr;
 
 	if (!PlayerActor || !AIPawn) return false;

@@ -16,19 +16,15 @@ public:
 	UBTD_CheckDistance();
 
 protected:
-	/** 조건 계산 */
 	virtual bool CalculateRawConditionValue(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) const override;
 
 public:
-	/** 거리 체크할 플레이어 */
 	UPROPERTY(EditAnywhere, Category = "Player")
 	FBlackboardKeySelector PlayerKey;
 
-	/** 보스 (Querier) */
-	UPROPERTY(EditAnywhere, Category = "Boss")
-	FBlackboardKeySelector BossKey;
+	UPROPERTY(EditAnywhere, Category = "Enemy")
+	FBlackboardKeySelector EnemyKey;
 
-	/** 최대 거리 */
 	UPROPERTY(EditAnywhere, Category = "Distance")
 	float MaxDistance;
 };

@@ -3,14 +3,15 @@
 
 #include "AI/Tasks/Wolf/BTT_ThrowStone.h"
 #include "Kismet/GameplayStatics.h"
-#include "AIController.h"
 #include "GameFramework/Character.h"
 #include "Animation/AnimInstance.h"
+#include "Actors/StoneProjectile.h"
 
 EBTNodeResult::Type UBTT_ThrowStone::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
-	AAIController* AICon = OwnerComp.GetAIOwner();
-	ACharacter* AIPawn = AICon ? Cast<ACharacter>(AICon->GetPawn()) : nullptr;
+	AICon = Cast<AEnemyAIController>(OwnerComp.GetAIOwner());
+
+	AIPawn = AICon ? Cast<ACharacter>(AICon->GetPawn()) : nullptr;
 
 	if (!AIPawn) return EBTNodeResult::Failed;
 
@@ -37,7 +38,7 @@ EBTNodeResult::Type UBTT_ThrowStone::ExecuteTask(UBehaviorTreeComponent& OwnerCo
 
 void UBTT_ThrowStone::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted, UBehaviorTreeComponent* OwnerComp)
 {
-	if (Montage == ThrowStoneMontage && OwnerComp)
+	if (Montage == ThrowStoneMontage && OwnerComp && !bInterrupted)
 	{
 		FinishLatentTask(*OwnerComp, bInterrupted ? EBTNodeResult::Failed : EBTNodeResult::Succeeded);
 	}
