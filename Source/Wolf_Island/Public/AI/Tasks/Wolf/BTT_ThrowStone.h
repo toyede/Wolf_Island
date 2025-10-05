@@ -7,6 +7,7 @@
 #include "BehaviorTree/BTTaskNode.h"
 #include "Animation/AnimMontage.h"
 #include "AI/EnemyAIController.h"
+#include "AIController.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "BTT_ThrowStone.generated.h"
 
