@@ -224,6 +224,18 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void EnableController();
 
+	//값 반환 함수
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	float GetHPPercent() { return CurrentHP / MaxHP; };
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	float GetStaminaPercent() { return CurrentStamina / MaxStamina; };
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	float GetHungerPercent() { return CurrentHunger / MaxHunger; };
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	float GetHydrationPercent() { return CurrentHydration / MaxHydration; };
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	float GetWeightPercent() { return CurrentWeight / MaxWeight; };
+
 	//디버그 함수
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Debug")
 	void DebugGetStatus(float &HP, float& Stamina, float& Hunger, float& Hydration, float& Weight);

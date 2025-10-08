@@ -9,6 +9,7 @@
 #include "Components/StatusComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/InventoryComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Interaction/InteractionInterface.h"
 
@@ -22,6 +23,8 @@ AMainPlayer::AMainPlayer()
 	StatusComponent = CreateDefaultSubobject<UStatusComponent>("StatusComponent");
 
 	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>("FirstPersonCamera");
+
+	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>("InventoryComponent");
 
 	GetMesh()->SetRelativeTransform(
 		FTransform(
@@ -39,6 +42,10 @@ AMainPlayer::AMainPlayer()
 			FRotator(-90, 90, 90),
 			FVector(0,10,0)
 			));
+
+	//인벤토리 초기화
+	InventoryComponent->SetSlotsCapacity(20);
+	InventoryComponent->SetWeightCapacity(StatusComponent->MaxWeight);
 }
 
 // Called when the game starts or when spawned
@@ -229,7 +236,7 @@ void AMainPlayer::Run()
 			//스태미나 0이면 암것도 안하기
 			if (StatusComponent->CurrentStamina <= 0) return;
 	
-			GetCharacterMovement()->MaxWalkSpeed = 900.0f;
+			GetCharacterMovement()->MaxWalkSpeed = 600.0f;
 			StatusComponent->StopStamina();
 
 			//이동 속도가 0 초과일 때만 스태미나 감소

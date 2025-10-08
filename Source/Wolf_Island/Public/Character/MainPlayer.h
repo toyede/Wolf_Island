@@ -42,6 +42,9 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UStatusComponent* StatusComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UInventoryComponent* InventoryComponent;
 	
 	//입력 관련 변수====================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")

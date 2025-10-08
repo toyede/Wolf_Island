@@ -86,6 +86,7 @@ void UStatusComponent::IncreaseStamina(float amount)
 	if (CurrentStamina > MaxStamina)
 	{
 		CurrentStamina = MaxStamina;
+		StopRecoverStamina();
 	}
 	//음수 방지
 	if (CurrentStamina <= 0)
