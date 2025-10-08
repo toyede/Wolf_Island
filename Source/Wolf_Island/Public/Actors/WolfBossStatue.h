@@ -24,7 +24,10 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	UStaticMeshComponent* StatueMesh;
+	class UCapsuleComponent* Capsule;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	class UStaticMeshComponent* StatueMesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Statue")
 	float MaxHealth;

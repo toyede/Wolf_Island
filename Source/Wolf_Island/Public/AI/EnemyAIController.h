@@ -25,17 +25,6 @@ enum class EEnemyState : uint8
 	Attacking UMETA(DisplayName = "Attacking")
 };
 
-UENUM(BlueprintType)
-enum class EBossState : uint8
-{
-	Idle UMETA(DisplayName = "Idle"),
-	Move UMETA(DisplayName = "Move"),
-	ThrowAttack UMETA(DisplayName = "ThrowAttack"),
-	Rush UMETA(DisplayName = "Rush"),
-	SummonStatue UMETA(DisplayName = "Summon Statue"),
-	SummonAltar UMETA(DisplayName = "Summon Altar")
-};
-
 class AEnemyAIBase;
 
 UCLASS()

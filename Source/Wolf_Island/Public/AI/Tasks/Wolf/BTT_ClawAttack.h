@@ -24,6 +24,12 @@ protected:
 	AEnemyAIController* AICon;
 
 	ACharacter* AIPawn;
+
+	bool SphereTraceSingle(
+		const FVector Start, const FVector End, float Radius,
+		const TArray<TEnumAsByte<ECollisionChannel>>& Channels,
+		FHitResult& OutHit, const TArray<AActor*>& ActorsToIgnore,
+		bool bDrawDebug) const;
 public:
 	UPROPERTY(EditAnywhere, Category = "Animation")
 	UAnimMontage* ClawAttackMontage;

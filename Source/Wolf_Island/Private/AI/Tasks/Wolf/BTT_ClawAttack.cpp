@@ -47,3 +47,4 @@ void UBTT_ClawAttack::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted, U
 		FinishLatentTask(*OwnerComp, bInterrupted ? EBTNodeResult::Failed : EBTNodeResult::Succeeded);
 	}
 }
+

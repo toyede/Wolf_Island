@@ -2,6 +2,7 @@
 
 
 #include "Actors/WolfBossStatue.h"
+#include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 
 // Sets default values
@@ -9,9 +10,13 @@ AWolfBossStatue::AWolfBossStatue()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	
+	Capsule = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Capsule"));
+	RootComponent = Capsule;
 
 	StatueMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StatueMesh"));
-	RootComponent = StatueMesh;
+	StatueMesh->SetupAttachment(Capsule);
+	
 
 	MaxHealth = 100.f;
 	CurrentHealth = MaxHealth;
