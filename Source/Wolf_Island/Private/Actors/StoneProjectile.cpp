@@ -15,7 +15,7 @@ AStoneProjectile::AStoneProjectile()
     ProjectileComp->bRotationFollowsVelocity = true;
     ProjectileComp->ProjectileGravityScale = 1.0f; // 직선 원하면 0
     ProjectileComp->bAutoActivate = false;
-    InitialLifeSpan = 5.f;
+    InitialLifeSpan = 1.f;
 
 }
 
