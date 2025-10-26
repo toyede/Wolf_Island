@@ -112,6 +112,9 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 		//인터랙션
 		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AMainPlayer::BeginInteract);
 		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Completed, this, &AMainPlayer::EndInteract);
+
+		//인벤토리
+		EnhancedInputComponent->BindAction(InventoryAction, ETriggerEvent::Started, this, &AMainPlayer::ToggleInventory);
 	}
 
 }
@@ -292,6 +295,16 @@ void AMainPlayer::ToggleCrouch()
 
 void AMainPlayer::ToggleInventory()
 {
+	//인벤토리가 열려 있으면
+	if (IsInventoryOpen)
+	{
+		IsInventoryOpen = false;
+	}
+	//인벤토리가 닫혀 있으면
+	else
+	{
+		IsInventoryOpen = true;
+	}
 }
 
 void AMainPlayer::Sliding()

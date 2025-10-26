@@ -3,6 +3,7 @@
 
 #include "Wolf_Island/Public/Components/StatusComponent.h"
 
+#include "Components/InventoryComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -464,4 +465,8 @@ void UStatusComponent::DebugGetStatus(float &HP, float& Stamina, float& Hunger, 
 	Hunger = CurrentHunger;
 	Hydration = CurrentHydration;
 	Weight = CurrentWeight;
+	if (UInventoryComponent* Inven = Cast<UInventoryComponent>(GetOwner()->GetComponentByClass(UInventoryComponent::StaticClass())))
+	{
+		Weight = Inven->GetCurrentWeight();
+	}
 }

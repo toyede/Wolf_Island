@@ -11,7 +11,7 @@ UInventoryComponent::UInventoryComponent()
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
-	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bCanEverTick = false;
 
 	// ...
 }
@@ -121,14 +121,13 @@ FItemAddResult UInventoryComponent::HandleAddItem(UItemBase* AddedItem)
 			return FItemAddResult::AddedPartial(StackableAmount, FText::Format(FText::FromString("Partial 아이템 일부만 추가 [ {0} : {1} 개 ]"), AddedItem->TextData.Name, StackableAmount));
 		}
 		//쌓을 개수가 0보다 작거나 같다면
-		/*if (StackableAmount <= 0)
+		if (StackableAmount <= 0)
 		{
 			//추가 안해부러
 			return FItemAddResult::AddedNone(FText::Format(FText::FromString("Failed 아이템 슬롯 개수 초과 [ {0} : {1} 개 ]"), AddedItem->TextData.Name, RequestedAmount));
-		}*/
+		}
 	}
 	
-	check(false);
 	return FItemAddResult::AddedNone(FText::FromString(TEXT("Can't Find Owner")));
 }
 
@@ -254,6 +253,7 @@ int32 UInventoryComponent::HandleStackableItem(UItemBase* AddedItem, int32 Reque
 				return RequestedAmount - AmountToDistribute;
 			}
 			//아니면 넣으려는 수 만큼 아이템 추가
+			UE_LOG(LogTemp, Warning, TEXT("Amount to Distribute : %d"), AmountToDistribute);
 			AddNewItem(AddedItem, AmountToDistribute);
 			return RequestedAmount;
 		}
@@ -270,7 +270,7 @@ int32 UInventoryComponent::CalculateWeightAddAmount(UItemBase* Item, int32 Amoun
 {
 	//남은 용량에서 더 추가할 수 있는 개수
 	const int32 WeightMaxAddAmount = FMath::FloorToInt((GetWeightCapacity() - CurrentWeight) / Item->GetItemSingleWeight());
-
+	UE_LOG(LogTemp, Warning, TEXT("Addable Weight Max Amount : %d"),WeightMaxAddAmount);
 	//추가할 아이템이 가능한 개수보다 적으면 추가할 개수 반환
 	if (WeightMaxAddAmount >= Amount)
 	{

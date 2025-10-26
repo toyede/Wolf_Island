@@ -110,6 +110,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	float SlideConsumeAmount  = 2.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	bool IsInventoryOpen = false;
+
 	//인터랙션 관련 변수===============================================================
 	//인터랙션 타이머 - 꾹 누르는 인터랙션을 위한 것
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Interaction")

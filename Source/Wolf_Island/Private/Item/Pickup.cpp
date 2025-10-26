@@ -3,9 +3,11 @@
 
 #include "Item/Pickup.h"
 
+#include "Character/MainPlayer.h"
 #include "Components/InventoryComponent.h"
 #include "Item/ItemBase.h"
 #include "Data/ItemDataStruct.h"
+#include "Kismet/GameplayStatics.h"
 
 APickup::APickup()
 {
@@ -41,6 +43,11 @@ void APickup::InitializePickUp(const TSubclassOf<UItemBase> BaseClass, const int
         ItemReference->AssetData = ItemData->AssetData;
 
         InAmount <= 0 ? ItemReference->SetAmount(1) : ItemReference->SetAmount(InAmount);
+
+        if (ItemReference->NumericData.MaxAmount < InAmount)
+        {
+            ItemReference->SetAmount(ItemReference->NumericData.MaxAmount);
+        }
 		
         PickupMesh->SetStaticMesh(ItemData->AssetData.Mesh);
         PickupMesh->SetSimulatePhysics(IsPhysics);
@@ -78,17 +85,27 @@ void APickup::PickUp(const AActor* Picker)
                 //결과에 따른 행동
                 switch (AddResult.OperationResult)
                 {
-                case EItemAddResult::NoItemAdded:
-                    break;
-                case EItemAddResult::PartiallyItemAdded:
-                    break;
-                //싹 다 먹었으면 삭제
-                case EItemAddResult::AllItemAdded:
-                    Destroy();
-                    break;
+                    case EItemAddResult::NoItemAdded:
+                        //디버깅 결과 메시지
+                        UE_LOG(LogTemp, Warning, TEXT("Didn't Eat Item"));
+                        break;
+                    case EItemAddResult::PartiallyItemAdded:
+                        //디버깅 결과 메시지
+                        UE_LOG(LogTemp, Warning, TEXT("Remain Some"));
+                        break;
+                    //싹 다 먹었으면 삭제
+                    case EItemAddResult::AllItemAdded:
+                        //디버깅 결과 메시지
+                        UE_LOG(LogTemp, Warning, TEXT("Got All Item"));
+                        Destroy();
+                        break;
                 }
                 //디버깅 결과 메시지
                 UE_LOG(LogTemp, Warning, TEXT("%s"), *AddResult.ResultMessage.ToString());
+                if (const AMainPlayer* player = Cast<AMainPlayer>(Picker))
+                {
+                    
+                }
             } else
             {
                 //디버깅 결과 메시지
