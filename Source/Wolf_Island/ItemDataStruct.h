@@ -31,11 +31,23 @@ struct FItemData : public FTableRowBase
 	int Hungry;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int Weight;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int Durability;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int Overlap;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FString Text;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UStaticMesh* Mesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UBlueprint* BPMesh;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+   	UTexture* UITexture;
 };
