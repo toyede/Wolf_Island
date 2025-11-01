@@ -3,10 +3,13 @@
 
 #include "Widgets/InventorySlot.h"
 
+#include "Components/Border.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Item/ItemBase.h"
+#include "Widgets/DragItemVisual.h"
 #include "Widgets/InventoryToolTip.h"
+#include "Widgets/ItemDragDropOperation.h"
 
 void UInventorySlot::NativeOnInitialized()
 {
@@ -41,7 +44,15 @@ void UInventorySlot::NativeConstruct()
 
 FReply UInventorySlot::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-	return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+	FReply Reply = Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+
+	//왼쪽 마우스 클릭이면
+	if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+	{
+		return Reply.Handled().DetectDrag(TakeWidget(), EKeys::LeftMouseButton);
+	}
+
+	return Reply.Unhandled();
 }
 
 void UInventorySlot::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
@@ -53,6 +64,27 @@ void UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPo
 	UDragDropOperation*& OutOperation)
 {
 	Super::NativeOnDragDetected(InGeometry, InMouseEvent, OutOperation);
+
+	if (DragItemVisualClass)
+	{
+		const TObjectPtr<UDragItemVisual> DragVisual = CreateWidget<UDragItemVisual>(this, DragItemVisualClass);
+		DragVisual->ItemIcon->SetBrushFromTexture(ItemRef->AssetData.Icon);
+		DragVisual->ItemBorder->SetBrushColor(ItemBorder->GetBrushColor());
+		DragVisual->ItemAmount->SetText(FText::AsNumber(ItemRef->Amount));
+
+		UItemDragDropOperation* DragItemOperation = NewObject<UItemDragDropOperation>();
+		DragItemOperation->SourceItem = ItemRef;
+		DragItemOperation->SourceInventory = ItemRef->OwningInventory;
+
+		DragItemOperation->DefaultDragVisual = DragVisual;
+		DragItemOperation->Pivot = EDragPivot::MouseDown;
+
+		OutOperation = DragItemOperation;
+		if (OutOperation)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("DRAG ITEM OPERATION OUTTED"));
+		}
+	}
 }
 
 bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,

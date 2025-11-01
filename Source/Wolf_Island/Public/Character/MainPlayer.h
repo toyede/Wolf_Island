@@ -8,6 +8,7 @@
 #include "InputAction.h"
 #include "Interaction/InteractionInterface.h"
 #include "MainPlayer.generated.h"
+
 struct FInputActionValue;
 
 USTRUCT(BlueprintType)
@@ -209,6 +210,9 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void Interact(AActor* Interactor) override;
+
+	UFUNCTION(BlueprintCallable)
+	void DropItem(class UItemBase* ItemToDrop, const int32 AmountToDrop);
 };
 
 

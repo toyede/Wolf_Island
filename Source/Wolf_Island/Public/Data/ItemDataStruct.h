@@ -52,6 +52,8 @@ struct FItemNumericData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Durability;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float InteractionDuration;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool IsStackable;
 };
 

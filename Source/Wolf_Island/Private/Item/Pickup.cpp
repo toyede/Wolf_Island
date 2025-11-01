@@ -22,7 +22,6 @@ APickup::APickup()
 void APickup::BeginPlay()
 {
     Super::BeginPlay();
-    
     //게임 시작 시 아이템 정보 초기화
     InitializePickUp(UItemBase::StaticClass(), ItemAmount);
 }
@@ -41,6 +40,7 @@ void APickup::InitializePickUp(const TSubclassOf<UItemBase> BaseClass, const int
         ItemReference->NumericData = ItemData->NumericData;
         ItemReference->TextData = ItemData->TextData;
         ItemReference->AssetData = ItemData->AssetData;
+        InteractableData.InteractionDuration = ItemReference->NumericData.InteractionDuration;
 
         InAmount <= 0 ? ItemReference->SetAmount(1) : ItemReference->SetAmount(InAmount);
 
@@ -58,6 +58,7 @@ void APickup::InitializePickUp(const TSubclassOf<UItemBase> BaseClass, const int
 void APickup::InitializeDrop(UItemBase* ItemToDrop, const int32 InAmount)
 {
     ItemReference = ItemToDrop;
+    InteractableData.InteractionDuration = ItemReference->NumericData.InteractionDuration;
     InAmount <= 0 ? ItemReference->SetAmount(1) : ItemReference->SetAmount(InAmount);
     PickupMesh->SetStaticMesh(ItemToDrop->AssetData.Mesh);
 }
@@ -97,7 +98,13 @@ void APickup::PickUp(const AActor* Picker)
                     case EItemAddResult::AllItemAdded:
                         //디버깅 결과 메시지
                         UE_LOG(LogTemp, Warning, TEXT("Got All Item"));
-                        Destroy();
+                        if (Destroy())
+                        {
+                            UE_LOG(LogTemp, Warning, TEXT("Item Destroyed"));   
+                        }else
+                        {
+                            UE_LOG(LogTemp, Warning, TEXT("Item Not Destroyed"));
+                        }
                         break;
                 }
                 //디버깅 결과 메시지

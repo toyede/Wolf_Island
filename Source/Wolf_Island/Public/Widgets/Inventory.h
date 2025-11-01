@@ -13,5 +13,15 @@ UCLASS()
 class WOLF_ISLAND_API UInventory : public UUserWidget
 {
 	GENERATED_BODY()
+
+	UPROPERTY()
+	class AMainPlayer* PlayerRef;
+
+protected:
+	virtual void NativeOnInitialized() override;
+
+	virtual void NativeConstruct() override;
+
+	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 	
 };

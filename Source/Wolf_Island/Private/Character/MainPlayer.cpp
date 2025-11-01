@@ -12,6 +12,7 @@
 #include "Components/InventoryComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Interaction/InteractionInterface.h"
+#include "Item/Pickup.h"
 
 
 // Sets default values
@@ -501,5 +502,28 @@ void AMainPlayer::Interaction()
 			//인터랙션 액터의 인터랙션 함수 실행
 			TargetInteractionInterface->Interact(this);
 		}
+	}
+}
+
+void AMainPlayer::DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop)
+{
+	if (InventoryComponent->FindMatchingItem(ItemToDrop))
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = this;
+		SpawnParams.bNoFail = true;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+		const FVector SpawnLocation(GetActorLocation() + (GetActorForwardVector() * 50.0f));
+		const FTransform SpawnTransform(GetActorRotation(), SpawnLocation);
+
+		const int32 RemovedAmount = InventoryComponent->RemoveAmountOfItem(ItemToDrop, AmountToDrop);
+
+		APickup* Pickup = GetWorld()->SpawnActor<APickup>(APickup::StaticClass(), SpawnTransform, SpawnParams);
+	
+		Pickup->InitializeDrop(ItemToDrop, RemovedAmount);
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ITEM DROP SEQUENCE IS NOT WORKING."))
 	}
 }
