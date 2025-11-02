@@ -57,6 +57,11 @@ FReply UInventorySlot::NativeOnMouseButtonDown(const FGeometry& InGeometry, cons
 	{
 		return Reply.Handled().DetectDrag(TakeWidget(), EKeys::LeftMouseButton);
 	}
+	//오른쪽 마우스 클릭이면
+	else if (InMouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
+	{
+		return Reply.Handled().DetectDrag(TakeWidget(), EKeys::RightMouseButton);
+	}
 
 	return Reply.Unhandled();
 }
@@ -70,26 +75,66 @@ void UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPo
 	UDragDropOperation*& OutOperation)
 {
 	Super::NativeOnDragDetected(InGeometry, InMouseEvent, OutOperation);
-	
-	if (DragItemVisualClass && ItemRef)
+
+	//좌클릭 드래그면 이동
+	if (InMouseEvent.IsMouseButtonDown(EKeys::LeftMouseButton))
 	{
-		const TObjectPtr<UDragItemVisual> DragVisual = CreateWidget<UDragItemVisual>(this, DragItemVisualClass);
-		DragVisual->ItemIcon->SetBrushFromTexture(ItemRef->AssetData.Icon);
-		DragVisual->ItemBorder->SetBrushColor(ItemBorder->GetBrushColor());
-		DragVisual->ItemAmount->SetText(FText::AsNumber(ItemRef->Amount));
-
-		UItemDragDropOperation* DragItemOperation = NewObject<UItemDragDropOperation>();
-		DragItemOperation->SourceItem = ItemRef;
-		DragItemOperation->SourceInventory = ItemRef->OwningInventory;
-		DragItemOperation->SourceIndex = Index;
-
-		DragItemOperation->DefaultDragVisual = DragVisual;
-		DragItemOperation->Pivot = EDragPivot::MouseDown;
-
-		OutOperation = DragItemOperation;
-		if (OutOperation)
+		if (DragItemVisualClass && ItemRef)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("DRAG ITEM OPERATION OUTTED"));
+			const TObjectPtr<UDragItemVisual> DragVisual = CreateWidget<UDragItemVisual>(this, DragItemVisualClass);
+			DragVisual->ItemIcon->SetBrushFromTexture(ItemRef->AssetData.Icon);
+			DragVisual->ItemBorder->SetBrushColor(ItemBorder->GetBrushColor());
+			DragVisual->ItemAmount->SetText(FText::AsNumber(ItemRef->Amount));
+
+			UItemDragDropOperation* DragItemOperation = NewObject<UItemDragDropOperation>();
+			DragItemOperation->SourceItem = ItemRef;
+			DragItemOperation->SourceInventory = ItemRef->OwningInventory;
+			DragItemOperation->SourceIndex = Index;
+
+			DragItemOperation->DefaultDragVisual = DragVisual;
+			DragItemOperation->Pivot = EDragPivot::MouseDown;
+
+			OutOperation = DragItemOperation;
+			if (OutOperation)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("LEFT DRAG ITEM OPERATION OUTTED"));
+			}
+		}
+	}
+	//우클릭 드래그면 반으로 나눠보리기
+	else if (InMouseEvent.IsMouseButtonDown(EKeys::RightMouseButton))
+	{
+		if (DragItemVisualClass && ItemRef)
+		{
+			int32 MovedAmount = ItemRef->Amount/2;
+			int32 RemaindAmount = ItemRef->Amount - MovedAmount;
+
+			if (MovedAmount == 0 ) return;
+			
+			ItemRef->Amount = RemaindAmount;			
+			
+			const TObjectPtr<UDragItemVisual> DragVisual = CreateWidget<UDragItemVisual>(this, DragItemVisualClass);
+			DragVisual->ItemIcon->SetBrushFromTexture(ItemRef->AssetData.Icon);
+			DragVisual->ItemBorder->SetBrushColor(ItemBorder->GetBrushColor());
+			DragVisual->ItemAmount->SetText(FText::AsNumber(MovedAmount));
+
+			UItemDragDropOperation* DragItemOperation = NewObject<UItemDragDropOperation>();
+			DragItemOperation->SourceItem = ItemRef->CreateItemCopy();
+			DragItemOperation->SourceInventory = ItemRef->OwningInventory;
+			DragItemOperation->SourceIndex = Index;
+			DragItemOperation->SourceItem->Amount = MovedAmount;
+			DragItemOperation->SourceItem->OwningInventory = ItemRef->OwningInventory;
+
+			DragItemOperation->DefaultDragVisual = DragVisual;
+			DragItemOperation->Pivot = EDragPivot::MouseDown;
+
+			ItemRef->OwningInventory->OnInventoryUpdated.Broadcast();
+			
+			OutOperation = DragItemOperation;
+			if (OutOperation)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("RIGHT DRAG ITEM OPERATION OUTTED"));
+			}
 		}
 	}
 }
@@ -98,12 +143,43 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 	UDragDropOperation* InOperation)
 {
 	const UItemDragDropOperation* ItemDragDrop = Cast<UItemDragDropOperation>(InOperation);
-
 	UE_LOG(LogTemp, Warning, TEXT("SLOT DROP DETECTED"));
 	if (UInventoryComponent* InventoryRef = ItemDragDrop->SourceInventory)
 	{
-		InventoryRef->SwapItems(ItemDragDrop->SourceIndex, Index);
-		return true;
+		//좌클릭 떨구기면 스왑
+		if (InDragDropEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("LEFT SLOT DROP DETECTED"));
+			InventoryRef->SwapItems(ItemDragDrop->SourceIndex, Index);
+			return true;
+		}
+		//우클릭 떨구기면 연산 후 삽입
+		else if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
+		{
+			//같은 아이템이 아니면
+			if (!InventoryRef->CheckSameItemAtIndex(Index, ItemDragDrop->SourceItem))
+			{
+				UE_LOG(LogTemp, Warning, TEXT("RIGHT SLOT DROP DETECTED"));
+				//빈 슬롯이면 그대로 삽입
+				if (InventoryRef->CheckEmptySlotAtIndex(Index))
+				{
+					InventoryRef->InsertItemToIndex(Index, ItemDragDrop->SourceItem);
+					return true;
+				}
+				//아니면 제자리로
+				//원래 인덱스 아이템 개수 원상 복구 후 끝
+				InventoryRef->GetItemAtIndex(ItemDragDrop->SourceIndex)->Amount += ItemDragDrop->SourceItem->Amount;
+				InventoryRef->OnInventoryUpdated.Broadcast();
+				
+				return true;
+			}
+			//같은 아이템이면 연산 후 삽입
+			else
+			{
+				
+			}
+		}
+		
 	}
 	
 	return false;

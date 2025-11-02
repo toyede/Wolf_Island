@@ -510,7 +510,7 @@ void AMainPlayer::Interaction()
 	}
 }
 
-void AMainPlayer::DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop)
+void AMainPlayer::DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool IsWhole)
 {
 	if (InventoryComponent->FindMatchingItem(ItemToDrop))
 	{
@@ -522,7 +522,7 @@ void AMainPlayer::DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop)
 		const FVector SpawnLocation(GetActorLocation() + (GetActorForwardVector() * 50.0f));
 		const FTransform SpawnTransform(GetActorRotation(), SpawnLocation);
 
-		const int32 RemovedAmount = InventoryComponent->RemoveAmountOfItem(ItemToDrop, AmountToDrop);
+		const int32 RemovedAmount = IsWhole ? InventoryComponent->RemoveAmountOfItem(ItemToDrop, AmountToDrop) : AmountToDrop;
 
 		APickup* Pickup = GetWorld()->SpawnActor<APickup>(APickup::StaticClass(), SpawnTransform, SpawnParams);
 	

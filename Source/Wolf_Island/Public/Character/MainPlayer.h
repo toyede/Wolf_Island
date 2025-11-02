@@ -218,7 +218,7 @@ public:
 	void Interact(AActor* Interactor) override;
 
 	UFUNCTION(BlueprintCallable)
-	void DropItem(class UItemBase* ItemToDrop, const int32 AmountToDrop);
+	void DropItem(class UItemBase* ItemToDrop, const int32 AmountToDrop, bool IsWhole);
 };
 
 

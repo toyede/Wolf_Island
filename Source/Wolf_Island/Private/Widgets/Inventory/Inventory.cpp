@@ -4,6 +4,7 @@
 #include "Widgets/Inventory/Inventory.h"
 
 #include "Character/MainPlayer.h"
+#include "Components/InventoryComponent.h"
 #include "Components/SizeBox.h"
 #include "Item/ItemBase.h"
 #include "Widgets/Inventory/InventoryPanel.h"
@@ -42,11 +43,23 @@ bool UInventory::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent&
 			if (LocalMousePos.X >= PanelPos.X && LocalMousePos.X <= PanelPos.X + PanelSize.X &&
 				LocalMousePos.Y >= PanelPos.Y && LocalMousePos.Y <= PanelPos.Y + PanelSize.Y)
 			{
+				//우클릭이면 반갈한 거 원위치
+				if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
+				{
+					ItemDragDrop->SourceInventory->GetItemAtIndex(ItemDragDrop->SourceIndex)->Amount += ItemDragDrop->SourceItem->Amount;
+					ItemDragDrop->SourceInventory->OnInventoryUpdated.Broadcast();
+				}
 				return false;
 			}
 		}
+		//우클릭이면 반갈한 것만 버리기
+		if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
+		{
+			PlayerRef->DropItem(Item, Item->Amount, false);
+			return true;
+		}
 		
-		PlayerRef->DropItem(Item, Item->Amount);
+		PlayerRef->DropItem(Item, Item->Amount, true);
 		return true;
 	}
 	return false;

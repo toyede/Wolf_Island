@@ -104,6 +104,15 @@ public:
 	//인덱스 A,B 아이템 바꾸기
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void SwapItems(int32 A, int32 B);
+	//특정 인덱스의 아이템 비교
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool CheckSameItemAtIndex(int32 Index, UItemBase* Item);
+	//특정 인덱스가 빈 슬롯인 지 확인
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool CheckEmptySlotAtIndex(int32 Index) { return InventoryContents[Index].Item == nullptr; };
+	//특정 인덱스의 아이템 반환
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	UItemBase* GetItemAtIndex(int32 Index){ return InventoryContents[Index].Item; };
 	
 	//인벤토리에 있는 아이템과 중복되는 아이템인가 체크(인벤토리에서 불러온 아이템인지)
 	UFUNCTION(BlueprintCallable, Category = "Inventory")

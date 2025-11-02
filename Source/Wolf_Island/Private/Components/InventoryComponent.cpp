@@ -5,6 +5,7 @@
 
 #include "Editor/PropertyEditor/Public/PropertyEditorModule.h"
 #include "Item/ItemBase.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 // Sets default values for this component's properties
 UInventoryComponent::UInventoryComponent()
@@ -22,11 +23,14 @@ UItemBase* UInventoryComponent::FindMatchingItem(UItemBase* Item) const
 	{
 		//인벤토리에 있는 아이템과 같은 아이템이면 그대로 반환
 		//if(InventoryContents.Contains(Item)) return Item;
-		for (const FItemSlot& Slot : InventoryContents)
+		for (FItemSlot Slot : InventoryContents)
 		{
-			if (Slot.Item == Item)
+			if (Slot.Item)
 			{
-				return Item;
+				if (Slot.Item->ID == Item->ID)
+				{
+					return Item;
+				}
 			}
 		}
 	}
@@ -400,12 +404,50 @@ void UInventoryComponent::InsertItemToIndex(int32 Index, UItemBase* Item)
 	}
 }
 
+//A가 옮기는 슬롯, B가 가만히 있는 슬롯
 void UInventoryComponent::SwapItems(int32 A, int32 B)
 {
-	FItemSlot TempSlot = InventoryContents[A];
-	InventoryContents[A] = InventoryContents[B];
-	InventoryContents[B] = TempSlot;
+	FItemSlot& SlotA = InventoryContents[A];
+	FItemSlot& SlotB = InventoryContents[B];
+
+	// 하나라도 빈 슬롯이면 그냥 교환
+	if (!SlotA.Item || !SlotB.Item)
+	{
+		Swap(SlotA, SlotB);
+		OnInventoryUpdated.Broadcast();
+		return;
+	}
+
+	//서로 다른 아이템이면 자리 교환
+	if (SlotA.Item->ID != SlotB.Item->ID)
+	{
+		Swap(SlotA, SlotB);
+	}
+	//같은 아이템이면 스택 확인
+	else
+	{
+		// 같은 아이템이면 스택 합치기
+		int32 TotalAmount = SlotA.Item->Amount + SlotB.Item->Amount;
+		int32 MaxStack = SlotB.Item->NumericData.MaxAmount;
+
+		SlotB.Item->Amount = FMath::Min(TotalAmount, MaxStack);
+		SlotA.Item->Amount = TotalAmount - SlotB.Item->Amount;
+
+		if (SlotA.Item->Amount <= 0){
+			SlotA.Item = nullptr;
+		}
+	}
+	
 	OnInventoryUpdated.Broadcast();
+}
+
+bool UInventoryComponent::CheckSameItemAtIndex(int32 Index, UItemBase* Item)
+{
+	if (InventoryContents[Index].Item)
+	{
+		return InventoryContents[Index].Item->ID == Item->ID;
+	}
+	return false;
 }
 
 // Called every frame
@@ -413,7 +455,13 @@ void UInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	//UE_LOG(LogTemp,Warning,TEXT("Slots : [%d]"), InventoryContents.Num());
-	// ...
+	for (int32 i = 0; i < InventoryContents.Num(); i++)
+	{
+		const UItemBase* Item = InventoryContents[i].Item;
+		FString ItemName = Item ? Item->GetName() : TEXT("Empty");
+		FString Message = FString::Printf(TEXT("Slot %d: %s"), i, *ItemName);
+
+		UKismetSystemLibrary::PrintString(GetWorld(), Message, true, true, FLinearColor::Green, DeltaTime);
+	}
 }
 
