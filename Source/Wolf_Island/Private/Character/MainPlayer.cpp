@@ -6,6 +6,7 @@
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
 #include "MaterialHLSLTree.h"
+#include "Blueprint/UserWidget.h"
 #include "Components/StatusComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -13,6 +14,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Interaction/InteractionInterface.h"
 #include "Item/Pickup.h"
+#include "Widgets/PlayerHUD.h"
 
 
 // Sets default values
@@ -67,6 +69,9 @@ void AMainPlayer::BeginPlay()
 		StatusComponent->StartHunger();
 		StatusComponent->StartHydration();
 	}
+
+	HUD = CreateWidget<UPlayerHUD>(GetWorld(), HUDClass);
+	HUD->AddToViewport();
 }
 
 // Called every frame

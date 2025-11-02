@@ -12,6 +12,7 @@
  */
 
 class UProgressBar;
+class UItemAcquiredBlock;
 
 UCLASS()
 class WOLF_ISLAND_API UPlayerHUD : public UUserWidget
@@ -27,6 +28,13 @@ public:
 		
 	UPROPERTY(meta=(BindWidget))
 	UProgressBar* InteractionBar;
+
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UItemAcquiredBlock> ItemAcquiredBlockClass;
+
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	class UVerticalBox* InfoList;
+
 
 protected:
 	

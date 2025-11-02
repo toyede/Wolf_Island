@@ -2,13 +2,35 @@
 
 
 #include "Widgets/PlayerHUD.h"
+#include "Widgets/Inventory/ItemAcquiredBlock.h"
 
 #include "Character/MainPlayer.h"
+#include "Components/VerticalBox.h"
+#include "Components/VerticalBoxSlot.h"
 #include "Components/ProgressBar.h"
+#include "Components/TextBlock.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 void UPlayerHUD::AddItemMessage(FItemAddResult Result)
 {
+	if (Result.OperationResult == EItemAddedResult::NoItemAdded) return;
+	
+	if (ItemAcquiredBlockClass)
+	{
+		UItemAcquiredBlock* Block = CreateWidget<UItemAcquiredBlock>(this, ItemAcquiredBlockClass);
+
+		if (Block)
+		{
+			const FString Info = {Result.ItemName.ToString()+" x"+FString::FromInt(Result.ActualAmountAdded)};
+
+			Block->InfoText->SetText(FText::FromString(Info));
+			UE_LOG(LogTemp, Warning, TEXT("%s"),*Info);
+			if (InfoList)
+			{
+				InfoList->InsertChildAt(0, Block);
+			}
+		}
+	}
 }
 
 void UPlayerHUD::NativeConstruct()
@@ -35,12 +57,15 @@ void UPlayerHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 		float ElapsedTime = UKismetSystemLibrary::K2_GetTimerElapsedTimeHandle(this, InteractionTimer);
 		float TotalTime = RemainingTime + ElapsedTime;
 
-		if (UKismetSystemLibrary::K2_IsTimerActiveHandle(this, InteractionTimer))
+		if (InteractionBar)
 		{
-			InteractionBar->SetPercent(ElapsedTime/TotalTime);
-		} else
-		{
-			InteractionBar->SetPercent(0);
+			if (UKismetSystemLibrary::K2_IsTimerActiveHandle(this, InteractionTimer))
+			{
+				InteractionBar->SetPercent(ElapsedTime/TotalTime);
+			} else
+			{
+				InteractionBar->SetPercent(0);
+			}
 		}
 	}
 }

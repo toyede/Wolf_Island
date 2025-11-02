@@ -23,9 +23,12 @@ class WOLF_ISLAND_API UInventorySlot : public UUserWidget
 public:
 
 	FORCEINLINE void SetItemReference(UItemBase* ItemIn) { ItemRef = ItemIn; };
+	FORCEINLINE void SetIndex(int32 InIndex) { Index = InIndex; };
 	FORCEINLINE UItemBase* GetItemReference() const { return ItemRef; };
 
 protected:
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category = "InventorySlot")
+	int32 Index;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Inventory Slot")
 	TSubclassOf<UDragItemVisual> DragItemVisualClass;
@@ -44,7 +47,7 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
 	UTextBlock* ItemAmount;
-
+	
 	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;

@@ -8,6 +8,8 @@
 #include "Item/ItemBase.h"
 #include "Data/ItemDataStruct.h"
 #include "Kismet/GameplayStatics.h"
+#include "Slate/SGameLayerManager.h"
+#include "Widgets/PlayerHUD.h"
 
 APickup::APickup()
 {
@@ -30,7 +32,7 @@ void APickup::InitializePickUp(const TSubclassOf<UItemBase> BaseClass, const int
 {
     if (ItemHandle.DataTable && !ItemHandle.RowName.IsNone())
     {
-        UE_LOG(LogTemp, Warning, TEXT("Item Init Start"));
+        //UE_LOG(LogTemp, Warning, TEXT("Item Init Start"));
         const FItemData* ItemData = ItemHandle.DataTable->FindRow<FItemData>(ItemHandle.RowName, ItemHandle.RowName.ToString());
 	
         ItemReference = NewObject<UItemBase>(this, BaseClass);
@@ -83,19 +85,24 @@ void APickup::PickUp(const AActor* Picker)
                 //아이템 추가 시퀀스 실행
                 const FItemAddResult AddResult = PickerInventory->HandleAddItem(ItemReference);
 
+                if (const AMainPlayer* Player = Cast<AMainPlayer>(Picker))
+                {
+                    Player->HUD->AddItemMessage(AddResult);
+                }
+
                 //결과에 따른 행동
                 switch (AddResult.OperationResult)
                 {
-                    case EItemAddResult::NoItemAdded:
+                    case EItemAddedResult::NoItemAdded:
                         //디버깅 결과 메시지
                         UE_LOG(LogTemp, Warning, TEXT("Didn't Eat Item"));
                         break;
-                    case EItemAddResult::PartiallyItemAdded:
+                    case EItemAddedResult::PartiallyItemAdded:
                         //디버깅 결과 메시지
                         UE_LOG(LogTemp, Warning, TEXT("Remain Some"));
                         break;
                     //싹 다 먹었으면 삭제
-                    case EItemAddResult::AllItemAdded:
+                    case EItemAddedResult::AllItemAdded:
                         //디버깅 결과 메시지
                         UE_LOG(LogTemp, Warning, TEXT("Got All Item"));
                         if (Destroy())

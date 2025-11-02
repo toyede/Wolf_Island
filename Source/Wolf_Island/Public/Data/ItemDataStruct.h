@@ -88,3 +88,13 @@ struct FItemData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
 	FItemAssetData AssetData;
 };
+
+//슬롯 데이터
+USTRUCT(BlueprintType)
+struct FItemSlot
+{
+	GENERATED_USTRUCT_BODY();
+
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
+	TObjectPtr<class UItemBase> Item = nullptr;
+};

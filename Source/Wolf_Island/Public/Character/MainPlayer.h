@@ -137,6 +137,12 @@ public:
 	//애님 몽타주======================================================================
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Anim")
 	class UAnimMontage* SlideMontage;
+
+	//위젯============================================================================
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
+	TSubclassOf<class UPlayerHUD> HUDClass;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Widget")
+	UPlayerHUD* HUD;
 	
 protected:
 	// Called when the game starts or when spawned

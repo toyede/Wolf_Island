@@ -16,6 +16,12 @@ class WOLF_ISLAND_API UInventory : public UUserWidget
 
 	UPROPERTY()
 	class AMainPlayer* PlayerRef;
+	
+	UPROPERTY(meta=(BindWidget))
+	class UInventoryPanel* InventoryPanel;
+
+	UPROPERTY(meta=(BindWidget))
+	class USizeBox* InventorySection;
 
 protected:
 	virtual void NativeOnInitialized() override;

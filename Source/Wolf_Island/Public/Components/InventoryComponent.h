@@ -4,14 +4,15 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Data/ItemDataStruct.h"
 #include "InventoryComponent.generated.h"
 
 class UItemBase;
 DECLARE_MULTICAST_DELEGATE(FOnInventoryUpdated);
 
 //아이템 추가 결과 이넘
-UENUM(BlueprintType)
-enum class EItemAddResult : uint8
+UENUM(BlueprintType, meta=(ScriptName="ItemAddedResult"))
+enum class EItemAddedResult : uint8
 {	
 	//아이템 추가 실패
 	NoItemAdded UMETA(DisplayName = "Item Adding Failed"),
@@ -29,16 +30,19 @@ struct FItemAddResult
 
 	FItemAddResult() :
 	ActualAmountAdded(0),
-	OperationResult(EItemAddResult::NoItemAdded),
+	OperationResult(EItemAddedResult::NoItemAdded),
 	ResultMessage(FText::GetEmpty())
 	{};
-	
+
+	//추가된 아이템 이름
+	UPROPERTY(BlueprintReadOnly, Category="Item Add Result")
+	FText ItemName;
 	//실제 인벤토리에 추가된 아이템 개수
 	UPROPERTY(BlueprintReadOnly, Category="Item Add Result")
 	int32 ActualAmountAdded;
 	//아이템 추가 결과 이넘
 	UPROPERTY(BlueprintReadOnly, Category = "Item Add Result")
-	EItemAddResult OperationResult;
+	EItemAddedResult OperationResult;
 	//결과 메시지
 	UPROPERTY(BlueprintReadOnly, Category = "Item Add Result")
 	FText ResultMessage;
@@ -48,29 +52,31 @@ struct FItemAddResult
 	{
 		FItemAddResult AddedNoneResult;
 		AddedNoneResult.ActualAmountAdded = 0;
-		AddedNoneResult.OperationResult = EItemAddResult::NoItemAdded;
+		AddedNoneResult.OperationResult = EItemAddedResult::NoItemAdded;
 		AddedNoneResult.ResultMessage = ErrorText;
 
 		return AddedNoneResult;
 	};
 	
 	//부분 개수만 추가됨
-	static FItemAddResult AddedPartial(const int32 PartialAmountAdded, const FText& ErrorText)
+	static FItemAddResult AddedPartial(const FText& ItemName, const int32 PartialAmountAdded, const FText& ErrorText)
 	{
 		FItemAddResult AddedPartialResult;
+		AddedPartialResult.ItemName = ItemName;
 		AddedPartialResult.ActualAmountAdded = PartialAmountAdded;
-		AddedPartialResult.OperationResult = EItemAddResult::PartiallyItemAdded;
+		AddedPartialResult.OperationResult = EItemAddedResult::PartiallyItemAdded;
 		AddedPartialResult.ResultMessage = ErrorText;
 
 		return AddedPartialResult;
 	};
 	
 	//모두 추가됨
-	static FItemAddResult AddedAll(const int32 AmountAdded, const FText& Message)
+	static FItemAddResult AddedAll(const FText& ItemName, const int32 AmountAdded, const FText& Message)
 	{
 		FItemAddResult AddedAllResult;
+		AddedAllResult.ItemName = ItemName;
 		AddedAllResult.ActualAmountAdded = AmountAdded;
-		AddedAllResult.OperationResult = EItemAddResult::AllItemAdded;
+		AddedAllResult.OperationResult = EItemAddedResult::AllItemAdded;
 		AddedAllResult.ResultMessage = Message;
 
 		return AddedAllResult;
@@ -92,6 +98,12 @@ public:
 	//아이템 추가 함수
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	FItemAddResult  HandleAddItem(UItemBase* AddedItem);
+	//특정 인덱스에 아이템 넣기
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void InsertItemToIndex(int32 Index, UItemBase* Item);
+	//인덱스 A,B 아이템 바꾸기
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void SwapItems(int32 A, int32 B);
 	
 	//인벤토리에 있는 아이템과 중복되는 아이템인가 체크(인벤토리에서 불러온 아이템인지)
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -130,7 +142,7 @@ public:
 	FORCEINLINE int32 GetItemAmount() const { return InventoryContents.Num(); };
 	//인벤토리 슬롯 반환
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	FORCEINLINE TArray<class UItemBase*> GetInventory() const { return InventoryContents; };
+	FORCEINLINE TArray<FItemSlot> GetInventory() const { return InventoryContents; };
 
 	//인벤토리 슬롯 용량 설정
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -157,7 +169,7 @@ protected:
 
 	//인벤토리 슬롯
 	UPROPERTY(EditAnywhere, Category = "Inventory")
-	TArray<TObjectPtr<UItemBase>> InventoryContents;
+	TArray<FItemSlot> InventoryContents;
 
 	//단일 아이템 추가 함수
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -180,6 +192,10 @@ protected:
 	//배열 max 반환
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Inventory")
 	FORCEINLINE int32 GetMaxSlots() { return InventoryContents.Max(); };
+	//빈 슬롯 반환
+	FItemSlot* FindEmptySlot();
+	//빈 슬롯 개수 반환
+	int32 GetEmptySlotCount();
 
 public:	
 	// Called every frame

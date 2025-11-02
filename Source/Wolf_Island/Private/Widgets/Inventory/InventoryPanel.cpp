@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Widgets/InventoryPanel.h"
+#include "Widgets/Inventory/InventoryPanel.h"
 
 #include "Components/InventoryComponent.h"
 #include "Components/ProgressBar.h"
@@ -53,13 +53,29 @@ void UInventoryPanel::RefreshInventory()
 	{
 		InventoryPanel->ClearChildren();
 
-		for (UItemBase* const& InventoryItem : InventoryRef->GetInventory())
+		/*for (UItemBase* const& InventoryItem : InventoryRef->GetInventory())
 		{
 			UInventorySlot* ItemSlot = CreateWidget<UInventorySlot>(this, SlotClass);
 			ItemSlot->SetItemReference(InventoryItem);
 
 			InventoryPanel->AddChildToWrapBox(ItemSlot);
-		}		
+		}*/
+		//const TArray<UItemBase*>& Items = InventoryRef->GetInventory();
+		int32 Index = 0;
+		for (FItemSlot InventorySlot : InventoryRef->GetInventory())
+		{
+			UInventorySlot* ItemSlot = CreateWidget<UInventorySlot>(this, SlotClass);
+			ItemSlot->SetIndex(Index++);
+			
+			if (InventorySlot.Item)
+			{
+				ItemSlot->SetItemReference(InventorySlot.Item);
+			}
+
+			InventoryPanel->AddChildToWrapBox(ItemSlot);
+		}
+
+		SetInfoText();
 	}
 }
 
