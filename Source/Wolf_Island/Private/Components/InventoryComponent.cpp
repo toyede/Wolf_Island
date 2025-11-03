@@ -427,10 +427,14 @@ void UInventoryComponent::SwapItems(int32 A, int32 B)
 	else
 	{
 		// 같은 아이템이면 스택 합치기
+		//분배할 총 개수
 		int32 TotalAmount = SlotA.Item->Amount + SlotB.Item->Amount;
+		//최대 스택 개수
 		int32 MaxStack = SlotB.Item->NumericData.MaxAmount;
-
+		
+		//옮길(B) 슬롯에 총 개수와 최대 스택 개수 중 작은 것 할당
 		SlotB.Item->Amount = FMath::Min(TotalAmount, MaxStack);
+		//옮기는(A) 슬롯에 총 개수 - 옮길(B) 슬롯 개수 할당
 		SlotA.Item->Amount = TotalAmount - SlotB.Item->Amount;
 
 		if (SlotA.Item->Amount <= 0){
@@ -454,14 +458,5 @@ bool UInventoryComponent::CheckSameItemAtIndex(int32 Index, UItemBase* Item)
 void UInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	for (int32 i = 0; i < InventoryContents.Num(); i++)
-	{
-		const UItemBase* Item = InventoryContents[i].Item;
-		FString ItemName = Item ? Item->GetName() : TEXT("Empty");
-		FString Message = FString::Printf(TEXT("Slot %d: %s"), i, *ItemName);
-
-		UKismetSystemLibrary::PrintString(GetWorld(), Message, true, true, FLinearColor::Green, DeltaTime);
-	}
 }
 

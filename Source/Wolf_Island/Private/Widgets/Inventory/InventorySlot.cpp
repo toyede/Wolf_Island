@@ -150,6 +150,10 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 		if (InDragDropEvent.GetEffectingButton() == EKeys::LeftMouseButton)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("LEFT SLOT DROP DETECTED"));
+			//같은 칸이면 무시
+			if (ItemDragDrop->SourceIndex == Index) return false;
+
+			//다른 칸이면 스왑
 			InventoryRef->SwapItems(ItemDragDrop->SourceIndex, Index);
 			return true;
 		}
@@ -176,7 +180,15 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 			//같은 아이템이면 연산 후 삽입
 			else
 			{
-				
+				//옮길 곳에 최대로 더하고 남은 건 원래 자리로
+				//옮길 곳 : Index | 옮기는 것 : SourceIndex
+				int32 TotalAmount = ItemRef->Amount + ItemDragDrop->SourceItem->Amount;
+				int32 MaxStack = ItemRef->NumericData.MaxAmount;
+
+				ItemRef->Amount = FMath::Min(TotalAmount, MaxStack);
+				ItemDragDrop->SourceItem->Amount = TotalAmount - ItemRef->Amount;
+				InventoryRef->GetItemAtIndex(ItemDragDrop->SourceIndex)->Amount += ItemDragDrop->SourceItem->Amount;
+				InventoryRef->OnInventoryUpdated.Broadcast();
 			}
 		}
 		
