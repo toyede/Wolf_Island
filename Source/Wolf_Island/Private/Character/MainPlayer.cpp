@@ -6,11 +6,15 @@
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
 #include "MaterialHLSLTree.h"
+#include "Blueprint/UserWidget.h"
 #include "Components/StatusComponent.h"
 #include "Camera/CameraComponent.h"
-#include "GameFramework/SpringArmComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Components/InventoryComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Interaction/InteractionInterface.h"
+#include "Item/Pickup.h"
+#include "Widgets/PlayerHUD.h"
 
 
 // Sets default values
@@ -22,8 +26,8 @@ AMainPlayer::AMainPlayer()
 	StatusComponent = CreateDefaultSubobject<UStatusComponent>("StatusComponent");
 
 	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>("FirstPersonCamera");
-	ThirdPersonCamera = CreateDefaultSubobject<UCameraComponent>("ThirdPersonCamera");
-	SpringArm = CreateDefaultSubobject<USpringArmComponent>("SpringArm");
+
+	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>("InventoryComponent");
 
 	GetMesh()->SetRelativeTransform(
 		FTransform(
@@ -32,36 +36,42 @@ AMainPlayer::AMainPlayer()
 			));
 	
 	//메시에 카메라 붙이기
-	FirstPersonCamera->SetupAttachment(GetMesh());
+	FirstPersonCamera->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, "headSocket");
 	//컨트롤러 마우스 위치 입력을 카메라 입력에 반영
 	FirstPersonCamera->bUsePawnControlRotation = true;
+	
 	FirstPersonCamera->SetRelativeTransform(
 		FTransform(
-			FRotator(0, 90, 0),
-			FVector(0,20,170)
+			FRotator(-90, 90, 90),
+			FVector(0,10,0)
 			));
-	
-	SpringArm->SetupAttachment(GetMesh());
-	SpringArm->SetRelativeTransform(
-		FTransform(
-			FRotator(-20, 90, 0),
-			FVector(0,0,150)
-			));
-	
-	ThirdPersonCamera->SetupAttachment(SpringArm);
 
+	//인벤토리 초기화
+	InventoryComponent->SetSlotsCapacity(20);
+	InventoryComponent->SetWeightCapacity(StatusComponent->MaxWeight);
 }
 
 // Called when the game starts or when spawned
 void AMainPlayer::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	InteractableData.InteractionDuration = InteractionDuration;
+	
+	if(StatusComponent){
+		//상태 델리게이트 바인딩
+		StatusComponent->OnStaminaZero.AddDynamic(this, &AMainPlayer::StopRun);
 
-	//상태 델리게이트 바인딩
-	StatusComponent->OnStaminaZero.AddDynamic(this, &AMainPlayer::StopRun);
+		//죽음 바인딩
+		StatusComponent->OnHPZero.AddDynamic(this, &AMainPlayer::OnDeath_Implementation);
 
-	StatusComponent->StartHunger();
-	StatusComponent->StartHydration();
+		//배고픔, 수분 감소 시작
+		StatusComponent->StartHunger();
+		StatusComponent->StartHydration();
+	}
+
+	HUD = CreateWidget<UPlayerHUD>(GetWorld(), HUDClass);
+	HUD->AddToViewport();
 }
 
 // Called every frame
@@ -101,13 +111,16 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 		//웅크리기
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &AMainPlayer::ToggleCrouch);
-		
-		//인칭 변환 테스트 키 -- 폐기
-		//EnhancedInputComponent->BindAction(SlideAction, ETriggerEvent::Started, this, &AMainPlayer::SwitchCamera);
 
+		//슬라이딩
+		EnhancedInputComponent->BindAction(SlideAction, ETriggerEvent::Started, this, &AMainPlayer::Sliding);
+		
 		//인터랙션
 		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AMainPlayer::BeginInteract);
 		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Completed, this, &AMainPlayer::EndInteract);
+
+		//인벤토리
+		EnhancedInputComponent->BindAction(InventoryAction, ETriggerEvent::Started, this, &AMainPlayer::ToggleInventory);
 	}
 
 }
@@ -129,16 +142,13 @@ void AMainPlayer::NotifyControllerChanged()
 void AMainPlayer::StartJump()
 {
 	//스태미나가 0이면 점프 불가
-	if (StatusComponent->CurrentStamina <= JumpConsumeAmount)
-	{
-		return;
-	}
+	if (StatusComponent->CurrentStamina <= JumpConsumeAmount) return;
 
 	//낙하 중(점프 중) 이면 점프 불가
-	if (GetCharacterMovement()->IsFalling())
-	{
-		return;
-	}
+	if (GetCharacterMovement()->IsFalling()) return;
+
+	//슬라이딩 중이면 점프 불가
+	if (IsSliding) return;
 	
 	//달리는 중 점프하면 스태미나 감소 중단
 	if (IsRunning)
@@ -158,6 +168,20 @@ void AMainPlayer::StartJump()
 void AMainPlayer::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
+
+	float FallForce = FMath::Abs(GetVelocity().Z);
+	UE_LOG(LogTemp, Warning, TEXT("%f"), FallForce);
+	
+	if (FallForce > 1000.0f)
+	{
+		if (FallForce > 3000.0f)
+		{
+			StatusComponent->DecreaseHP(StatusComponent->MaxHP);
+		} else
+		{
+			StatusComponent->DecreaseHP(FallForce*0.03f);
+		}
+	}
 
 	//달리는 중이면 스태미나 감소 시작
 	if (IsRunning)
@@ -221,7 +245,7 @@ void AMainPlayer::Run()
 			//스태미나 0이면 암것도 안하기
 			if (StatusComponent->CurrentStamina <= 0) return;
 	
-			GetCharacterMovement()->MaxWalkSpeed = 900.0f;
+			GetCharacterMovement()->MaxWalkSpeed = 600.0f;
 			StatusComponent->StopStamina();
 
 			//이동 속도가 0 초과일 때만 스태미나 감소
@@ -247,7 +271,7 @@ void AMainPlayer::Run()
 
 void AMainPlayer::StopRun()
 {	
-	GetCharacterMovement()->MaxWalkSpeed = 600.0f;
+	GetCharacterMovement()->MaxWalkSpeed = 300.0f;
 	//스태미나 감소 중단
 	StatusComponent->StopStamina();
 	//스태미나 회복 타이머가 실행 중이 아니면
@@ -265,33 +289,47 @@ void AMainPlayer::ToggleCrouch()
 	if (IsCrouching)
 	{
 		UnCrouch();
-		GetCharacterMovement()->MaxWalkSpeed = 600.0f;
+		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
 		IsCrouching = false;
 	} else
 	{
 		Crouch();
-		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
+		GetCharacterMovement()->MaxWalkSpeed = 150.0f;
 		IsCrouching = true;
 	}
 }
 
 void AMainPlayer::ToggleInventory()
 {
+	//인벤토리가 열려 있으면
+	if (IsInventoryOpen)
+	{
+		IsInventoryOpen = false;
+	}
+	//인벤토리가 닫혀 있으면
+	else
+	{
+		IsInventoryOpen = true;
+	}
 }
 
-void AMainPlayer::SwitchCamera()
+void AMainPlayer::Sliding()
 {
-	if (IsFirstPerson)
+	//달리기 중이고 슬라이딩을 하지 않는 경우에만 가능
+	if (IsRunning&&!IsSliding)
 	{
-		FirstPersonCamera->SetActive(false);
-		ThirdPersonCamera->SetActive(true);
-		IsFirstPerson = false;
-	} else
-	{
-		FirstPersonCamera->SetActive(true);
-		ThirdPersonCamera->SetActive(false);
-		IsFirstPerson = true;
+		StatusComponent->DecreaseStamina(SlideConsumeAmount);
+		IsSliding = true;
+		GetCapsuleComponent()->SetCapsuleHalfHeight(30);
+		PlayAnimMontage(SlideMontage);
+		GetCapsuleComponent()->SetCapsuleHalfHeight(88);
+		IsSliding = false;
 	}
+}
+
+void AMainPlayer::OnDeath_Implementation()
+{
+	UE_LOG(LogTemp, Display, TEXT("Player Dead"));
 }
 
 void AMainPlayer::CheckInteraction()
@@ -306,7 +344,7 @@ void AMainPlayer::CheckInteraction()
 		FVector TraceEnd{ TraceStart + (FirstPersonCamera->GetForwardVector() * InteractionCheckDistance) };
 
 		//라인 트레이스 디버그 라인
-		DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, false, 1.0f);
+		//DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, false, 1.0f);
 		
 		//자기 메쉬에 안부딪히게 설정
 		FCollisionQueryParams QueryParams;
@@ -417,13 +455,13 @@ void AMainPlayer::BeginInteract()
 			TargetInteractionInterface->BeginInteract();
 
 			//즉시 인터랙션이 가능하면 (꾹 누르는 인터랙션이 아니면)
-			if (FMath::IsNearlyZero(TargetInteractionInterface->InteractableData.InteractionDuration, 0.1f))
+			if (TargetInteractionInterface->InteractableData.InteractionDuration == 0.0f)
 			{
 				//인터랙션 가능 상태인지 확인
 				if (TargetInteractionInterface->InteractableData.CanInteract)
 				{
 					//인터랙션 실행
-					Interact();
+					Interaction();
 				}
 			}
 			//꾹 누르는 인터랙션이면
@@ -432,7 +470,7 @@ void AMainPlayer::BeginInteract()
 				//인터랙션 실행 시간 만큼 대기 후 인터랙션 실행
 				GetWorldTimerManager().SetTimer(InteractionTimer,
 					this,
-					&AMainPlayer::Interact,
+					&AMainPlayer::Interaction,
 					TargetInteractionInterface->InteractableData.InteractionDuration,
 					false);
 			}
@@ -455,7 +493,7 @@ void AMainPlayer::EndInteract()
 	}
 }
 
-void AMainPlayer::Interact()
+void AMainPlayer::Interaction()
 {
 	//인터랙션 타이머 클리어
 	GetWorldTimerManager().ClearTimer(InteractionTimer);
@@ -469,5 +507,28 @@ void AMainPlayer::Interact()
 			//인터랙션 액터의 인터랙션 함수 실행
 			TargetInteractionInterface->Interact(this);
 		}
+	}
+}
+
+void AMainPlayer::DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool IsWhole)
+{
+	if (InventoryComponent->FindMatchingItem(ItemToDrop))
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = this;
+		SpawnParams.bNoFail = true;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+		const FVector SpawnLocation(GetActorLocation() + (GetActorForwardVector() * 50.0f));
+		const FTransform SpawnTransform(GetActorRotation(), SpawnLocation);
+
+		const int32 RemovedAmount = IsWhole ? InventoryComponent->RemoveAmountOfItem(ItemToDrop, AmountToDrop) : AmountToDrop;
+
+		APickup* Pickup = GetWorld()->SpawnActor<APickup>(APickup::StaticClass(), SpawnTransform, SpawnParams);
+	
+		Pickup->InitializeDrop(ItemToDrop, RemovedAmount);
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ITEM DROP SEQUENCE IS NOT WORKING."))
 	}
 }
