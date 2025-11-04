@@ -162,11 +162,11 @@ FItemAddResult UInventoryComponent::HandleAddItem(UItemBase* AddedItem)
 		if (AddedAmount <= 0)
 		{
 			//추가 안해부러
-			return FItemAddResult::AddedNone(FText::Format(FText::FromString("Failed Slot Overflow [ {0} : x{1} ]"), AddedItem->TextData.Name, RequestedAmount));
+			return FItemAddResult::AddedNone(FText::Format(FText::FromString("Failed Slot Overflow [ {0} : x{1} ]"), AddedItem->TextData.Name, RequestedAmount), EItemFailReason::SlotOverflow);
 		}
 	}
 	
-	return FItemAddResult::AddedNone(FText::FromString(TEXT("Can't Find Owner")));
+	return FItemAddResult::AddedNone(FText::FromString(TEXT("Can't Find Owner")),EItemFailReason::SystemError);
 }
 
 //단일 아이템 추가 태스크 함수
@@ -175,17 +175,17 @@ FItemAddResult UInventoryComponent::HandleNoneStackableItem(UItemBase* AddedItem
 	//추가할 아이템 무게 췤. 음수인 지 음수면 아무것도 안 함
 	if (FMath::IsNearlyZero(AddedItem->GetItemSingleWeight()) || AddedItem->GetItemSingleWeight() < 0)
 	{
-		return FItemAddResult::AddedNone(FText::Format(FText::FromString("[WEIGHT ERROR] [ {0} : x{1} ]"),AddedItem->TextData.Name, AddedItem->GetItemSingleWeight()));
+		return FItemAddResult::AddedNone(FText::Format(FText::FromString("[WEIGHT ERROR] [ {0} : x{1} ]"),AddedItem->TextData.Name, AddedItem->GetItemSingleWeight()), EItemFailReason::SystemError);
 	}
 	//무게 용량 초과면 아무것도 안 함
 	if (CurrentWeight + AddedItem->GetItemSingleWeight() > GetWeightCapacity())
 	{
-		return FItemAddResult::AddedNone(FText::Format(FText::FromString("[WEIGHT OVERFLOW] [ {0} : x{1} ]"),AddedItem->TextData.Name, AddedItem->GetItemSingleWeight()));
+		return FItemAddResult::AddedNone(FText::Format(FText::FromString("[WEIGHT OVERFLOW] [ {0} : x{1} ]"),AddedItem->TextData.Name, AddedItem->GetItemSingleWeight()), EItemFailReason::WeightOverflow);
 	}
 	//아이템 슬롯 초과 했능가? 초과면 아무것도 안 함
-	if (GetEmptySlotCount() > SlotsCapacity )
+	if (GetEmptySlotCount() <= 0 )
 	{
-		return FItemAddResult::AddedNone(FText::Format(FText::FromString("[SLOT OVERFLOW] [ {0} : x{1} ]"),AddedItem->TextData.Name, 1));
+		return FItemAddResult::AddedNone(FText::Format(FText::FromString("[SLOT OVERFLOW] [ {0} : x{1} ]"),AddedItem->TextData.Name, 1), EItemFailReason::SlotOverflow);
 	}
 
 	//이상할 것이 없으면 추가
@@ -268,7 +268,7 @@ int32 UInventoryComponent::HandleStackableItem(UItemBase* AddedItem, int32 Reque
 	}
 	
 	//남은 아이템 슬롯이 있는가
-	if (GetEmptySlotCount() <= SlotsCapacity)
+	if (GetEmptySlotCount() > 0)
 	{
 		//무게 고려 최대 넣을 수 있는 수량
 		const int32 WeightLimitAddAmount = CalculateWeightAddAmount(AddedItem, AmountToDistribute);
@@ -458,5 +458,17 @@ bool UInventoryComponent::CheckSameItemAtIndex(int32 Index, UItemBase* Item)
 void UInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (GEngine)
+	{
+		for (FItemSlot& Slot : InventoryContents)
+		{
+			const UItemBase* Item = Slot.Item;
+			FString ItemName = Item ? Item->GetName() : TEXT("Empty");
+			FString Message = FString::Printf(TEXT("Slot: %s"), *ItemName);
+
+			UKismetSystemLibrary::PrintString(GetWorld(), Message, true, true, FLinearColor::Green, DeltaTime);
+		}
+	}
 }
 

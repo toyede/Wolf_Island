@@ -12,6 +12,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/InventoryComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Games/MainHUD.h"
 #include "Interaction/InteractionInterface.h"
 #include "Item/Pickup.h"
 #include "Widgets/PlayerHUD.h"
@@ -69,6 +70,8 @@ void AMainPlayer::BeginPlay()
 		StatusComponent->StartHunger();
 		StatusComponent->StartHydration();
 	}
+
+	//HUD = Cast<AMainHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
 
 	HUD = CreateWidget<UPlayerHUD>(GetWorld(), HUDClass);
 	HUD->AddToViewport();

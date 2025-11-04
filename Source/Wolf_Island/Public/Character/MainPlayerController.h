@@ -13,5 +13,10 @@ UCLASS()
 class WOLF_ISLAND_API AMainPlayerController : public APlayerController
 {
 	GENERATED_BODY()
-	
+
+public:
+	UPROPERTY(EditAnywhere)
+	class AMainHUD* HUD;
+
+	virtual void BeginPlay() override;
 };

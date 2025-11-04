@@ -10,6 +10,16 @@
 class UItemBase;
 DECLARE_MULTICAST_DELEGATE(FOnInventoryUpdated);
 
+//실패 이유
+UENUM(BlueprintType, meta=(ScriptName="ItemAddedResult"))
+enum class EItemFailReason : uint8
+{
+	NoReason UMETA(DisplayName="No Reason"),
+	SystemError UMETA(DisplayName="System Error"),
+	SlotOverflow UMETA(DisplayName="Slot Overflow"),
+	WeightOverflow UMETA(DisplayName="Weight Overflow")
+};
+
 //아이템 추가 결과 이넘
 UENUM(BlueprintType, meta=(ScriptName="ItemAddedResult"))
 enum class EItemAddedResult : uint8
@@ -43,16 +53,20 @@ struct FItemAddResult
 	//아이템 추가 결과 이넘
 	UPROPERTY(BlueprintReadOnly, Category = "Item Add Result")
 	EItemAddedResult OperationResult;
+	//실패 이유
+	UPROPERTY(BlueprintReadOnly, Category = "Item Add Result")
+	EItemFailReason OperationFailReason;
 	//결과 메시지
 	UPROPERTY(BlueprintReadOnly, Category = "Item Add Result")
 	FText ResultMessage;
 	
 	//아무것도 추가되지 않음
-	static FItemAddResult AddedNone(const FText& ErrorText)
+	static FItemAddResult AddedNone(const FText& ErrorText, EItemFailReason Reason)
 	{
 		FItemAddResult AddedNoneResult;
 		AddedNoneResult.ActualAmountAdded = 0;
 		AddedNoneResult.OperationResult = EItemAddedResult::NoItemAdded;
+		AddedNoneResult.OperationFailReason = Reason;
 		AddedNoneResult.ResultMessage = ErrorText;
 
 		return AddedNoneResult;
@@ -65,6 +79,7 @@ struct FItemAddResult
 		AddedPartialResult.ItemName = ItemName;
 		AddedPartialResult.ActualAmountAdded = PartialAmountAdded;
 		AddedPartialResult.OperationResult = EItemAddedResult::PartiallyItemAdded;
+		AddedPartialResult.OperationFailReason = EItemFailReason::NoReason;
 		AddedPartialResult.ResultMessage = ErrorText;
 
 		return AddedPartialResult;
@@ -77,6 +92,7 @@ struct FItemAddResult
 		AddedAllResult.ItemName = ItemName;
 		AddedAllResult.ActualAmountAdded = AmountAdded;
 		AddedAllResult.OperationResult = EItemAddedResult::AllItemAdded;
+		AddedAllResult.OperationFailReason = EItemFailReason::NoReason;
 		AddedAllResult.ResultMessage = Message;
 
 		return AddedAllResult;

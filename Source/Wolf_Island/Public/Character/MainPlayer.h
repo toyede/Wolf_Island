@@ -36,6 +36,10 @@ class WOLF_ISLAND_API AMainPlayer : public ACharacter , public IInteractionInter
 public:
 	// Sets default values for this character's properties
 	AMainPlayer();
+
+	//HUD=============================================================================
+	//UPROPERTY(EditAnywhere)
+	//class AMainHUD* HUD;
 	
 	//컴포넌트=========================================================================
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

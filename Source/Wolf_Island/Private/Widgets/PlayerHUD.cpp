@@ -13,18 +13,37 @@
 
 void UPlayerHUD::AddItemMessage(FItemAddResult Result)
 {
-	if (Result.OperationResult == EItemAddedResult::NoItemAdded) return;
-	
 	if (ItemAcquiredBlockClass)
 	{
 		UItemAcquiredBlock* Block = CreateWidget<UItemAcquiredBlock>(this, ItemAcquiredBlockClass);
 
 		if (Block)
 		{
-			const FString Info = {Result.ItemName.ToString()+" x"+FString::FromInt(Result.ActualAmountAdded)};
+			FString Info = {Result.ItemName.ToString()+" x"+FString::FromInt(Result.ActualAmountAdded)};
+
+			if (Result.OperationResult == EItemAddedResult::NoItemAdded)
+			{
+				switch (Result.OperationFailReason)
+				{
+					case EItemFailReason::SlotOverflow:
+						Info = {"Full of inventory"};
+						break;
+					case EItemFailReason::WeightOverflow:
+						Info = {"No more weight capacity."};
+						break;
+					case EItemFailReason::SystemError:
+						Info = {"System error."};
+						break;
+					case EItemFailReason::NoReason:
+						Info = {"No reason."};
+						break;
+				}
+			}
 
 			Block->InfoText->SetText(FText::FromString(Info));
+			
 			UE_LOG(LogTemp, Warning, TEXT("%s"),*Info);
+			
 			if (InfoList)
 			{
 				InfoList->InsertChildAt(0, Block);
