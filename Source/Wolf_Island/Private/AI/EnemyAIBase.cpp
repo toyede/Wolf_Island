@@ -57,6 +57,11 @@ void AEnemyAIBase::Tick(float DeltaTime)
 
 void AEnemyAIBase::ChangeForm(EEnemyForm Form)
 {
+    if (ChangeFormMontage == nullptr)
+    {
+        return;
+    }
+
     switch (Form)
     {
     case EEnemyForm::Human:

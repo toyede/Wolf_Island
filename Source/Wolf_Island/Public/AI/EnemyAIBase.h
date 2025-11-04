@@ -8,6 +8,7 @@
 #include "AI/EnemyAIController.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
+#include "Animation/AnimMontage.h"
 #include "EnemyAIBase.generated.h"
 
 UENUM(BlueprintType)
@@ -54,4 +55,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void ChangeForm(EEnemyForm Form);
+
+	UPROPERTY(EditAnywhere, Category = "Animation")
+	UAnimMontage* ChangeFormMontage;
 };

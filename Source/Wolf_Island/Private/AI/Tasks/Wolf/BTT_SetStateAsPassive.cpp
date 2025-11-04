@@ -19,5 +19,5 @@ EBTNodeResult::Type UBTT_SetStateAsPassive::ExecuteTask(UBehaviorTreeComponent& 
 
 	AICon->SetStateAsPassive();
 
-	return EBTNodeResult::Type();
+	return EBTNodeResult::Succeeded;
 }

@@ -37,6 +37,8 @@ public:
 
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
+
+	virtual void OnUnPossess() override;
 	
 	virtual void BeginPlay() override;
 
@@ -64,17 +66,23 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "AI")
 	FName EnemyStateKey = "State";
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void OnPerceptionUpdated(const TArray<AActor*>& UpdatedActors);
 
 	//UFUNCTION()
 	//void OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus);
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	bool CanSensedActor(AActor* Actor, FAIStimulus& LastStimulus);
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void SetStateAsAttacking(AActor* Actor);
+
+	UFUNCTION(BlueprintCallable)
+	void CheckIfForgottenSeenActor();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI")
+	TArray<AActor*> KnownSeenActors;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI");
 	EEnemyState EnemyState;
@@ -83,6 +91,13 @@ protected:
 	AEnemyAIBase* ControlledEnemy;
 
 	FTimerHandle HearingReactTimer;
+
+	FTimerHandle TimerHandle;
+
+	UFUNCTION(BlueprintCallable)
+	void HandleForgotActor(AActor* Actor);
+
+	AActor* AttackTarget;
 
 public:
 	UPROPERTY(EditDefaultsOnly, Category = "AI")

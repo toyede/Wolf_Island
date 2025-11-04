@@ -57,6 +57,14 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 
     // Form Setting
     ControlledEnemy->ChangeForm(ControlledEnemy->EnemyForm);
+
+    GetWorld()->GetTimerManager().SetTimer(TimerHandle, this, &AEnemyAIController::CheckIfForgottenSeenActor, 0.5f, true);
+}
+
+void AEnemyAIController::OnUnPossess()
+{
+    GetWorld()->GetTimerManager().ClearTimer(TimerHandle);
+    TimerHandle.Invalidate();
 }
 
 void AEnemyAIController::BeginPlay()
@@ -67,6 +75,7 @@ void AEnemyAIController::BeginPlay()
 void AEnemyAIController::OnPerceptionUpdated(const TArray<AActor*>& UpdatedActors)
 {
     APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+    if (!PlayerPawn) return;
 
     for (AActor * Actor : UpdatedActors)
     {
@@ -75,7 +84,9 @@ void AEnemyAIController::OnPerceptionUpdated(const TArray<AActor*>& UpdatedActor
         {
             if (Stimulus.Type == UAISense::GetSenseID<UAISense_Sight>() && Actor == PlayerPawn)
             {
-                SetStateAsAttacking(PlayerPawn);
+                UE_LOG(LogTemp, Display, TEXT("percepted"));
+                KnownSeenActors.AddUnique(Actor);
+                SetStateAsAttacking(Actor);
             }
             else if (Stimulus.Type == UAISense::GetSenseID<UAISense_Hearing>() && Stimulus.Tag == FName("Howling"))
             {
@@ -92,6 +103,10 @@ void AEnemyAIController::OnPerceptionUpdated(const TArray<AActor*>& UpdatedActor
                     false
                 );
             }
+        }
+        else
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Red, TEXT("zz"));
         }
     }
 }
@@ -117,8 +132,19 @@ bool AEnemyAIController::CanSensedActor(AActor* Actor, FAIStimulus& OutStimulus)
 
 
 
+void AEnemyAIController::HandleForgotActor(AActor* Actor)
+{
+    KnownSeenActors.Remove(Actor);
+
+    if (Actor == AttackTarget)
+    {
+        SetStateAsPassive();
+    }
+}
+
 void AEnemyAIController::SetStateAsPassive()
 {
+    AttackTarget = nullptr;
     EnemyState = EEnemyState::Passive;
     BlackboardComp->SetValueAsEnum(EnemyStateKey, static_cast<uint8>(EnemyState));
     BlackboardComp->SetValueAsObject(AttackTargetKey, nullptr);
@@ -126,11 +152,34 @@ void AEnemyAIController::SetStateAsPassive()
 
 void AEnemyAIController::SetStateAsAttacking(AActor* Actor)
 {
-    APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+    AttackTarget = Actor;
     EnemyState = EEnemyState::Attacking;
     BlackboardComp->SetValueAsEnum(EnemyStateKey, static_cast<uint8>(EnemyState));
-    if (PlayerPawn != nullptr)
+    
+    if (Actor != nullptr)
     {
-        BlackboardComp->SetValueAsObject(AttackTargetKey, PlayerPawn);
+        BlackboardComp->SetValueAsObject(AttackTargetKey, Actor);
+    }
+    else
+    {
+        SetStateAsPassive();
+    }
+}
+
+void AEnemyAIController::CheckIfForgottenSeenActor()
+{
+    TArray<AActor*> KnownPerceived;
+    AIPerceptionComp->GetKnownPerceivedActors(UAISense_Sight::StaticClass(), KnownPerceived);
+
+    if (KnownSeenActors.Num() != KnownPerceived.Num())
+    {
+        for (AActor* Actor : KnownSeenActors)
+        {
+            int32 Index = KnownPerceived.Find(Actor);
+            if (Index == INDEX_NONE)
+            {
+                HandleForgotActor(Actor);
+            }
+        }
     }
 }
