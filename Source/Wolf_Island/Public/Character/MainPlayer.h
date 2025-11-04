@@ -8,6 +8,7 @@
 #include "InputAction.h"
 #include "Interaction/InteractionInterface.h"
 #include "MainPlayer.generated.h"
+
 struct FInputActionValue;
 
 USTRUCT(BlueprintType)
@@ -35,19 +36,20 @@ class WOLF_ISLAND_API AMainPlayer : public ACharacter , public IInteractionInter
 public:
 	// Sets default values for this character's properties
 	AMainPlayer();
+
+	//HUD=============================================================================
+	//UPROPERTY(EditAnywhere)
+	//class AMainHUD* HUD;
 	
 	//컴포넌트=========================================================================
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UCameraComponent* FirstPersonCamera;
-	
-	UPROPERTY(EditAnywhere)
-	UCameraComponent* ThirdPersonCamera;
-	
-	UPROPERTY(EditAnywhere)
-	class USpringArmComponent* SpringArm;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UStatusComponent* StatusComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UInventoryComponent* InventoryComponent;
 	
 	//입력 관련 변수====================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
@@ -97,9 +99,24 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsFirstPerson = true;
 
+	//행동불능 상태인지
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	bool IsInability = false;
+
+	//공격 소모 스태미나
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	float AttackConsumeAmount = 1.0f;
+
 	//점프 소모 스태미나
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
-	float JumpConsumeAmount = 20.0f;
+	float JumpConsumeAmount = 1.0f;
+
+	//슬라이딩 소모 스태미나
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	float SlideConsumeAmount  = 2.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	bool IsInventoryOpen = false;
 
 	//인터랙션 관련 변수===============================================================
 	//인터랙션 타이머 - 꾹 누르는 인터랙션을 위한 것
@@ -117,6 +134,19 @@ public:
 	//인터랙션 액터의 인터랙션 인터페이스 포인터
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Interaction")
 	TScriptInterface<IInteractionInterface> TargetInteractionInterface;
+	//꾹 누르기 인터랙션 시간
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction")
+	float InteractionDuration = 0.0f;
+
+	//애님 몽타주======================================================================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Anim")
+	class UAnimMontage* SlideMontage;
+
+	//위젯============================================================================
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
+	TSubclassOf<class UPlayerHUD> HUDClass;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Widget")
+	UPlayerHUD* HUD;
 	
 protected:
 	// Called when the game starts or when spawned
@@ -155,12 +185,19 @@ public:
 	void ToggleInventory();
 
 	UFUNCTION()
-	void SwitchCamera();
+	void Sliding();
+
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
+	void OnDeath();
+	void OnDeath_Implementation();
 
 	//인터랙션 관련 함수===================================================
 	//인터랙션 체크 함수 - 라인트레이스로 인터랙션 액터 체크
 	UFUNCTION()
 	void CheckInteraction();
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE float GetInteractionDuration() { return InteractableData.InteractionDuration; };
 	
 	//인터랙션 액터를 찾았을 때
 	UFUNCTION()
@@ -179,7 +216,13 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void EndInteract() override;
 	UFUNCTION(BlueprintCallable)
-	void Interact();
+	void Interaction();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void Interact(AActor* Interactor) override;
+
+	UFUNCTION(BlueprintCallable)
+	void DropItem(class UItemBase* ItemToDrop, const int32 AmountToDrop, bool IsWhole);
 };
 
 
