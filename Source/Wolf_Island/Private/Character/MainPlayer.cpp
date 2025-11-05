@@ -524,14 +524,14 @@ void AMainPlayer::DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool
 
 		const FVector SpawnLocation(GetActorLocation() + (GetActorForwardVector() * 50.0f));
 		const FTransform SpawnTransform(GetActorRotation(), SpawnLocation);
-
-		const int32 RemovedAmount = IsWhole ? InventoryComponent->RemoveAmountOfItem(ItemToDrop, AmountToDrop) : AmountToDrop;
-
+		
+		const int32 RemovedAmount = InventoryComponent->RemoveAmountOfItem(ItemToDrop, AmountToDrop);
+		
 		APickup* Pickup = GetWorld()->SpawnActor<APickup>(APickup::StaticClass(), SpawnTransform, SpawnParams);
-	
+		
 		Pickup->InitializeDrop(ItemToDrop, RemovedAmount);
 	} else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ITEM DROP SEQUENCE IS NOT WORKING."))
+		UE_LOG(LogTemp, Warning, TEXT("CAN'T FIND MATCHED ITEM."))
 	}
 }

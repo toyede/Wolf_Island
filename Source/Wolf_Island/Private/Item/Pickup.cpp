@@ -59,10 +59,11 @@ void APickup::InitializePickUp(const TSubclassOf<UItemBase> BaseClass, const int
 
 void APickup::InitializeDrop(UItemBase* ItemToDrop, const int32 InAmount)
 {
-    ItemReference = ItemToDrop;
+    ItemReference = ItemToDrop->CreateItemCopy();
+    ItemReference->OwningInventory = nullptr;
     InteractableData.InteractionDuration = ItemReference->NumericData.InteractionDuration;
     InAmount <= 0 ? ItemReference->SetAmount(1) : ItemReference->SetAmount(InAmount);
-    PickupMesh->SetStaticMesh(ItemToDrop->AssetData.Mesh);
+    PickupMesh->SetStaticMesh(ItemReference->AssetData.Mesh);
 }
 
 void APickup::Interact(AActor* Interactor)

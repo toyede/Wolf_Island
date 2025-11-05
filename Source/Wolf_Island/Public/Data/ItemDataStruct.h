@@ -44,7 +44,7 @@ struct FItemNumericData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Stamina;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Hydaration;
+	float Hydration;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Hunger;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -96,5 +96,30 @@ struct FItemSlot
 	GENERATED_USTRUCT_BODY();
 
 	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
+	UPROPERTY()
 	TObjectPtr<class UItemBase> Item = nullptr;
+};
+
+//레시피 데이터
+USTRUCT(BlueprintType)
+struct FRecipeData : public FTableRowBase
+{
+	GENERATED_USTRUCT_BODY();
+
+	UPROPERTY(EditAnywhere)
+	FName Part1ID;
+	UPROPERTY(EditAnywhere)
+	int32 Part1Amount;
+	UPROPERTY(EditAnywhere)
+	FName Part2ID;
+	UPROPERTY(EditAnywhere)
+	int32 Part2Amount;
+	UPROPERTY(EditAnywhere)
+	FName Part3ID;
+	UPROPERTY(EditAnywhere)
+	int32 Part3Amount;
+	UPROPERTY(EditAnywhere)
+	FName ResultID;
+	UPROPERTY(EditAnywhere)
+	int32 ResultAmount;
 };

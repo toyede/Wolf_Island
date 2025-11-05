@@ -129,6 +129,11 @@ public:
 	//특정 인덱스의 아이템 반환
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	UItemBase* GetItemAtIndex(int32 Index){ return InventoryContents[Index].Item; };
+	//해당 ID의 아이템이 있는 슬롯 반환
+	FItemSlot* FindSlotByID(FName ItemID);
+	//인벤토리에 있는 해당 ID의 아이템 총 개수 반환
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	int32 GetItemTotalAmountByID(FName ItemID);
 	
 	//인벤토리에 있는 아이템과 중복되는 아이템인가 체크(인벤토리에서 불러온 아이템인지)
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -180,6 +185,10 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
+	//아이템 데이터 테이블
+	UPROPERTY(EditDefaultsOnly, Category = "Item Data")
+	UDataTable* ItemDataTable;
+
 	//인벤토리 슬롯 개수
 	UPROPERTY(EditDefaultsOnly, Category = "Inventory")
 	int32 SlotsCapacity;
@@ -220,7 +229,18 @@ protected:
 	//빈 슬롯 반환
 	FItemSlot* FindEmptySlot();
 	//빈 슬롯 개수 반환
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Inventory")
 	int32 GetEmptySlotCount();
+	//해당 ID의 아이템을 개수만큼 인벤토리에서 삭제
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	int32 RemoveItemsByID(FName ItemID, int32 Amount);
+	//ID와 개수에 따른 아이템 데이터 생성
+	UItemBase* CreateItemByID(FName ItemID, int32 Amount);
+
+	//레시피 체크
+	bool CheckCanMakeRecipe(FRecipeData Recipe);
+	//레시피 아이템 제작
+	bool MakeItem(FRecipeData Recipe);
 
 public:	
 	// Called every frame

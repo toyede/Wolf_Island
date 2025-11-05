@@ -43,22 +43,25 @@ bool UInventory::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent&
 			if (LocalMousePos.X >= PanelPos.X && LocalMousePos.X <= PanelPos.X + PanelSize.X &&
 				LocalMousePos.Y >= PanelPos.Y && LocalMousePos.Y <= PanelPos.Y + PanelSize.Y)
 			{
-				//우클릭이면 반갈한 거 원위치
+				//우클릭이면 떨구기면 반갈한 거 원위치
 				if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
 				{
-					ItemDragDrop->SourceInventory->GetItemAtIndex(ItemDragDrop->SourceIndex)->Amount += ItemDragDrop->SourceItem->Amount;
+					ItemDragDrop->SourceInventory->GetItemAtIndex(ItemDragDrop->SourceIndex)->Amount += Item->Amount;
 					ItemDragDrop->SourceInventory->OnInventoryUpdated.Broadcast();
 				}
 				return false;
 			}
 		}
-		//우클릭이면 반갈한 것만 버리기
+		
+		//우클릭이면 떨구기면 반갈한 것만 버리기
 		if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
 		{
+			UE_LOG(LogTemp, Warning, TEXT("RIGHT CLICK DROP"));
 			PlayerRef->DropItem(Item, Item->Amount, false);
 			return true;
 		}
 		
+		UE_LOG(LogTemp, Warning, TEXT("LEFT CLICK DROP"));
 		PlayerRef->DropItem(Item, Item->Amount, true);
 		return true;
 	}
