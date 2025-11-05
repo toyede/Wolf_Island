@@ -36,18 +36,19 @@ FItemSlot* UInventoryComponent::FindSlotByID(FName ItemID)
 int32 UInventoryComponent::GetItemTotalAmountByID(FName ItemID)
 {
 	int32 count = 0;
-	
+	FText ItemName = FText();
 	for (FItemSlot Slot : InventoryContents)
 	{
 		if (Slot.Item)
 		{
 			if (Slot.Item->ID == ItemID)
 			{
+				ItemName = Slot.Item->TextData.Name;
 				count += Slot.Item->Amount;
 			}
 		}
 	}
-
+	UE_LOG(LogTemp, Warning, TEXT("[ %s ] : %d in Inventory."), *ItemName.ToString() ,count);
 	return count;
 }
 
@@ -461,6 +462,7 @@ UItemBase* UInventoryComponent::CreateItemByID(FName ItemID, int32 Amount)
 	//데이터 데이블에서 아이템 데이터 가져오기
 	if (!ItemDataTable)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("ItemDataTable is null"));
 		return nullptr;
 	}
 
@@ -468,6 +470,7 @@ UItemBase* UInventoryComponent::CreateItemByID(FName ItemID, int32 Amount)
 	
 	if (!ItemData)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("ItemData is null"));
 		return nullptr;
 	}
 	
@@ -501,16 +504,17 @@ bool UInventoryComponent::CheckCanMakeRecipe(FRecipeData Recipe)
 	if (Recipe.Part1Amount <= GetItemTotalAmountByID(Recipe.Part1ID)) pass1 = true;
 	//두번째 재료 인벤토리에서 체크
 	//레시피 개수보다 인벤토리에 아이템 개수가 같거나 많으면 패스
-	if (Recipe.Part2Amount <= GetItemTotalAmountByID(Recipe.Part2ID)) pass1 = true;
+	if (Recipe.Part2Amount <= GetItemTotalAmountByID(Recipe.Part2ID)) pass2 = true;
 	//세번째 재료 인벤토리에서 체크
 	//레시피 개수보다 인벤토리에 아이템 개수가 같거나 많으면 패스
-	if (Recipe.Part3Amount <= GetItemTotalAmountByID(Recipe.Part3ID)) pass1 = true;	
+	if (Recipe.Part3Amount <= GetItemTotalAmountByID(Recipe.Part3ID)) pass3 = true;	
 	
 	return pass1 && pass2 && pass3;
 }
 
 bool UInventoryComponent::MakeItem(FRecipeData Recipe)
 {
+	UE_LOG(LogTemp, Warning, TEXT("Make Item Execute."));
 	//레시피 다시한번 체크
 	if (CheckCanMakeRecipe(Recipe))
 	{
@@ -523,7 +527,7 @@ bool UInventoryComponent::MakeItem(FRecipeData Recipe)
 		UItemBase* ResultItem = CreateItemByID(Recipe.ResultID, Recipe.ResultAmount);
 		if (ResultItem)
 		{
-			AddNewItem(ResultItem, ResultItem->Amount);
+			UE_LOG(LogTemp, Warning, TEXT("Result Item Created."));
 			//빈 슬롯이 없으면 바닥에 떨구기
 			if (GetEmptySlotCount() <= 0)
 			{
@@ -538,6 +542,7 @@ bool UInventoryComponent::MakeItem(FRecipeData Recipe)
 			return true;
 		}
 	}
+	UE_LOG(LogTemp, Warning, TEXT("Recipe Check Failed."));
 	
 	return false;
 }

@@ -238,8 +238,10 @@ protected:
 	UItemBase* CreateItemByID(FName ItemID, int32 Amount);
 
 	//레시피 체크
+	UFUNCTION(BlueprintCallable, Category = "Craft")
 	bool CheckCanMakeRecipe(FRecipeData Recipe);
 	//레시피 아이템 제작
+	UFUNCTION(BlueprintCallable, Category = "Craft")
 	bool MakeItem(FRecipeData Recipe);
 
 public:	
