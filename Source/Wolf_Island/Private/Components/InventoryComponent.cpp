@@ -612,7 +612,7 @@ void UInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 #if WITH_EDITOR
-	if (GEngine)
+	if (!GEngine)
 	{
 		for (FItemSlot& Slot : InventoryContents)
 		{
