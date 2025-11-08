@@ -15,13 +15,7 @@
 void UInventorySlot::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
-
-	if (ToolTipClass && ItemRef)
-	{
-		UInventoryToolTip* ToolTip = CreateWidget<UInventoryToolTip>(this, ToolTipClass);
-		ToolTip->InventorySlotBeingHovered = this;
-		SetToolTip(ToolTip);
-	}
+	
 }
 
 
@@ -45,6 +39,13 @@ void UInventorySlot::NativeConstruct()
 	{
 		ItemIcon->SetVisibility(ESlateVisibility::Collapsed);
 		ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	
+	if (ToolTipClass && ItemRef)
+	{
+		UInventoryToolTip* ToolTip = CreateWidget<UInventoryToolTip>(this, ToolTipClass);
+		ToolTip->InventorySlotBeingHovered = this;
+		SetToolTip(ToolTip);
 	}
 }
 
