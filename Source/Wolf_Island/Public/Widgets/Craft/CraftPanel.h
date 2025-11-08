@@ -17,21 +17,40 @@ class WOLF_ISLAND_API UCraftPanel : public UUserWidget
 public:
 	UPROPERTY(EditDefaultsOnly)
 	UDataTable* ItemDataTable;
+	UPROPERTY(EditDefaultsOnly)
+	UDataTable* RecipeTable;
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<class URecipeBlock> RecipeBlockClass;
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<class UCraftSlot> SlotClass;
+	UPROPERTY(EditAnywhere)
+	class UInventoryComponent* OwnerInventory;
 
-	UPROPERTY(EditAnywhere, meta=(BindWidget))
-	class UTextBlock* ItemName;
-	UPROPERTY(EditAnywhere, meta=(BindWidget))
-	class UTextBlock* ItemDescription;
-	UPROPERTY(EditAnywhere, meta=(BindWidget))
-	class UTextBlock* DurationText;
-	UPROPERTY(EditAnywhere, meta=(BindWidget))
+	/*UPROPERTY(VisibleAnywhere, meta=(BindWidget))
+	class URecipeInfo* RecipeInfo;*/
+	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
 	class UScrollBox* RecipeList;
-	UPROPERTY(EditAnywhere, meta=(BindWidget))
-	class UWrapBox* Ingredients;
-	UPROPERTY(EditAnywhere, meta=(BindWidget))
+
+	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
+	class UTextBlock* ItemName;
+	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
+	UCraftSlot* ResultSlot;
+	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
+	UTextBlock* ItemDescription;
+	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
+	UTextBlock* DurationText;
+	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
+	class UWrapBox* IngredientList;
+	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
 	class UButton* CraftButton;
-	UPROPERTY(EditAnywhere, meta=(BindWidget))
-	class UImage* ItemIcon;
+
 	
-	
+	UFUNCTION()
+	void AddRecipe(struct FRecipeData Recipe);
+
+	UFUNCTION(BlueprintCallable)
+	void SetRecipeInfo(FRecipeData RecipeData);
+
+protected:
+	virtual void NativeConstruct() override;
 };

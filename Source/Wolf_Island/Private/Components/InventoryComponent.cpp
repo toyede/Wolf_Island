@@ -495,19 +495,19 @@ bool UInventoryComponent::CheckCanMakeRecipe(FRecipeData Recipe)
 	bool pass1 = false, pass2 = false, pass3 = false;
 
 	//재료 아이템이 비어있으면 그 칸은 패스
-	if (Recipe.Part1ID.IsNone()) pass1 = true;
-	if (Recipe.Part2ID.IsNone()) pass2 = true;
-	if (Recipe.Part3ID.IsNone()) pass3 = true;
+	if (Recipe.Ingredient1ID.IsNone()) pass1 = true;
+	if (Recipe.Ingredient2ID.IsNone()) pass2 = true;
+	if (Recipe.Ingredient3ID.IsNone()) pass3 = true;
 
 	//첫번째 재료 인벤토리에서 체크
 	//레시피 개수보다 인벤토리에 아이템 개수가 같거나 많으면 패스
-	if (Recipe.Part1Amount <= GetItemTotalAmountByID(Recipe.Part1ID)) pass1 = true;
+	if (Recipe.Ingredient1Amount <= GetItemTotalAmountByID(Recipe.Ingredient1ID)) pass1 = true;
 	//두번째 재료 인벤토리에서 체크
 	//레시피 개수보다 인벤토리에 아이템 개수가 같거나 많으면 패스
-	if (Recipe.Part2Amount <= GetItemTotalAmountByID(Recipe.Part2ID)) pass2 = true;
+	if (Recipe.Ingredient2Amount <= GetItemTotalAmountByID(Recipe.Ingredient2ID)) pass2 = true;
 	//세번째 재료 인벤토리에서 체크
 	//레시피 개수보다 인벤토리에 아이템 개수가 같거나 많으면 패스
-	if (Recipe.Part3Amount <= GetItemTotalAmountByID(Recipe.Part3ID)) pass3 = true;	
+	if (Recipe.Ingredient3Amount <= GetItemTotalAmountByID(Recipe.Ingredient3ID)) pass3 = true;	
 	
 	return pass1 && pass2 && pass3;
 }
@@ -519,9 +519,9 @@ bool UInventoryComponent::MakeItem(FRecipeData Recipe)
 	if (CheckCanMakeRecipe(Recipe))
 	{
 		//레시피 개수별로 아이템 삭제
-		RemoveItemsByID(Recipe.Part1ID, Recipe.Part1Amount);
-		RemoveItemsByID(Recipe.Part2ID, Recipe.Part2Amount);
-		RemoveItemsByID(Recipe.Part3ID, Recipe.Part3Amount);
+		RemoveItemsByID(Recipe.Ingredient1ID, Recipe.Ingredient1Amount);
+		RemoveItemsByID(Recipe.Ingredient2ID, Recipe.Ingredient2Amount);
+		RemoveItemsByID(Recipe.Ingredient3ID, Recipe.Ingredient3Amount);
 
 		//결과물 아이템 생성
 		UItemBase* ResultItem = CreateItemByID(Recipe.ResultID, Recipe.ResultAmount);

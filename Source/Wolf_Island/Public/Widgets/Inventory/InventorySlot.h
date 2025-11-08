@@ -48,6 +48,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
 	UTextBlock* ItemAmount;
 	
+	
 	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;

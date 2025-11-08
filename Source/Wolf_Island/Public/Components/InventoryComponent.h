@@ -181,6 +181,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	FORCEINLINE void SetWeightCapacity(int32 Capacity) { WeightCapacity = Capacity; };
 
+	//레시피 체크
+	UFUNCTION(BlueprintCallable, Category = "Craft")
+	bool CheckCanMakeRecipe(FRecipeData Recipe);
+	//레시피 아이템 제작
+	UFUNCTION(BlueprintCallable, Category = "Craft")
+	bool MakeItem(FRecipeData Recipe);
+	
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -236,13 +243,6 @@ protected:
 	int32 RemoveItemsByID(FName ItemID, int32 Amount);
 	//ID와 개수에 따른 아이템 데이터 생성
 	UItemBase* CreateItemByID(FName ItemID, int32 Amount);
-
-	//레시피 체크
-	UFUNCTION(BlueprintCallable, Category = "Craft")
-	bool CheckCanMakeRecipe(FRecipeData Recipe);
-	//레시피 아이템 제작
-	UFUNCTION(BlueprintCallable, Category = "Craft")
-	bool MakeItem(FRecipeData Recipe);
 
 public:	
 	// Called every frame

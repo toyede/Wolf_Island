@@ -100,6 +100,14 @@ struct FItemSlot
 	TObjectPtr<class UItemBase> Item = nullptr;
 };
 
+//조합기 타입 (인벤토리, 화로 등)
+UENUM(BlueprintType)
+enum class ECraftMethod : uint8
+{
+	INVEN UMETA(DisplayName = "INVENTORY"),
+	FIRE UMETA(DisplayName = "FIRE"),
+};
+
 //레시피 데이터
 USTRUCT(BlueprintType)
 struct FRecipeData : public FTableRowBase
@@ -107,19 +115,47 @@ struct FRecipeData : public FTableRowBase
 	GENERATED_USTRUCT_BODY();
 
 	UPROPERTY(EditAnywhere)
-	FName Part1ID;
+	ECraftMethod Method;
 	UPROPERTY(EditAnywhere)
-	int32 Part1Amount;
+	EItemType ItemType;
 	UPROPERTY(EditAnywhere)
-	FName Part2ID;
+	FName Ingredient1ID;
 	UPROPERTY(EditAnywhere)
-	int32 Part2Amount;
+	int32 Ingredient1Amount;
 	UPROPERTY(EditAnywhere)
-	FName Part3ID;
+	FName Ingredient2ID;
 	UPROPERTY(EditAnywhere)
-	int32 Part3Amount;
+	int32 Ingredient2Amount;
+	UPROPERTY(EditAnywhere)
+	FName Ingredient3ID;
+	UPROPERTY(EditAnywhere)
+	int32 Ingredient3Amount;
 	UPROPERTY(EditAnywhere)
 	FName ResultID;
 	UPROPERTY(EditAnywhere)
 	int32 ResultAmount;
+	UPROPERTY(EditAnywhere)
+	float Duration;
+
+	TArray<FName> GetIngredientsID() const
+	{
+		TArray<FName> Result;
+		
+		if (!Ingredient1ID.IsNone()) Result.Add(Ingredient1ID);
+		if (!Ingredient2ID.IsNone()) Result.Add(Ingredient2ID);
+		if (!Ingredient3ID.IsNone()) Result.Add(Ingredient3ID);
+
+		return Result;
+	}
+	
+	TMap<FName, int32> GetIngredients() const
+	{
+		TMap<FName, int32> Result;
+		
+		if (!Ingredient1ID.IsNone()) Result.Add(Ingredient1ID, Ingredient1Amount);
+		if (!Ingredient2ID.IsNone()) Result.Add(Ingredient2ID, Ingredient2Amount);
+		if (!Ingredient3ID.IsNone()) Result.Add(Ingredient3ID, Ingredient3Amount);
+
+		return Result;
+	}
 };
