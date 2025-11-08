@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Data/ItemDataStruct.h"
 #include "CraftPanel.generated.h"
 
 /**
@@ -25,12 +26,12 @@ public:
 	TSubclassOf<class UCraftSlot> SlotClass;
 	UPROPERTY(EditAnywhere)
 	class UInventoryComponent* OwnerInventory;
+	UPROPERTY(EditAnywhere)
+	FRecipeData CurrentRecipeData;
 
-	/*UPROPERTY(VisibleAnywhere, meta=(BindWidget))
-	class URecipeInfo* RecipeInfo;*/
+
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
 	class UScrollBox* RecipeList;
-
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
 	class UTextBlock* ItemName;
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
@@ -47,10 +48,14 @@ public:
 	
 	UFUNCTION()
 	void AddRecipe(struct FRecipeData Recipe);
-
 	UFUNCTION(BlueprintCallable)
 	void SetRecipeInfo(FRecipeData RecipeData);
+	UFUNCTION(BlueprintCallable)
+	void SetCraftButton(FRecipeData RecipeData);
 
 protected:
 	virtual void NativeConstruct() override;
+
+	UFUNCTION()
+	void OnCraftButtonClicked();
 };

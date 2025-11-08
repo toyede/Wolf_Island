@@ -18,12 +18,22 @@ void UCraftPanel::NativeConstruct()
 	Super::NativeConstruct();
 
 	OwnerInventory = GetOwningPlayerPawn()->GetComponentByClass<UInventoryComponent>();
+	CraftButton->OnClicked.AddDynamic(this, &UCraftPanel::OnCraftButtonClicked);
 
 	RecipeTable->ForeachRow<FRecipeData>(TEXT("RecipeTableContext"),
 	[&](const FName& RowName, const FRecipeData& Recipe)
 	{
 		AddRecipe(Recipe);
 	});
+}
+
+void UCraftPanel::OnCraftButtonClicked()
+{
+	if (OwnerInventory)
+	{
+		OwnerInventory->MakeItem(CurrentRecipeData);
+		SetCraftButton(CurrentRecipeData);
+	}
 }
 
 void UCraftPanel::AddRecipe(FRecipeData Recipe)
@@ -81,8 +91,14 @@ void UCraftPanel::SetRecipeInfo(FRecipeData RecipeData)
 	DurationText->SetText(FText::FromString(FString::Printf(TEXT("%.1fs"), RecipeData.Duration)));
 
 	//만들 수 있나 체크 후 버튼 활성화 결정
+	SetCraftButton(RecipeData);
+}
+
+void UCraftPanel::SetCraftButton(FRecipeData RecipeData)
+{
 	if (OwnerInventory->CheckCanMakeRecipe(RecipeData))
 	{
+		CurrentRecipeData = RecipeData;		
 		CraftButton->SetIsEnabled(true);
 	} else
 	{
