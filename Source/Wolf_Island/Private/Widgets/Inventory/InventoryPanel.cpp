@@ -5,9 +5,7 @@
 
 #include "Components/InventoryComponent.h"
 #include "Components/ProgressBar.h"
-#include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
-#include "Components/UniformGridPanel.h"
 #include "Components/WrapBox.h"
 #include "Item/ItemBase.h"
 
@@ -54,7 +52,7 @@ void UInventoryPanel::RefreshInventory()
 	if (InventoryRef && SlotClass)
 	{
 		InventoryPanel->ClearChildren();
-		HandSection->ClearChildren();
+		HotBarPanel->ClearChildren();
 		
 		int32 Index = 0;
 		for (FItemSlot InventorySlot : InventoryRef->GetInventory())
@@ -66,11 +64,14 @@ void UInventoryPanel::RefreshInventory()
 			{
 				ItemSlot->SetItemReference(InventorySlot.Item);
 			} 
-
-			if (Index==1)
+			
+			//핫바 슬롯( 첫번째부터 6칸 ( 0 ~ 5 ) )
+			if (Index >= 1 && Index <= 6)
 			{
-				HandSection->AddChild(ItemSlot);
-			} else
+				HotBarPanel->AddChildToWrapBox(ItemSlot);
+			}
+			//인벤토리 슬롯
+			else
 			{
 				InventoryPanel->AddChildToWrapBox(ItemSlot);
 			}

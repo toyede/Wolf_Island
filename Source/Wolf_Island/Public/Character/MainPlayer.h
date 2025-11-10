@@ -9,6 +9,7 @@
 #include "Interaction/InteractionInterface.h"
 #include "MainPlayer.generated.h"
 
+class UItemBase;
 struct FInputActionValue;
 
 USTRUCT(BlueprintType)
@@ -82,6 +83,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputAction* InventoryAction;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
+	UInputAction* UseItemAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
+	UInputAction* HotBarAction;
+
 	//상태 관련 변수 (뛰는 중인지, ~~하는 중인지 등등)=====================================
 	//뛰는 중인지
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
@@ -117,6 +124,13 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsInventoryOpen = false;
+
+	//핫바 관련 변수==================================================================
+	//핫바 슬롯 인덱스
+	UPROPERTY(VisibleAnywhere, Category="HotBar")
+	int32 HotBarIndex = 0;
+	UPROPERTY(VisibleAnywhere, Category="HotBar")
+	FTimerHandle ItemUseTimer;
 
 	//인터랙션 관련 변수===============================================================
 	//인터랙션 타이머 - 꾹 누르는 인터랙션을 위한 것
@@ -187,6 +201,18 @@ public:
 	UFUNCTION()
 	void Sliding();
 
+	UFUNCTION()
+	void UseItem(UItemBase* Item);
+
+	UFUNCTION()
+	void StartUseItem();
+
+	UFUNCTION()
+	void StopUseItem();
+
+	UFUNCTION()
+	void HandleHotBar(const FInputActionValue& Value);
+	
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
 	void OnDeath();
 	void OnDeath_Implementation();

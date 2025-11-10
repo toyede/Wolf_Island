@@ -408,19 +408,14 @@ void UInventoryComponent::BeginPlay()
 
 FItemSlot* UInventoryComponent::FindEmptySlot()
 {
-	//0번 슬롯은 손 슬롯. 모두 빈 상태일 때엔 0말고 1부터 채우기. 
-	for (int i=0; i<InventoryContents.Num(); i++)
+	for (FItemSlot& Slot : InventoryContents)
 	{
-		FItemSlot& Slot = InventoryContents[i];
-		
-		if (!Slot.Item && i!=0)
+		if (!Slot.Item)
 		{
 			return &Slot;
 		}
 		
 	}
-	//손만 비었으면 손 반환
-	if (!InventoryContents[0].Item) return &InventoryContents[0];
 	
 	return nullptr;
 }

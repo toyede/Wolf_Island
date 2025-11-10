@@ -14,6 +14,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Games/MainHUD.h"
 #include "Interaction/InteractionInterface.h"
+#include "Item/ItemBase.h"
 #include "Item/Pickup.h"
 #include "Widgets/PlayerHUD.h"
 
@@ -48,7 +49,7 @@ AMainPlayer::AMainPlayer()
 			));
 
 	//인벤토리 초기화
-	InventoryComponent->SetSlotsCapacity(21);
+	InventoryComponent->SetSlotsCapacity(30);
 	InventoryComponent->SetWeightCapacity(StatusComponent->MaxWeight);
 }
 
@@ -124,6 +125,14 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 		//인벤토리
 		EnhancedInputComponent->BindAction(InventoryAction, ETriggerEvent::Started, this, &AMainPlayer::ToggleInventory);
+
+		//아이템 사용 - 좌클릭 꾹 누르기
+		EnhancedInputComponent->BindAction(UseItemAction, ETriggerEvent::Started, this, &AMainPlayer::StartUseItem);
+		EnhancedInputComponent->BindAction(UseItemAction, ETriggerEvent::Completed, this, &AMainPlayer::StopUseItem);
+
+		//핫바 숫자키
+		EnhancedInputComponent->BindAction(HotBarAction, ETriggerEvent::Started, this, &AMainPlayer::HandleHotBar);
+
 	}
 
 }
@@ -327,6 +336,89 @@ void AMainPlayer::Sliding()
 		PlayAnimMontage(SlideMontage);
 		GetCapsuleComponent()->SetCapsuleHalfHeight(88);
 		IsSliding = false;
+	}
+}
+
+void AMainPlayer::UseItem(UItemBase* Item)
+{
+	UE_LOG(LogTemp, Warning, TEXT("USE ITEM EXECUTED"))
+	if (InventoryComponent)
+	{
+		if (Item)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("TRY TO USE THIS : [ %s ]"), *Item->TextData.Name.ToString());
+			
+			if (StatusComponent && Item->Type == EItemType::FOOD)
+			{
+				StatusComponent->ApplyItem(Item);
+				InventoryComponent->RemoveAmountOfItem(Item, 1);
+			}
+		} else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("NO ITEM IN HOTBAR SLOT"))
+		}
+	}
+}
+
+//타이머 시간을 0으로 하면 실행이 안되는 사실 발견...
+void AMainPlayer::StartUseItem()
+{
+	if (UItemBase* TargetItem = InventoryComponent->GetItemAtIndex(HotBarIndex))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ITEM IS VALID AND START USE ITEM"))
+		if (!GetWorld()->GetTimerManager().IsTimerActive(ItemUseTimer))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("TIMER EXECUTED"))
+			UE_LOG(LogTemp, Warning, TEXT("TARGET ITEM : [ %s ] : DURATION : [ %f ]"), *TargetItem->TextData.Name.ToString(), TargetItem->NumericData.InteractionDuration);
+			GetWorld()->GetTimerManager().SetTimer(
+			ItemUseTimer,
+			[this, TargetItem]()
+			{
+				UseItem(TargetItem);
+			},
+			1,
+			false
+			);
+		}else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("TIMER NOT EXECUTED"))
+		}
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("NO ITEM IN HOTBAR SLOT [%d]"), HotBarIndex+1);
+	}
+}
+
+void AMainPlayer::StopUseItem()
+{
+	UE_LOG(LogTemp, Warning, TEXT("USE ITEM TIMER CANCELED"))
+	GetWorld()->GetTimerManager().ClearTimer(ItemUseTimer);
+}
+
+void AMainPlayer::HandleHotBar(const FInputActionValue& Value)
+{
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (PlayerController)
+	{
+		UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer());
+
+		if (Subsystem)
+		{
+			for (FKey Key : Subsystem->QueryKeysMappedToAction(HotBarAction))
+			{
+				if (PlayerController->IsInputKeyDown(Key))
+				{
+					if (Key == EKeys::One)      HotBarIndex = 0;
+					else if (Key == EKeys::Two) HotBarIndex = 1;
+					else if (Key == EKeys::Three) HotBarIndex = 2;
+					else if (Key == EKeys::Four) HotBarIndex = 3;
+					else if (Key == EKeys::Five) HotBarIndex = 4;
+					else if (Key == EKeys::Six)  HotBarIndex = 5;
+
+					HUD->RefreshHotBar();
+				}
+			}
+		}
 	}
 }
 

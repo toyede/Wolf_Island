@@ -26,7 +26,8 @@ public:
 	FORCEINLINE void SetIndex(int32 InIndex) { Index = InIndex; };
 	FORCEINLINE UItemBase* GetItemReference() const { return ItemRef; };
 	FORCEINLINE void SetDragDrop(bool CanDD) { CanDragDrop = CanDD; };
-
+	void SetSelectedSlot();
+	
 protected:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category = "InventorySlot")
 	int32 Index;

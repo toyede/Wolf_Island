@@ -6,6 +6,12 @@
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Data/ItemDataStruct.h"
+#include "Widgets/Inventory/InventoryToolTip.h"
+
+void UCraftSlot::NativeConstruct()
+{
+	Super::NativeConstruct();
+}
 
 void UCraftSlot::SetCraftSlot(const FItemData& ItemData, int32 Amount)
 {
@@ -18,4 +24,11 @@ void UCraftSlot::SetCraftSlot(const FItemData& ItemData, int32 Amount)
 		ItemIcon->SetVisibility(ESlateVisibility::Hidden);
 	}
 	AmountText->SetText(Amount == 0 ? FText() : FText::AsNumber(Amount));
+
+	if (ToolTipClass)
+	{
+		UInventoryToolTip* ToolTip = CreateWidget<UInventoryToolTip>(this, ToolTipClass);
+		ToolTip->ItemData = ItemData;
+		SetToolTip(ToolTip);
+	}
 }

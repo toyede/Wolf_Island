@@ -124,7 +124,7 @@ void UPlayerHUD::RefreshHotBar()
 {
 	HotBar->ClearChildren();
 	
-	for (int i=1; i<=8; i++)
+	for (int i=0; i<6; i++)
 	{
 		UInventorySlot* HotSlot = CreateWidget<UInventorySlot>(this, SlotClass);
 		HotSlot->SetDragDrop(false);
@@ -132,6 +132,11 @@ void UPlayerHUD::RefreshHotBar()
 		if (UItemBase* Item = PlayerRef->InventoryComponent->GetInventory()[i].Item)
 		{
 			HotSlot->SetItemReference(Item);
+		}
+
+		if (PlayerRef->HotBarIndex == i)
+		{
+			HotSlot->SetSelectedSlot();
 		}
 
 		HotBar->AddChildToWrapBox(HotSlot);

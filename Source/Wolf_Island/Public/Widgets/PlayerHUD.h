@@ -23,7 +23,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void AddItemMessage(FItemAddResult Result);
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class AMainPlayer* PlayerRef;
 		
 	UPROPERTY(meta=(BindWidget))

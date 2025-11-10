@@ -202,3 +202,8 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 	
 	return false;
 }
+
+void UInventorySlot::SetSelectedSlot()
+{
+	ItemBorder->SetBrushColor(FLinearColor::Yellow);
+}

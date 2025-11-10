@@ -6,7 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "CraftSlot.generated.h"
 
-/**
+ /**
  * 
  */
 UCLASS()
@@ -21,7 +21,14 @@ public:
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
 	class UTextBlock* AmountText;
 
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<class UInventoryToolTip> ToolTipClass;
+
 	UFUNCTION()
 	void SetCraftSlot(const struct FItemData& ItemData, int32 Amount);
+
+protected:
+
+	virtual void NativeConstruct() override;
 	
 };
