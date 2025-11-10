@@ -35,6 +35,27 @@ public:
 	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
 	class UVerticalBox* InfoList;
 
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	class UWrapBox* HotBar;
+
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<class UInventorySlot> SlotClass;
+
+	UPROPERTY()
+	bool ShowInteraction = true;
+
+	UFUNCTION(BlueprintCallable)
+	void DisplayInteraction();
+	UFUNCTION(BlueprintCallable)
+	void HideInteraction();
+	UFUNCTION(BlueprintCallable)
+	void ToggleInteraction();
+	UFUNCTION(BlueprintCallable)
+	void UpdateInteraction();
+
+	UFUNCTION(BlueprintCallable)
+	void RefreshHotBar();
+
 
 protected:
 	

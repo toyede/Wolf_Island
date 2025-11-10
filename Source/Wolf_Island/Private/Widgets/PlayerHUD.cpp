@@ -9,7 +9,36 @@
 #include "Components/VerticalBoxSlot.h"
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
+#include "Components/WrapBox.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Widgets/Inventory/InventorySlot.h"
+
+void UPlayerHUD::NativeConstruct()
+{
+	Super::NativeConstruct();
+	
+	RefreshHotBar();
+}
+
+void UPlayerHUD::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+
+	PlayerRef = Cast<AMainPlayer>(GetOwningPlayerPawn());
+
+	if (PlayerRef)
+	{
+		PlayerRef->InventoryComponent->OnInventoryUpdated.AddUObject(this, &UPlayerHUD::RefreshHotBar);
+	}
+}
+
+void UPlayerHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+
+	//인터랙션 바 업데이트
+	UpdateInteraction();
+}
 
 void UPlayerHUD::AddItemMessage(FItemAddResult Result)
 {
@@ -52,24 +81,26 @@ void UPlayerHUD::AddItemMessage(FItemAddResult Result)
 	}
 }
 
-void UPlayerHUD::NativeConstruct()
+void UPlayerHUD::DisplayInteraction()
 {
-	Super::NativeConstruct();
-	
+	ShowInteraction = true;
+	InteractionBar->SetVisibility(ESlateVisibility::Visible);
 }
 
-void UPlayerHUD::NativeOnInitialized()
+void UPlayerHUD::HideInteraction()
 {
-	Super::NativeOnInitialized();
-
-	PlayerRef = Cast<AMainPlayer>(GetOwningPlayerPawn());
+	ShowInteraction = false;
+	InteractionBar->SetVisibility(ESlateVisibility::Hidden);
 }
 
-void UPlayerHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+void UPlayerHUD::ToggleInteraction()
 {
-	Super::NativeTick(MyGeometry, InDeltaTime);
+	ShowInteraction ? HideInteraction() : DisplayInteraction();
+}
 
-	if (PlayerRef)
+void UPlayerHUD::UpdateInteraction()
+{
+	if (PlayerRef && ShowInteraction)
 	{
 		FTimerHandle InteractionTimer = PlayerRef->InteractionTimer;
 		float RemainingTime = UKismetSystemLibrary::K2_GetTimerRemainingTimeHandle(this, InteractionTimer);
@@ -86,5 +117,23 @@ void UPlayerHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 				InteractionBar->SetPercent(0);
 			}
 		}
+	}
+}
+
+void UPlayerHUD::RefreshHotBar()
+{
+	HotBar->ClearChildren();
+	
+	for (int i=1; i<=8; i++)
+	{
+		UInventorySlot* HotSlot = CreateWidget<UInventorySlot>(this, SlotClass);
+		HotSlot->SetDragDrop(false);
+
+		if (UItemBase* Item = PlayerRef->InventoryComponent->GetInventory()[i].Item)
+		{
+			HotSlot->SetItemReference(Item);
+		}
+
+		HotBar->AddChildToWrapBox(HotSlot);
 	}
 }

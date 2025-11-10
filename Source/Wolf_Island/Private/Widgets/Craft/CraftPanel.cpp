@@ -20,11 +20,7 @@ void UCraftPanel::NativeConstruct()
 	OwnerInventory = GetOwningPlayerPawn()->GetComponentByClass<UInventoryComponent>();
 	CraftButton->OnClicked.AddDynamic(this, &UCraftPanel::OnCraftButtonClicked);
 
-	RecipeTable->ForeachRow<FRecipeData>(TEXT("RecipeTableContext"),
-	[&](const FName& RowName, const FRecipeData& Recipe)
-	{
-		AddRecipe(Recipe);
-	});
+	RefreshRecipeList();
 }
 
 void UCraftPanel::OnCraftButtonClicked()
@@ -60,6 +56,19 @@ void UCraftPanel::AddRecipe(FRecipeData Recipe)
 
 		RecipeList->AddChild(Block);
 	}
+}
+
+inline void UCraftPanel::RefreshRecipeList()
+{
+	RecipeList->ClearChildren();
+	
+	RecipeTable->ForeachRow<FRecipeData>(TEXT("RecipeTableContext"),
+	[&](const FName& RowName, const FRecipeData& Recipe)
+	{
+		//필터링에 있으면 출력
+		if (RecipeTypeList.Contains(Recipe.ItemType))
+			AddRecipe(Recipe);
+	});
 }
 
 void UCraftPanel::SetRecipeInfo(FRecipeData RecipeData)

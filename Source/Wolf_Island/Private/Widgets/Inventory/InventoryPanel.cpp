@@ -5,7 +5,9 @@
 
 #include "Components/InventoryComponent.h"
 #include "Components/ProgressBar.h"
+#include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
+#include "Components/UniformGridPanel.h"
 #include "Components/WrapBox.h"
 #include "Item/ItemBase.h"
 
@@ -52,15 +54,8 @@ void UInventoryPanel::RefreshInventory()
 	if (InventoryRef && SlotClass)
 	{
 		InventoryPanel->ClearChildren();
-
-		/*for (UItemBase* const& InventoryItem : InventoryRef->GetInventory())
-		{
-			UInventorySlot* ItemSlot = CreateWidget<UInventorySlot>(this, SlotClass);
-			ItemSlot->SetItemReference(InventoryItem);
-
-			InventoryPanel->AddChildToWrapBox(ItemSlot);
-		}*/
-		//const TArray<UItemBase*>& Items = InventoryRef->GetInventory();
+		HandSection->ClearChildren();
+		
 		int32 Index = 0;
 		for (FItemSlot InventorySlot : InventoryRef->GetInventory())
 		{
@@ -70,9 +65,15 @@ void UInventoryPanel::RefreshInventory()
 			if (InventorySlot.Item)
 			{
 				ItemSlot->SetItemReference(InventorySlot.Item);
-			}
+			} 
 
-			InventoryPanel->AddChildToWrapBox(ItemSlot);
+			if (Index==1)
+			{
+				HandSection->AddChild(ItemSlot);
+			} else
+			{
+				InventoryPanel->AddChildToWrapBox(ItemSlot);
+			}
 		}
 
 		SetInfoText();

@@ -397,6 +397,8 @@ void UInventoryComponent::AddNewItem(UItemBase* Item, const int32 Amount)
 void UInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	//나중에 저장 데이터에서 인벤토리 가져오는 코드 구현 예정
+	
 
 	InventoryContents.Init(FItemSlot(), SlotsCapacity);
 	// ...
@@ -406,13 +408,20 @@ void UInventoryComponent::BeginPlay()
 
 FItemSlot* UInventoryComponent::FindEmptySlot()
 {
-	for (FItemSlot& Slot : InventoryContents)
+	//0번 슬롯은 손 슬롯. 모두 빈 상태일 때엔 0말고 1부터 채우기. 
+	for (int i=0; i<InventoryContents.Num(); i++)
 	{
-		if (!Slot.Item)
+		FItemSlot& Slot = InventoryContents[i];
+		
+		if (!Slot.Item && i!=0)
 		{
 			return &Slot;
 		}
+		
 	}
+	//손만 비었으면 손 반환
+	if (!InventoryContents[0].Item) return &InventoryContents[0];
+	
 	return nullptr;
 }
 

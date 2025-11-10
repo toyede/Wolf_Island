@@ -25,6 +25,9 @@ public:
 	class UWrapBox* InventoryPanel;
 	
 	UPROPERTY(meta=(BindWidget))
+	class USizeBox* HandSection;
+	
+	UPROPERTY(meta=(BindWidget))
 	class UProgressBar* WeightBar;
 
 	UPROPERTY(meta=(BindWidget))

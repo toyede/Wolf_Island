@@ -25,6 +25,7 @@ public:
 	FORCEINLINE void SetItemReference(UItemBase* ItemIn) { ItemRef = ItemIn; };
 	FORCEINLINE void SetIndex(int32 InIndex) { Index = InIndex; };
 	FORCEINLINE UItemBase* GetItemReference() const { return ItemRef; };
+	FORCEINLINE void SetDragDrop(bool CanDD) { CanDragDrop = CanDD; };
 
 protected:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category = "InventorySlot")
@@ -47,6 +48,9 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
 	UTextBlock* ItemAmount;
+
+	UPROPERTY(VisibleAnywhere)
+	bool CanDragDrop = true;
 	
 	
 	virtual void NativeOnInitialized() override;

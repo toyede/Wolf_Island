@@ -44,10 +44,14 @@ public:
 	class UWrapBox* IngredientList;
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
 	class UButton* CraftButton;
+	UPROPERTY(EditAnywhere)
+	TArray<EItemType> RecipeTypeList;
 
 	
 	UFUNCTION()
 	void AddRecipe(struct FRecipeData Recipe);
+	UFUNCTION()
+	void RefreshRecipeList();
 	UFUNCTION(BlueprintCallable)
 	void SetRecipeInfo(FRecipeData RecipeData);
 	UFUNCTION(BlueprintCallable)

@@ -48,7 +48,7 @@ AMainPlayer::AMainPlayer()
 			));
 
 	//인벤토리 초기화
-	InventoryComponent->SetSlotsCapacity(20);
+	InventoryComponent->SetSlotsCapacity(21);
 	InventoryComponent->SetWeightCapacity(StatusComponent->MaxWeight);
 }
 

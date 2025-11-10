@@ -17,6 +17,5 @@ void UCraftSlot::SetCraftSlot(const FItemData& ItemData, int32 Amount)
 	{
 		ItemIcon->SetVisibility(ESlateVisibility::Hidden);
 	}
-
 	AmountText->SetText(Amount == 0 ? FText() : FText::AsNumber(Amount));
 }

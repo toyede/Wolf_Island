@@ -4,15 +4,29 @@
 #include "Widgets/Inventory/Inventory.h"
 
 #include "Character/MainPlayer.h"
+#include "Components/Button.h"
 #include "Components/InventoryComponent.h"
 #include "Components/SizeBox.h"
+#include "Components/WidgetSwitcher.h"
 #include "Item/ItemBase.h"
+#include "Widgets/Craft/CraftPanel.h"
 #include "Widgets/Inventory/InventoryPanel.h"
 #include "Widgets/Inventory/ItemDragDropOperation.h"
 
 void UInventory::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
+
+	PanelSwitcher->AddChild(InventorySection);
+	PanelSwitcher->AddChild(FoodRecipeSection);
+	PanelSwitcher->AddChild(CraftRecipeSection);
+	PanelSwitcher->AddChild(UnknownRecordSection);
+
+	InventoryButton->OnClicked.AddDynamic(this, &UInventory::HandleInventoryClicked);
+	FoodRecipeButton->OnClicked.AddDynamic(this, &UInventory::HandleFoodRecipeClicked);
+	CraftRecipeButton->OnClicked.AddDynamic(this, &UInventory::HandleCraftRecipeClicked);
+	UnknownRecordButton->OnClicked.AddDynamic(this, &UInventory::HandleUnknownRecordClicked);
+
 }
 
 void UInventory::NativeConstruct()
@@ -66,5 +80,29 @@ bool UInventory::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent&
 		return true;
 	}
 	return false;
+}
+
+void UInventory::HandleInventoryClicked()
+{
+	PanelSwitcher->SetActiveWidget(InventorySection);
+	OnInventoryClicked.ExecuteIfBound();
+}
+
+void UInventory::HandleFoodRecipeClicked()
+{
+	PanelSwitcher->SetActiveWidget(FoodRecipeSection);
+	OnCraftClicked.ExecuteIfBound();
+}
+
+void UInventory::HandleCraftRecipeClicked()
+{
+	PanelSwitcher->SetActiveWidget(CraftRecipeSection);
+	OnCraftClicked.ExecuteIfBound();
+}
+
+void UInventory::HandleUnknownRecordClicked()
+{
+	PanelSwitcher->SetActiveWidget(UnknownRecordSection);
+	OnUnknownRecordClicked.ExecuteIfBound();
 }
 

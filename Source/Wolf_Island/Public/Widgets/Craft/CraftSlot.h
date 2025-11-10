@@ -15,7 +15,7 @@ class WOLF_ISLAND_API UCraftSlot : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	
+
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
 	class UImage* ItemIcon;
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
