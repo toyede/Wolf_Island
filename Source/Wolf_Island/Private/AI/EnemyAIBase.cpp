@@ -41,6 +41,10 @@ AEnemyAIBase::AEnemyAIBase()
     HealthBarWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBarWidget"));
     HealthBarWidget->SetupAttachment(GetCapsuleComponent());
 
+    StatusComponent = CreateDefaultSubobject<UStatusComponent>(TEXT("StatusComponent"));
+
+    AttackDamage = 10.0f;
+
 }
 
 void AEnemyAIBase::BeginPlay()
@@ -66,9 +70,11 @@ void AEnemyAIBase::ChangeForm(EEnemyForm Form)
     {
     case EEnemyForm::Human:
         if (HumanMesh) GetMesh()->SetSkeletalMesh(HumanMesh);
+        if (HumanAnimBP) GetMesh()->SetAnimInstanceClass(HumanAnimBP);
         break;
     case EEnemyForm::Wolf:
         if (WolfMesh) GetMesh()->SetSkeletalMesh(WolfMesh);
+        if (HumanAnimBP) GetMesh()->SetAnimInstanceClass(WolfAnimBP);
         break;
 
     default:
