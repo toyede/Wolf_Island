@@ -15,7 +15,8 @@
 void UInventorySlot::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
-	
+
+	SetUnSelectedSlot();
 }
 
 
@@ -205,5 +206,10 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 
 void UInventorySlot::SetSelectedSlot()
 {
-	ItemBorder->SetBrushColor(FLinearColor::Yellow);
+	ItemBorder->SetBrush(SelectedSlotBrush);
+}
+
+void UInventorySlot::SetUnSelectedSlot()
+{
+	ItemBorder->SetBrush(UnSelectedSlotBrush);
 }

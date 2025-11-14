@@ -56,7 +56,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void RefreshHotBar();
 
-
 protected:
 	
 	virtual void NativeConstruct() override;

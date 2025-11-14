@@ -124,6 +124,7 @@ void UPlayerHUD::RefreshHotBar()
 {
 	HotBar->ClearChildren();
 	
+	UE_LOG(LogTemp, Warning, TEXT("SELECTED INDEX [ %d ]=========================="), PlayerRef->HotBarIndex);
 	for (int i=0; i<6; i++)
 	{
 		UInventorySlot* HotSlot = CreateWidget<UInventorySlot>(this, SlotClass);
@@ -133,12 +134,14 @@ void UPlayerHUD::RefreshHotBar()
 		{
 			HotSlot->SetItemReference(Item);
 		}
-
+		
 		if (PlayerRef->HotBarIndex == i)
 		{
 			HotSlot->SetSelectedSlot();
+			UE_LOG(LogTemp, Warning, TEXT("[ %d ] Slot is Selected"), i);
 		}
-
+		UE_LOG(LogTemp, Warning, TEXT("[ %d ] Slot's Color is [ %s ]"), i, *HotSlot->GetBrushColor().ToString());
+		
 		HotBar->AddChildToWrapBox(HotSlot);
 	}
 }
