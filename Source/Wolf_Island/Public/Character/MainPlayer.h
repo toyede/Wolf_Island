@@ -51,6 +51,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UInventoryComponent* InventoryComponent;
+	//손에 들 아이템
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UStaticMeshComponent* ItemMesh;
 	
 	//입력 관련 변수====================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
@@ -89,6 +92,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputAction* HotBarAction;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
+	UInputAction* HotBarWheelAction;
+
 	//상태 관련 변수 (뛰는 중인지, ~~하는 중인지 등등)=====================================
 	//뛰는 중인지
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
@@ -122,8 +128,13 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	float SlideConsumeAmount  = 2.0f;
 
+	//인벤토리가 열려 있는지
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsInventoryOpen = false;
+
+	//손에 든 아이템이 있는지
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	bool IsHoldingItem = false;
 
 	//핫바 관련 변수==================================================================
 	//핫바 슬롯 인덱스
@@ -202,6 +213,9 @@ public:
 	void Sliding();
 
 	UFUNCTION()
+	void EndSliding(UAnimMontage* Montage, bool bInterrupted);
+
+	UFUNCTION()
 	void UseItem(UItemBase* Item);
 
 	UFUNCTION()
@@ -212,10 +226,16 @@ public:
 
 	UFUNCTION()
 	void HandleHotBar(const FInputActionValue& Value);
+
+	UFUNCTION()
+	void HandleHotBarWithWheel(const FInputActionValue& Value);
 	
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
 	void OnDeath();
-	void OnDeath_Implementation();
+	virtual void OnDeath_Implementation();
+
+	UFUNCTION(BlueprintCallable)
+	void RefreshHand();
 
 	//인터랙션 관련 함수===================================================
 	//인터랙션 체크 함수 - 라인트레이스로 인터랙션 액터 체크

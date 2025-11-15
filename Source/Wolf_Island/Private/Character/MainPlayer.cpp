@@ -31,6 +31,11 @@ AMainPlayer::AMainPlayer()
 
 	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>("InventoryComponent");
 
+	//손에 든 아이템 메쉬
+	ItemMesh = CreateDefaultSubobject<UStaticMeshComponent>("Item");
+	//손 소켓에 부-착!
+	ItemMesh->SetupAttachment(GetMesh(), "hand_r_socket");
+	
 	GetMesh()->SetRelativeTransform(
 		FTransform(
 			FRotator(0, -90, 0),
@@ -65,11 +70,17 @@ void AMainPlayer::BeginPlay()
 		StatusComponent->OnStaminaZero.AddDynamic(this, &AMainPlayer::StopRun);
 
 		//죽음 바인딩
-		StatusComponent->OnHPZero.AddDynamic(this, &AMainPlayer::OnDeath_Implementation);
+		StatusComponent->OnHPZero.AddDynamic(this, &AMainPlayer::OnDeath);
 
 		//배고픔, 수분 감소 시작
 		StatusComponent->StartHunger();
 		StatusComponent->StartHydration();
+	}
+
+	if (InventoryComponent)
+	{
+		//아이템 업데이트 바인딩
+		InventoryComponent->OnInventoryUpdated.AddUObject(this, &AMainPlayer::RefreshHand);
 	}
 
 	//HUD = Cast<AMainHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
@@ -132,7 +143,8 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 		//핫바 숫자키
 		EnhancedInputComponent->BindAction(HotBarAction, ETriggerEvent::Started, this, &AMainPlayer::HandleHotBar);
-
+		//핫바 마우스 휠
+		EnhancedInputComponent->BindAction(HotBarWheelAction, ETriggerEvent::Triggered, this, &AMainPlayer::HandleHotBarWithWheel);
 	}
 
 }
@@ -254,8 +266,8 @@ void AMainPlayer::Run()
 		}
 		
 		if(!IsRunning){
-			//스태미나 0이면 암것도 안하기
-			if (StatusComponent->CurrentStamina <= 0) return;
+			//스태미나 0이거나 웅크리는 중이면
+			if (StatusComponent->CurrentStamina <= 0 || IsCrouching) return;
 	
 			GetCharacterMovement()->MaxWalkSpeed = 600.0f;
 			StatusComponent->StopStamina();
@@ -282,17 +294,21 @@ void AMainPlayer::Run()
 }
 
 void AMainPlayer::StopRun()
-{	
-	GetCharacterMovement()->MaxWalkSpeed = 300.0f;
-	//스태미나 감소 중단
-	StatusComponent->StopStamina();
-	//스태미나 회복 타이머가 실행 중이 아니면
-	if (!GetWorld()->GetTimerManager().TimerExists(StatusComponent->StaminaRecoverTimer))
+{
+	//달리기 중일 때만 달리기 중지 시퀀스 작동
+	if (IsRunning)
 	{
-		//스태미나 회복 타이머 실행
-		StatusComponent->StartRecoverStamina();
+		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
+		//스태미나 감소 중단
+		StatusComponent->StopStamina();
+		//스태미나 회복 타이머가 실행 중이 아니면
+		if (!GetWorld()->GetTimerManager().TimerExists(StatusComponent->StaminaRecoverTimer))
+		{
+			//스태미나 회복 타이머 실행
+			StatusComponent->StartRecoverStamina();
+		}
+		IsRunning = false;
 	}
-	IsRunning = false;
 }
 
 void AMainPlayer::ToggleCrouch()
@@ -327,8 +343,20 @@ void AMainPlayer::ToggleInventory()
 
 void AMainPlayer::Sliding()
 {
+	UAnimInstance* AnimInst = GetMesh()->GetAnimInstance();
+
+	if (AnimInst&&!IsSliding)
+	{
+		StatusComponent->DecreaseStamina(SlideConsumeAmount);
+		IsSliding = true;
+		GetCapsuleComponent()->SetCapsuleHalfHeight(30);
+		GetMesh()->SetRelativeLocation(FVector(0, 0, -31.0f));
+		AnimInst->Montage_Play(SlideMontage);
+		AnimInst->OnMontageEnded.AddDynamic(this, &AMainPlayer::EndSliding);
+	}
+	
 	//달리기 중이고 슬라이딩을 하지 않는 경우에만 가능
-	if (IsRunning&&!IsSliding)
+	/*if (IsRunning&&!IsSliding)
 	{
 		StatusComponent->DecreaseStamina(SlideConsumeAmount);
 		IsSliding = true;
@@ -336,7 +364,15 @@ void AMainPlayer::Sliding()
 		PlayAnimMontage(SlideMontage);
 		GetCapsuleComponent()->SetCapsuleHalfHeight(88);
 		IsSliding = false;
-	}
+	}*/
+}
+
+//-31
+void AMainPlayer::EndSliding(UAnimMontage* Montage, bool bInterrupted)
+{
+	GetMesh()->SetRelativeLocation(FVector(0, 0, -90.0f));
+	GetCapsuleComponent()->SetCapsuleHalfHeight(88);
+	IsSliding = false;
 }
 
 void AMainPlayer::UseItem(UItemBase* Item)
@@ -416,15 +452,48 @@ void AMainPlayer::HandleHotBar(const FInputActionValue& Value)
 					else if (Key == EKeys::Six)  HotBarIndex = 5;
 
 					HUD->RefreshHotBar();
+					RefreshHand();
 				}
 			}
 		}
 	}
 }
 
+void AMainPlayer::HandleHotBarWithWheel(const FInputActionValue& Value)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Wheel Value : %f"), Value.Get<float>());
+	if (Value.Get<float>() > 0)
+	{
+		HotBarIndex = (HotBarIndex + 1) % 6;
+	} else
+	{
+		HotBarIndex = (HotBarIndex - 1 + 6) % 6;
+	}
+
+	HUD->RefreshHotBar();
+	RefreshHand();
+}
+
 void AMainPlayer::OnDeath_Implementation()
 {
 	UE_LOG(LogTemp, Display, TEXT("Player Dead"));
+}
+
+//손에 든 아이템 업데이트 함수
+void AMainPlayer::RefreshHand()
+{
+	//해당 인덱스 인벤토리 칸에 아이템이 있으면 그 아이템 들기.
+	if (UItemBase* Item = InventoryComponent->GetItemAtIndex(HotBarIndex))
+	{
+		IsHoldingItem = true;
+		ItemMesh->SetStaticMesh(Item->AssetData.Mesh);
+		ItemMesh->SetRelativeScale3D(FVector(0.1f, 0.1f, 0.1f));
+	} else
+	{
+		IsHoldingItem = false;
+		ItemMesh->SetStaticMesh(nullptr);
+	}
+	
 }
 
 void AMainPlayer::CheckInteraction()
