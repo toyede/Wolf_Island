@@ -145,8 +145,10 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 		EnhancedInputComponent->BindAction(HotBarAction, ETriggerEvent::Started, this, &AMainPlayer::HandleHotBar);
 		//핫바 마우스 휠
 		EnhancedInputComponent->BindAction(HotBarWheelAction, ETriggerEvent::Triggered, this, &AMainPlayer::HandleHotBarWithWheel);
-	}
 
+		//공격
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &AMainPlayer::Attack);
+	}
 }
 
 void AMainPlayer::NotifyControllerChanged()
@@ -493,6 +495,11 @@ void AMainPlayer::RefreshHand()
 		IsHoldingItem = false;
 		ItemMesh->SetStaticMesh(nullptr);
 	}
+	
+}
+
+void AMainPlayer::Attack_Implementation()
+{
 	
 }
 

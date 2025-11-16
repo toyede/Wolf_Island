@@ -237,6 +237,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void RefreshHand();
 
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
+	void Attack();
+	virtual void Attack_Implementation();
+
 	//인터랙션 관련 함수===================================================
 	//인터랙션 체크 함수 - 라인트레이스로 인터랙션 액터 체크
 	UFUNCTION()
