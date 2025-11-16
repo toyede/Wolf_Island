@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Data/ItemDataStruct.h"
 #include "InventoryToolTip.generated.h"
 
 class UInventorySlot;
@@ -20,6 +21,9 @@ public:
 
 	UPROPERTY(VisibleAnywhere)
 	UInventorySlot* InventorySlotBeingHovered;
+
+	UPROPERTY(VisibleAnywhere)
+	FItemData ItemData;
 
 	UPROPERTY(meta=(BindWidget))
 	UTextBlock* ItemName;

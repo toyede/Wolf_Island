@@ -14,6 +14,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Games/MainHUD.h"
 #include "Interaction/InteractionInterface.h"
+#include "Item/ItemBase.h"
 #include "Item/Pickup.h"
 #include "Widgets/PlayerHUD.h"
 
@@ -30,6 +31,11 @@ AMainPlayer::AMainPlayer()
 
 	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>("InventoryComponent");
 
+	//손에 든 아이템 메쉬
+	ItemMesh = CreateDefaultSubobject<UStaticMeshComponent>("Item");
+	//손 소켓에 부-착!
+	ItemMesh->SetupAttachment(GetMesh(), "hand_r_socket");
+	
 	GetMesh()->SetRelativeTransform(
 		FTransform(
 			FRotator(0, -90, 0),
@@ -48,7 +54,7 @@ AMainPlayer::AMainPlayer()
 			));
 
 	//인벤토리 초기화
-	InventoryComponent->SetSlotsCapacity(20);
+	InventoryComponent->SetSlotsCapacity(30);
 	InventoryComponent->SetWeightCapacity(StatusComponent->MaxWeight);
 }
 
@@ -64,11 +70,17 @@ void AMainPlayer::BeginPlay()
 		StatusComponent->OnStaminaZero.AddDynamic(this, &AMainPlayer::StopRun);
 
 		//죽음 바인딩
-		StatusComponent->OnHPZero.AddDynamic(this, &AMainPlayer::OnDeath_Implementation);
+		StatusComponent->OnHPZero.AddDynamic(this, &AMainPlayer::OnDeath);
 
 		//배고픔, 수분 감소 시작
 		StatusComponent->StartHunger();
 		StatusComponent->StartHydration();
+	}
+
+	if (InventoryComponent)
+	{
+		//아이템 업데이트 바인딩
+		InventoryComponent->OnInventoryUpdated.AddUObject(this, &AMainPlayer::RefreshHand);
 	}
 
 	//HUD = Cast<AMainHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
@@ -124,6 +136,15 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 		//인벤토리
 		EnhancedInputComponent->BindAction(InventoryAction, ETriggerEvent::Started, this, &AMainPlayer::ToggleInventory);
+
+		//아이템 사용 - 좌클릭 꾹 누르기
+		EnhancedInputComponent->BindAction(UseItemAction, ETriggerEvent::Started, this, &AMainPlayer::StartUseItem);
+		EnhancedInputComponent->BindAction(UseItemAction, ETriggerEvent::Completed, this, &AMainPlayer::StopUseItem);
+
+		//핫바 숫자키
+		EnhancedInputComponent->BindAction(HotBarAction, ETriggerEvent::Started, this, &AMainPlayer::HandleHotBar);
+		//핫바 마우스 휠
+		EnhancedInputComponent->BindAction(HotBarWheelAction, ETriggerEvent::Triggered, this, &AMainPlayer::HandleHotBarWithWheel);
 	}
 
 }
@@ -245,8 +266,8 @@ void AMainPlayer::Run()
 		}
 		
 		if(!IsRunning){
-			//스태미나 0이면 암것도 안하기
-			if (StatusComponent->CurrentStamina <= 0) return;
+			//스태미나 0이거나 웅크리는 중이면
+			if (StatusComponent->CurrentStamina <= 0 || IsCrouching) return;
 	
 			GetCharacterMovement()->MaxWalkSpeed = 600.0f;
 			StatusComponent->StopStamina();
@@ -273,17 +294,21 @@ void AMainPlayer::Run()
 }
 
 void AMainPlayer::StopRun()
-{	
-	GetCharacterMovement()->MaxWalkSpeed = 300.0f;
-	//스태미나 감소 중단
-	StatusComponent->StopStamina();
-	//스태미나 회복 타이머가 실행 중이 아니면
-	if (!GetWorld()->GetTimerManager().TimerExists(StatusComponent->StaminaRecoverTimer))
+{
+	//달리기 중일 때만 달리기 중지 시퀀스 작동
+	if (IsRunning)
 	{
-		//스태미나 회복 타이머 실행
-		StatusComponent->StartRecoverStamina();
+		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
+		//스태미나 감소 중단
+		StatusComponent->StopStamina();
+		//스태미나 회복 타이머가 실행 중이 아니면
+		if (!GetWorld()->GetTimerManager().TimerExists(StatusComponent->StaminaRecoverTimer))
+		{
+			//스태미나 회복 타이머 실행
+			StatusComponent->StartRecoverStamina();
+		}
+		IsRunning = false;
 	}
-	IsRunning = false;
 }
 
 void AMainPlayer::ToggleCrouch()
@@ -318,8 +343,20 @@ void AMainPlayer::ToggleInventory()
 
 void AMainPlayer::Sliding()
 {
+	UAnimInstance* AnimInst = GetMesh()->GetAnimInstance();
+
+	if (AnimInst&&!IsSliding)
+	{
+		StatusComponent->DecreaseStamina(SlideConsumeAmount);
+		IsSliding = true;
+		GetCapsuleComponent()->SetCapsuleHalfHeight(30);
+		GetMesh()->SetRelativeLocation(FVector(0, 0, -31.0f));
+		AnimInst->Montage_Play(SlideMontage);
+		AnimInst->OnMontageEnded.AddDynamic(this, &AMainPlayer::EndSliding);
+	}
+	
 	//달리기 중이고 슬라이딩을 하지 않는 경우에만 가능
-	if (IsRunning&&!IsSliding)
+	/*if (IsRunning&&!IsSliding)
 	{
 		StatusComponent->DecreaseStamina(SlideConsumeAmount);
 		IsSliding = true;
@@ -327,12 +364,136 @@ void AMainPlayer::Sliding()
 		PlayAnimMontage(SlideMontage);
 		GetCapsuleComponent()->SetCapsuleHalfHeight(88);
 		IsSliding = false;
+	}*/
+}
+
+//-31
+void AMainPlayer::EndSliding(UAnimMontage* Montage, bool bInterrupted)
+{
+	GetMesh()->SetRelativeLocation(FVector(0, 0, -90.0f));
+	GetCapsuleComponent()->SetCapsuleHalfHeight(88);
+	IsSliding = false;
+}
+
+void AMainPlayer::UseItem(UItemBase* Item)
+{
+	UE_LOG(LogTemp, Warning, TEXT("USE ITEM EXECUTED"))
+	if (InventoryComponent)
+	{
+		if (Item)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("TRY TO USE THIS : [ %s ]"), *Item->TextData.Name.ToString());
+			
+			if (StatusComponent && Item->Type == EItemType::FOOD)
+			{
+				StatusComponent->ApplyItem(Item);
+				InventoryComponent->RemoveAmountOfItem(Item, 1);
+			}
+		} else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("NO ITEM IN HOTBAR SLOT"))
+		}
 	}
+}
+
+//타이머 시간을 0으로 하면 실행이 안되는 사실 발견...
+void AMainPlayer::StartUseItem()
+{
+	if (UItemBase* TargetItem = InventoryComponent->GetItemAtIndex(HotBarIndex))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ITEM IS VALID AND START USE ITEM"))
+		if (!GetWorld()->GetTimerManager().IsTimerActive(ItemUseTimer))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("TIMER EXECUTED"))
+			UE_LOG(LogTemp, Warning, TEXT("TARGET ITEM : [ %s ] : DURATION : [ %f ]"), *TargetItem->TextData.Name.ToString(), TargetItem->NumericData.InteractionDuration);
+			GetWorld()->GetTimerManager().SetTimer(
+			ItemUseTimer,
+			[this, TargetItem]()
+			{
+				UseItem(TargetItem);
+			},
+			1,
+			false
+			);
+		}else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("TIMER NOT EXECUTED"))
+		}
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("NO ITEM IN HOTBAR SLOT [%d]"), HotBarIndex+1);
+	}
+}
+
+void AMainPlayer::StopUseItem()
+{
+	UE_LOG(LogTemp, Warning, TEXT("USE ITEM TIMER CANCELED"))
+	GetWorld()->GetTimerManager().ClearTimer(ItemUseTimer);
+}
+
+void AMainPlayer::HandleHotBar(const FInputActionValue& Value)
+{
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (PlayerController)
+	{
+		UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer());
+
+		if (Subsystem)
+		{
+			for (FKey Key : Subsystem->QueryKeysMappedToAction(HotBarAction))
+			{
+				if (PlayerController->IsInputKeyDown(Key))
+				{
+					if (Key == EKeys::One)      HotBarIndex = 0;
+					else if (Key == EKeys::Two) HotBarIndex = 1;
+					else if (Key == EKeys::Three) HotBarIndex = 2;
+					else if (Key == EKeys::Four) HotBarIndex = 3;
+					else if (Key == EKeys::Five) HotBarIndex = 4;
+					else if (Key == EKeys::Six)  HotBarIndex = 5;
+
+					HUD->RefreshHotBar();
+					RefreshHand();
+				}
+			}
+		}
+	}
+}
+
+void AMainPlayer::HandleHotBarWithWheel(const FInputActionValue& Value)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Wheel Value : %f"), Value.Get<float>());
+	if (Value.Get<float>() > 0)
+	{
+		HotBarIndex = (HotBarIndex + 1) % 6;
+	} else
+	{
+		HotBarIndex = (HotBarIndex - 1 + 6) % 6;
+	}
+
+	HUD->RefreshHotBar();
+	RefreshHand();
 }
 
 void AMainPlayer::OnDeath_Implementation()
 {
 	UE_LOG(LogTemp, Display, TEXT("Player Dead"));
+}
+
+//손에 든 아이템 업데이트 함수
+void AMainPlayer::RefreshHand()
+{
+	//해당 인덱스 인벤토리 칸에 아이템이 있으면 그 아이템 들기.
+	if (UItemBase* Item = InventoryComponent->GetItemAtIndex(HotBarIndex))
+	{
+		IsHoldingItem = true;
+		ItemMesh->SetStaticMesh(Item->AssetData.Mesh);
+		ItemMesh->SetRelativeScale3D(FVector(0.1f, 0.1f, 0.1f));
+	} else
+	{
+		IsHoldingItem = false;
+		ItemMesh->SetStaticMesh(nullptr);
+	}
+	
 }
 
 void AMainPlayer::CheckInteraction()
@@ -524,14 +685,14 @@ void AMainPlayer::DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool
 
 		const FVector SpawnLocation(GetActorLocation() + (GetActorForwardVector() * 50.0f));
 		const FTransform SpawnTransform(GetActorRotation(), SpawnLocation);
-
-		const int32 RemovedAmount = IsWhole ? InventoryComponent->RemoveAmountOfItem(ItemToDrop, AmountToDrop) : AmountToDrop;
-
+		
+		const int32 RemovedAmount = InventoryComponent->RemoveAmountOfItem(ItemToDrop, AmountToDrop);
+		
 		APickup* Pickup = GetWorld()->SpawnActor<APickup>(APickup::StaticClass(), SpawnTransform, SpawnParams);
-	
+		
 		Pickup->InitializeDrop(ItemToDrop, RemovedAmount);
 	} else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ITEM DROP SEQUENCE IS NOT WORKING."))
+		UE_LOG(LogTemp, Warning, TEXT("CAN'T FIND MATCHED ITEM."))
 	}
 }

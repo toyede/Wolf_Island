@@ -6,6 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "StatusComponent.generated.h"
 
+class UItemBase;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHPZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStaminaZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHungerZero);
@@ -223,6 +224,10 @@ public:
 	//입력 허용 함수
 	UFUNCTION(BlueprintCallable)
 	void EnableController();
+
+	//아이템 사용 스탯 적용 함수
+	UFUNCTION(BlueprintCallable)
+	void ApplyItem(UItemBase* Item);
 
 	//값 반환 함수
 	UFUNCTION(BlueprintCallable, BlueprintPure)

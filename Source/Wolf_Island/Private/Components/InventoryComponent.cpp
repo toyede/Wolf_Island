@@ -17,6 +17,41 @@ UInventoryComponent::UInventoryComponent()
 	// ...
 }
 
+FItemSlot* UInventoryComponent::FindSlotByID(FName ItemID)
+{
+	for (FItemSlot& Slot : InventoryContents)
+	{
+		if (Slot.Item)
+		{
+			if (Slot.Item->ID == ItemID)
+			{
+				return &Slot;
+			}
+		}
+	}
+
+	return nullptr;
+}
+
+int32 UInventoryComponent::GetItemTotalAmountByID(FName ItemID)
+{
+	int32 count = 0;
+	FText ItemName = FText();
+	for (FItemSlot Slot : InventoryContents)
+	{
+		if (Slot.Item)
+		{
+			if (Slot.Item->ID == ItemID)
+			{
+				ItemName = Slot.Item->TextData.Name;
+				count += Slot.Item->Amount;
+			}
+		}
+	}
+	UE_LOG(LogTemp, Warning, TEXT("[ %s ] : %d in Inventory."), *ItemName.ToString() ,count);
+	return count;
+}
+
 UItemBase* UInventoryComponent::FindMatchingItem(UItemBase* Item) const
 {
 	if (Item)
@@ -102,6 +137,7 @@ void UInventoryComponent::RemoveSingleInstanceOfItem(UItemBase* Item)
 
 int32 UInventoryComponent::RemoveAmountOfItem(UItemBase* Item, int32 DesiredRemovedAmount)
 {
+	UE_LOG(LogTemp, Warning, TEXT("Item Amount : %d | Desired Amount : %d"), Item->Amount, DesiredRemovedAmount);
 	//삭제하고 싶은 개수와 실제 아이템 개수 중 작은 값
 	const int32 ActualAmountToRemove = FMath::Min(DesiredRemovedAmount, Item->Amount);
 	//아이템 개수에서 실제 삭제 개수 빼기
@@ -118,7 +154,7 @@ int32 UInventoryComponent::RemoveAmountOfItem(UItemBase* Item, int32 DesiredRemo
 void UInventoryComponent::SplitExistingStack(UItemBase* Item, const int32 AmountToSplit)
 {
 	//인벤토리 개수를 초과하지 않으면 (1칸 빈 공간이 있으면)
-	if (GetEmptySlotCount() <= SlotsCapacity)
+	if (GetEmptySlotCount() > 0)
 	{
 		//쪼갤 만큼 삭제하고
 		RemoveAmountOfItem(Item, AmountToSplit);
@@ -189,7 +225,7 @@ FItemAddResult UInventoryComponent::HandleNoneStackableItem(UItemBase* AddedItem
 	}
 
 	//이상할 것이 없으면 추가
-	AddNewItem(AddedItem, 1);
+	AddNewItem(AddedItem->CreateItemCopy(), 1);
 	return FItemAddResult::AddedAll(AddedItem->TextData.Name, 1, FText::Format(FText::FromString("[ADDING SUCCESS] [ {0} : x{1} ]"), AddedItem->TextData.Name, 1));
 }
 
@@ -285,7 +321,7 @@ int32 UInventoryComponent::HandleStackableItem(UItemBase* AddedItem, int32 Reque
 				AddedItem->SetAmount(AmountToDistribute);
 
 				//아이템 복사본을 무게 초과하지 않는 개수만큼 추가
-				AddNewItem(AddedItem->CreateItemCopy(), WeightLimitAddAmount);
+				AddNewItem(AddedItem, WeightLimitAddAmount);
 				//요청한 개수에서 넣으려는 개수 빼고 반환
 				UE_LOG(LogTemp, Warning, TEXT("WeightLimitAmount over 0"));
 				return RequestedAmount - AmountToDistribute;
@@ -361,6 +397,8 @@ void UInventoryComponent::AddNewItem(UItemBase* Item, const int32 Amount)
 void UInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	//나중에 저장 데이터에서 인벤토리 가져오는 코드 구현 예정
+	
 
 	InventoryContents.Init(FItemSlot(), SlotsCapacity);
 	// ...
@@ -376,7 +414,9 @@ FItemSlot* UInventoryComponent::FindEmptySlot()
 		{
 			return &Slot;
 		}
+		
 	}
+	
 	return nullptr;
 }
 
@@ -393,6 +433,122 @@ int32 UInventoryComponent::GetEmptySlotCount()
 	}
 
 	return count;
+}
+
+int32 UInventoryComponent::RemoveItemsByID(FName ItemID, int32 Amount)
+{
+	int32 DesiredRemoveAmount = Amount;
+	
+	for (FItemSlot& Slot : InventoryContents)
+	{
+		if (Slot.Item)
+		{
+			if (Slot.Item->ID == ItemID)
+			{
+				int32 RemoveAmount = FMath::Min(DesiredRemoveAmount, Slot.Item->Amount);
+				Slot.Item->Amount -= RemoveAmount;
+				DesiredRemoveAmount -= RemoveAmount;
+
+				UE_LOG(LogTemp, Log, TEXT("Removed %d of %s, Remaining remove amount: %d"), RemoveAmount, *Slot.Item->TextData.Name.ToString(), DesiredRemoveAmount);
+
+				if (Slot.Item->Amount <= 0) Slot.Item = nullptr;
+				if (DesiredRemoveAmount <= 0) break;
+			}
+		}
+	}
+	
+	OnInventoryUpdated.Broadcast();
+	return Amount - DesiredRemoveAmount;
+}
+
+UItemBase* UInventoryComponent::CreateItemByID(FName ItemID, int32 Amount)
+{
+	//데이터 데이블에서 아이템 데이터 가져오기
+	if (!ItemDataTable)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ItemDataTable is null"));
+		return nullptr;
+	}
+
+	FItemData* ItemData = ItemDataTable->FindRow<FItemData>(ItemID, TEXT("CreateItemByID"));
+	
+	if (!ItemData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ItemData is null"));
+		return nullptr;
+	}
+	
+	//아이템 데이터 생성
+	UItemBase* NewItem = NewObject<UItemBase>(StaticClass());
+
+	//데이터 테이블에서 아이템 데이터 삽입
+	NewItem->ID = ItemData->ID;
+	NewItem->Type = ItemData->Type;
+	NewItem->NumericData = ItemData->NumericData;
+	NewItem->TextData = ItemData->TextData;
+	NewItem->AssetData = ItemData->AssetData;
+	NewItem->OwningInventory = this;
+	NewItem->SetAmount(Amount);
+
+	//아이템 데이터 반환
+	return NewItem;
+}
+
+bool UInventoryComponent::CheckCanMakeRecipe(FRecipeData Recipe)
+{
+	bool pass1 = false, pass2 = false, pass3 = false;
+
+	//재료 아이템이 비어있으면 그 칸은 패스
+	if (Recipe.Ingredient1ID.IsNone()) pass1 = true;
+	if (Recipe.Ingredient2ID.IsNone()) pass2 = true;
+	if (Recipe.Ingredient3ID.IsNone()) pass3 = true;
+
+	//첫번째 재료 인벤토리에서 체크
+	//레시피 개수보다 인벤토리에 아이템 개수가 같거나 많으면 패스
+	if (Recipe.Ingredient1Amount <= GetItemTotalAmountByID(Recipe.Ingredient1ID)) pass1 = true;
+	//두번째 재료 인벤토리에서 체크
+	//레시피 개수보다 인벤토리에 아이템 개수가 같거나 많으면 패스
+	if (Recipe.Ingredient2Amount <= GetItemTotalAmountByID(Recipe.Ingredient2ID)) pass2 = true;
+	//세번째 재료 인벤토리에서 체크
+	//레시피 개수보다 인벤토리에 아이템 개수가 같거나 많으면 패스
+	if (Recipe.Ingredient3Amount <= GetItemTotalAmountByID(Recipe.Ingredient3ID)) pass3 = true;	
+	
+	return pass1 && pass2 && pass3;
+}
+
+bool UInventoryComponent::MakeItem(FRecipeData Recipe)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Make Item Execute."));
+	//레시피 다시한번 체크
+	if (CheckCanMakeRecipe(Recipe))
+	{
+		//레시피 개수별로 아이템 삭제
+		RemoveItemsByID(Recipe.Ingredient1ID, Recipe.Ingredient1Amount);
+		RemoveItemsByID(Recipe.Ingredient2ID, Recipe.Ingredient2Amount);
+		RemoveItemsByID(Recipe.Ingredient3ID, Recipe.Ingredient3Amount);
+
+		//결과물 아이템 생성
+		UItemBase* ResultItem = CreateItemByID(Recipe.ResultID, Recipe.ResultAmount);
+		if (ResultItem)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Result Item Created."));
+			//빈 슬롯이 없으면 바닥에 떨구기
+			if (GetEmptySlotCount() <= 0)
+			{
+				
+			}
+			//있으면 추가
+			else
+			{
+				AddNewItem(ResultItem, ResultItem->Amount);
+			}
+			
+			return true;
+		}
+	}
+	UE_LOG(LogTemp, Warning, TEXT("Recipe Check Failed."));
+	
+	return false;
 }
 
 void UInventoryComponent::InsertItemToIndex(int32 Index, UItemBase* Item)
@@ -459,16 +615,24 @@ void UInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (GEngine)
+#if WITH_EDITOR
+	if (!GEngine)
 	{
 		for (FItemSlot& Slot : InventoryContents)
 		{
 			const UItemBase* Item = Slot.Item;
-			FString ItemName = Item ? Item->GetName() : TEXT("Empty");
-			FString Message = FString::Printf(TEXT("Slot: %s"), *ItemName);
+			FString IsPending = "NULL";
+			FString ItemName = "NULL";
+			if (Item)
+			{
+				IsPending = Item->IsUnreachable() ? "WILL DESTROY" : "NORMAL";
+				ItemName = Item ? Item->GetName() : TEXT("Empty");
+			}
+			FString Message = FString::Printf(TEXT("Slot: [ %s ] | [ %s ]"), *ItemName, *IsPending);
 
 			UKismetSystemLibrary::PrintString(GetWorld(), Message, true, true, FLinearColor::Green, DeltaTime);
 		}
 	}
+#endif
 }
 

@@ -23,6 +23,9 @@ public:
 
 	UPROPERTY(meta=(BindWidget))
 	class UWrapBox* InventoryPanel;
+
+	UPROPERTY(meta=(BindWidget))
+	UWrapBox* HotBarPanel;
 	
 	UPROPERTY(meta=(BindWidget))
 	class UProgressBar* WeightBar;
