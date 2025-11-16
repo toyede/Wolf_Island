@@ -44,14 +44,19 @@ void AEnemyAIBossController::SetNewState(EBossState NewState)
 
 void AEnemyAIBossController::SetRandomNewState()
 {
-    // Not Include Groggy
+    TArray<EBossState> Candidates;
+    Candidates.Add(EBossState::Idle);
+    Candidates.Add(EBossState::Move);
+    Candidates.Add(EBossState::ThrowAttack);
+	Candidates.Add(EBossState::Rush);
+	Candidates.Add(EBossState::SummonStatue);
+	Candidates.Add(EBossState::SummonAltar);
+	Candidates.Add(EBossState::Attack);
+    // Groggy, Dead는 추가 안함
 
-    int32 RandomIndex = FMath::RandRange(0, static_cast<int32>(EBossState::Groggy) - 1);
+    int32 Index = FMath::RandRange(0, Candidates.Num() - 1);
 
-    EBossState RandomState = static_cast<EBossState>(RandomIndex);
-
-    BossState = RandomState;
-
-    BlackboardComp->SetValueAsEnum(BossStateKey, static_cast<uint8>(BossState));
+    BossState = Candidates[Index];
+    BlackboardComp->SetValueAsEnum(BossStateKey, (uint8)BossState);
 
 }

@@ -21,7 +21,8 @@ enum class EBossState : uint8
 	SummonStatue UMETA(DisplayName = "SummonStatue"),
 	SummonAltar UMETA(DisplayName = "SummonAltar"),
 	Attack UMETA(DisplayName = "Attack"),
-	Groggy UMETA(DisplayName = "Groggy")
+	Groggy UMETA(DisplayName = "Groggy"),
+	Dead UMETA(DisplayName = "Dead")
 };
 
 
@@ -58,14 +59,6 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI")
 	APawn* AttackTarget;
-
-	// Stats
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-	float MaxHealth;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-	float CurrentHealth;
 
 	UFUNCTION(BlueprintCallable)
 	void SetNewState(EBossState NewState);
