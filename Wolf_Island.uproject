@@ -38,6 +38,10 @@
 				"Linux",
 				"Android"
 			]
+		},
+		{
+			"Name": "Water",
+			"Enabled": true
 		}
 	]
 }
