@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Components/Border.h"
 #include "InventorySlot.generated.h"
 
 /**
@@ -25,10 +26,21 @@ public:
 	FORCEINLINE void SetItemReference(UItemBase* ItemIn) { ItemRef = ItemIn; };
 	FORCEINLINE void SetIndex(int32 InIndex) { Index = InIndex; };
 	FORCEINLINE UItemBase* GetItemReference() const { return ItemRef; };
+	FORCEINLINE void SetDragDrop(bool CanDD) { CanDragDrop = CanDD; };
+	void SetSelectedSlot();
+	void SetUnSelectedSlot();
+	FLinearColor GetBrushColor() const { return ItemBorder->GetBrushColor(); };
 
+	
 protected:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category = "InventorySlot")
 	int32 Index;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "InventorySlot")
+	FSlateBrush SelectedSlotBrush;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "InventorySlot")
+	FSlateBrush UnSelectedSlotBrush;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Inventory Slot")
 	TSubclassOf<UDragItemVisual> DragItemVisualClass;
@@ -47,6 +59,9 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
 	UTextBlock* ItemAmount;
+
+	UPROPERTY(VisibleAnywhere)
+	bool CanDragDrop = true;
 	
 	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;

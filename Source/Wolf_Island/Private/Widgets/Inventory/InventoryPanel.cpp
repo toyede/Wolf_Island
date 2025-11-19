@@ -52,15 +52,8 @@ void UInventoryPanel::RefreshInventory()
 	if (InventoryRef && SlotClass)
 	{
 		InventoryPanel->ClearChildren();
-
-		/*for (UItemBase* const& InventoryItem : InventoryRef->GetInventory())
-		{
-			UInventorySlot* ItemSlot = CreateWidget<UInventorySlot>(this, SlotClass);
-			ItemSlot->SetItemReference(InventoryItem);
-
-			InventoryPanel->AddChildToWrapBox(ItemSlot);
-		}*/
-		//const TArray<UItemBase*>& Items = InventoryRef->GetInventory();
+		HotBarPanel->ClearChildren();
+		
 		int32 Index = 0;
 		for (FItemSlot InventorySlot : InventoryRef->GetInventory())
 		{
@@ -70,9 +63,18 @@ void UInventoryPanel::RefreshInventory()
 			if (InventorySlot.Item)
 			{
 				ItemSlot->SetItemReference(InventorySlot.Item);
+			} 
+			
+			//핫바 슬롯( 첫번째부터 6칸 ( 0 ~ 5 ) )
+			if (Index >= 1 && Index <= 6)
+			{
+				HotBarPanel->AddChildToWrapBox(ItemSlot);
 			}
-
-			InventoryPanel->AddChildToWrapBox(ItemSlot);
+			//인벤토리 슬롯
+			else
+			{
+				InventoryPanel->AddChildToWrapBox(ItemSlot);
+			}
 		}
 
 		SetInfoText();

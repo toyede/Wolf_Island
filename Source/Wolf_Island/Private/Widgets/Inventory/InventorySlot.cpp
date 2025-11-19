@@ -16,12 +16,7 @@ void UInventorySlot::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
-	if (ToolTipClass && ItemRef)
-	{
-		UInventoryToolTip* ToolTip = CreateWidget<UInventoryToolTip>(this, ToolTipClass);
-		ToolTip->InventorySlotBeingHovered = this;
-		SetToolTip(ToolTip);
-	}
+	SetUnSelectedSlot();
 }
 
 
@@ -46,12 +41,20 @@ void UInventorySlot::NativeConstruct()
 		ItemIcon->SetVisibility(ESlateVisibility::Collapsed);
 		ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
 	}
+	
+	if (ToolTipClass && ItemRef && CanDragDrop)
+	{
+		UInventoryToolTip* ToolTip = CreateWidget<UInventoryToolTip>(this, ToolTipClass);
+		ToolTip->InventorySlotBeingHovered = this;
+		SetToolTip(ToolTip);
+	}
 }
 
 FReply UInventorySlot::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
 	FReply Reply = Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
-
+	if (!CanDragDrop) return Reply.Unhandled();
+	
 	//왼쪽 마우스 클릭이면
 	if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
 	{
@@ -75,6 +78,8 @@ void UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPo
 	UDragDropOperation*& OutOperation)
 {
 	Super::NativeOnDragDetected(InGeometry, InMouseEvent, OutOperation);
+	
+	if (!CanDragDrop) return;
 
 	//좌클릭 드래그면 이동
 	if (InMouseEvent.IsMouseButtonDown(EKeys::LeftMouseButton))
@@ -142,6 +147,8 @@ void UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPo
 bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,
 	UDragDropOperation* InOperation)
 {
+	if (!CanDragDrop) return false;
+	
 	const UItemDragDropOperation* ItemDragDrop = Cast<UItemDragDropOperation>(InOperation);
 	UE_LOG(LogTemp, Warning, TEXT("SLOT DROP DETECTED"));
 	if (UInventoryComponent* InventoryRef = ItemDragDrop->SourceInventory)
@@ -195,4 +202,14 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 	}
 	
 	return false;
+}
+
+void UInventorySlot::SetSelectedSlot()
+{
+	ItemBorder->SetBrush(SelectedSlotBrush);
+}
+
+void UInventorySlot::SetUnSelectedSlot()
+{
+	ItemBorder->SetBrush(UnSelectedSlotBrush);
 }

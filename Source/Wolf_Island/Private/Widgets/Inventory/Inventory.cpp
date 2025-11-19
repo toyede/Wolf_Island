@@ -4,15 +4,29 @@
 #include "Widgets/Inventory/Inventory.h"
 
 #include "Character/MainPlayer.h"
+#include "Components/Button.h"
 #include "Components/InventoryComponent.h"
 #include "Components/SizeBox.h"
+#include "Components/WidgetSwitcher.h"
 #include "Item/ItemBase.h"
+#include "Widgets/Craft/CraftPanel.h"
 #include "Widgets/Inventory/InventoryPanel.h"
 #include "Widgets/Inventory/ItemDragDropOperation.h"
 
 void UInventory::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
+
+	PanelSwitcher->AddChild(InventorySection);
+	PanelSwitcher->AddChild(FoodRecipeSection);
+	PanelSwitcher->AddChild(CraftRecipeSection);
+	PanelSwitcher->AddChild(UnknownRecordSection);
+
+	InventoryButton->OnClicked.AddDynamic(this, &UInventory::HandleInventoryClicked);
+	FoodRecipeButton->OnClicked.AddDynamic(this, &UInventory::HandleFoodRecipeClicked);
+	CraftRecipeButton->OnClicked.AddDynamic(this, &UInventory::HandleCraftRecipeClicked);
+	UnknownRecordButton->OnClicked.AddDynamic(this, &UInventory::HandleUnknownRecordClicked);
+
 }
 
 void UInventory::NativeConstruct()
@@ -43,25 +57,52 @@ bool UInventory::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent&
 			if (LocalMousePos.X >= PanelPos.X && LocalMousePos.X <= PanelPos.X + PanelSize.X &&
 				LocalMousePos.Y >= PanelPos.Y && LocalMousePos.Y <= PanelPos.Y + PanelSize.Y)
 			{
-				//우클릭이면 반갈한 거 원위치
+				//우클릭이면 떨구기면 반갈한 거 원위치
 				if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
 				{
-					ItemDragDrop->SourceInventory->GetItemAtIndex(ItemDragDrop->SourceIndex)->Amount += ItemDragDrop->SourceItem->Amount;
+					ItemDragDrop->SourceInventory->GetItemAtIndex(ItemDragDrop->SourceIndex)->Amount += Item->Amount;
 					ItemDragDrop->SourceInventory->OnInventoryUpdated.Broadcast();
 				}
 				return false;
 			}
 		}
-		//우클릭이면 반갈한 것만 버리기
+		
+		//우클릭이면 떨구기면 반갈한 것만 버리기
 		if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
 		{
+			UE_LOG(LogTemp, Warning, TEXT("RIGHT CLICK DROP"));
 			PlayerRef->DropItem(Item, Item->Amount, false);
 			return true;
 		}
 		
+		UE_LOG(LogTemp, Warning, TEXT("LEFT CLICK DROP"));
 		PlayerRef->DropItem(Item, Item->Amount, true);
 		return true;
 	}
 	return false;
+}
+
+void UInventory::HandleInventoryClicked()
+{
+	PanelSwitcher->SetActiveWidget(InventorySection);
+	OnInventoryClicked.ExecuteIfBound();
+}
+
+void UInventory::HandleFoodRecipeClicked()
+{
+	PanelSwitcher->SetActiveWidget(FoodRecipeSection);
+	OnCraftClicked.ExecuteIfBound();
+}
+
+void UInventory::HandleCraftRecipeClicked()
+{
+	PanelSwitcher->SetActiveWidget(CraftRecipeSection);
+	OnCraftClicked.ExecuteIfBound();
+}
+
+void UInventory::HandleUnknownRecordClicked()
+{
+	PanelSwitcher->SetActiveWidget(UnknownRecordSection);
+	OnUnknownRecordClicked.ExecuteIfBound();
 }
 
