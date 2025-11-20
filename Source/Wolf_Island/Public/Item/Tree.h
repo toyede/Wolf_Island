@@ -16,13 +16,13 @@ struct FTreeDropEntry
 {
 	GENERATED_BODY()
     
-	UPROPERTY(BlueprintReadWrite, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FDataTableRowHandle ItemHandle;
     
-	UPROPERTY(BlueprintReadWrite, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 Amount = 1;
 
-	UPROPERTY(BlueprintReadWrite, BlueprintReadWrite, meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float DropChance = 1.0f;
 };
 

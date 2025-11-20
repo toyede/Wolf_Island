@@ -172,6 +172,15 @@ public:
 	TSubclassOf<class UPlayerHUD> HUDClass;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Widget")
 	UPlayerHUD* HUD;
+
+	//공격시 폴리지 판정
+	UPROPERTY(EditAnywhere, Category = "Interaction")
+	TMap<UStaticMesh*, TSubclassOf<class ATree>> FoliageToActorMap;
+
+	void TryConvertFoliageToActor(const FHitResult& HitResult, float DamageAmount);
+	
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void ProcessAttackHit(const FHitResult& HitResult, float DamageAmount);
 	
 protected:
 	// Called when the game starts or when spawned
