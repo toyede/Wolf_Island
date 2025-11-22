@@ -6,9 +6,13 @@
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
 #include "MaterialHLSLTree.h"
+#include "Engine/DamageEvents.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/StatusComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Components/InstancedStaticMeshComponent.h"
+#include "Item/Tree.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InventoryComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -56,6 +60,77 @@ AMainPlayer::AMainPlayer()
 	//인벤토리 초기화
 	InventoryComponent->SetSlotsCapacity(30);
 	InventoryComponent->SetWeightCapacity(StatusComponent->MaxWeight);
+}
+
+void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float DamageAmount)
+{
+	// 1. 맞은 컴포넌트가 유효한지 먼저 확인
+	UPrimitiveComponent* HitComponent = HitResult.GetComponent();
+	if (!HitComponent) return;
+
+	// 2. 폴리지(InstancedStaticMeshComponent)인지 변환 시도
+	UInstancedStaticMeshComponent* ISMC = Cast<UInstancedStaticMeshComponent>(HitComponent);
+
+	// [중요] 폴리지가 아니면(nullptr이면) 여기서 즉시 함수 종료! (땅바닥 등을 쳤을 때 크래시 방지)
+	if (!ISMC) 
+	{
+		// 디버깅용 메시지 (필요 없으면 주석 처리)
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("맞은 건 폴리지가 아님"));
+		return; 
+	}
+
+	// 3. 어떤 나무(StaticMesh)인지 확인
+	UStaticMesh* HitMesh = ISMC->GetStaticMesh();
+
+	// 4. 맵(목록)에 등록된 나무인지 확인
+	// HitMesh가 없거나, 맵에 등록되지 않은 풀/돌멩이라면 무시
+	if (!HitMesh || !FoliageToActorMap.Contains(HitMesh)) 
+	{
+		return;
+	}
+
+	// 5. 인덱스 확인 (가끔 -1이 들어오는 경우 방지)
+	int32 InstanceIndex = HitResult.Item;
+	if (InstanceIndex == INDEX_NONE) return;
+
+	// --- 검증 끝, 변환 시작 ---
+
+	TSubclassOf<ATree> TargetActorClass = FoliageToActorMap[HitMesh];
+	if (!TargetActorClass) return;
+
+	FTransform InstanceTransform;
+	// 월드 좌표 기준으로 트랜스폼 가져오기
+	ISMC->GetInstanceTransform(InstanceIndex, InstanceTransform, true);
+
+	// 폴리지 삭제
+	ISMC->RemoveInstance(InstanceIndex);
+
+	// 진짜 액터 소환
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	ATree* NewTree = GetWorld()->SpawnActor<ATree>(TargetActorClass, InstanceTransform, SpawnParams);
+
+	// 데미지 전달
+	if (NewTree)
+	{
+		FDamageEvent DamageEvent;
+		NewTree->TakeDamage(DamageAmount, DamageEvent, GetController(), this);
+        
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, TEXT("나무 변환 성공!"));
+	}
+}
+
+void AMainPlayer::ProcessAttackHit(const FHitResult& HitResult, float DamageAmount)
+{
+	AActor* HitActor = HitResult.GetActor();
+
+	if (HitActor)
+	{
+		UGameplayStatics::ApplyDamage(HitActor, DamageAmount, GetController(), this, UDamageType::StaticClass());
+	}
+
+	TryConvertFoliageToActor(HitResult, DamageAmount);
 }
 
 // Called when the game starts or when spawned
@@ -145,8 +220,10 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 		EnhancedInputComponent->BindAction(HotBarAction, ETriggerEvent::Started, this, &AMainPlayer::HandleHotBar);
 		//핫바 마우스 휠
 		EnhancedInputComponent->BindAction(HotBarWheelAction, ETriggerEvent::Triggered, this, &AMainPlayer::HandleHotBarWithWheel);
-	}
 
+		//공격
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &AMainPlayer::Attack);
+	}
 }
 
 void AMainPlayer::NotifyControllerChanged()
@@ -493,6 +570,11 @@ void AMainPlayer::RefreshHand()
 		IsHoldingItem = false;
 		ItemMesh->SetStaticMesh(nullptr);
 	}
+	
+}
+
+void AMainPlayer::Attack_Implementation()
+{
 	
 }
 
