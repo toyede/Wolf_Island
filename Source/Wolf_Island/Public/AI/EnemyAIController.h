@@ -22,7 +22,8 @@ enum class EEnemyState : uint8
 {
 	None UMETA(DisplayName = "None"),
 	Passive UMETA(DisplayName = "Passive"),
-	Attacking UMETA(DisplayName = "Attacking")
+	Attacking UMETA(DisplayName = "Attacking"),
+	Dead UMETA(DisplayName = "Dead")
 };
 
 class AEnemyAIBase;

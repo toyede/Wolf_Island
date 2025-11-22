@@ -25,7 +25,7 @@ void UThrowStoneAnimNotify::Notify(USkeletalMeshComponent* MeshComp, UAnimSequen
         AStoneProjectile* Projectile = World->SpawnActor<AStoneProjectile>(ProjectileClass, HandLoc, Rot);
         if (Projectile)
         {
-            Projectile->LaunchProjectile(Dir, 1500.f);
+            Projectile->LaunchProjectile(Dir, 2000.f);
         }
     }
 }
