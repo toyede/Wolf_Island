@@ -33,10 +33,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-	float CurrentHealth;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-	float Maxhealth;
+	class UStatusComponent* StatusComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Stats");
 	EEnemyForm EnemyForm;
@@ -53,9 +50,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Form")
 	USkeletalMesh* WolfMesh;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Form Change")
+	TSubclassOf<UAnimInstance> HumanAnimBP;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Form Change")
+	TSubclassOf<UAnimInstance> WolfAnimBP;
+
 	UFUNCTION(BlueprintCallable)
 	void ChangeForm(EEnemyForm Form);
 
 	UPROPERTY(EditAnywhere, Category = "Animation")
 	UAnimMontage* ChangeFormMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	float AttackDamage;
 };

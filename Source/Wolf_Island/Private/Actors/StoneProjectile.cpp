@@ -10,10 +10,10 @@ AStoneProjectile::AStoneProjectile()
     RootComponent = Mesh;
 
     ProjectileComp = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileComp"));
-    ProjectileComp->InitialSpeed = 1500.f;
-    ProjectileComp->MaxSpeed = 1500.f;
+    ProjectileComp->InitialSpeed = 2500.f;
+    ProjectileComp->MaxSpeed = 2500.f;
     ProjectileComp->bRotationFollowsVelocity = true;
-    ProjectileComp->ProjectileGravityScale = 1.0f; // 직선 원하면 0
+    ProjectileComp->ProjectileGravityScale = 0.4f; // 직선 원하면 0
     ProjectileComp->bAutoActivate = false;
     InitialLifeSpan = 1.f;
 

@@ -18,9 +18,9 @@ public:
 	void LaunchProjectile(const FVector& Direction, float Speed);
 
 protected:
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(EditAnywhere)
 	UStaticMeshComponent* Mesh;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(EditAnywhere)
 	class UProjectileMovementComponent* ProjectileComp;
 };
