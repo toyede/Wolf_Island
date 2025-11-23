@@ -88,7 +88,7 @@ void UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPo
 		{
 			const TObjectPtr<UDragItemVisual> DragVisual = CreateWidget<UDragItemVisual>(this, DragItemVisualClass);
 			DragVisual->ItemIcon->SetBrushFromTexture(ItemRef->AssetData.Icon);
-			DragVisual->ItemBorder->SetBrushColor(ItemBorder->GetBrushColor());
+			DragVisual->ItemBorder->SetBrush(UnSelectedSlotBrush);
 			DragVisual->ItemAmount->SetText(FText::AsNumber(ItemRef->Amount));
 
 			UItemDragDropOperation* DragItemOperation = NewObject<UItemDragDropOperation>();
@@ -153,51 +153,61 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 	UE_LOG(LogTemp, Warning, TEXT("SLOT DROP DETECTED"));
 	if (UInventoryComponent* InventoryRef = ItemDragDrop->SourceInventory)
 	{
-		//좌클릭 떨구기면 스왑
-		if (InDragDropEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+		//같은 인벤토리 안에서 이동이면,
+		if (OwnerInventoryRef == InventoryRef)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("LEFT SLOT DROP DETECTED"));
-			//같은 칸이면 무시
-			if (ItemDragDrop->SourceIndex == Index) return false;
-
-			//다른 칸이면 스왑
-			InventoryRef->SwapItems(ItemDragDrop->SourceIndex, Index);
-			return true;
-		}
-		//우클릭 떨구기면 연산 후 삽입
-		else if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
-		{
-			//같은 아이템이 아니면
-			if (!InventoryRef->CheckSameItemAtIndex(Index, ItemDragDrop->SourceItem))
+			//좌클릭 떨구기면 스왑
+			if (InDragDropEvent.GetEffectingButton() == EKeys::LeftMouseButton)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("RIGHT SLOT DROP DETECTED"));
-				//빈 슬롯이면 그대로 삽입
-				if (InventoryRef->CheckEmptySlotAtIndex(Index))
-				{
-					InventoryRef->InsertItemToIndex(Index, ItemDragDrop->SourceItem);
-					return true;
-				}
-				//아니면 제자리로
-				//원래 인덱스 아이템 개수 원상 복구 후 끝
-				InventoryRef->GetItemAtIndex(ItemDragDrop->SourceIndex)->Amount += ItemDragDrop->SourceItem->Amount;
-				InventoryRef->OnInventoryUpdated.Broadcast();
-				
+				UE_LOG(LogTemp, Warning, TEXT("LEFT SLOT DROP DETECTED"));
+				//같은 칸이면 무시
+				if (ItemDragDrop->SourceIndex == Index) return false;
+
+				//다른 칸이면 스왑
+				InventoryRef->SwapItems(ItemDragDrop->SourceIndex, Index);
 				return true;
 			}
-			//같은 아이템이면 연산 후 삽입
-			else
+			//우클릭 떨구기면 연산 후 삽입
+			else if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
 			{
-				//옮길 곳에 최대로 더하고 남은 건 원래 자리로
-				//옮길 곳 : Index | 옮기는 것 : SourceIndex
-				int32 TotalAmount = ItemRef->Amount + ItemDragDrop->SourceItem->Amount;
-				int32 MaxStack = ItemRef->NumericData.MaxAmount;
+				//같은 아이템이 아니면
+				if (!InventoryRef->CheckSameItemAtIndex(Index, ItemDragDrop->SourceItem))
+				{
+					UE_LOG(LogTemp, Warning, TEXT("RIGHT SLOT DROP DETECTED"));
+					//빈 슬롯이면 그대로 삽입
+					if (InventoryRef->CheckEmptySlotAtIndex(Index))
+					{
+						InventoryRef->InsertItemToIndex(Index, ItemDragDrop->SourceItem);
+						return true;
+					}
+					//아니면 제자리로
+					//원래 인덱스 아이템 개수 원상 복구 후 끝
+					InventoryRef->GetItemAtIndex(ItemDragDrop->SourceIndex)->Amount += ItemDragDrop->SourceItem->Amount;
+					InventoryRef->OnInventoryUpdated.Broadcast();
+				
+					return true;
+				}
+				//같은 아이템이면 연산 후 삽입
+				else
+				{
+					//옮길 곳에 최대로 더하고 남은 건 원래 자리로
+					//옮길 곳 : Index | 옮기는 것 : SourceIndex
+					int32 TotalAmount = ItemRef->Amount + ItemDragDrop->SourceItem->Amount;
+					int32 MaxStack = ItemRef->NumericData.MaxAmount;
 
-				ItemRef->Amount = FMath::Min(TotalAmount, MaxStack);
-				ItemDragDrop->SourceItem->Amount = TotalAmount - ItemRef->Amount;
-				InventoryRef->GetItemAtIndex(ItemDragDrop->SourceIndex)->Amount += ItemDragDrop->SourceItem->Amount;
-				InventoryRef->OnInventoryUpdated.Broadcast();
+					ItemRef->Amount = FMath::Min(TotalAmount, MaxStack);
+					ItemDragDrop->SourceItem->Amount = TotalAmount - ItemRef->Amount;
+					InventoryRef->GetItemAtIndex(ItemDragDrop->SourceIndex)->Amount += ItemDragDrop->SourceItem->Amount;
+					InventoryRef->OnInventoryUpdated.Broadcast();
+				}
 			}
 		}
+		//다른 인벤토리 간 이동이면, (ex. 플레이어 <-> 상자)
+		else
+		{
+			
+		}
+		
 		
 	}
 	

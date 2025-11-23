@@ -50,10 +50,11 @@ void UChestPanel::RefreshChest()
 		ChestPanel->ClearChildren();
 
 		int32 Index = 0;
-		for (FItemSlot InventorySlot : ChestInventoryRef->GetInventory())
+		for (FItemSlot& InventorySlot : ChestInventoryRef->GetInventory())
 		{
 			UInventorySlot* ItemSlot = CreateWidget<UInventorySlot>(this, SlotClass);
 			ItemSlot->SetIndex(Index++);
+			ItemSlot->SetOwnerRef(ChestInventoryRef);
 			
 			if (InventorySlot.Item)
 			{
@@ -75,7 +76,6 @@ void UChestPanel::SetInventoryComponent(AChest* Chest, AActor* Interactor)
 	if (PlayerRef)
 	{
 		InventoryRef = PlayerRef->InventoryComponent;
-		InventoryRef->OnInventoryUpdated.AddUObject(this, &UChestPanel::RefreshChest);
 	} else
 	{
 		UE_LOG(LogTemp, Error, TEXT("CHEST PANEL : INTERACTOR PLAYER NOT FOUND"));
