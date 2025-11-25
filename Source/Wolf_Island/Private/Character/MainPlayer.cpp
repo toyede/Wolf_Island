@@ -38,7 +38,7 @@ AMainPlayer::AMainPlayer()
 	//손에 든 아이템 메쉬
 	ItemMesh = CreateDefaultSubobject<UStaticMeshComponent>("Item");
 	//손 소켓에 부-착!
-	ItemMesh->SetupAttachment(GetMesh(), "hand_r_socket");
+	ItemMesh->SetupAttachment(GetMesh(), "hand_r");
 	
 	GetMesh()->SetRelativeTransform(
 		FTransform(
@@ -47,8 +47,9 @@ AMainPlayer::AMainPlayer()
 			));
 	
 	//메시에 카메라 붙이기
-	FirstPersonCamera->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, "headSocket");
+	//FirstPersonCamera->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, "headSocket");
 	//컨트롤러 마우스 위치 입력을 카메라 입력에 반영
+	FirstPersonCamera->SetupAttachment(GetMesh());
 	FirstPersonCamera->bUsePawnControlRotation = true;
 	
 	FirstPersonCamera->SetRelativeTransform(
@@ -581,7 +582,15 @@ void AMainPlayer::RefreshHand()
 	{
 		IsHoldingItem = true;
 		ItemMesh->SetStaticMesh(Item->AssetData.Mesh);
-		ItemMesh->SetRelativeScale3D(FVector(0.1f, 0.1f, 0.1f));
+		ItemMesh->AttachToComponent(
+		GetMesh(),
+		FAttachmentTransformRules::KeepRelativeTransform,
+		TEXT("hand_r"));
+		
+		FTransform SocketTransform = ItemMesh->GetSocketTransform(TEXT("HandSocket"), RTS_Component);
+		ItemMesh->SetRelativeTransform(SocketTransform.Inverse());
+
+		//ItemMesh->SetRelativeScale3D(FVector(0.1f, 0.1f, 0.1f));
 	} else
 	{
 		IsHoldingItem = false;
