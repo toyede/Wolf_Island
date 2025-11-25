@@ -212,7 +212,7 @@ public:
 	UFUNCTION()
 	void StopRun();
 
-	UFUNCTION()
+	UFUNCTION(Server, Reliable)
 	void ToggleCrouch();
 
 	UFUNCTION()
@@ -281,7 +281,7 @@ public:
 	void Interact(AActor* Interactor) override;
 
 	UFUNCTION(BlueprintCallable)
-	void DropItem(class UItemBase* ItemToDrop, const int32 AmountToDrop, bool IsWhole);
+	void DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool IsWhole);
 };
 
 

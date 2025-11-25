@@ -23,8 +23,9 @@ void AChest::Interact(AActor* Interactor)
 
 	IsOccupied = true;
 
+	//상자 위젯 생성
 	UChestScreen* ChestScreen = CreateWidget<UChestScreen>(GetWorld(), ChestWidgetClass);
 	ChestScreen->InitializeChest(this, Interactor);
-	ChestScreen->AddToViewport();
 	ChestScreen->SetIsFocusable(true);
+	ChestScreen->AddToViewport();
 }

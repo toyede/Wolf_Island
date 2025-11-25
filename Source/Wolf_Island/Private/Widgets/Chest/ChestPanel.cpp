@@ -12,16 +12,7 @@
 void UChestPanel::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
-
-	if (ChestInventoryRef)
-	{
-		ChestInventoryRef->OnInventoryUpdated.AddUObject(this, &UChestPanel::RefreshChest);
 	}
-	if (InventoryRef)
-	{
-		InventoryRef->OnInventoryUpdated.AddUObject(this, &UChestPanel::RefreshChest);
-	}
-}
 
 void UChestPanel::NativeConstruct()
 {
@@ -31,9 +22,6 @@ void UChestPanel::NativeConstruct()
 void UChestPanel::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
-
-	FString Message = InventoryRef->GetOwner()->GetName();
-	//UKismetSystemLibrary::PrintString(GetWorld(), Message, true, true, FLinearColor::Green, InDeltaTime);
 }
 
 bool UChestPanel::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,
@@ -79,6 +67,24 @@ void UChestPanel::SetInventoryComponent(AChest* Chest, AActor* Interactor)
 	} else
 	{
 		UE_LOG(LogTemp, Error, TEXT("CHEST PANEL : INTERACTOR PLAYER NOT FOUND"));
+	}
+
+	if (InventoryRef)
+	{
+		FString Owner = InventoryRef->GetOwner()->GetName();
+		UE_LOG(LogTemp, Warning, TEXT("PLAYER INVENTORY OWNER : %s"), *Owner);
+	}
+	
+	if (ChestInventoryRef)
+	{
+		FString Owner = ChestInventoryRef->GetOwner()->GetName();
+		UE_LOG(LogTemp, Warning, TEXT("CHEST INVENTORY OWNER : %s"), *Owner);
+	}
+
+	if (ChestInventoryRef)
+	{
+		ChestInventoryRef->OnInventoryUpdated.AddUObject(this, &UChestPanel::RefreshChest);
+		UE_LOG(LogTemp, Warning, TEXT("CHEST UPDATE BINDING IN CHEST PANEL"));
 	}
 
 	RefreshChest();

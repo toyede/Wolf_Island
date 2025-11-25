@@ -388,7 +388,7 @@ void AMainPlayer::StopRun()
 	}
 }
 
-void AMainPlayer::ToggleCrouch()
+void AMainPlayer::ToggleCrouch_Implementation()
 {
 	//웅크리는 중이면
 	if (IsCrouching)
@@ -403,6 +403,23 @@ void AMainPlayer::ToggleCrouch()
 		IsCrouching = true;
 	}
 }
+
+/*
+void AMainPlayer::ToggleCrouch()
+{
+	//웅크리는 중이면
+	if (IsCrouching)
+	{
+		UnCrouch();
+		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
+		IsCrouching = false;
+	} else
+	{
+		Crouch();
+		GetCharacterMovement()->MaxWalkSpeed = 150.0f;
+		IsCrouching = true;
+	}
+}*/
 
 void AMainPlayer::ToggleInventory()
 {
@@ -758,7 +775,9 @@ void AMainPlayer::Interaction()
 
 void AMainPlayer::DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool IsWhole)
 {
-	if (InventoryComponent->FindMatchingItem(ItemToDrop))
+	UInventoryComponent* OriginInventory =  ItemToDrop->OwningInventory;
+	
+	if (OriginInventory->FindMatchingItem(ItemToDrop))
 	{
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.Owner = this;
@@ -768,7 +787,7 @@ void AMainPlayer::DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool
 		const FVector SpawnLocation(GetActorLocation() + (GetActorForwardVector() * 50.0f));
 		const FTransform SpawnTransform(GetActorRotation(), SpawnLocation);
 		
-		const int32 RemovedAmount = InventoryComponent->RemoveAmountOfItem(ItemToDrop, AmountToDrop);
+		const int32 RemovedAmount = OriginInventory->RemoveAmountOfItem(ItemToDrop, AmountToDrop);
 		
 		APickup* Pickup = GetWorld()->SpawnActor<APickup>(APickup::StaticClass(), SpawnTransform, SpawnParams);
 		

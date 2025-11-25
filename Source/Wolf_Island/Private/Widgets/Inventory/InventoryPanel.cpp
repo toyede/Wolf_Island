@@ -66,7 +66,7 @@ void UInventoryPanel::RefreshInventory()
 				ItemSlot->SetItemReference(InventorySlot.Item);
 			} else
 			{
-				UE_LOG(LogTemp, Warning, TEXT("NO ITEM IN SLOT [%d]"), Index);
+				//UE_LOG(LogTemp, Warning, TEXT("NO ITEM IN SLOT [%d]"), Index);
 			}
 			
 			//핫바 슬롯( 첫번째부터 6칸 ( 0 ~ 5 ) )
