@@ -120,6 +120,16 @@ public:
 	//인덱스 A,B 아이템 바꾸기
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void SwapItems(int32 A, int32 B);
+	//서로 다른 인벤토리의 인덱스 A,B 아이템 바꾸기
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void SwapItemsBetweenInventory(
+		UInventoryComponent* OriginInventoryComponent, int32 OriginIndex,
+		UInventoryComponent* TargetInventoryComponent, int32 TargetIndex);
+	//서로 다른 인벤토리의 인덱스 A,B에서
+	void DropItemBetweenInventory(
+		UInventoryComponent* OriginInventoryComponent, int32 OriginIndex,
+		UInventoryComponent* TargetInventoryComponent, int32 TargetIndex,
+		UItemBase* DraggedItem);
 	//특정 인덱스의 아이템 비교
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	bool CheckSameItemAtIndex(int32 Index, UItemBase* Item);
@@ -134,6 +144,9 @@ public:
 	//인벤토리에 있는 해당 ID의 아이템 총 개수 반환
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	int32 GetItemTotalAmountByID(FName ItemID);
+	//특정 인덱스에 아이템 삽입
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void SetItemAtIndex(UItemBase* Item, int32 Index);
 	
 	//인벤토리에 있는 아이템과 중복되는 아이템인가 체크(인벤토리에서 불러온 아이템인지)
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
