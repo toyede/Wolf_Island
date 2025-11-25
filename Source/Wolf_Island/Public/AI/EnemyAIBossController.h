@@ -22,7 +22,8 @@ enum class EBossState : uint8
 	SummonAltar UMETA(DisplayName = "SummonAltar"),
 	Attack UMETA(DisplayName = "Attack"),
 	Groggy UMETA(DisplayName = "Groggy"),
-	Dead UMETA(DisplayName = "Dead")
+	Dead UMETA(DisplayName = "Dead"),
+	Stun UMETA(DisplayName = "Stun")
 };
 
 

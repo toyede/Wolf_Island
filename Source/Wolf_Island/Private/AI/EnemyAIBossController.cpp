@@ -52,7 +52,7 @@ void AEnemyAIBossController::SetRandomNewState()
 	Candidates.Add(EBossState::SummonStatue);
 	Candidates.Add(EBossState::SummonAltar);
 	Candidates.Add(EBossState::Attack);
-    // Groggy, Dead는 추가 안함
+    // Groggy, Dead, Stun은 추가 안함
 
     int32 Index = FMath::RandRange(0, Candidates.Num() - 1);
 
