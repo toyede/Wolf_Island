@@ -23,7 +23,7 @@ protected:
 
 	AEnemyAIController* AICon;
 
-	ACharacter* AIPawn;
+	class AEnemyAIBase* AIPawn;
 
 public:
 	UPROPERTY(EditAnywhere, Category = "Animation")

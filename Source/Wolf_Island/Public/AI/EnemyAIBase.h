@@ -35,26 +35,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	class UStatusComponent* StatusComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Stats");
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Stats")
 	EEnemyForm EnemyForm;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Patrol Route")
 	AActor* PatrolRoute;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class UWidgetComponent* HealthBarWidget;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Form")
-	USkeletalMesh* HumanMesh;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Form")
-	USkeletalMesh* WolfMesh;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Form Change")
-	TSubclassOf<UAnimInstance> HumanAnimBP;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Form Change")
-	TSubclassOf<UAnimInstance> WolfAnimBP;
 
 	UFUNCTION(BlueprintCallable)
 	void ChangeForm(EEnemyForm Form);
@@ -64,4 +49,28 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	float AttackDamage;
+
+	UPROPERTY(VisibleAnywhere, Category = "Mesh")
+	USkeletalMeshComponent* FaceMesh;
+
+	UPROPERTY(VisibleAnywhere, Category = "Mesh")
+	USkeletalMeshComponent* TorsoMesh;
+
+	UPROPERTY(VisibleAnywhere, Category = "Mesh")
+	USkeletalMeshComponent* LegsMesh;
+
+	UPROPERTY(VisibleAnywhere, Category = "Mesh")
+	USkeletalMeshComponent* FeetMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh")
+	USkeletalMeshComponent* WolfMesh;
+
+	UPROPERTY()
+	TArray<USkeletalMeshComponent*> HumanParts;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Form Change")
+	TSubclassOf<UAnimInstance> HumanAnimBP;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Form Change")
+	TSubclassOf<UAnimInstance> WolfAnimBP;
 };

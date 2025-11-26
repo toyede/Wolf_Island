@@ -8,6 +8,7 @@
 #include "AI/EnemyAIController.h"
 #include "Animation/AnimInstance.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "Components/StatusComponent.h"
 
 
 AEnemyAIBase::AEnemyAIBase()
@@ -17,7 +18,27 @@ AEnemyAIBase::AEnemyAIBase()
     GetCapsuleComponent()->InitCapsuleSize(42.f, 96.f);
 
     GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -96.f));
-    GetMesh()->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
+
+    FaceMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FaceMesh"));
+    FaceMesh->SetupAttachment(GetMesh());
+    FaceMesh->SetLeaderPoseComponent(GetMesh());
+
+    TorsoMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("TorsoMesh"));
+    TorsoMesh->SetupAttachment(GetMesh());
+    TorsoMesh->SetLeaderPoseComponent(GetMesh());
+
+    LegsMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("LegsMesh"));
+    LegsMesh->SetupAttachment(GetMesh());
+    LegsMesh->SetLeaderPoseComponent(GetMesh());
+
+    FeetMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FeetMesh"));
+    FeetMesh->SetupAttachment(GetMesh());
+    FeetMesh->SetLeaderPoseComponent(GetMesh());
+
+    WolfMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WolfMesh"));
+    WolfMesh->SetupAttachment(GetCapsuleComponent());
+    WolfMesh->SetRelativeLocation(FVector(0.f, 0.f, -96.f));
+    WolfMesh->SetVisibility(false);
 
     // Movement 
     UCharacterMovementComponent* MoveComp = GetCharacterMovement();
@@ -37,10 +58,6 @@ AEnemyAIBase::AEnemyAIBase()
     AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
     AIControllerClass = AEnemyAIController::StaticClass();
 
-    // HealthBar Widget
-    HealthBarWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBarWidget"));
-    HealthBarWidget->SetupAttachment(GetCapsuleComponent());
-
     StatusComponent = CreateDefaultSubobject<UStatusComponent>(TEXT("StatusComponent"));
 
     AttackDamage = 10.0f;
@@ -50,6 +67,12 @@ AEnemyAIBase::AEnemyAIBase()
 void AEnemyAIBase::BeginPlay()
 {
 	Super::BeginPlay();
+
+    HumanParts.Empty();
+    HumanParts.Add(FaceMesh);
+    HumanParts.Add(TorsoMesh);
+    HumanParts.Add(LegsMesh);
+    HumanParts.Add(FeetMesh);
 	
 }
 
@@ -61,32 +84,49 @@ void AEnemyAIBase::Tick(float DeltaTime)
 
 void AEnemyAIBase::ChangeForm(EEnemyForm Form)
 {
-    if (ChangeFormMontage == nullptr)
+    bool bIsHuman = (Form == EEnemyForm::Human);
+
+    GetMesh()->SetVisibility(bIsHuman);
+    GetMesh()->SetCollisionEnabled(bIsHuman ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+
+    // Human 파츠 토글
+    TArray<USkeletalMeshComponent*> Parts = { FaceMesh, TorsoMesh, LegsMesh, FeetMesh };
+    for (USkeletalMeshComponent* Part : Parts)
     {
-        return;
+        if (Part)
+        {
+            Part->SetVisibility(bIsHuman);
+            Part->SetCollisionEnabled(bIsHuman ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+        }
     }
 
-    switch (Form)
+    // Wolf 토글
+    if (WolfMesh)
     {
-    case EEnemyForm::Human:
-        if (HumanMesh) GetMesh()->SetSkeletalMesh(HumanMesh);
-        if (HumanAnimBP) GetMesh()->SetAnimInstanceClass(HumanAnimBP);
-        break;
-    case EEnemyForm::Wolf:
-        if (WolfMesh) GetMesh()->SetSkeletalMesh(WolfMesh);
-        if (HumanAnimBP) GetMesh()->SetAnimInstanceClass(WolfAnimBP);
-        break;
-
-    default:
-        break;
+        WolfMesh->SetVisibility(!bIsHuman);
+        WolfMesh->SetCollisionEnabled(!bIsHuman ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
     }
 
-    AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController());
-
-    if (AICon && AICon->GetBlackboardComponent())
+    // 애니메이션 - GetMesh() 아니고 각각 메시에
+    if (bIsHuman && HumanAnimBP)
     {
-        AICon->GetBlackboardComponent()->SetValueAsEnum(AICon->EnemyFormKey, (uint8)Form);
+        GetMesh()->SetAnimInstanceClass(HumanAnimBP);
+    }
+    else if (!bIsHuman && WolfAnimBP)
+    {
+        WolfMesh->SetAnimInstanceClass(WolfAnimBP);
+    }
+
+    // Blackboard 업데이트
+    if (AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController()))
+    {
+        if (AICon->GetBlackboardComponent())
+        {
+            AICon->GetBlackboardComponent()->SetValueAsEnum(AICon->EnemyFormKey, (uint8)Form);
+        }
     }
 }
+
+
 
 
