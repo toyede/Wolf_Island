@@ -4,12 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "AIController.h"
-#include "BehaviorTree/BehaviorTree.h"
-#include "BehaviorTree/BlackboardComponent.h"
-#include "BehaviorTree/BehaviorTreeComponent.h"
-#include "GameFramework/Character.h"
-#include "Kismet/GameplayStatics.h"
 #include "EnemyAIBossController.generated.h"
+
+class UBehaviorTree;
+class UBehaviorTreeComponent;
 
 UENUM(BlueprintType)
 enum class EBossState : uint8
@@ -35,36 +33,44 @@ class WOLF_ISLAND_API AEnemyAIBossController : public AAIController
 public:
 	AEnemyAIBossController();
 
-protected:
-	virtual void OnPossess(APawn* InPawn) override;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AttackTarget")
+	ACharacter* Player;
 
-	virtual void BeginPlay() override;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI|State")
+	EBossState BossState = EBossState::Idle;
 
-	UPROPERTY(EditAnywhere, Category = "AI")
-	UBehaviorTree* BehaviorTreeAsset;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
-	UBlackboardComponent* BlackboardComp;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
-	UBehaviorTreeComponent* BehaviorComp;
-
-	UPROPERTY(EditDefaultsOnly, Category = "AI")
-	FName AttackTargetKey = "AttackTarget";
-
-	UPROPERTY(EditDefaultsOnly, Category = "AI")
-	FName BossStateKey = "State";
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI")
-	EBossState BossState;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI")
-	APawn* AttackTarget;
-
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "AI|State")
 	void SetNewState(EBossState NewState);
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "AI|State")
 	void SetRandomNewState();
+
+	UFUNCTION(BlueprintCallable, Category = "AI|State")
+	EBossState SetStateAsGroggy();
+
+	UFUNCTION(BlueprintCallable, Category = "AI|State")
+	EBossState SetStateAsStun();
+
+	UFUNCTION()
+	void SetAttackTarget();
+
+	UFUNCTION(BlueprintPure, Category = "AI|State")
+	EBossState GetCurrentState() const { return BossState; }
+
+protected:
+	virtual void BeginPlay() override;
+	virtual void OnPossess(APawn* InPawn) override;
+
+	UPROPERTY(EditAnywhere, Category = "AI")
+	TObjectPtr<UBehaviorTree> BehaviorTreeAsset;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
+	TObjectPtr<UBehaviorTreeComponent> BehaviorComp;
+
+	UPROPERTY(EditDefaultsOnly, Category = "AI|Blackboard")
+	FName AttackTargetKey = TEXT("AttackTarget");
+
+	UPROPERTY(EditDefaultsOnly, Category = "AI|Blackboard")
+	FName BossStateKey = TEXT("State");
 };
 

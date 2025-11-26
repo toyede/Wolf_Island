@@ -9,6 +9,8 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
 #include "Animation/AnimMontage.h"
+#include "NiagaraSystem.h"
+#include "NiagaraFunctionLibrary.h"
 #include "EnemyAIBase.generated.h"
 
 UENUM(BlueprintType)
@@ -73,4 +75,10 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Form Change")
 	TSubclassOf<UAnimInstance> WolfAnimBP;
+
+	UPROPERTY(EditAnywhere, Category = "Particle")
+	class UNiagaraSystem* FormChangeNiagaraEffect;
+
+	UFUNCTION()
+	void SpawnParticle();
 };

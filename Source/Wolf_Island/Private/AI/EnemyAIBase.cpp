@@ -107,6 +107,8 @@ void AEnemyAIBase::ChangeForm(EEnemyForm Form)
         WolfMesh->SetCollisionEnabled(!bIsHuman ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
     }
 
+    SpawnParticle();
+
     // 애니메이션 - GetMesh() 아니고 각각 메시에
     if (bIsHuman && HumanAnimBP)
     {
@@ -124,6 +126,20 @@ void AEnemyAIBase::ChangeForm(EEnemyForm Form)
         {
             AICon->GetBlackboardComponent()->SetValueAsEnum(AICon->EnemyFormKey, (uint8)Form);
         }
+    }
+}
+
+void AEnemyAIBase::SpawnParticle()
+{
+    if (FormChangeNiagaraEffect)
+    {
+        FVector SpawnLocation = GetActorLocation();
+        UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+            GetWorld(),
+            FormChangeNiagaraEffect,
+            SpawnLocation,
+            GetActorRotation()
+        );
     }
 }
 
