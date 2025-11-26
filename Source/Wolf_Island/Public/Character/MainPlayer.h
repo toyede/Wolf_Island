@@ -43,16 +43,16 @@ public:
 	//class AMainHUD* HUD;
 	
 	//컴포넌트=========================================================================
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	class UCameraComponent* FirstPersonCamera;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	class UStatusComponent* StatusComponent;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	class UInventoryComponent* InventoryComponent;
 	//손에 들 아이템
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	UStaticMeshComponent* ItemMesh;
 	
 	//입력 관련 변수====================================================================
@@ -212,7 +212,7 @@ public:
 	UFUNCTION()
 	void StopRun();
 
-	UFUNCTION(Server, Reliable)
+	UFUNCTION(NetMulticast, Server, Reliable)
 	void ToggleCrouch();
 
 	UFUNCTION()
@@ -282,6 +282,13 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool IsWhole);
+
+	UFUNCTION(BlueprintPure)
+	UItemBase* GetHoldingItemReference();
+	
+	//멀티플레이어
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
 };
 
 

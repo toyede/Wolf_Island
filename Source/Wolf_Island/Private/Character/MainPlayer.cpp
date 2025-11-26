@@ -806,3 +806,21 @@ void AMainPlayer::DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool
 		UE_LOG(LogTemp, Warning, TEXT("CAN'T FIND MATCHED ITEM."))
 	}
 }
+
+UItemBase* AMainPlayer::GetHoldingItemReference()
+{
+	if (InventoryComponent)
+	{
+		if (InventoryComponent->GetItemAmount() > 0)
+		{
+			return InventoryComponent->GetItemAtIndex(HotBarIndex);
+		}
+	}
+	
+	return nullptr;
+}
+
+void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+}
