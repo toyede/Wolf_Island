@@ -29,3 +29,8 @@ void AChest::Interact(AActor* Interactor)
 	ChestScreen->SetIsFocusable(true);
 	ChestScreen->AddToViewport();
 }
+
+void AChest::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+}

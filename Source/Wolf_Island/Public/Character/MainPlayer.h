@@ -163,10 +163,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction")
 	float InteractionDuration = 0.0f;
 
-	//애님 몽타주======================================================================
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Anim")
+	//애니메이션 변수======================================================================
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
 	class UAnimMontage* SlideMontage;
-
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
+	UAnimMontage* PunchMontage;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
+	UAnimMontage* FuckyouMontage;
+	
 	//위젯============================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	TSubclassOf<class UPlayerHUD> HUDClass;
