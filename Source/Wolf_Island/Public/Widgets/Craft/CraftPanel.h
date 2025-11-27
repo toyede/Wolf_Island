@@ -56,6 +56,12 @@ public:
 	void SetRecipeInfo(FRecipeData RecipeData);
 	UFUNCTION(BlueprintCallable)
 	void SetCraftButton(FRecipeData RecipeData);
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Crafting")
+	ECraftMethod TargetCraftMethod = ECraftMethod::INVEN;
+	
+	UFUNCTION(BlueprintCallable)
+	void SetCraftingMethod(ECraftMethod NewMethod);
 
 protected:
 	virtual void NativeConstruct() override;

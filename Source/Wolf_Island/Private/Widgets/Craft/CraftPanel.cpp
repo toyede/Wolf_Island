@@ -13,6 +13,13 @@
 #include "Widgets/Craft/RecipeBlock.h"
 #include "Widgets/Craft//CraftSlot.h"
 
+void UCraftPanel::SetCraftingMethod(ECraftMethod NewMethod)
+{
+	TargetCraftMethod = NewMethod;
+    
+	RefreshRecipeList();
+}
+
 void UCraftPanel::NativeConstruct()
 {
 	Super::NativeConstruct();
@@ -60,14 +67,25 @@ void UCraftPanel::AddRecipe(FRecipeData Recipe)
 
 inline void UCraftPanel::RefreshRecipeList()
 {
+	if (!RecipeList || !RecipeTable) return;
+
 	RecipeList->ClearChildren();
-	
+    
 	RecipeTable->ForeachRow<FRecipeData>(TEXT("RecipeTableContext"),
 	[&](const FName& RowName, const FRecipeData& Recipe)
 	{
-		//필터링에 있으면 출력
-		if (RecipeTypeList.Contains(Recipe.ItemType))
-			AddRecipe(Recipe);
+	   // 1. 아이템 타입 필터 (기존 로직)
+	   bool bTypeMatch = RecipeTypeList.Contains(Recipe.ItemType);
+       
+	   // 2. [추가된 로직] 제작 방식(Method) 일치 여부 확인
+	   // 레시피의 Method가 현재 패널 설정(TargetCraftMethod)과 같은가?
+	   bool bMethodMatch = (Recipe.Method == TargetCraftMethod);
+
+	   // 두 조건 다 맞으면 목록에 추가
+	   if (bTypeMatch && bMethodMatch)
+	   {
+		  AddRecipe(Recipe);
+	   }
 	});
 }
 
