@@ -8,6 +8,8 @@
 
 AChest::AChest()
 {
+	SetReplicates(true);
+	
 	ChestMesh = CreateDefaultSubobject<UStaticMeshComponent>("ChestMesh");
 	ChestCoverMesh = CreateDefaultSubobject<UStaticMeshComponent>("ChestCoverMesh");
 	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>("InventoryComponent");
