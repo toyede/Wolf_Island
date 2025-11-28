@@ -1,38 +1,47 @@
 #include "Interaction/Repair_Actor.h"
 #include "Data/ItemDataStruct.h"
 
+ARepair_Actor::ARepair_Actor()
+{
+    bIsBody = false;
+    bIsEngine = false;
+    bIsSteering = false;
+    bIsRadar = false;
+    bIsAnchor = false;
+}
+
+void ARepair_Actor::BeginPlay()
+{
+    Super::BeginPlay();
+
+    if (RepairRecipesTable)
+    {
+        TArray<FName> RowNames = RepairRecipesTable->GetRowNames();
+        FString ContextString;
+
+        for (const FName& RowName : RowNames)
+        {
+            if (!RepairStatusMap.Contains(RowName))
+            {
+                RepairStatusMap.Add(RowName, false);
+            }
+
+            FRepairRecipeData* RowData = RepairRecipesTable->FindRow<FRepairRecipeData>(RowName, ContextString);
+            if (RowData)
+            {
+                RecipeIDMap.Add(RowData->RecipeName, RowName);
+                
+                UE_LOG(LogTemp, Log, TEXT("[RepairActor] 매핑됨: %s -> %s"), *RowData->RecipeName.ToString(), *RowName.ToString());
+            }
+        }
+    }
+}
+
 bool ARepair_Actor::CheckBodyComplete()
 {
-    // 테이블이 없으면 실패 처리 및 변수 초기화
-    if (!RepairRecipesTable)
-    {
-       bIsBody = false; 
-       return false;
-    }
+    bool bIsBD1Complete = IsRecipeComplete(FName("BD1"));
+    bool bIsBD2Complete = IsRecipeComplete(FName("BD2"));
 
-    bool bIsBD1Complete = false;
-    bool bIsBD2Complete = false;
-
-    FString ContextString;
-    TArray<FRepairRecipeData*> AllRows;
-    RepairRecipesTable->GetAllRows<FRepairRecipeData>(ContextString, AllRows);
-
-    for (const FRepairRecipeData* Row : AllRows)
-    {
-       if (Row)
-       {
-          if (Row->RecipeName.IsEqual(FName("BD1")) && Row->Complete)
-          {
-             bIsBD1Complete = true;
-          }
-          else if (Row->RecipeName.IsEqual(FName("BD2")) && Row->Complete)
-          {
-             bIsBD2Complete = true;
-          }
-       }
-    }
-
-    // 결과를 멤버 변수에 저장
     if (bIsBD1Complete && bIsBD2Complete)
     {
        bIsBody = true;
@@ -47,35 +56,9 @@ bool ARepair_Actor::CheckBodyComplete()
 
 bool ARepair_Actor::CheckEngineComplete()
 {
-    if (!RepairRecipesTable)
-    {
-       bIsEngine = false;
-       return false;
-    }
+    bool bIsEG1Complete = IsRecipeComplete(FName("EG1"));
+    bool bIsEG2Complete = IsRecipeComplete(FName("EG2"));
 
-    bool bIsEG1Complete = false;
-    bool bIsEG2Complete = false;
-
-    FString ContextString;
-    TArray<FRepairRecipeData*> AllRows;
-    RepairRecipesTable->GetAllRows<FRepairRecipeData>(ContextString, AllRows);
-
-    for (const FRepairRecipeData* Row : AllRows)
-    {
-       if (Row)
-       {
-          if (Row->RecipeName.IsEqual(FName("EG1")) && Row->Complete)
-          {
-             bIsEG1Complete = true;
-          }
-          else if (Row->RecipeName.IsEqual(FName("EG2")) && Row->Complete)
-          {
-             bIsEG2Complete = true;
-          }
-       }
-    }
-
-    // 결과를 멤버 변수에 저장
     if (bIsEG1Complete && bIsEG2Complete)
     {
        bIsEngine = true;
@@ -90,35 +73,9 @@ bool ARepair_Actor::CheckEngineComplete()
 
 bool ARepair_Actor::CheckSteeringComplete()
 {
-    if (!RepairRecipesTable)
-    {
-       bIsSteering = false;
-       return false;
-    }
+    bool bIsST1Complete = IsRecipeComplete(FName("ST1"));
+    bool bIsST2Complete = IsRecipeComplete(FName("ST2"));
 
-    bool bIsST1Complete = false;
-    bool bIsST2Complete = false;
-
-    FString ContextString;
-    TArray<FRepairRecipeData*> AllRows;
-    RepairRecipesTable->GetAllRows<FRepairRecipeData>(ContextString, AllRows);
-
-    for (const FRepairRecipeData* Row : AllRows)
-    {
-       if (Row)
-       {
-          if (Row->RecipeName.IsEqual(FName("ST1")) && Row->Complete)
-          {
-             bIsST1Complete = true;
-          }
-          else if (Row->RecipeName.IsEqual(FName("ST2")) && Row->Complete)
-          {
-             bIsST2Complete = true;
-          }
-       }
-    }
-
-    // 결과를 멤버 변수에 저장
     if (bIsST1Complete && bIsST2Complete)
     {
        bIsSteering = true;
@@ -133,35 +90,9 @@ bool ARepair_Actor::CheckSteeringComplete()
 
 bool ARepair_Actor::CheckRadarComplete()
 {
-    if (!RepairRecipesTable)
-    {
-       bIsRadar = false;
-       return false;
-    }
+    bool bIsRD1Complete = IsRecipeComplete(FName("RD1"));
+    bool bIsRD2Complete = IsRecipeComplete(FName("RD2"));
 
-    bool bIsRD1Complete = false;
-    bool bIsRD2Complete = false;
-
-    FString ContextString;
-    TArray<FRepairRecipeData*> AllRows;
-    RepairRecipesTable->GetAllRows<FRepairRecipeData>(ContextString, AllRows);
-
-    for (const FRepairRecipeData* Row : AllRows)
-    {
-       if (Row)
-       {
-          if (Row->RecipeName.IsEqual(FName("RD1")) && Row->Complete)
-          {
-             bIsRD1Complete = true;
-          }
-          else if (Row->RecipeName.IsEqual(FName("RD2")) && Row->Complete)
-          {
-             bIsRD2Complete = true;
-          }
-       }
-    }
-
-    // 결과를 멤버 변수에 저장
     if (bIsRD1Complete && bIsRD2Complete)
     {
        bIsRadar = true;
@@ -176,35 +107,9 @@ bool ARepair_Actor::CheckRadarComplete()
 
 bool ARepair_Actor::CheckAnchorComplete()
 {
-    if (!RepairRecipesTable)
-    {
-       bIsAnchor = false;
-       return false;
-    }
+    bool bIsAC1Complete = IsRecipeComplete(FName("AC1"));
+    bool bIsAC2Complete = IsRecipeComplete(FName("AC2"));
 
-    bool bIsAC1Complete = false;
-    bool bIsAC2Complete = false;
-
-    FString ContextString;
-    TArray<FRepairRecipeData*> AllRows;
-    RepairRecipesTable->GetAllRows<FRepairRecipeData>(ContextString, AllRows);
-
-    for (const FRepairRecipeData* Row : AllRows)
-    {
-       if (Row)
-       {
-          if (Row->RecipeName.IsEqual(FName("AC1")) && Row->Complete)
-          {
-             bIsAC1Complete = true;
-          }
-          else if (Row->RecipeName.IsEqual(FName("AC2")) && Row->Complete)
-          {
-             bIsAC2Complete = true;
-          }
-       }
-    }
-
-    // 결과를 멤버 변수에 저장
     if (bIsAC1Complete && bIsAC2Complete)
     {
        bIsAnchor = true;
@@ -219,31 +124,47 @@ bool ARepair_Actor::CheckAnchorComplete()
 
 void ARepair_Actor::CompleteRepair()
 {
-   CheckBodyComplete();
-   CheckEngineComplete();
-   CheckSteeringComplete();
-   CheckRadarComplete();
-   CheckAnchorComplete();
+    CheckBodyComplete();
+    CheckEngineComplete();
+    CheckSteeringComplete();
+    CheckRadarComplete();
+    CheckAnchorComplete();
 
-   if (bIsBody && bIsEngine && bIsSteering && bIsRadar && bIsAnchor)
-   {
-      
-   }
+    if (bIsBody && bIsEngine && bIsSteering && bIsRadar && bIsAnchor)
+    {
+    }
 }
 
-void ARepair_Actor::MarkRecipeAsComplete(FName RecipeName)
+void ARepair_Actor::MarkRecipeAsComplete(FName RowName)
 {
-   if (RepairStatusMap.Contains(RecipeName))
-   {
-      RepairStatusMap[RecipeName] = true;
-   }
+    if (RepairStatusMap.Contains(RowName))
+    {
+        RepairStatusMap[RowName] = true;
+        
+        UE_LOG(LogTemp, Log, TEXT("[RepairActor] 수리 기록됨: %s"), *RowName.ToString());
+
+        CompleteRepair();
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("[RepairActor] MarkRecipe 실패! Map에 키가 없음: %s"), *RowName.ToString());
+    }
 }
 
-bool ARepair_Actor::IsRecipeComplete(FName TargetRecipeName)
+bool ARepair_Actor::IsRecipeComplete(FName TargetName)
 {
-   if (bool* bComplete = RepairStatusMap.Find(TargetRecipeName))
-   {
-      return *bComplete;
-   }
-   return false;
+    if (bool* bComplete = RepairStatusMap.Find(TargetName))
+    {
+        return *bComplete;
+    }
+
+    if (FName* RealRowName = RecipeIDMap.Find(TargetName))
+    {
+        if (bool* bComplete = RepairStatusMap.Find(*RealRowName))
+        {
+            return *bComplete;
+        }
+    }
+
+    return false;
 }

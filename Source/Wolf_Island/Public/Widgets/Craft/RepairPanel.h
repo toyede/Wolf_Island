@@ -21,7 +21,7 @@ public:
     UDataTable* ItemDataTable; // 아이콘 조회용
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data")
-    UDataTable* RepairRecipeTable; // 수리 레시피 테이블 (DT_RepairRecipes)
+    UDataTable* RepairRecipeTable; // 수리 레시피 테이블
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
     TSubclassOf<class URepairBlock> RepairBlockClass; // 목록에 추가할 위젯
@@ -86,7 +86,7 @@ public:
     void SetRepairButtonState(FRepairRecipeData RecipeData);
 
     // 데이터 테이블의 Complete 값을 True로 변경하는 함수
-    void MarkRecipeAsComplete(FName RowName);
+    //void MarkRecipeAsComplete(FName RowName);
 
     UFUNCTION(BlueprintCallable, Category = "Repair")
     void InitRepairPanel(class ARepair_Actor* InRepairActor);

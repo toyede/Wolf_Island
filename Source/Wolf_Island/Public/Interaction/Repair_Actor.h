@@ -11,8 +11,12 @@ class WOLF_ISLAND_API ARepair_Actor : public AInteractableActor
 {
 	GENERATED_BODY()
 
-	//virtual void BeginPlay() override;
+	virtual void BeginPlay() override;
+	
 public:
+
+	ARepair_Actor();
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Check")
 	bool bIsBody = false;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Check")
@@ -44,6 +48,9 @@ public:
 
 	UPROPERTY()
 	TMap<FName, bool> RepairStatusMap;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Repair|State")
+	TMap<FName, FName> RecipeIDMap;
 
 	UFUNCTION(BlueprintCallable, Category = "Repair")
 	void MarkRecipeAsComplete(FName RecipeName);
