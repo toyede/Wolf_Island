@@ -91,12 +91,20 @@ void UInventory::HandleInventoryClicked()
 void UInventory::HandleFoodRecipeClicked()
 {
 	PanelSwitcher->SetActiveWidget(FoodRecipeSection);
+	if (UCraftPanel* FoodPanel = Cast<UCraftPanel>(FoodRecipeSection))
+	{
+		FoodPanel->SetCraftingMethod(ECraftMethod::INVEN);
+	}
 	OnCraftClicked.ExecuteIfBound();
 }
 
 void UInventory::HandleCraftRecipeClicked()
 {
 	PanelSwitcher->SetActiveWidget(CraftRecipeSection);
+	if (UCraftPanel* CraftPanel = Cast<UCraftPanel>(CraftRecipeSection))
+	{
+		CraftPanel->SetCraftingMethod(ECraftMethod::INVEN);
+	}
 	OnCraftClicked.ExecuteIfBound();
 }
 

@@ -539,6 +539,28 @@ bool UInventoryComponent::CheckCanMakeRecipe(FRecipeData Recipe)
 	return pass1 && pass2 && pass3;
 }
 
+bool UInventoryComponent::CheckCanMakeRepair(FRepairRecipeData Recipe)
+{
+	bool pass1 = false, pass2 = false, pass3 = false;
+
+	//재료 아이템이 비어있으면 그 칸은 패스
+	if (Recipe.Ingredient1ID.IsNone()) pass1 = true;
+	if (Recipe.Ingredient2ID.IsNone()) pass2 = true;
+	if (Recipe.Ingredient3ID.IsNone()) pass3 = true;
+
+	//첫번째 재료 인벤토리에서 체크
+	//레시피 개수보다 인벤토리에 아이템 개수가 같거나 많으면 패스
+	if (Recipe.Ingredient1Amount <= GetItemTotalAmountByID(Recipe.Ingredient1ID)) pass1 = true;
+	//두번째 재료 인벤토리에서 체크
+	//레시피 개수보다 인벤토리에 아이템 개수가 같거나 많으면 패스
+	if (Recipe.Ingredient2Amount <= GetItemTotalAmountByID(Recipe.Ingredient2ID)) pass2 = true;
+	//세번째 재료 인벤토리에서 체크
+	//레시피 개수보다 인벤토리에 아이템 개수가 같거나 많으면 패스
+	if (Recipe.Ingredient3Amount <= GetItemTotalAmountByID(Recipe.Ingredient3ID)) pass3 = true;	
+	
+	return pass1 && pass2 && pass3;
+}
+
 bool UInventoryComponent::MakeItem(FRecipeData Recipe)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Make Item Execute."));
@@ -568,6 +590,23 @@ bool UInventoryComponent::MakeItem(FRecipeData Recipe)
 			
 			return true;
 		}
+	}
+	UE_LOG(LogTemp, Warning, TEXT("Recipe Check Failed."));
+	
+	return false;
+}
+
+bool UInventoryComponent::RepairShip(FRepairRecipeData Recipes)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Make Item Execute."));
+	//레시피 다시한번 체크
+	if (CheckCanMakeRepair(Recipes))
+	{
+		//레시피 개수별로 아이템 삭제
+		RemoveItemsByID(Recipes.Ingredient1ID, Recipes.Ingredient1Amount);
+		RemoveItemsByID(Recipes.Ingredient2ID, Recipes.Ingredient2Amount);
+		RemoveItemsByID(Recipes.Ingredient3ID, Recipes.Ingredient3Amount);
+		RemoveItemsByID(Recipes.Ingredient4ID, Recipes.Ingredient4Amount);
 	}
 	UE_LOG(LogTemp, Warning, TEXT("Recipe Check Failed."));
 	

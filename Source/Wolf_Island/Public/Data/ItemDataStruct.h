@@ -159,3 +159,58 @@ struct FRecipeData : public FTableRowBase
 		return Result;
 	}
 };
+
+//수리 레시피 데이터
+USTRUCT(BlueprintType)
+struct FRepairRecipeData : public FTableRowBase
+{
+	GENERATED_USTRUCT_BODY();
+
+	UPROPERTY(EditAnywhere)
+	FName RecipeName;
+	UPROPERTY(EditAnywhere)
+	FName Ingredient1ID;
+	UPROPERTY(EditAnywhere)
+	int32 Ingredient1Amount;
+	UPROPERTY(EditAnywhere)
+	FName Ingredient2ID;
+	UPROPERTY(EditAnywhere)
+	int32 Ingredient2Amount;
+	UPROPERTY(EditAnywhere)
+	FName Ingredient3ID;
+	UPROPERTY(EditAnywhere)
+	int32 Ingredient3Amount;
+	UPROPERTY(EditAnywhere)
+	FName Ingredient4ID;
+	UPROPERTY(EditAnywhere)
+	int32 Ingredient4Amount;
+	UPROPERTY(EditAnywhere)
+	float Duration;
+	UPROPERTY(EditAnywhere)
+	bool Complete = false;
+
+	TArray<FName> GetIngredientsID() const
+	{
+		TArray<FName> Result;
+		
+		if (!Ingredient1ID.IsNone()) Result.Add(Ingredient1ID);
+		if (!Ingredient2ID.IsNone()) Result.Add(Ingredient2ID);
+		if (!Ingredient3ID.IsNone()) Result.Add(Ingredient3ID);
+		if (!Ingredient4ID.IsNone()) Result.Add(Ingredient4ID);
+
+		return Result;
+	}
+	
+	TMap<FName, int32> GetIngredients() const
+	{
+		TMap<FName, int32> Result;
+		
+		if (!Ingredient1ID.IsNone()) Result.Add(Ingredient1ID, Ingredient1Amount);
+		if (!Ingredient2ID.IsNone()) Result.Add(Ingredient2ID, Ingredient2Amount);
+		if (!Ingredient3ID.IsNone()) Result.Add(Ingredient3ID, Ingredient3Amount);
+		if (!Ingredient4ID.IsNone()) Result.Add(Ingredient4ID, Ingredient4Amount);
+
+		return Result;
+	}
+	
+};
