@@ -10,6 +10,8 @@
 /**
  * 
  */
+class ARepair_Actor;
+ 
 UCLASS()
 class WOLF_ISLAND_API URepairUI : public UUserWidget
 {
@@ -23,6 +25,12 @@ public:
 	// WBP의 닫기 버튼 (이름을 CloseButton으로 맞춰주세요)
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
 	class UButton* CloseButton;
+	
+	UFUNCTION(BlueprintCallable, Category = "Repair System")
+    void InitRepairWindow(ARepair_Actor* InActor);
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (ExposeOnSpawn = true), Category = "Repair System")
+	ARepair_Actor* TargetActor;
 
 protected:
 	virtual void NativeConstruct() override;

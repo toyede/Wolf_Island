@@ -2,7 +2,6 @@
 
 
 #include "Widgets/craft/RepairPanel.h"
-// 필요한 헤더들 (경로 확인 필요)
 #include "Components/Button.h"
 #include "Components/Image.h"
 #include "Components/InventoryComponent.h"
@@ -219,7 +218,7 @@ void URepairPanel::OnRepairButtonClicked()
     if (!OwnerInventory) return;
 
     // 변환 과정
-    FRecipeData TempRecipe;
+    FRepairRecipeData TempRecipe;
     
     TempRecipe.Ingredient1ID = CurrentRepairData.Ingredient1ID;
     TempRecipe.Ingredient1Amount = CurrentRepairData.Ingredient1Amount;
@@ -230,19 +229,22 @@ void URepairPanel::OnRepairButtonClicked()
     TempRecipe.Ingredient3ID = CurrentRepairData.Ingredient3ID;
     TempRecipe.Ingredient3Amount = CurrentRepairData.Ingredient3Amount;
 
-    TempRecipe.ResultID = FName("None");
-    TempRecipe.ResultAmount = 0;
+    TempRecipe.Ingredient4ID = CurrentRepairData.Ingredient4ID;
+    TempRecipe.Ingredient4Amount = CurrentRepairData.Ingredient4Amount;
+
 
     // 1. 인벤토리에서 재료 소모
-    OwnerInventory->MakeItem(TempRecipe);
-
+    OwnerInventory->RepairShip(TempRecipe);
+    
     // 2. 액터 상태 변경
     if (TargetRepairActor)
     {
+        UE_LOG(LogTemp, Error, TEXT("TargetRepairActor ON"));
+        
         TargetRepairActor->CompleteRepair();
     }
-    
-    // 3. 데이터 테이블 변경
+
+    // 3. 데이터 테이블 수정
     MarkRecipeAsComplete(CurrentRowName);
 
     // 4. UI 갱신
@@ -265,5 +267,15 @@ void URepairPanel::MarkRecipeAsComplete(FName RowName)
     {
         Row->Complete = true; // 런타임 값 수정
         UE_LOG(LogTemp, Log, TEXT("DataTable Updated: %s is now Complete."), *RowName.ToString());
+    }
+}
+
+void URepairPanel::InitRepairPanel(class ARepair_Actor* InRepairActor)
+{
+    TargetRepairActor = InRepairActor;
+
+    if (TargetRepairActor)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("RepairPanel: 수리 대상 액터 연결됨 -> %s"), *TargetRepairActor->GetName());
     }
 }

@@ -10,6 +10,8 @@ UCLASS()
 class WOLF_ISLAND_API ARepair_Actor : public AInteractableActor
 {
 	GENERATED_BODY()
+
+	//virtual void BeginPlay() override;
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Check")
 	bool bIsBody = false;
@@ -39,5 +41,13 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly)
 	UDataTable* RepairRecipesTable;
-	
+
+	UPROPERTY()
+	TMap<FName, bool> RepairStatusMap;
+
+	UFUNCTION(BlueprintCallable, Category = "Repair")
+	void MarkRecipeAsComplete(FName RecipeName);
+
+	UFUNCTION(BlueprintCallable, Category = "Repair")
+	bool IsRecipeComplete(FName TargetRecipeName);
 };

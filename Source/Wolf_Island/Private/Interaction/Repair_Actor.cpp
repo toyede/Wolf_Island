@@ -230,3 +230,20 @@ void ARepair_Actor::CompleteRepair()
       
    }
 }
+
+void ARepair_Actor::MarkRecipeAsComplete(FName RecipeName)
+{
+   if (RepairStatusMap.Contains(RecipeName))
+   {
+      RepairStatusMap[RecipeName] = true;
+   }
+}
+
+bool ARepair_Actor::IsRecipeComplete(FName TargetRecipeName)
+{
+   if (bool* bComplete = RepairStatusMap.Find(TargetRecipeName))
+   {
+      return *bComplete;
+   }
+   return false;
+}
