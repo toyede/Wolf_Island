@@ -13,6 +13,8 @@
 #include "NiagaraFunctionLibrary.h"
 #include "EnemyAIBase.generated.h"
 
+class APatrolRoute;
+
 UENUM(BlueprintType)
 enum class EEnemyForm : uint8
 {
@@ -34,14 +36,14 @@ protected:
 public:	
 	virtual void Tick(float DeltaTime) override;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Patrol Route")
+	TObjectPtr<APatrolRoute> AssignedPatrolRoute;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	class UStatusComponent* StatusComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Stats")
 	EEnemyForm EnemyForm;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Patrol Route")
-	AActor* PatrolRoute;
 
 	UFUNCTION(BlueprintCallable)
 	void ChangeForm(EEnemyForm Form);
@@ -81,4 +83,10 @@ public:
 
 	UFUNCTION()
 	void SpawnParticle();
+
+	UFUNCTION(BlueprintCallable)
+	int32 GetNextPoint();
+
+	UPROPERTY(VisibleAnywhere)
+	int32 CurrentPatrolIndex = 0;
 };

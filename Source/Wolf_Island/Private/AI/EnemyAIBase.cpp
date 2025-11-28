@@ -9,6 +9,8 @@
 #include "Animation/AnimInstance.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Components/StatusComponent.h"
+#include "Actors/PatrolRoute.h"
+#include "Components/SplineComponent.h"
 
 
 AEnemyAIBase::AEnemyAIBase()
@@ -141,6 +143,22 @@ void AEnemyAIBase::SpawnParticle()
             GetActorRotation()
         );
     }
+}
+
+int32 AEnemyAIBase::GetNextPoint()
+{
+    if (AssignedPatrolRoute)
+    {
+        int32 NumberOfRoutes = AssignedPatrolRoute->SplinePoints->GetNumberOfSplinePoints();
+
+        if (NumberOfRoutes > 0)
+        {
+            CurrentPatrolIndex = (CurrentPatrolIndex + 1) % NumberOfRoutes;
+
+            return CurrentPatrolIndex;
+        }
+    }
+    return 0;
 }
 
 

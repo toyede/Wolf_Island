@@ -100,6 +100,9 @@ protected:
 
 	AActor* AttackTarget;
 
+	UFUNCTION(BlueprintCallable)
+	void MoveToNextRoute();
+
 public:
 	UPROPERTY(EditDefaultsOnly, Category = "AI")
 	FName EnemyFormKey = "Form";

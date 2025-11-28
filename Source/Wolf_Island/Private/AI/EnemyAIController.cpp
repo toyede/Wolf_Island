@@ -5,6 +5,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
 #include "AI/EnemyAIBase.h"
+#include "Components/SplineComponent.h"
+#include "Actors/PatrolRoute.h"
 
 AEnemyAIController::AEnemyAIController()
 {
@@ -106,7 +108,7 @@ void AEnemyAIController::OnPerceptionUpdated(const TArray<AActor*>& UpdatedActor
         }
         else
         {
-            GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Red, TEXT("zz"));
+            return;
         }
     }
 }
@@ -139,6 +141,27 @@ void AEnemyAIController::HandleForgotActor(AActor* Actor)
     if (Actor == AttackTarget)
     {
         SetStateAsPassive();
+    }
+}
+
+void AEnemyAIController::MoveToNextRoute()
+{
+    AEnemyAIBase* EnemyOwner = Cast<AEnemyAIBase>(GetPawn());
+
+    if (EnemyOwner && EnemyOwner->AssignedPatrolRoute)
+    {
+        int32 NextIndex = EnemyOwner->GetNextPoint();
+        USplineComponent* Spline = EnemyOwner->AssignedPatrolRoute->SplinePoints;
+
+        if (Spline)
+        {
+            FVector TargetLocation = Spline->GetLocationAtSplinePoint(
+                NextIndex,
+                ESplineCoordinateSpace::World
+            );
+
+            MoveToLocation(TargetLocation);
+        }
     }
 }
 
