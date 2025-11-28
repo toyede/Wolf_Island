@@ -76,6 +76,12 @@ void AEnemyAIBase::BeginPlay()
     HumanParts.Add(LegsMesh);
     HumanParts.Add(FeetMesh);
 	
+    if (NativePatrolRoute && WolfPatrolRoute) // 원주민으로 시작해서 기본 루트는 원주민루트로
+    {
+		AssignedPatrolRoute = NativePatrolRoute;
+
+        CurrentPatrolIndex = GetRandomPointIndex();
+    }
 }
 
 void AEnemyAIBase::Tick(float DeltaTime)
@@ -108,6 +114,12 @@ void AEnemyAIBase::ChangeForm(EEnemyForm Form)
         WolfMesh->SetVisibility(!bIsHuman);
         WolfMesh->SetCollisionEnabled(!bIsHuman ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
     }
+
+    // 패트롤루트 전환
+	AssignedPatrolRoute = bIsHuman ? NativePatrolRoute : WolfPatrolRoute;
+
+    // 패트롤 시작점 초기화
+	CurrentPatrolIndex = GetRandomPointIndex();
 
     SpawnParticle();
 
@@ -161,6 +173,21 @@ int32 AEnemyAIBase::GetNextPoint()
     return 0;
 }
 
+int32 AEnemyAIBase::GetRandomPointIndex()
+{
+    if (!AssignedPatrolRoute || !AssignedPatrolRoute->SplinePoints)
+    {
+        return 0;
+    }
 
+    int32 NumPoints = AssignedPatrolRoute->SplinePoints->GetNumberOfSplinePoints();
+    if (NumPoints <= 0)
+    {
+        return 0;
+    }
+
+    return FMath::RandRange(-1, AssignedPatrolRoute->SplinePoints->GetNumberOfSplinePoints() - 1); // 원주민마다 랜덤 스타트
+
+}
 
 
