@@ -12,12 +12,11 @@
 #include "Data/ItemDataStruct.h"
 #include "Widgets/Craft/RepairBlock.h"
 #include "Widgets/Craft/CraftSlot.h"
-#include "Interaction/Repair_Actor.h" // ARepair_Actor 헤더 포함 필수
+#include "Interaction/Repair_Actor.h"
 
 void URepairPanel::NativeConstruct()
 {
     Super::NativeConstruct();
-
     // 플레이어의 인벤토리 가져오기
     if (GetOwningPlayerPawn())
     {
@@ -44,7 +43,7 @@ void URepairPanel::RefreshRecipeList()
     RepairRecipeTable->ForeachRow<FRepairRecipeData>(TEXT("RepairTableContext"),
     [&](const FName& RowName, const FRepairRecipeData& Recipe)
     {
-        // 모든 레시피를 추가 (필요시 여기서 필터링 가능)
+        // 모든 레시피를 추가
         AddRecipe(RowName, Recipe);
     });
 }
@@ -146,9 +145,8 @@ void URepairPanel::SetRepairInfo(FName RowName, FRepairRecipeData RecipeData)
         
         if (!ItemData)
         {
-            // ★ 여기가 가장 의심스러운 부분!
             UE_LOG(LogTemp, Error, TEXT("!!! [찾기 실패] 아이템 테이블에 '%s' 라는 ID가 없습니다! 오타 확인 필요."), *IngredientID.ToString());
-            continue; // 다음 재료로 넘어감
+            continue;
         }
 
         // 6. 슬롯 클래스 확인
@@ -191,8 +189,6 @@ void URepairPanel::SetRepairButtonState(FRepairRecipeData RecipeData)
         RepairButton->SetIsEnabled(false);
         return;
     }
-
-    // [수정] 하나씩 직접 대입해야 합니다.
     FRecipeData TempRecipe;
     
     TempRecipe.Ingredient1ID = RecipeData.Ingredient1ID;
@@ -203,11 +199,12 @@ void URepairPanel::SetRepairButtonState(FRepairRecipeData RecipeData)
     
     TempRecipe.Ingredient3ID = RecipeData.Ingredient3ID;
     TempRecipe.Ingredient3Amount = RecipeData.Ingredient3Amount;
-
-    // 주의: RepairData는 재료가 4개까지 있는데, RecipeData는 3개까지만 담을 수 있습니다.
-    // 만약 4번째 재료가 필수라면, RecipeData 구조체도 4개로 늘려야 정확합니다.
-
-    // 결과물은 없음
+    
+    /*
+    TempRecipe.Ingredient4ID = RecipeData.Ingredient4ID;
+    TempRecipe.Ingredient4Amount = RecipeData.Ingredient4Amount;
+    */
+    
     TempRecipe.ResultID = FName("None");
     TempRecipe.ResultAmount = 0;
 
@@ -221,7 +218,7 @@ void URepairPanel::OnRepairButtonClicked()
 {
     if (!OwnerInventory) return;
 
-    // [수정] 변환 과정 (하나씩 대입)
+    // 변환 과정
     FRecipeData TempRecipe;
     
     TempRecipe.Ingredient1ID = CurrentRepairData.Ingredient1ID;
@@ -244,7 +241,7 @@ void URepairPanel::OnRepairButtonClicked()
     {
         TargetRepairActor->CompleteRepair();
     }
-
+    
     // 3. 데이터 테이블 변경
     MarkRecipeAsComplete(CurrentRowName);
 
