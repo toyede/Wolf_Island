@@ -9,17 +9,8 @@
   <component name="ChangeListManager">
     <list default="true" id="367b04d5-c3d9-4599-86e8-ad54ff3b4b47" name="변경" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.Wolf_Island.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Wolf_Island.dir/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Maps/NewMap.umap" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Maps/NewMap.umap" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/StarterContent/Architecture/Floor_400x400.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/StarterContent/Architecture/Floor_400x400.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/StarterContent/Materials/M_Brick_Cut_Stone.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/StarterContent/Materials/M_Brick_Cut_Stone.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/StarterContent/Props/SM_Rock.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/StarterContent/Props/SM_Rock.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/item/DT_Items.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/DT_Items.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/item/ItemMesh/bonfire/SM_BonFire.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/ItemMesh/bonfire/SM_BonFire.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/item/ItemMesh/sailingboard_beam/aluminium_beam.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/ItemMesh/sailingboard_beam/aluminium_beam.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Private/Widgets/Craft/CraftPanel.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Private/Widgets/Craft/CraftPanel.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Private/Widgets/Inventory/Inventory.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Private/Widgets/Inventory/Inventory.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Public/Data/ItemDataStruct.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Public/Data/ItemDataStruct.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Public/Widgets/Craft/CraftPanel.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Public/Widgets/Craft/CraftPanel.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/item/DT_RepairRecipes.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/DT_RepairRecipes.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/item/ItemMesh/boat/boat_broken/BP_BrokenShip.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/ItemMesh/boat/boat_broken/BP_BrokenShip.uasset" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -167,6 +158,7 @@
       <workItem from="1764221105712" duration="9543000" />
       <workItem from="1764251553635" duration="836000" />
       <workItem from="1764253173907" duration="6821000" />
+      <workItem from="1764298385280" duration="249000" />
     </task>
     <servers />
   </component>
