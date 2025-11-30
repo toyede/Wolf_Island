@@ -11,6 +11,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHPZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStaminaZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHungerZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHydrationZero);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInfectionChanged);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class WOLF_ISLAND_API UStatusComponent : public UActorComponent
@@ -30,6 +31,18 @@ public:
 	FOnHungerZero OnHungerZero;
 	UPROPERTY(BlueprintAssignable, Category="Status Delegate")
 	FOnHydrationZero OnHydrationZero;
+	UPROPERTY(BlueprintAssignable, Category="Status Delegate")
+	FOnInfectionChanged OnInfectionChanged;
+
+	//늑대인간
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection")
+	float CurrentInfectionRate = 0.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection")
+	bool IsInfected = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection")
+	float InfectionInterval = 0.01f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection")
+	float InfectionIncrement = 0.01f;
 
 	//체력
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
@@ -93,6 +106,9 @@ public:
 	//강제 휴식 타이머
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
 	FTimerHandle ForcedRestTimer;
+	//감염 타이머
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
+	FTimerHandle InfectionTimer;
 
 	//스태미나 감소 주기
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
@@ -224,6 +240,19 @@ public:
 	//입력 허용 함수
 	UFUNCTION(BlueprintCallable)
 	void EnableController();
+
+	//감염 시작 함수
+	UFUNCTION(BlueprintCallable)
+	void StartInfection();
+	//감염 중단 함수
+	UFUNCTION(BlueprintCallable)
+	void StopInfection();
+	//감염률 증가 함수
+	UFUNCTION(BlueprintCallable)
+	void IncreaseInfection();
+	//감염률 감소 함수
+	UFUNCTION(BlueprintCallable)
+	void DecreaseInfection(float Amount);
 
 	//아이템 사용 스탯 적용 함수
 	UFUNCTION(BlueprintCallable)
