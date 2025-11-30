@@ -97,6 +97,8 @@ void AEnemyAIBase::ChangeForm(EEnemyForm Form)
     GetMesh()->SetVisibility(bIsHuman);
     GetMesh()->SetCollisionEnabled(bIsHuman ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
 
+	GetCapsuleComponent()->SetCapsuleSize(bIsHuman ? 42.f : 70.f, bIsHuman ? 96.f : 96.f); // Ä¸½¶ Å©±â º¯°æ
+
     // Human ÆÄÃ÷ Åä±Û
     TArray<USkeletalMeshComponent*> Parts = { FaceMesh, TorsoMesh, LegsMesh, FeetMesh };
     for (USkeletalMeshComponent* Part : Parts)
