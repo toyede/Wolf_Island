@@ -3,6 +3,7 @@
 
 #include "Wolf_Island/Public/Components/StatusComponent.h"
 
+#include "Character/MainPlayer.h"
 #include "Components/InventoryComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Item/ItemBase.h"
@@ -14,7 +15,7 @@ UStatusComponent::UStatusComponent()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-
+	SetIsReplicated(true);
 	// ...
 }
 
@@ -457,6 +458,37 @@ void UStatusComponent::EnableController()
 	}
 	
 	RecoverStamina();
+}
+
+void UStatusComponent::StartInfection()
+{
+	GetWorld()->GetTimerManager().SetTimer(
+		InfectionTimer,
+		this,
+		&UStatusComponent::IncreaseInfection,
+		InfectionInterval,
+		true);
+}
+
+void UStatusComponent::StopInfection()
+{
+	GetWorld()->GetTimerManager().ClearTimer(InfectionTimer);
+}
+
+void UStatusComponent::IncreaseInfection()
+{
+	CurrentInfectionRate += InfectionIncrement;
+	if (CurrentInfectionRate >= 1) CurrentInfectionRate = 1;
+	
+	OnInfectionChanged.Broadcast();
+}
+
+void UStatusComponent::DecreaseInfection(float Amount)
+{
+	CurrentInfectionRate -= Amount;
+	if (CurrentInfectionRate <= 0) CurrentInfectionRate = 0;
+	
+	OnInfectionChanged.Broadcast();
 }
 
 void UStatusComponent::ApplyItem(UItemBase* Item)

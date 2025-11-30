@@ -8,6 +8,8 @@
 
 AChest::AChest()
 {
+	SetReplicates(true);
+	
 	ChestMesh = CreateDefaultSubobject<UStaticMeshComponent>("ChestMesh");
 	ChestCoverMesh = CreateDefaultSubobject<UStaticMeshComponent>("ChestCoverMesh");
 	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>("InventoryComponent");
@@ -28,4 +30,9 @@ void AChest::Interact(AActor* Interactor)
 	ChestScreen->InitializeChest(this, Interactor);
 	ChestScreen->SetIsFocusable(true);
 	ChestScreen->AddToViewport();
+}
+
+void AChest::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
