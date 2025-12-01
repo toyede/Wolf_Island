@@ -1,6 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Item/Pickup.h"
 
 #include "Character/MainPlayer.h"
@@ -32,28 +29,44 @@ void APickup::InitializePickUp(const TSubclassOf<UItemBase> BaseClass, const int
 {
     if (ItemHandle.DataTable && !ItemHandle.RowName.IsNone())
     {
-        //UE_LOG(LogTemp, Warning, TEXT("Item Init Start"));
         const FItemData* ItemData = ItemHandle.DataTable->FindRow<FItemData>(ItemHandle.RowName, ItemHandle.RowName.ToString());
-	
-        ItemReference = NewObject<UItemBase>(this, BaseClass);
 
-        ItemReference->ID = ItemData->ID;
-        ItemReference->Type = ItemData->Type;
-        ItemReference->NumericData = ItemData->NumericData;
-        ItemReference->TextData = ItemData->TextData;
-        ItemReference->AssetData = ItemData->AssetData;
-        InteractableData.InteractionDuration = ItemReference->NumericData.InteractionDuration;
-
-        InAmount <= 0 ? ItemReference->SetAmount(1) : ItemReference->SetAmount(InAmount);
-
-        if (ItemReference->NumericData.MaxAmount < InAmount)
+        if (ItemData == nullptr) 
         {
-            ItemReference->SetAmount(ItemReference->NumericData.MaxAmount);
+            return;
         }
-		
-        PickupMesh->SetStaticMesh(ItemData->AssetData.Mesh);
-        PickupMesh->SetSimulatePhysics(IsPhysics);
-        
+    
+        TSubclassOf<UItemBase> ClassToUse = BaseClass;
+
+        if (ClassToUse == nullptr)
+        {
+            ClassToUse = UItemBase::StaticClass();
+        }
+
+        ItemReference = NewObject<UItemBase>(this, ClassToUse);
+
+        if (ItemReference)
+        {
+            ItemReference->ID = ItemData->ID;
+            ItemReference->Type = ItemData->Type;
+            ItemReference->NumericData = ItemData->NumericData;
+            ItemReference->TextData = ItemData->TextData;
+            ItemReference->AssetData = ItemData->AssetData;
+            InteractableData.InteractionDuration = ItemReference->NumericData.InteractionDuration;
+
+            InAmount <= 0 ? ItemReference->SetAmount(1) : ItemReference->SetAmount(InAmount);
+
+            if (ItemReference->NumericData.MaxAmount < InAmount)
+            {
+                ItemReference->SetAmount(ItemReference->NumericData.MaxAmount);
+            }
+        }
+       
+        if (ItemData->AssetData.Mesh)
+        {
+            PickupMesh->SetStaticMesh(ItemData->AssetData.Mesh);
+            PickupMesh->SetSimulatePhysics(IsPhysics);
+        }
     }
 }
 

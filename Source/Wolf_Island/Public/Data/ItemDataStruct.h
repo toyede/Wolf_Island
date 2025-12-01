@@ -2,7 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
+#include "GameFramework/Actor.h"
 #include "ItemDataStruct.generated.h"
+
+class UItemBase;
 
 //아이템 종류 이넘 클래스
 UENUM(BlueprintType)
@@ -87,6 +90,10 @@ struct FItemData : public FTableRowBase
 	FItemNumericData NumericData;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
 	FItemAssetData AssetData;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
+	TSubclassOf<class UItemBase> ItemClass;
+	
 };
 
 //슬롯 데이터
@@ -213,4 +220,44 @@ struct FRepairRecipeData : public FTableRowBase
 		return Result;
 	}
 	
+};
+
+
+// 아이템 저장 구조체
+USTRUCT(BlueprintType)
+struct FSavedActorData
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
+	TSubclassOf<AActor> ActorClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
+	FTransform ActorTransform;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
+	FName ItemID;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
+	int32 ItemAmount;
+
+	FSavedActorData()
+	{
+		ActorClass = nullptr;
+		ActorTransform = FTransform::Identity;
+		ItemID = NAME_None;
+		ItemAmount = 1;
+	}
+};
+
+// 아이템 저장 '배열' 구조체
+USTRUCT(BlueprintType)
+struct FSavedActorList
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
+	TArray<FSavedActorData> Actors;
 };
