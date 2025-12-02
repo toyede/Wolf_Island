@@ -99,6 +99,20 @@ struct FItemAddResult
 	};
 };
 
+USTRUCT(BlueprintType)
+struct FInventorySaveData
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	bool IsEmpty = true;
+	UPROPERTY(BlueprintReadOnly, Category="Inventory Save Data")
+	TArray<FItemSlot> Inventory;
+	UPROPERTY(BlueprintReadOnly, Category="Inventory Save Data")
+	float CurrentWeight;
+};
+
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class WOLF_ISLAND_API UInventoryComponent : public UActorComponent
 {
@@ -110,6 +124,13 @@ public:
 		
 	//인벤토리 업데이트 델리게이트 (아이템 개수 변화 시 호출)
 	FOnInventoryUpdated OnInventoryUpdated;
+
+	//인벤토리 저장 함수
+	UFUNCTION(BlueprintCallable, Category="Inventory Save")
+	void SaveInventory();
+	//인벤토리 불러오기 함수
+	UFUNCTION(BlueprintCallable, Category="Inventory Save")
+	void LoadInventory();
 
 	//아이템 추가 함수
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -174,6 +195,12 @@ public:
 	//인벤토리 무게 용량 반환
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	FORCEINLINE float GetWeightCapacity() const { return WeightCapacity; };
+	//무게 추가 함수
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void IncreaseCurrentWeight(float Weight);
+	//무게 감소 함수
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void DecreaseCurrentWeight(float Weight);
 	//인벤토리 용량 반환
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	FORCEINLINE int32 GetCapacity() const { return SlotsCapacity; };

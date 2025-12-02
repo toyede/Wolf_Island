@@ -164,6 +164,8 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 public:	
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
@@ -258,6 +260,10 @@ public:
 	//감염률 감소 함수
 	UFUNCTION(BlueprintCallable)
 	void DecreaseInfection(float Amount);
+
+	//모든 타이머 삭제
+	UFUNCTION(BlueprintCallable)
+	void ClearAllTimers();
 
 	//아이템 사용 스탯 적용 함수
 	UFUNCTION(BlueprintCallable)

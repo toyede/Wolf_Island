@@ -5,7 +5,8 @@ public class AdvancedSessions : ModuleRules
 {
     public AdvancedSessions(ReadOnlyTargetRules Target) : base(Target)
     {
-        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+	    PrivateDependencyModuleNames.AddRange(new string[] { "Wolf_Island" });
+	    PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
         //bEnforceIWYU = true;
 
         PublicDefinitions.Add("WITH_ADVANCED_SESSIONS=1");

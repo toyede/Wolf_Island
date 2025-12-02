@@ -12,7 +12,7 @@
 void UChestPanel::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
-	}
+}
 
 void UChestPanel::NativeConstruct()
 {
@@ -24,8 +24,7 @@ void UChestPanel::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	Super::NativeTick(MyGeometry, InDeltaTime);
 }
 
-bool UChestPanel::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,
-                               UDragDropOperation* InOperation)
+bool UChestPanel::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
 {
 	return Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
 }
@@ -50,7 +49,6 @@ void UChestPanel::RefreshChest()
 			}
 			
 			ChestPanel->AddChildToWrapBox(ItemSlot);
-			
 		}
 	}
 	RefreshInventory();
