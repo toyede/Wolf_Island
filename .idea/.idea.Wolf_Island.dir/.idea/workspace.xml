@@ -9,10 +9,13 @@
   <component name="ChangeListManager">
     <list default="true" id="367b04d5-c3d9-4599-86e8-ad54ff3b4b47" name="변경" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.Wolf_Island.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Wolf_Island.dir/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Private/Interaction/Repair_Actor.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Private/Interaction/Repair_Actor.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Private/Widgets/Craft/RepairPanel.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Private/Widgets/Craft/RepairPanel.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Public/Interaction/Repair_Actor.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Public/Interaction/Repair_Actor.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Public/Widgets/Craft/RepairPanel.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Public/Widgets/Craft/RepairPanel.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Config/DefaultEngine.ini" beforeDir="false" afterPath="$PROJECT_DIR$/Config/DefaultEngine.ini" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/JSY/Interaction/BP_Pickup.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/JSY/Interaction/BP_Pickup.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Maps/Cave.umap" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Maps/Cave.umap" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Maps/NewMap.umap" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Maps/NewMap.umap" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Private/Item/Pickup.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Private/Item/Pickup.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Public/Data/ItemDataStruct.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Public/Data/ItemDataStruct.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Public/Item/Pickup.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Public/Item/Pickup.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -164,6 +167,8 @@
       <workItem from="1764300637746" duration="561000" />
       <workItem from="1764313594965" duration="1148000" />
       <workItem from="1764314909634" duration="7791000" />
+      <workItem from="1764544549794" duration="3103000" />
+      <workItem from="1764550295303" duration="3996000" />
     </task>
     <servers />
   </component>

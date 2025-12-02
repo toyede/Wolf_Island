@@ -20,15 +20,16 @@ public:
 	UPROPERTY(VisibleAnywhere, Category = "Item Data")
 	UStaticMeshComponent* PickupMesh;
 	//최대 스택 개수를 초과하면 최대 스택 개수로 초기화됨.
-	UPROPERTY(EditInstanceOnly, Category = "Item Data")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data", Meta = (ExposeOnSpawn = "true"))
 	int32 ItemAmount = 1;
-	UPROPERTY(EditInstanceOnly, Category = "Item Data")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data", Meta = (ExposeOnSpawn = "true"))
 	FDataTableRowHandle ItemHandle;
-	UPROPERTY(VisibleAnywhere, Category = "Item Data")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
 	class UItemBase* ItemReference;
 	UPROPERTY(EditAnywhere, Category = "Item Data")
 	bool IsPhysics = true;
-
+	
+	UFUNCTION(BlueprintCallable, Category = "Item Data")
 	void InitializePickUp(const TSubclassOf<UItemBase> BaseClass, const int32 InAmount);
 
 	void InitializeDrop(UItemBase* ItemToDrop, const int32 InAmount);
