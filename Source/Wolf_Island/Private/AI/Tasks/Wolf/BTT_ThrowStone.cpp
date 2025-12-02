@@ -21,6 +21,11 @@ EBTNodeResult::Type UBTT_ThrowStone::ExecuteTask(UBehaviorTreeComponent& OwnerCo
 
         AnimInstance->Montage_Play(ThrowStoneMontage);
         AnimInstance->Montage_SetEndDelegate(EndDelegate, ThrowStoneMontage);
+
+        if (ThrowSound)
+        {
+            UGameplayStatics::PlaySoundAtLocation(this, ThrowSound, PlayerPawn->GetActorLocation());
+        }
         return EBTNodeResult::InProgress;
     }
     return EBTNodeResult::Failed;

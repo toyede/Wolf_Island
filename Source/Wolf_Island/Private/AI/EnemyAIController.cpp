@@ -34,6 +34,9 @@ AEnemyAIController::AEnemyAIController()
     HearingConfig->DetectionByAffiliation.bDetectNeutrals = true;
     HearingConfig->SetMaxAge(2.0f);
 
+    DamageConfig = CreateDefaultSubobject<UAISenseConfig_Damage>(TEXT("DamageConfig"));
+    DamageConfig->SetMaxAge(1.0f);
+
     // Perception Component
     AIPerceptionComp->ConfigureSense(*SightConfig);
     AIPerceptionComp->ConfigureSense(*HearingConfig);
@@ -104,6 +107,11 @@ void AEnemyAIController::OnPerceptionUpdated(const TArray<AActor*>& UpdatedActor
                     RandomDelay,
                     false
                 );
+            }
+            else if (Stimulus.Type == UAISense::GetSenseID<UAISense_Damage>() && Actor == PlayerPawn)
+            {
+                KnownSeenActors.AddUnique(Actor);
+                SetStateAsAttacking(Actor);
             }
         }
         else
