@@ -8,9 +8,6 @@
 #include "AI/EnemyAIController.h"
 #include "Animation/AnimInstance.h"
 #include "BehaviorTree/BlackboardComponent.h"
-#include "Components/StatusComponent.h"
-#include "Actors/PatrolRoute.h"
-#include "Components/SplineComponent.h"
 
 
 AEnemyAIBase::AEnemyAIBase()
@@ -20,27 +17,7 @@ AEnemyAIBase::AEnemyAIBase()
     GetCapsuleComponent()->InitCapsuleSize(42.f, 96.f);
 
     GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -96.f));
-
-    FaceMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FaceMesh"));
-    FaceMesh->SetupAttachment(GetMesh());
-    FaceMesh->SetLeaderPoseComponent(GetMesh());
-
-    TorsoMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("TorsoMesh"));
-    TorsoMesh->SetupAttachment(GetMesh());
-    TorsoMesh->SetLeaderPoseComponent(GetMesh());
-
-    LegsMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("LegsMesh"));
-    LegsMesh->SetupAttachment(GetMesh());
-    LegsMesh->SetLeaderPoseComponent(GetMesh());
-
-    FeetMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FeetMesh"));
-    FeetMesh->SetupAttachment(GetMesh());
-    FeetMesh->SetLeaderPoseComponent(GetMesh());
-
-    WolfMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WolfMesh"));
-    WolfMesh->SetupAttachment(GetCapsuleComponent());
-    WolfMesh->SetRelativeLocation(FVector(0.f, 0.f, -96.f));
-    WolfMesh->SetVisibility(false);
+    GetMesh()->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
 
     // Movement 
     UCharacterMovementComponent* MoveComp = GetCharacterMovement();
@@ -60,6 +37,10 @@ AEnemyAIBase::AEnemyAIBase()
     AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
     AIControllerClass = AEnemyAIController::StaticClass();
 
+    // HealthBar Widget
+    HealthBarWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBarWidget"));
+    HealthBarWidget->SetupAttachment(GetCapsuleComponent());
+
     StatusComponent = CreateDefaultSubobject<UStatusComponent>(TEXT("StatusComponent"));
 
     AttackDamage = 10.0f;
@@ -69,19 +50,7 @@ AEnemyAIBase::AEnemyAIBase()
 void AEnemyAIBase::BeginPlay()
 {
 	Super::BeginPlay();
-
-    HumanParts.Empty();
-    HumanParts.Add(FaceMesh);
-    HumanParts.Add(TorsoMesh);
-    HumanParts.Add(LegsMesh);
-    HumanParts.Add(FeetMesh);
 	
-    if (NativePatrolRoute && WolfPatrolRoute) // 원주민으로 시작해서 기본 루트는 원주민루트로
-    {
-		AssignedPatrolRoute = NativePatrolRoute;
-
-        CurrentPatrolIndex = GetRandomPointIndex();
-    }
 }
 
 void AEnemyAIBase::Tick(float DeltaTime)
@@ -92,121 +61,31 @@ void AEnemyAIBase::Tick(float DeltaTime)
 
 void AEnemyAIBase::ChangeForm(EEnemyForm Form)
 {
-    bIsHuman = (Form == EEnemyForm::Human);
-
-    GetMesh()->SetVisibility(bIsHuman);
-    GetMesh()->SetCollisionEnabled(bIsHuman ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
-
-	GetCapsuleComponent()->SetCapsuleSize(bIsHuman ? 42.f : 70.f, bIsHuman ? 96.f : 96.f); // 캡슐 크기 변경
-
-    // Human 파츠 토글
-    TArray<USkeletalMeshComponent*> Parts = { FaceMesh, TorsoMesh, LegsMesh, FeetMesh };
-    for (USkeletalMeshComponent* Part : Parts)
+    if (ChangeFormMontage == nullptr)
     {
-        if (Part)
-        {
-            Part->SetVisibility(bIsHuman);
-            Part->SetCollisionEnabled(bIsHuman ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
-        }
+        return;
     }
 
-    // Wolf 토글
-    if (WolfMesh)
+    switch (Form)
     {
-        WolfMesh->SetVisibility(!bIsHuman);
-        WolfMesh->SetCollisionEnabled(!bIsHuman ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+    case EEnemyForm::Human:
+        if (HumanMesh) GetMesh()->SetSkeletalMesh(HumanMesh);
+        if (HumanAnimBP) GetMesh()->SetAnimInstanceClass(HumanAnimBP);
+        break;
+    case EEnemyForm::Wolf:
+        if (WolfMesh) GetMesh()->SetSkeletalMesh(WolfMesh);
+        if (HumanAnimBP) GetMesh()->SetAnimInstanceClass(WolfAnimBP);
+        break;
+
+    default:
+        break;
     }
 
-    // 패트롤루트 전환
-	AssignedPatrolRoute = bIsHuman ? NativePatrolRoute : WolfPatrolRoute;
+    AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController());
 
-    // 패트롤 시작점 초기화
-	CurrentPatrolIndex = GetRandomPointIndex();
-
-    SpawnParticle();
-
-    // 애니메이션 - GetMesh() 아니고 각각 메시에
-    if (bIsHuman && HumanAnimBP)
+    if (AICon && AICon->GetBlackboardComponent())
     {
-        GetMesh()->SetAnimInstanceClass(HumanAnimBP);
-    }
-    else if (!bIsHuman && WolfAnimBP)
-    {
-        WolfMesh->SetAnimInstanceClass(WolfAnimBP);
-    }
-
-    // Blackboard 업데이트
-    if (AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController()))
-    {
-        if (AICon->GetBlackboardComponent())
-        {
-            AICon->GetBlackboardComponent()->SetValueAsEnum(AICon->EnemyFormKey, (uint8)Form);
-        }
-    }
-}
-
-void AEnemyAIBase::SpawnParticle()
-{
-    if (FormChangeNiagaraEffect)
-    {
-        FVector SpawnLocation = GetActorLocation();
-        UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-            GetWorld(),
-            FormChangeNiagaraEffect,
-            SpawnLocation,
-            GetActorRotation()
-        );
-    }
-}
-
-int32 AEnemyAIBase::GetNextPoint()
-{
-    if (AssignedPatrolRoute)
-    {
-        int32 NumberOfRoutes = AssignedPatrolRoute->SplinePoints->GetNumberOfSplinePoints();
-
-        if (NumberOfRoutes > 0)
-        {
-            CurrentPatrolIndex = (CurrentPatrolIndex + 1) % NumberOfRoutes;
-
-            return CurrentPatrolIndex;
-        }
-    }
-    return 0;
-}
-
-int32 AEnemyAIBase::GetRandomPointIndex()
-{
-    if (!AssignedPatrolRoute || !AssignedPatrolRoute->SplinePoints)
-    {
-        return 0;
-    }
-
-    int32 NumPoints = AssignedPatrolRoute->SplinePoints->GetNumberOfSplinePoints();
-    if (NumPoints <= 0)
-    {
-        return 0;
-    }
-
-    return FMath::RandRange(-1, AssignedPatrolRoute->SplinePoints->GetNumberOfSplinePoints() - 1); // 원주민마다 랜덤 스타트
-
-}
-
-void AEnemyAIBase::StopAllMontages()
-{
-    // Human Mesh
-    if (UAnimInstance* HumanAnim = GetMesh()->GetAnimInstance())
-    {
-        HumanAnim->Montage_Stop(0.2f);
-    }
-
-    // Wolf Mesh
-    if (WolfMesh)
-    {
-        if (UAnimInstance* WolfAnim = WolfMesh->GetAnimInstance())
-        {
-            WolfAnim->Montage_Stop(0.2f);
-        }
+        AICon->GetBlackboardComponent()->SetValueAsEnum(AICon->EnemyFormKey, (uint8)Form);
     }
 }
 

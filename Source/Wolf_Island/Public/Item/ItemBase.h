@@ -10,7 +10,7 @@
 /**
  * 
  */
-UCLASS(Blueprintable)
+UCLASS()
 class WOLF_ISLAND_API UItemBase : public UObject
 {
 	GENERATED_BODY()

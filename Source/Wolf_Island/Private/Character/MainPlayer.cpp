@@ -38,7 +38,7 @@ AMainPlayer::AMainPlayer()
 	//손에 든 아이템 메쉬
 	ItemMesh = CreateDefaultSubobject<UStaticMeshComponent>("Item");
 	//손 소켓에 부-착!
-	ItemMesh->SetupAttachment(GetMesh(), "hand_r");
+	ItemMesh->SetupAttachment(GetMesh(), "hand_r_socket");
 	
 	GetMesh()->SetRelativeTransform(
 		FTransform(
@@ -47,9 +47,8 @@ AMainPlayer::AMainPlayer()
 			));
 	
 	//메시에 카메라 붙이기
-	//FirstPersonCamera->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, "headSocket");
+	FirstPersonCamera->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, "headSocket");
 	//컨트롤러 마우스 위치 입력을 카메라 입력에 반영
-	FirstPersonCamera->SetupAttachment(GetMesh());
 	FirstPersonCamera->bUsePawnControlRotation = true;
 	
 	FirstPersonCamera->SetRelativeTransform(
@@ -389,23 +388,6 @@ void AMainPlayer::StopRun()
 	}
 }
 
-void AMainPlayer::ToggleCrouch_Implementation()
-{
-	//웅크리는 중이면
-	if (IsCrouching)
-	{
-		UnCrouch();
-		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
-		IsCrouching = false;
-	} else
-	{
-		Crouch();
-		GetCharacterMovement()->MaxWalkSpeed = 150.0f;
-		IsCrouching = true;
-	}
-}
-
-/*
 void AMainPlayer::ToggleCrouch()
 {
 	//웅크리는 중이면
@@ -420,7 +402,7 @@ void AMainPlayer::ToggleCrouch()
 		GetCharacterMovement()->MaxWalkSpeed = 150.0f;
 		IsCrouching = true;
 	}
-}*/
+}
 
 void AMainPlayer::ToggleInventory()
 {
@@ -582,15 +564,7 @@ void AMainPlayer::RefreshHand()
 	{
 		IsHoldingItem = true;
 		ItemMesh->SetStaticMesh(Item->AssetData.Mesh);
-		ItemMesh->AttachToComponent(
-		GetMesh(),
-		FAttachmentTransformRules::KeepRelativeTransform,
-		TEXT("hand_r"));
-		
-		FTransform SocketTransform = ItemMesh->GetSocketTransform(TEXT("HandSocket"), RTS_Component);
-		ItemMesh->SetRelativeTransform(SocketTransform.Inverse());
-
-		//ItemMesh->SetRelativeScale3D(FVector(0.1f, 0.1f, 0.1f));
+		ItemMesh->SetRelativeScale3D(FVector(0.1f, 0.1f, 0.1f));
 	} else
 	{
 		IsHoldingItem = false;
@@ -784,9 +758,7 @@ void AMainPlayer::Interaction()
 
 void AMainPlayer::DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool IsWhole)
 {
-	UInventoryComponent* OriginInventory =  ItemToDrop->OwningInventory;
-	
-	if (OriginInventory->FindMatchingItem(ItemToDrop))
+	if (InventoryComponent->FindMatchingItem(ItemToDrop))
 	{
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.Owner = this;
@@ -796,7 +768,7 @@ void AMainPlayer::DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool
 		const FVector SpawnLocation(GetActorLocation() + (GetActorForwardVector() * 50.0f));
 		const FTransform SpawnTransform(GetActorRotation(), SpawnLocation);
 		
-		const int32 RemovedAmount = OriginInventory->RemoveAmountOfItem(ItemToDrop, AmountToDrop);
+		const int32 RemovedAmount = InventoryComponent->RemoveAmountOfItem(ItemToDrop, AmountToDrop);
 		
 		APickup* Pickup = GetWorld()->SpawnActor<APickup>(APickup::StaticClass(), SpawnTransform, SpawnParams);
 		
@@ -805,22 +777,4 @@ void AMainPlayer::DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool
 	{
 		UE_LOG(LogTemp, Warning, TEXT("CAN'T FIND MATCHED ITEM."))
 	}
-}
-
-UItemBase* AMainPlayer::GetHoldingItemReference()
-{
-	if (InventoryComponent)
-	{
-		if (InventoryComponent->GetItemAmount() > 0)
-		{
-			return InventoryComponent->GetItemAtIndex(HotBarIndex);
-		}
-	}
-	
-	return nullptr;
-}
-
-void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }

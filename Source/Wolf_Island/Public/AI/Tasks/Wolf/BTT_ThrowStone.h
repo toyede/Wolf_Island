@@ -27,7 +27,7 @@ protected:
 public:
 	AEnemyAIController* AICon;
 
-	class ACharacter* AIPawn;
+	ACharacter* AIPawn;
 protected:
 	UPROPERTY(EditAnywhere, Category = "Animation")
 	UAnimMontage* ThrowStoneMontage;

@@ -7,7 +7,6 @@
 #include "Components/Border.h"
 #include "InventorySlot.generated.h"
 
-class UInventoryComponent;
 /**
  * 
  */
@@ -28,8 +27,6 @@ public:
 	FORCEINLINE void SetIndex(int32 InIndex) { Index = InIndex; };
 	FORCEINLINE UItemBase* GetItemReference() const { return ItemRef; };
 	FORCEINLINE void SetDragDrop(bool CanDD) { CanDragDrop = CanDD; };
-	FORCEINLINE void SetOwnerRef(UInventoryComponent* Inventory) { OwnerInventoryRef = Inventory; };
-	FORCEINLINE UInventoryComponent* GetOwnerRef() const { return OwnerInventoryRef; };
 	void SetSelectedSlot();
 	void SetUnSelectedSlot();
 	FLinearColor GetBrushColor() const { return ItemBorder->GetBrushColor(); };
@@ -65,9 +62,6 @@ protected:
 
 	UPROPERTY(VisibleAnywhere)
 	bool CanDragDrop = true;
-
-	UPROPERTY(VisibleAnywhere)
-	UInventoryComponent* OwnerInventoryRef;
 	
 	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;

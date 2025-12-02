@@ -23,8 +23,7 @@ enum class EEnemyState : uint8
 	None UMETA(DisplayName = "None"),
 	Passive UMETA(DisplayName = "Passive"),
 	Attacking UMETA(DisplayName = "Attacking"),
-	Dead UMETA(DisplayName = "Dead"),
-	Frozen UMETA(DisplayName = "Frozen")
+	Dead UMETA(DisplayName = "Dead")
 };
 
 class AEnemyAIBase;
@@ -101,17 +100,11 @@ protected:
 
 	AActor* AttackTarget;
 
-	UFUNCTION(BlueprintCallable)
-	void MoveToNextRoute();
-
 public:
 	UPROPERTY(EditDefaultsOnly, Category = "AI")
 	FName EnemyFormKey = "Form";
 
 	UFUNCTION()
 	void SetStateAsPassive();
-
-	UFUNCTION(BlueprintCallable)
-	void SetStateAsFrozen();
 };
 

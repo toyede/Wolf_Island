@@ -128,7 +128,6 @@ void UPlayerHUD::RefreshHotBar()
 	{
 		UInventorySlot* HotSlot = CreateWidget<UInventorySlot>(this, SlotClass);
 		HotSlot->SetDragDrop(false);
-		HotSlot->SetOwnerRef(PlayerRef->InventoryComponent);
 
 		if (UItemBase* Item = PlayerRef->InventoryComponent->GetInventory()[i].Item)
 		{

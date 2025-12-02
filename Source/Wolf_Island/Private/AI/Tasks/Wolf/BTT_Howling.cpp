@@ -6,13 +6,12 @@
 #include "GameFramework/Character.h"
 #include "Animation/AnimInstance.h"
 #include "Perception/AISense_Hearing.h"
-#include "AI/EnemyAIBase.h"
 
 EBTNodeResult::Type UBTT_Howling::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
 	AICon = Cast<AEnemyAIController>(OwnerComp.GetAIOwner());
 
-	AIPawn = AICon ? Cast<AEnemyAIBase>(AICon->GetPawn()) : nullptr;
+	AIPawn = AICon ? Cast<ACharacter>(AICon->GetPawn()) : nullptr;
 
 	if (!AIPawn) return EBTNodeResult::Failed;
 
@@ -20,7 +19,7 @@ EBTNodeResult::Type UBTT_Howling::ExecuteTask(UBehaviorTreeComponent& OwnerComp,
 
 	if (!PlayerPawn) return EBTNodeResult::Failed;
 
-	UAnimInstance* AnimInstance = AIPawn->WolfMesh->GetAnimInstance();
+	UAnimInstance* AnimInstance = AIPawn->GetMesh()->GetAnimInstance();
 
 	if (!AnimInstance) return EBTNodeResult::Failed;
 

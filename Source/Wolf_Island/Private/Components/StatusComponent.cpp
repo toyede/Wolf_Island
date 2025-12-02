@@ -3,7 +3,6 @@
 
 #include "Wolf_Island/Public/Components/StatusComponent.h"
 
-#include "Character/MainPlayer.h"
 #include "Components/InventoryComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Item/ItemBase.h"
@@ -15,7 +14,7 @@ UStatusComponent::UStatusComponent()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-	SetIsReplicated(true);
+
 	// ...
 }
 
@@ -458,47 +457,6 @@ void UStatusComponent::EnableController()
 	}
 	
 	RecoverStamina();
-}
-
-void UStatusComponent::StartInfection()
-{
-	/*GetWorld()->GetTimerManager().SetTimer(
-		InfectionTimer,
-		this,
-		&UStatusComponent::IncreaseInfection,
-		InfectionInterval,
-		true);*/
-	IsInfected = true;
-
-}
-
-void UStatusComponent::StopInfection()
-{
-	GetWorld()->GetTimerManager().ClearTimer(InfectionTimer);
-}
-
-void UStatusComponent::IncreaseInfection()
-{
-	float PrevRate = CurrentInfectionRate;  // 먼저 저장
-	CurrentInfectionRate = FMath::Clamp(CurrentInfectionRate + InfectionIncrement, 0.0f, 1.0f);
-
-	TArray<float> Thresholds = { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f };
-	for (float Threshold : Thresholds)
-	{
-		if (PrevRate < Threshold && CurrentInfectionRate >= Threshold)
-		{
-			OnInfectionChanged.Broadcast();
-			break;
-		}
-	}
-}
-
-void UStatusComponent::DecreaseInfection(float Amount)
-{
-	CurrentInfectionRate -= Amount;
-	if (CurrentInfectionRate <= 0) CurrentInfectionRate = 0;
-	
-	OnInfectionChanged.Broadcast();
 }
 
 void UStatusComponent::ApplyItem(UItemBase* Item)

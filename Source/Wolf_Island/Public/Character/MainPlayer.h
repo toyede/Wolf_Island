@@ -43,16 +43,16 @@ public:
 	//class AMainHUD* HUD;
 	
 	//컴포넌트=========================================================================
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UCameraComponent* FirstPersonCamera;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UStatusComponent* StatusComponent;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UInventoryComponent* InventoryComponent;
 	//손에 들 아이템
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UStaticMeshComponent* ItemMesh;
 	
 	//입력 관련 변수====================================================================
@@ -163,14 +163,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction")
 	float InteractionDuration = 0.0f;
 
-	//애니메이션 변수======================================================================
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
+	//애님 몽타주======================================================================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Anim")
 	class UAnimMontage* SlideMontage;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
-	UAnimMontage* PunchMontage;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
-	UAnimMontage* FuckyouMontage;
-	
+
 	//위젯============================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	TSubclassOf<class UPlayerHUD> HUDClass;
@@ -216,7 +212,7 @@ public:
 	UFUNCTION()
 	void StopRun();
 
-	UFUNCTION(NetMulticast, Server, Reliable)
+	UFUNCTION()
 	void ToggleCrouch();
 
 	UFUNCTION()
@@ -285,14 +281,7 @@ public:
 	void Interact(AActor* Interactor) override;
 
 	UFUNCTION(BlueprintCallable)
-	void DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool IsWhole);
-
-	UFUNCTION(BlueprintPure)
-	UItemBase* GetHoldingItemReference();
-	
-	//멀티플레이어
-	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
-
+	void DropItem(class UItemBase* ItemToDrop, const int32 AmountToDrop, bool IsWhole);
 };
 
 

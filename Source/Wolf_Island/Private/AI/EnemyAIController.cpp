@@ -5,8 +5,6 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
 #include "AI/EnemyAIBase.h"
-#include "Components/SplineComponent.h"
-#include "Actors/PatrolRoute.h"
 
 AEnemyAIController::AEnemyAIController()
 {
@@ -108,7 +106,7 @@ void AEnemyAIController::OnPerceptionUpdated(const TArray<AActor*>& UpdatedActor
         }
         else
         {
-            return;
+            GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Red, TEXT("zz"));
         }
     }
 }
@@ -144,39 +142,12 @@ void AEnemyAIController::HandleForgotActor(AActor* Actor)
     }
 }
 
-void AEnemyAIController::MoveToNextRoute()
-{
-    AEnemyAIBase* EnemyOwner = Cast<AEnemyAIBase>(GetPawn());
-
-    if (EnemyOwner && EnemyOwner->AssignedPatrolRoute)
-    {
-        int32 NextIndex = EnemyOwner->GetNextPoint();
-        USplineComponent* Spline = EnemyOwner->AssignedPatrolRoute->SplinePoints;
-
-        if (Spline)
-        {
-            FVector TargetLocation = Spline->GetLocationAtSplinePoint(
-                NextIndex,
-                ESplineCoordinateSpace::World
-            );
-
-            MoveToLocation(TargetLocation);
-        }
-    }
-}
-
 void AEnemyAIController::SetStateAsPassive()
 {
     AttackTarget = nullptr;
     EnemyState = EEnemyState::Passive;
     BlackboardComp->SetValueAsEnum(EnemyStateKey, static_cast<uint8>(EnemyState));
     BlackboardComp->SetValueAsObject(AttackTargetKey, nullptr);
-}
-
-void AEnemyAIController::SetStateAsFrozen()
-{
-	EnemyState = EEnemyState::Frozen;
-	BlackboardComp->SetValueAsEnum(EnemyStateKey, static_cast<uint8>(EnemyState));
 }
 
 void AEnemyAIController::SetStateAsAttacking(AActor* Actor)

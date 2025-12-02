@@ -12,7 +12,7 @@ void UThrowStoneAnimNotify::Notify(USkeletalMeshComponent* MeshComp, UAnimSequen
     ACharacter* Owner = Cast<ACharacter>(MeshComp->GetOwner());
     if (!Owner || !ProjectileClass) return;
 
-    FVector HandLoc = MeshComp->GetSocketLocation(TEXT("hand_r"));
+    FVector HandLoc = MeshComp->GetSocketLocation(TEXT("Hand_R"));
     APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(Owner, 0);
     if (!PlayerPawn) return;
 

@@ -8,7 +8,6 @@
 #include "GameFramework/Character.h"
 #include "MoonlightInfectionSystem.generated.h"
 
-
 UCLASS()
 class WOLF_ISLAND_API AMoonlightInfectionSystem : public AActor
 {
@@ -54,7 +53,6 @@ public:
 	/** 감염 체크 중지 (낮 시작 시 호출) */
 	UFUNCTION(BlueprintCallable, Category = "Moonlight System")
 	void DeactivateInfectionCheck();
-
 
 private:
 	// ========== 내부 변수 ==========
