@@ -15,25 +15,16 @@ EBTNodeResult::Type UBTT_ThrowStone::ExecuteTask(UBehaviorTreeComponent& OwnerCo
 
 	if (!AIPawn) return EBTNodeResult::Failed;
 
-	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(AIPawn, 0);
+        AnimInstance->Montage_Play(ThrowStoneMontage);
+        AnimInstance->Montage_SetEndDelegate(EndDelegate, ThrowStoneMontage);
 
-	if (!PlayerPawn) return EBTNodeResult::Failed;
-
-	UAnimInstance* AnimInstance = AIPawn->GetMesh()->GetAnimInstance();
-
-	if (AnimInstance && ThrowStoneMontage)
-	{
-		FOnMontageEnded EndDelegate;
-		EndDelegate.BindUObject(this, &UBTT_ThrowStone::OnMontageEnded, &OwnerComp);
-		
-		AnimInstance->Montage_Play(ThrowStoneMontage);
-		AnimInstance->Montage_SetEndDelegate(EndDelegate, ThrowStoneMontage);
-
-		return EBTNodeResult::InProgress;
-	}
-
-
-	return EBTNodeResult::Failed;
+        if (ThrowSound)
+        {
+            UGameplayStatics::PlaySoundAtLocation(this, ThrowSound, PlayerPawn->GetActorLocation());
+        }
+        return EBTNodeResult::InProgress;
+    }
+    return EBTNodeResult::Failed;
 }
 
 void UBTT_ThrowStone::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted, UBehaviorTreeComponent* OwnerComp)

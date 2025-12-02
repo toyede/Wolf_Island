@@ -6,6 +6,7 @@
 #include "BehaviorTree/BTTaskNode.h"
 #include "Animation/AnimMontage.h"
 #include "AI/EnemyAIController.h"
+#include "Kismet/GameplayStatics.h"
 #include "BTT_Howling.generated.h"
 
 /**
@@ -28,4 +29,7 @@ protected:
 public:
 	UPROPERTY(EditAnywhere, Category = "Animation")
 	UAnimMontage* HowlingMontage;
+
+	UPROPERTY(EditAnywhere, Category = "Trap")
+	USoundBase* HowlSound;
 };

@@ -8,6 +8,11 @@
 #include "AI/EnemyAIController.h"
 #include "Animation/AnimInstance.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "Components/StatusComponent.h"
+#include "Actors/PatrolRoute.h"
+#include "Components/SplineComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundAttenuation.h"
 
 
 AEnemyAIBase::AEnemyAIBase()
@@ -86,6 +91,21 @@ void AEnemyAIBase::ChangeForm(EEnemyForm Form)
     if (AICon && AICon->GetBlackboardComponent())
     {
         AICon->GetBlackboardComponent()->SetValueAsEnum(AICon->EnemyFormKey, (uint8)Form);
+    }
+}
+
+void AEnemyAIBase::Growling()
+{
+    if (GrowlSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this,
+            GrowlSound,
+            GetActorLocation(),
+            FRotator::ZeroRotator,
+            1.0f,   // Volume
+            1.0f,   // Pitch
+            0.0f,   // Start Time
+            AISoundAttenuation);
     }
 }
 

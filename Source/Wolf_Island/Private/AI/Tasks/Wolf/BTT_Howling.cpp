@@ -36,6 +36,11 @@ EBTNodeResult::Type UBTT_Howling::ExecuteTask(UBehaviorTreeComponent& OwnerComp,
 		FOnMontageEnded EndDelegate;
 		EndDelegate.BindUObject(this, &UBTT_Howling::OnMontageEnded, &OwnerComp);
 
+
+		if (HowlSound)
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, HowlSound, PlayerPawn->GetActorLocation());
+		}
 		AnimInstance->Montage_Play(HowlingMontage);
 		AnimInstance->Montage_SetEndDelegate(EndDelegate, HowlingMontage);
 

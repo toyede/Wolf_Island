@@ -64,4 +64,58 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	float AttackDamage;
+
+	UPROPERTY(VisibleAnywhere, Category = "Mesh")
+	USkeletalMeshComponent* FaceMesh;
+
+	UPROPERTY(VisibleAnywhere, Category = "Mesh")
+	USkeletalMeshComponent* TorsoMesh;
+
+	UPROPERTY(VisibleAnywhere, Category = "Mesh")
+	USkeletalMeshComponent* LegsMesh;
+
+	UPROPERTY(VisibleAnywhere, Category = "Mesh")
+	USkeletalMeshComponent* FeetMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh")
+	USkeletalMeshComponent* WolfMesh;
+
+	UPROPERTY()
+	TArray<USkeletalMeshComponent*> HumanParts;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Form Change")
+	TSubclassOf<UAnimInstance> HumanAnimBP;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Form Change")
+	TSubclassOf<UAnimInstance> WolfAnimBP;
+
+	UPROPERTY(EditAnywhere, Category = "Particle")
+	class UNiagaraSystem* FormChangeNiagaraEffect;
+
+	UFUNCTION()
+	void SpawnParticle();
+
+	UFUNCTION(BlueprintCallable)
+	int32 GetNextPoint();
+
+	UFUNCTION(BlueprintCallable)
+	int32 GetRandomPointIndex();
+
+	UPROPERTY(VisibleAnywhere)
+	int32 CurrentPatrolIndex = 0;
+
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	void StopAllMontages();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Form Change")
+	bool bIsHuman = true;
+
+	UFUNCTION(BlueprintCallable, Category = "Sound")
+	void Growling();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound")
+	USoundBase* GrowlSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound")
+	USoundAttenuation* AISoundAttenuation;
 };
