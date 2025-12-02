@@ -82,7 +82,7 @@ bool UChestScreen::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEven
 bool UChestScreen::NativeOnDragOver(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,
 	UDragDropOperation* InOperation)
 {
-	UE_LOG(LogTemp, Warning, TEXT("CHEST SCREEN DRAG OVER DETECTED"));
+	//UE_LOG(LogTemp, Warning, TEXT("CHEST SCREEN DRAG OVER DETECTED"));
 	return Super::NativeOnDragOver(InGeometry, InDragDropEvent, InOperation);
 }
 
