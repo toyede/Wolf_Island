@@ -155,6 +155,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
 	float HydrationDeathRate = 30.0f;
 
+
+	// 테스트용
+	UPROPERTY(BlueprintReadWrite, Category = "Status")
+	bool bIsIncapacitated = false;  // 쓰러진 상태
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;

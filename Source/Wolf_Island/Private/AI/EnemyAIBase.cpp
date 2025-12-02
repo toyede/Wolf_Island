@@ -92,7 +92,7 @@ void AEnemyAIBase::Tick(float DeltaTime)
 
 void AEnemyAIBase::ChangeForm(EEnemyForm Form)
 {
-    bool bIsHuman = (Form == EEnemyForm::Human);
+    bIsHuman = (Form == EEnemyForm::Human);
 
     GetMesh()->SetVisibility(bIsHuman);
     GetMesh()->SetCollisionEnabled(bIsHuman ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
@@ -190,6 +190,24 @@ int32 AEnemyAIBase::GetRandomPointIndex()
 
     return FMath::RandRange(-1, AssignedPatrolRoute->SplinePoints->GetNumberOfSplinePoints() - 1); // ¿øÁÖ¹Î¸¶´Ù ·£´ý ½ºÅ¸Æ®
 
+}
+
+void AEnemyAIBase::StopAllMontages()
+{
+    // Human Mesh
+    if (UAnimInstance* HumanAnim = GetMesh()->GetAnimInstance())
+    {
+        HumanAnim->Montage_Stop(0.2f);
+    }
+
+    // Wolf Mesh
+    if (WolfMesh)
+    {
+        if (UAnimInstance* WolfAnim = WolfMesh->GetAnimInstance())
+        {
+            WolfAnim->Montage_Stop(0.2f);
+        }
+    }
 }
 
 

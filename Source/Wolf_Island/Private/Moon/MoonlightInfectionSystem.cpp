@@ -10,6 +10,10 @@
 #include "TimerManager.h"
 #include "GameFramework/Character.h"
 
+// 테스트용 헤더
+#include "Character/MainPlayer.h"
+#include "Components/StatusComponent.h"
+
 // Sets default values
 AMoonlightInfectionSystem::AMoonlightInfectionSystem()
 {
@@ -113,10 +117,10 @@ void AMoonlightInfectionSystem::CheckAllPlayers()
 	TArray<AActor*> Players;
 
 	// 방법 1: 특정 클래스로 찾기 (프로젝트에 BP_MainCharacter C++ 클래스가 있는 경우)
-	// UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABP_MainCharacter::StaticClass(), Players);
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMainPlayer::StaticClass(), Players);
 
 	// 방법 2: Character 클래스로 찾기 (모든 캐릭터)
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ACharacter::StaticClass(), Players);
+	// UGameplayStatics::GetAllActorsOfClass(GetWorld(), ACharacter::StaticClass(), Players);
 
 	// 방법 3: Tag로 찾기 (더 유연함)
 	// UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("Player"), Players);
@@ -266,6 +270,28 @@ void AMoonlightInfectionSystem::ApplyInfection(AActor* Player, float Amount)
 			true, // 새로운 메시지 우선
 			FVector2D(1.5f, 1.5f) // 텍스트 크기
 		);
+	}
+
+	UStatusComponent* StatusComp = Player->FindComponentByClass<UStatusComponent>();
+
+	if (StatusComp)
+	{
+		if (StatusComp->IsInfected && !StatusComp->bIsIncapacitated)
+		{
+			StatusComp->IncreaseInfection();
+
+			if (bShowDebugMessages)
+			{
+				UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] %s infection increased by %.3f (Total: %.2f%%)"),
+					*Player->GetName(), Amount, StatusComp->CurrentInfectionRate * 100.0f);
+			}
+		}
+		
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] %s has no StatusComponent!"),
+			*Player->GetName());
 	}
 }
 

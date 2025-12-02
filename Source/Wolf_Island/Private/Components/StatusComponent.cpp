@@ -462,12 +462,14 @@ void UStatusComponent::EnableController()
 
 void UStatusComponent::StartInfection()
 {
-	GetWorld()->GetTimerManager().SetTimer(
+	/*GetWorld()->GetTimerManager().SetTimer(
 		InfectionTimer,
 		this,
 		&UStatusComponent::IncreaseInfection,
 		InfectionInterval,
-		true);
+		true);*/
+	IsInfected = true;
+
 }
 
 void UStatusComponent::StopInfection()
@@ -477,10 +479,18 @@ void UStatusComponent::StopInfection()
 
 void UStatusComponent::IncreaseInfection()
 {
-	CurrentInfectionRate += InfectionIncrement;
-	if (CurrentInfectionRate >= 1) CurrentInfectionRate = 1;
-	
-	OnInfectionChanged.Broadcast();
+	float PrevRate = CurrentInfectionRate;  // 먼저 저장
+	CurrentInfectionRate = FMath::Clamp(CurrentInfectionRate + InfectionIncrement, 0.0f, 1.0f);
+
+	TArray<float> Thresholds = { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f };
+	for (float Threshold : Thresholds)
+	{
+		if (PrevRate < Threshold && CurrentInfectionRate >= Threshold)
+		{
+			OnInfectionChanged.Broadcast();
+			break;
+		}
+	}
 }
 
 void UStatusComponent::DecreaseInfection(float Amount)

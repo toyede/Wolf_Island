@@ -23,7 +23,8 @@ enum class EEnemyState : uint8
 	None UMETA(DisplayName = "None"),
 	Passive UMETA(DisplayName = "Passive"),
 	Attacking UMETA(DisplayName = "Attacking"),
-	Dead UMETA(DisplayName = "Dead")
+	Dead UMETA(DisplayName = "Dead"),
+	Frozen UMETA(DisplayName = "Frozen")
 };
 
 class AEnemyAIBase;
@@ -109,5 +110,8 @@ public:
 
 	UFUNCTION()
 	void SetStateAsPassive();
+
+	UFUNCTION(BlueprintCallable)
+	void SetStateAsFrozen();
 };
 

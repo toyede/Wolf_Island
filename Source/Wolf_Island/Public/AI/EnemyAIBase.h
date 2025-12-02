@@ -98,4 +98,10 @@ public:
 
 	UPROPERTY(VisibleAnywhere)
 	int32 CurrentPatrolIndex = 0;
+
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	void StopAllMontages();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Form Change")
+	bool bIsHuman = true;
 };

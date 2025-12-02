@@ -173,6 +173,12 @@ void AEnemyAIController::SetStateAsPassive()
     BlackboardComp->SetValueAsObject(AttackTargetKey, nullptr);
 }
 
+void AEnemyAIController::SetStateAsFrozen()
+{
+	EnemyState = EEnemyState::Frozen;
+	BlackboardComp->SetValueAsEnum(EnemyStateKey, static_cast<uint8>(EnemyState));
+}
+
 void AEnemyAIController::SetStateAsAttacking(AActor* Actor)
 {
     AttackTarget = Actor;
