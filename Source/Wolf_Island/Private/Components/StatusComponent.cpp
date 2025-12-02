@@ -33,13 +33,6 @@ void UStatusComponent::BeginPlay()
 	OnHydrationZero.AddDynamic(this, &UStatusComponent::StartHydrationDeath);
 }
 
-void UStatusComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	Super::EndPlay(EndPlayReason);
-
-	ClearAllTimers();
-}
-
 
 // Called every frame
 void UStatusComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -517,19 +510,6 @@ void UStatusComponent::ApplyItem(UItemBase* Item)
 		IncreaseHunger(Item->NumericData.Hunger);
 		IncreaseHydration(Item->NumericData.Hydration);
 	}
-}
-
-void UStatusComponent::ClearAllTimers()
-{
-	GetWorld()->GetTimerManager().ClearTimer(StaminaTimer);
-	GetWorld()->GetTimerManager().ClearTimer(StaminaRecoverTimer);
-	GetWorld()->GetTimerManager().ClearTimer(HungerTimer);
-	GetWorld()->GetTimerManager().ClearTimer(HydrationTimer);
-	GetWorld()->GetTimerManager().ClearTimer(RunningTimer);
-	GetWorld()->GetTimerManager().ClearTimer(HungerDeathTimer);
-	GetWorld()->GetTimerManager().ClearTimer(HydrationDeathTimer);
-	GetWorld()->GetTimerManager().ClearTimer(ForcedRestTimer);
-	GetWorld()->GetTimerManager().ClearTimer(InfectionTimer);
 }
 
 void UStatusComponent::DebugGetStatus(float &HP, float& Stamina, float& Hunger, float& Hydration, float& Weight)

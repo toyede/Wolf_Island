@@ -44,10 +44,9 @@ public:
 	class UWrapBox* IngredientList;
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
 	class UButton* CraftButton;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = " Setting")
+	UPROPERTY(EditAnywhere)
 	TArray<EItemType> RecipeTypeList;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = " Setting")
-	ECraftMethod TargetCraftMethod = ECraftMethod::INVEN;
+
 	
 	UFUNCTION()
 	void AddRecipe(struct FRecipeData Recipe);
@@ -57,6 +56,10 @@ public:
 	void SetRecipeInfo(FRecipeData RecipeData);
 	UFUNCTION(BlueprintCallable)
 	void SetCraftButton(FRecipeData RecipeData);
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Crafting")
+	ECraftMethod TargetCraftMethod = ECraftMethod::INVEN;
+	
 	UFUNCTION(BlueprintCallable)
 	void SetCraftingMethod(ECraftMethod NewMethod);
 

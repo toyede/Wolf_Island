@@ -111,38 +111,31 @@ void UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPo
 	{
 		if (DragItemVisualClass && ItemRef)
 		{
-			//반갈 개수
 			int32 MovedAmount = ItemRef->Amount/2;
-			//기존 슬롯에 남은 아이템 개수
 			int32 RemaindAmount = ItemRef->Amount - MovedAmount;
 
-			//1개면 우클릭 불가능
 			if (MovedAmount == 0 ) return;
-
-			//아이템 개수
-			ItemRef->Amount = RemaindAmount;
-
-			//드래그 아이템 위젯 생성 (비주얼만 만드는 거임)
+			
+			ItemRef->Amount = RemaindAmount;			
+			
 			const TObjectPtr<UDragItemVisual> DragVisual = CreateWidget<UDragItemVisual>(this, DragItemVisualClass);
 			DragVisual->ItemIcon->SetBrushFromTexture(ItemRef->AssetData.Icon);
 			DragVisual->ItemBorder->SetBrush(UnSelectedSlotBrush);
 			DragVisual->ItemAmount->SetText(FText::AsNumber(MovedAmount));
 
-			//드래그 아이템 데이터 생성
 			UItemDragDropOperation* DragItemOperation = NewObject<UItemDragDropOperation>();
 			DragItemOperation->SourceItem = ItemRef->CreateItemCopy();
 			DragItemOperation->SourceInventory = ItemRef->OwningInventory;
 			DragItemOperation->SourceIndex = Index;
 			DragItemOperation->SourceItem->Amount = MovedAmount;
 			DragItemOperation->SourceItem->OwningInventory = ItemRef->OwningInventory;
-			
+
 			DragItemOperation->DefaultDragVisual = DragVisual;
 			DragItemOperation->Pivot = EDragPivot::MouseDown;
 
 			ItemRef->OwningInventory->OnInventoryUpdated.Broadcast();
 			
 			OutOperation = DragItemOperation;
-			
 			if (OutOperation)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("RIGHT DRAG ITEM OPERATION OUTTED"));
@@ -222,7 +215,6 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 			//좌클릭 떨구기면 스왑
 			if (InDragDropEvent.GetEffectingButton() == EKeys::LeftMouseButton)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("LEFT DROP BETWEEN OTHERS"))
 				OwnerInventoryRef->SwapItemsBetweenInventory(
 					OwnerInventoryRef, Index,
 					OriginInventoryRef, ItemDragDrop->SourceIndex);
@@ -232,13 +224,10 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 			//우클릭 떨구기면 연산 후 삽입
 			else if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("RIGHT DROP BETWEEN OTHERS"))
 				OwnerInventoryRef->DropItemBetweenInventory(
 					OriginInventoryRef, ItemDragDrop->SourceIndex,
 					OwnerInventoryRef, Index,
 					ItemDragDrop->SourceItem);
-
-				return true;
 			}
 		}
 	}
