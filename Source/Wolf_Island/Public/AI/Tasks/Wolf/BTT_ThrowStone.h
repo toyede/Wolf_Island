@@ -34,4 +34,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Projectile")
 	TSubclassOf<AStoneProjectile> ProjectileClass;
+
+	UPROPERTY(EditAnywhere, Category = "Sound")
+	USoundBase* ThrowSound;
 };

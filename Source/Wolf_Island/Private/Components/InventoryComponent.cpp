@@ -7,7 +7,9 @@
 #include "Editor/PropertyEditor/Public/PropertyEditorModule.h"
 #endif
 
+#include "AdvancedFriendsGameInstance.h"
 #include "Item/ItemBase.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 // Sets default values for this component's properties
@@ -20,6 +22,28 @@ UInventoryComponent::UInventoryComponent()
 	SetIsReplicated(true);
 	
 	// ...
+}
+
+void UInventoryComponent::SaveInventory()
+{
+	UAdvancedFriendsGameInstance* AFGI = Cast<UAdvancedFriendsGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+
+	FInventorySaveData PlayerInventorySaveData;
+	PlayerInventorySaveData.IsEmpty = false;
+	PlayerInventorySaveData.Inventory = InventoryContents;
+	PlayerInventorySaveData.CurrentWeight = CurrentWeight;
+
+	AFGI->PlayerInventory = PlayerInventorySaveData;
+}
+
+void UInventoryComponent::LoadInventory()
+{
+	UAdvancedFriendsGameInstance* AFGI = Cast<UAdvancedFriendsGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+
+	if(AFGI && !AFGI->PlayerInventory.IsEmpty){
+		InventoryContents = AFGI->PlayerInventory.Inventory;
+		CurrentWeight = AFGI->PlayerInventory.CurrentWeight;
+	}
 }
 
 FItemSlot* UInventoryComponent::FindSlotByID(FName ItemID)
@@ -186,6 +210,20 @@ void UInventoryComponent::SplitExistingStack(UItemBase* Item, const int32 Amount
 		//쪼갤 만큼 다시 추가
 		AddNewItem(Item, AmountToSplit);
 	}
+}
+
+void UInventoryComponent::IncreaseCurrentWeight(float Weight)
+{
+	CurrentWeight += Weight;
+	if (CurrentWeight > WeightCapacity) CurrentWeight = WeightCapacity;
+	if (CurrentWeight <= 0) CurrentWeight = 0;
+}
+
+void UInventoryComponent::DecreaseCurrentWeight(float Weight)
+{
+	CurrentWeight -= Weight;
+	if (CurrentWeight <= 0) CurrentWeight = 0;
+	if (CurrentWeight > WeightCapacity) CurrentWeight = WeightCapacity;
 }
 
 //아이템 추가 태스크 함수
@@ -727,6 +765,7 @@ void UInventoryComponent::DropItemBetweenInventory(
 	//빈 슬롯이면 삽입
 	if (!TargetSlot.Item)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("DIBI: EMPTY SLOT INSERT"));
 		TargetInventoryComponent->InsertItemToIndex(TargetIndex, DraggedItem);
 		DraggedItem->OwningInventory = TargetInventoryComponent;
 
@@ -742,6 +781,7 @@ void UInventoryComponent::DropItemBetweenInventory(
 	//다른 아이템이면 원상복구
 	if (TargetSlot.Item->ID != DraggedItem->ID)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("DIBI: BACK TO NORMAL"));
 		UItemBase* OriginItem = OriginSlot.Item;
 		OriginItem->Amount += DraggedItem->Amount;
 
