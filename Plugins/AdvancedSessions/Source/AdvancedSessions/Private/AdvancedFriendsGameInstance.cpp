@@ -235,6 +235,38 @@ void UAdvancedFriendsGameInstance::OnPlayerLoginStatusChangedMaster(int32 Player
 	}
 }
 
+void UAdvancedFriendsGameInstance::AddActorToLevelSave(FName LevelName, FSavedActorData NewActorData)
+{
+	FSavedActorList& ListWrapper = LevelDataMap.FindOrAdd(LevelName);
+	ListWrapper.Actors.Add(NewActorData);
+}
+
+bool UAdvancedFriendsGameInstance::GetSavedActorsFromLevel(FName LevelName, TArray<FSavedActorData>& OutActorList)
+{
+	if (FSavedActorList* FoundList = LevelDataMap.Find(LevelName))
+	{
+		OutActorList = FoundList->Actors;
+		return true;
+	}
+
+	return false;
+}
+
+void UAdvancedFriendsGameInstance::ClearLevelData(FName LevelName)
+{
+	LevelDataMap.Remove(LevelName);
+}
+
+void UAdvancedFriendsGameInstance::SaveRepairStatus(const TMap<FName, bool>& InStatusMap)
+{
+	GlobalRepairStatusMap = InStatusMap;
+}
+
+TMap<FName, bool> UAdvancedFriendsGameInstance::LoadRepairStatus()
+{
+	return GlobalRepairStatusMap;
+}
+
 void UAdvancedFriendsGameInstance::OnPlayerLoginChangedMaster(int32 PlayerNum)
 {
 	OnPlayerLoginChanged(PlayerNum);

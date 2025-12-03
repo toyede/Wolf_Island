@@ -6,6 +6,7 @@
 #include "Engine/DataTable.h"
 #include "Repair_Actor.generated.h"
 
+
 UCLASS()
 class WOLF_ISLAND_API ARepair_Actor : public AInteractableActor
 {
@@ -57,4 +58,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Repair")
 	bool IsRecipeComplete(FName TargetRecipeName);
+
+	UFUNCTION(BlueprintCallable, Category = "Repair|System")
+	void RestoreStateFromGameInstance();
 };

@@ -1,4 +1,6 @@
 #include "Interaction/Repair_Actor.h"
+
+#include "AdvancedFriendsGameInstance.h"
 #include "Data/ItemDataStruct.h"
 
 ARepair_Actor::ARepair_Actor()
@@ -12,7 +14,7 @@ ARepair_Actor::ARepair_Actor()
 
 void ARepair_Actor::BeginPlay()
 {
-    Super::BeginPlay();
+    
 
     if (RepairRecipesTable)
     {
@@ -35,12 +37,15 @@ void ARepair_Actor::BeginPlay()
             }
         }
     }
+    RestoreStateFromGameInstance();
+
+    Super::BeginPlay();
 }
 
 bool ARepair_Actor::CheckBodyComplete()
 {
-    bool bIsBD1Complete = IsRecipeComplete(FName("BD1"));
-    bool bIsBD2Complete = IsRecipeComplete(FName("BD2"));
+    bool bIsBD1Complete = IsRecipeComplete(FName("Body"));
+    bool bIsBD2Complete = IsRecipeComplete(FName("Propeller"));
 
     if (bIsBD1Complete && bIsBD2Complete)
     {
@@ -56,8 +61,8 @@ bool ARepair_Actor::CheckBodyComplete()
 
 bool ARepair_Actor::CheckEngineComplete()
 {
-    bool bIsEG1Complete = IsRecipeComplete(FName("EG1"));
-    bool bIsEG2Complete = IsRecipeComplete(FName("EG2"));
+    bool bIsEG1Complete = IsRecipeComplete(FName("Engine"));
+    bool bIsEG2Complete = IsRecipeComplete(FName("Pump"));
 
     if (bIsEG1Complete && bIsEG2Complete)
     {
@@ -73,8 +78,8 @@ bool ARepair_Actor::CheckEngineComplete()
 
 bool ARepair_Actor::CheckSteeringComplete()
 {
-    bool bIsST1Complete = IsRecipeComplete(FName("ST1"));
-    bool bIsST2Complete = IsRecipeComplete(FName("ST2"));
+    bool bIsST1Complete = IsRecipeComplete(FName("Control_Device"));
+    bool bIsST2Complete = IsRecipeComplete(FName("Follow-Up_Device"));
 
     if (bIsST1Complete && bIsST2Complete)
     {
@@ -90,8 +95,8 @@ bool ARepair_Actor::CheckSteeringComplete()
 
 bool ARepair_Actor::CheckRadarComplete()
 {
-    bool bIsRD1Complete = IsRecipeComplete(FName("RD1"));
-    bool bIsRD2Complete = IsRecipeComplete(FName("RD2"));
+    bool bIsRD1Complete = IsRecipeComplete(FName("Rader"));
+    bool bIsRD2Complete = IsRecipeComplete(FName("Transmitter"));
 
     if (bIsRD1Complete && bIsRD2Complete)
     {
@@ -107,8 +112,8 @@ bool ARepair_Actor::CheckRadarComplete()
 
 bool ARepair_Actor::CheckAnchorComplete()
 {
-    bool bIsAC1Complete = IsRecipeComplete(FName("AC1"));
-    bool bIsAC2Complete = IsRecipeComplete(FName("AC2"));
+    bool bIsAC1Complete = IsRecipeComplete(FName("Anchor"));
+    bool bIsAC2Complete = IsRecipeComplete(FName("Lifting_Device"));
 
     if (bIsAC1Complete && bIsAC2Complete)
     {
@@ -141,13 +146,19 @@ void ARepair_Actor::MarkRecipeAsComplete(FName RowName)
     {
         RepairStatusMap[RowName] = true;
         
-        UE_LOG(LogTemp, Log, TEXT("[RepairActor] 수리 기록됨: %s"), *RowName.ToString());
+        UE_LOG(LogTemp, Log, TEXT("[RepairActor] 수리 완료: %s"), *RowName.ToString());
 
         CompleteRepair();
+
+        UAdvancedFriendsGameInstance* GI = Cast<UAdvancedFriendsGameInstance>(GetGameInstance());
+        if (GI)
+        {
+            GI->SaveRepairStatus(RepairStatusMap);
+        }
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("[RepairActor] MarkRecipe 실패! Map에 키가 없음: %s"), *RowName.ToString());
+        UE_LOG(LogTemp, Error, TEXT("[RepairActor] MarkRecipe 실패: %s"), *RowName.ToString());
     }
 }
 
@@ -167,4 +178,33 @@ bool ARepair_Actor::IsRecipeComplete(FName TargetName)
     }
 
     return false;
+}
+
+void ARepair_Actor::RestoreStateFromGameInstance()
+{
+    UAdvancedFriendsGameInstance* GI = Cast<UAdvancedFriendsGameInstance>(GetGameInstance());
+    if (!GI) return;
+
+    TMap<FName, bool> SavedMap = GI->LoadRepairStatus();
+
+    if (SavedMap.Num() == 0) 
+    {
+        UE_LOG(LogTemp, Log, TEXT("[RepairActor] 저장된 데이터가 없습니다."));
+        return;
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("[RepairActor] 게임 인스턴스에서 데이터 로드 중... (%d개)"), SavedMap.Num());
+
+    for (const TPair<FName, bool>& Pair : SavedMap)
+    {
+        FName Key = Pair.Key;
+        bool bIsCompleted = Pair.Value;
+
+        if (RepairStatusMap.Contains(Key))
+        {
+            RepairStatusMap[Key] = bIsCompleted;
+        }
+    }
+
+    CompleteRepair();
 }
