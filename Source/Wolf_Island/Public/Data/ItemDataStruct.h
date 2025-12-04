@@ -261,3 +261,19 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
 	TArray<FSavedActorData> Actors;
 };
+
+//알 수 없는 기록 구조체
+USTRUCT(BlueprintType)
+struct FUnknownRecord : public FTableRowBase
+{
+	GENERATED_USTRUCT_BODY();
+
+	UPROPERTY(EditAnywhere)
+	FName RecordID;
+	UPROPERTY(EditAnywhere)
+	FText RecordTitle;
+	UPROPERTY(EditAnywhere)
+	FText RecordContent;
+	UPROPERTY(EditAnywhere)
+	UTexture2D* RecordImage;
+};

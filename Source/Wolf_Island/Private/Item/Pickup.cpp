@@ -99,7 +99,9 @@ void APickup::PickUp(const AActor* Picker)
                 //아이템 추가 시퀀스 실행
                 const FItemAddResult AddResult = PickerInventory->HandleAddItem(ItemReference);
 
-                if (const AMainPlayer* Player = Cast<AMainPlayer>(Picker))
+                const AMainPlayer* Player = Cast<AMainPlayer>(Picker);
+                
+                if (Player)
                 {
                     Player->HUD->AddItemMessage(AddResult);
                 }
@@ -107,25 +109,22 @@ void APickup::PickUp(const AActor* Picker)
                 //결과에 따른 행동
                 switch (AddResult.OperationResult)
                 {
+                    //아이템 추가 안됨
                     case EItemAddedResult::NoItemAdded:
                         //디버깅 결과 메시지
                         UE_LOG(LogTemp, Warning, TEXT("Didn't Eat Item"));
                         break;
+                    //아이템 부분만 먹음
                     case EItemAddedResult::PartiallyItemAdded:
                         //디버깅 결과 메시지
                         UE_LOG(LogTemp, Warning, TEXT("Remain Some"));
                         break;
-                    //싹 다 먹었으면 삭제
+                    //아이템 싹싹김치
                     case EItemAddedResult::AllItemAdded:
                         //디버깅 결과 메시지
                         UE_LOG(LogTemp, Warning, TEXT("Got All Item"));
-                        if (Destroy())
-                        {
-                            UE_LOG(LogTemp, Warning, TEXT("Item Destroyed"));   
-                        }else
-                        {
-                            UE_LOG(LogTemp, Warning, TEXT("Item Not Destroyed"));
-                        }
+                        UGameplayStatics::PlaySound2D(GetWorld(), Player->ItemGettingSound);
+                        Destroy();
                         break;
                 }
                 //디버깅 결과 메시지
