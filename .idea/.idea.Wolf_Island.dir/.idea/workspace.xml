@@ -8,17 +8,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="367b04d5-c3d9-4599-86e8-ad54ff3b4b47" name="변경" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.Wolf_Island.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Wolf_Island.dir/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/LJH/Portal/BP_Portal.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/LJH/Portal/BP_Portal.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/LJH/Portal/BP_Portal1.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/LJH/Portal/BP_Portal1.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Maps/Island_Copy.umap" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Maps/Island_Copy.umap" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/StarterContent/Architecture/Floor_400x400.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/StarterContent/Architecture/Floor_400x400.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/item/DT_RepairRecipes.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/DT_RepairRecipes.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/item/ItemMesh/boat/boat_broken/BP_BrokenShip.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/ItemMesh/boat/boat_broken/BP_BrokenShip.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Plugins/AdvancedSessions/Source/AdvancedSessions/Classes/AdvancedFriendsGameInstance.h" beforeDir="false" afterPath="$PROJECT_DIR$/Plugins/AdvancedSessions/Source/AdvancedSessions/Classes/AdvancedFriendsGameInstance.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Plugins/AdvancedSessions/Source/AdvancedSessions/Private/AdvancedFriendsGameInstance.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Plugins/AdvancedSessions/Source/AdvancedSessions/Private/AdvancedFriendsGameInstance.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Private/Interaction/Repair_Actor.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Private/Interaction/Repair_Actor.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Public/Interaction/Repair_Actor.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Public/Interaction/Repair_Actor.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -31,7 +23,6 @@
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/Source/Wolf_Island/Private/Character/MainPlayer.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/Wolf_Island/Private/Components/StatusComponent.cpp" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/Source/Wolf_Island/Private/Games/Test_ItemGameInstance.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/Wolf_Island/Private/Interaction/InteractableActor.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/Wolf_Island/Private/Interaction/InteractionInterface.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/Wolf_Island/Public/Character/MainPlayer.h" root0="FORCE_HIGHLIGHTING" />
@@ -41,7 +32,7 @@
   </component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="true" />
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="Toolset" />
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 5
@@ -51,20 +42,20 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;Uproject.Wolf_Island.executor&quot;: &quot;Run&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;LJH&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "Uproject.Wolf_Island.executor": "Run",
+    "git-widget-placeholder": "Main__2",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RunManager">
     <configuration name="Wolf_Island" type="Uproject" factoryName="rider.uproject">
       <configuration_1 setup="1">
@@ -173,9 +164,6 @@
       <workItem from="1764314909634" duration="7791000" />
       <workItem from="1764544549794" duration="3103000" />
       <workItem from="1764550295303" duration="3996000" />
-      <workItem from="1764725021707" duration="766000" />
-      <workItem from="1764725972646" duration="2445000" />
-      <workItem from="1764729563764" duration="759000" />
     </task>
     <servers />
   </component>
