@@ -11,14 +11,9 @@
       <change beforePath="$PROJECT_DIR$/.idea/.idea.Wolf_Island.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Wolf_Island.dir/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/JSY/Widgets/Craft/WBP_Repair.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/JSY/Widgets/Craft/WBP_Repair.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/JSY/Widgets/Craft/WBP_RepairPanel.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/JSY/Widgets/Craft/WBP_RepairPanel.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/KSH/AI/BP_EnemyAI_Boss.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/KSH/AI/BP_EnemyAI_Boss.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/KSH/Actors/BP_Trap_Base.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/KSH/Actors/BP_Trap_Base.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/LJH/Portal/BP_Portal.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/LJH/Portal/BP_Portal.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/Maps/Island_Copy.umap" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Maps/Island_Copy.umap" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Private/Actors/Trap_Base.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Private/Actors/Trap_Base.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Private/Widgets/Craft/RepairPanel.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Private/Widgets/Craft/RepairPanel.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Public/Actors/Trap_Base.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Public/Actors/Trap_Base.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Public/Widgets/Craft/RepairPanel.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Public/Widgets/Craft/RepairPanel.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/StarterContent/Architecture/Floor_400x400.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/StarterContent/Architecture/Floor_400x400.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Public/Widgets/Craft/BonFireUI.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Public/Widgets/Craft/BonFireUI.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -51,20 +46,20 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "Uproject.Wolf_Island.executor": "Run",
-    "git-widget-placeholder": "LJH",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;Uproject.Wolf_Island.executor&quot;: &quot;Run&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;LJH&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration name="Wolf_Island" type="Uproject" factoryName="rider.uproject">
       <configuration_1 setup="1">
@@ -174,6 +169,9 @@
       <workItem from="1764544549794" duration="3103000" />
       <workItem from="1764550295303" duration="3996000" />
       <workItem from="1764827422393" duration="4285000" />
+      <workItem from="1764834922040" duration="185000" />
+      <workItem from="1764836338071" duration="115000" />
+      <workItem from="1764837094669" duration="257000" />
     </task>
     <servers />
   </component>
