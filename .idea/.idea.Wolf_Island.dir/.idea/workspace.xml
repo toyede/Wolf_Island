@@ -9,16 +9,16 @@
   <component name="ChangeListManager">
     <list default="true" id="367b04d5-c3d9-4599-86e8-ad54ff3b4b47" name="변경" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.Wolf_Island.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Wolf_Island.dir/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/JSY/Characters/Player/BP_MainPlayer.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/JSY/Characters/Player/BP_MainPlayer.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/JSY/Interaction/BP_Chest.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/JSY/Interaction/BP_Chest.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/JWY/Blueprints/BP_DynamicSky.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/JWY/Blueprints/BP_DynamicSky.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/LJH/Portal/BP_Portal.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/LJH/Portal/BP_Portal.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/LJH/Portal/BP_Portal1.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/LJH/Portal/BP_Portal1.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/Maps/Island_Copy.umap" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Maps/Island_Copy.umap" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Maps/mesh/BP_Tree.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Maps/mesh/BP_Tree.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Maps/mesh/BP_Tree2.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Maps/mesh/BP_Tree2.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/item/ItemMesh/stone_axe/SM_StoneAxe.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/ItemMesh/stone_axe/SM_StoneAxe.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/item/ItemMesh/stone_knife/SM_StoneKnife.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/ItemMesh/stone_knife/SM_StoneKnife.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/item/ItemMesh/stonespear/SM_StoneSpear.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/ItemMesh/stonespear/SM_StoneSpear.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/StarterContent/Architecture/Floor_400x400.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/StarterContent/Architecture/Floor_400x400.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/item/DT_RepairRecipes.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/DT_RepairRecipes.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/item/ItemMesh/boat/boat_broken/BP_BrokenShip.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/ItemMesh/boat/boat_broken/BP_BrokenShip.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Plugins/AdvancedSessions/Source/AdvancedSessions/Classes/AdvancedFriendsGameInstance.h" beforeDir="false" afterPath="$PROJECT_DIR$/Plugins/AdvancedSessions/Source/AdvancedSessions/Classes/AdvancedFriendsGameInstance.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Plugins/AdvancedSessions/Source/AdvancedSessions/Private/AdvancedFriendsGameInstance.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Plugins/AdvancedSessions/Source/AdvancedSessions/Private/AdvancedFriendsGameInstance.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Private/Interaction/Repair_Actor.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Private/Interaction/Repair_Actor.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Public/Interaction/Repair_Actor.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Public/Interaction/Repair_Actor.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -176,7 +176,6 @@
       <workItem from="1764725021707" duration="766000" />
       <workItem from="1764725972646" duration="2445000" />
       <workItem from="1764729563764" duration="759000" />
-      <workItem from="1764818175238" duration="1961000" />
     </task>
     <servers />
   </component>
