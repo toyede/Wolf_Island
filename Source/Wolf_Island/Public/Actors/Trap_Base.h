@@ -9,6 +9,7 @@
 class UStaticMeshComponent;
 class USphereComponent;
 class AEnemyAIBase;
+class USoundBase;
 
 UCLASS()
 class WOLF_ISLAND_API ATrap_Base : public AActor
@@ -24,6 +25,12 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision")
 	TObjectPtr<USphereComponent> TriggerSphere;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound")
+	TObjectPtr<USoundBase> ActivateSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound")
+	TObjectPtr<USoundBase> ReleaseSound;
 
 protected:
 	// Called when the game starts or when spawned

@@ -9,6 +9,7 @@
 
 class ARepair_Actor;
 class UInventoryComponent;
+class USoundBase;
 
 UCLASS()
 class WOLF_ISLAND_API URepairPanel : public UUserWidget
@@ -61,6 +62,12 @@ public:
 
     UPROPERTY(VisibleAnywhere, meta=(BindWidget))
     class UButton* RepairButton;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound")
+    TObjectPtr<USoundBase> RepairCheckSound;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound")
+    TObjectPtr<USoundBase> RepairSound;
 
 
 protected:

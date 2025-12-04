@@ -8,6 +8,8 @@
 #include "Data/ItemDataStruct.h"
 #include "Widgets/Craft/RepairBlock.h"
 #include "Widgets/Craft/CraftSlot.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 #include "Interaction/Repair_Actor.h"
 
 void URepairPanel::NativeConstruct()
@@ -150,6 +152,11 @@ void URepairPanel::SetRepairButtonState(FRepairRecipeData RecipeData)
         return;
     }
 
+    if (RepairCheckSound)
+    {
+        UGameplayStatics::PlaySound2D(this, RepairCheckSound);
+    }
+
     // 재료 확인 로직
     FRecipeData TempRecipe;
     TempRecipe.Ingredient1ID = RecipeData.Ingredient1ID;
@@ -169,6 +176,10 @@ void URepairPanel::OnRepairButtonClicked()
 {
     if (!OwnerInventory) return;
 
+    if (RepairSound)
+    {
+        UGameplayStatics::PlaySound2D(this, RepairSound);
+    }
     FRepairRecipeData TempRecipe;
     TempRecipe.Ingredient1ID = CurrentRepairData.Ingredient1ID;
     TempRecipe.Ingredient1Amount = CurrentRepairData.Ingredient1Amount;
