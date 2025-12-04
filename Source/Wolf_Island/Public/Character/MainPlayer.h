@@ -7,6 +7,7 @@
 #include "InputMappingContext.h"
 #include "InputAction.h"
 #include "Interaction/InteractionInterface.h"
+#include "Data/ItemDataStruct.h"
 #include "MainPlayer.generated.h"
 
 class UItemBase;
@@ -136,6 +137,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsHoldingItem = false;
 
+	//공격 중인지
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	bool IsAttacking = false;
+
 	//핫바 관련 변수==================================================================
 	//핫바 슬롯 인덱스
 	UPROPERTY(VisibleAnywhere, Category="HotBar")
@@ -171,12 +176,22 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
 	UAnimMontage* FuckyouMontage;
 	
-	//위젯============================================================================
+	//위젯=============================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	TSubclassOf<class UPlayerHUD> HUDClass;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Widget")
 	UPlayerHUD* HUD;
 
+	//사운드============================================================================
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
+	class USoundBase* ItemGettingSound;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
+	USoundBase* JumpSound;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
+	USoundBase* EattingSound;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
+	USoundBase* PunchSound;
+	
 	//공격시 폴리지 판정
 	UPROPERTY(EditAnywhere, Category = "Interaction")
 	TMap<UStaticMesh*, TSubclassOf<class ATree>> FoliageToActorMap;
@@ -289,6 +304,9 @@ public:
 
 	UFUNCTION(BlueprintPure)
 	UItemBase* GetHoldingItemReference();
+
+	UFUNCTION(BlueprintPure)
+	EItemType GetHoldingItemType();
 	
 	//멀티플레이어
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;

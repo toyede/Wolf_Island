@@ -39,6 +39,14 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Chest")
 	TSubclassOf<class UChestScreen> ChestWidgetClass;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Chest")
+	class USoundBase* ChestSound;
+
+	UFUNCTION(BlueprintCallable)
+	void OpenChest();
+	UFUNCTION(BlueprintCallable)
+	void CloseChest();
+
 	virtual void Interact(AActor* Interactor) override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;

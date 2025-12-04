@@ -63,77 +63,6 @@ AMainPlayer::AMainPlayer()
 	InventoryComponent->SetWeightCapacity(StatusComponent->MaxWeight);
 }
 
-void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float DamageAmount)
-{
-	// 1. 맞은 컴포넌트가 유효한지 먼저 확인
-	UPrimitiveComponent* HitComponent = HitResult.GetComponent();
-	if (!HitComponent) return;
-
-	// 2. 폴리지(InstancedStaticMeshComponent)인지 변환 시도
-	UInstancedStaticMeshComponent* ISMC = Cast<UInstancedStaticMeshComponent>(HitComponent);
-
-	// [중요] 폴리지가 아니면(nullptr이면) 여기서 즉시 함수 종료! (땅바닥 등을 쳤을 때 크래시 방지)
-	if (!ISMC) 
-	{
-		// 디버깅용 메시지 (필요 없으면 주석 처리)
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("맞은 건 폴리지가 아님"));
-		return; 
-	}
-
-	// 3. 어떤 나무(StaticMesh)인지 확인
-	UStaticMesh* HitMesh = ISMC->GetStaticMesh();
-
-	// 4. 맵(목록)에 등록된 나무인지 확인
-	// HitMesh가 없거나, 맵에 등록되지 않은 풀/돌멩이라면 무시
-	if (!HitMesh || !FoliageToActorMap.Contains(HitMesh)) 
-	{
-		return;
-	}
-
-	// 5. 인덱스 확인 (가끔 -1이 들어오는 경우 방지)
-	int32 InstanceIndex = HitResult.Item;
-	if (InstanceIndex == INDEX_NONE) return;
-
-	// --- 검증 끝, 변환 시작 ---
-
-	TSubclassOf<ATree> TargetActorClass = FoliageToActorMap[HitMesh];
-	if (!TargetActorClass) return;
-
-	FTransform InstanceTransform;
-	// 월드 좌표 기준으로 트랜스폼 가져오기
-	ISMC->GetInstanceTransform(InstanceIndex, InstanceTransform, true);
-
-	// 폴리지 삭제
-	ISMC->RemoveInstance(InstanceIndex);
-
-	// 진짜 액터 소환
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-	ATree* NewTree = GetWorld()->SpawnActor<ATree>(TargetActorClass, InstanceTransform, SpawnParams);
-
-	// 데미지 전달
-	if (NewTree)
-	{
-		FDamageEvent DamageEvent;
-		NewTree->TakeDamage(DamageAmount, DamageEvent, GetController(), this);
-        
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, TEXT("나무 변환 성공!"));
-	}
-}
-
-void AMainPlayer::ProcessAttackHit(const FHitResult& HitResult, float DamageAmount)
-{
-	AActor* HitActor = HitResult.GetActor();
-
-	if (HitActor)
-	{
-		UGameplayStatics::ApplyDamage(HitActor, DamageAmount, GetController(), this, UDamageType::StaticClass());
-	}
-
-	TryConvertFoliageToActor(HitResult, DamageAmount);
-}
-
 // Called when the game starts or when spawned
 void AMainPlayer::BeginPlay()
 {
@@ -262,6 +191,11 @@ void AMainPlayer::StartJump()
 	StatusComponent->StopRecoverStamina();
 	//점프 스태미나 소모
 	StatusComponent->DecreaseStamina(JumpConsumeAmount);
+
+	if (JumpSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), JumpSound, GetActorLocation());
+	}
 	
 	Jump();
 }
@@ -481,6 +415,10 @@ void AMainPlayer::UseItem(UItemBase* Item)
 			
 			if (StatusComponent && Item->Type == EItemType::FOOD)
 			{
+				if (Item->Type == EItemType::FOOD && EattingSound)
+				{
+					UGameplayStatics::PlaySound2D(GetWorld(), EattingSound);
+				}
 				StatusComponent->ApplyItem(Item);
 				InventoryComponent->RemoveAmountOfItem(Item, 1);
 			}
@@ -501,6 +439,8 @@ void AMainPlayer::StartUseItem()
 		{
 			UE_LOG(LogTemp, Warning, TEXT("TIMER EXECUTED"))
 			UE_LOG(LogTemp, Warning, TEXT("TARGET ITEM : [ %s ] : DURATION : [ %f ]"), *TargetItem->TextData.Name.ToString(), TargetItem->NumericData.InteractionDuration);
+			
+			
 			GetWorld()->GetTimerManager().SetTimer(
 			ItemUseTimer,
 			[this, TargetItem]()
@@ -801,6 +741,12 @@ void AMainPlayer::DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool
 		APickup* Pickup = GetWorld()->SpawnActor<APickup>(APickup::StaticClass(), SpawnTransform, SpawnParams);
 		
 		Pickup->InitializeDrop(ItemToDrop, RemovedAmount);
+
+		if (ItemGettingSound)
+		{
+			UGameplayStatics::PlaySound2D(GetWorld(), ItemGettingSound);
+		}
+		
 	} else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("CAN'T FIND MATCHED ITEM."))
@@ -818,6 +764,88 @@ UItemBase* AMainPlayer::GetHoldingItemReference()
 	}
 	
 	return nullptr;
+}
+
+EItemType AMainPlayer::GetHoldingItemType()
+{
+	UItemBase* HoldingItem = GetHoldingItemReference();
+	if (HoldingItem)
+	{
+		return HoldingItem->Type;
+	}
+	
+	return EItemType::MATERIAL;
+}
+
+void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float DamageAmount)
+{
+	// 1. 맞은 컴포넌트가 유효한지 먼저 확인
+	UPrimitiveComponent* HitComponent = HitResult.GetComponent();
+	if (!HitComponent) return;
+
+	// 2. 폴리지(InstancedStaticMeshComponent)인지 변환 시도
+	UInstancedStaticMeshComponent* ISMC = Cast<UInstancedStaticMeshComponent>(HitComponent);
+
+	// [중요] 폴리지가 아니면(nullptr이면) 여기서 즉시 함수 종료! (땅바닥 등을 쳤을 때 크래시 방지)
+	if (!ISMC) 
+	{
+		// 디버깅용 메시지 (필요 없으면 주석 처리)
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("맞은 건 폴리지가 아님"));
+		return; 
+	}
+
+	// 3. 어떤 나무(StaticMesh)인지 확인
+	UStaticMesh* HitMesh = ISMC->GetStaticMesh();
+
+	// 4. 맵(목록)에 등록된 나무인지 확인
+	// HitMesh가 없거나, 맵에 등록되지 않은 풀/돌멩이라면 무시
+	if (!HitMesh || !FoliageToActorMap.Contains(HitMesh)) 
+	{
+		return;
+	}
+
+	// 5. 인덱스 확인 (가끔 -1이 들어오는 경우 방지)
+	int32 InstanceIndex = HitResult.Item;
+	if (InstanceIndex == INDEX_NONE) return;
+
+	// --- 검증 끝, 변환 시작 ---
+
+	TSubclassOf<ATree> TargetActorClass = FoliageToActorMap[HitMesh];
+	if (!TargetActorClass) return;
+
+	FTransform InstanceTransform;
+	// 월드 좌표 기준으로 트랜스폼 가져오기
+	ISMC->GetInstanceTransform(InstanceIndex, InstanceTransform, true);
+
+	// 폴리지 삭제
+	ISMC->RemoveInstance(InstanceIndex);
+
+	// 진짜 액터 소환
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	ATree* NewTree = GetWorld()->SpawnActor<ATree>(TargetActorClass, InstanceTransform, SpawnParams);
+
+	// 데미지 전달
+	if (NewTree)
+	{
+		FDamageEvent DamageEvent;
+		NewTree->TakeDamage(DamageAmount, DamageEvent, GetController(), this);
+        
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, TEXT("나무 변환 성공!"));
+	}
+}
+
+void AMainPlayer::ProcessAttackHit(const FHitResult& HitResult, float DamageAmount)
+{
+	AActor* HitActor = HitResult.GetActor();
+
+	if (HitActor)
+	{
+		UGameplayStatics::ApplyDamage(HitActor, DamageAmount, GetController(), this, UDamageType::StaticClass());
+	}
+
+	TryConvertFoliageToActor(HitResult, DamageAmount);
 }
 
 void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
