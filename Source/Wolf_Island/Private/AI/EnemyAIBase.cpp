@@ -11,6 +11,8 @@
 #include "Components/StatusComponent.h"
 #include "Actors/PatrolRoute.h"
 #include "Components/SplineComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundAttenuation.h"
 
 
 AEnemyAIBase::AEnemyAIBase()
@@ -207,6 +209,21 @@ void AEnemyAIBase::StopAllMontages()
         {
             WolfAnim->Montage_Stop(0.2f);
         }
+    }
+}
+
+void AEnemyAIBase::Growling()
+{
+    if (GrowlSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this,
+            GrowlSound,
+            GetActorLocation(),
+            FRotator::ZeroRotator,
+            1.0f,   // Volume
+            1.0f,   // Pitch
+            0.0f,   // Start Time
+            AISoundAttenuation);
     }
 }
 

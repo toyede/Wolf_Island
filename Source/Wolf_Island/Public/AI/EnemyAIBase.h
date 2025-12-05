@@ -104,4 +104,13 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Form Change")
 	bool bIsHuman = true;
+
+	UFUNCTION(BlueprintCallable, Category = "Sound")
+	void Growling();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound")
+	USoundBase* GrowlSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound")
+	USoundAttenuation* AISoundAttenuation;
 };
