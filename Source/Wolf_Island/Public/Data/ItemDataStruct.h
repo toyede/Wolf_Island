@@ -39,25 +39,25 @@ struct FItemNumericData
 	GENERATED_USTRUCT_BODY();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 MaxAmount;
+	int32 MaxAmount = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Damage;
+	float Damage = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Health;
+	float Health = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Stamina;
+	float Stamina = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Hydration;
+	float Hydration = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Hunger;
+	float Hunger = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Weight;
+	float Weight = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Durability;
+	float Durability = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float InteractionDuration;
+	float InteractionDuration = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool IsStackable;
+	bool IsStackable = false;
 };
 
 //아이템 에셋 데이터 (아이콘, 메쉬, BP)
@@ -67,11 +67,11 @@ struct FItemAssetData
 	GENERATED_USTRUCT_BODY();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UTexture2D* Icon;
+	UTexture2D* Icon = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UStaticMesh* Mesh;
+	UStaticMesh* Mesh = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UBlueprint* BPMesh;
+	UBlueprint* BPMesh = nullptr;
 };
 
 //아이템 데이터 (최종)
@@ -81,9 +81,9 @@ struct FItemData : public FTableRowBase
 	GENERATED_USTRUCT_BODY();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
-	FName ID;
+	FName ID = NAME_None;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
-	EItemType Type;
+	EItemType Type = EItemType::MATERIAL;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
 	FItemTextData TextData;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
@@ -92,7 +92,7 @@ struct FItemData : public FTableRowBase
 	FItemAssetData AssetData;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
-	TSubclassOf<class UItemBase> ItemClass;
+	TSubclassOf<class UItemBase> ItemClass = nullptr;
 	
 };
 
@@ -122,27 +122,27 @@ struct FRecipeData : public FTableRowBase
 	GENERATED_USTRUCT_BODY();
 
 	UPROPERTY(EditAnywhere)
-	ECraftMethod Method;
+	ECraftMethod Method = ECraftMethod::INVEN;
 	UPROPERTY(EditAnywhere)
-	EItemType ItemType;
+	EItemType ItemType = EItemType::MATERIAL;
 	UPROPERTY(EditAnywhere)
-	FName Ingredient1ID;
+	FName Ingredient1ID = NAME_None;
 	UPROPERTY(EditAnywhere)
-	int32 Ingredient1Amount;
+	int32 Ingredient1Amount = 0;
 	UPROPERTY(EditAnywhere)
-	FName Ingredient2ID;
+	FName Ingredient2ID = NAME_None;
 	UPROPERTY(EditAnywhere)
-	int32 Ingredient2Amount;
+	int32 Ingredient2Amount = 0;
 	UPROPERTY(EditAnywhere)
-	FName Ingredient3ID;
+	FName Ingredient3ID = NAME_None;
 	UPROPERTY(EditAnywhere)
-	int32 Ingredient3Amount;
+	int32 Ingredient3Amount = 0;
 	UPROPERTY(EditAnywhere)
-	FName ResultID;
+	FName ResultID = NAME_None;
 	UPROPERTY(EditAnywhere)
-	int32 ResultAmount;
+	int32 ResultAmount = 0;
 	UPROPERTY(EditAnywhere)
-	float Duration;
+	float Duration = 0.0f;
 
 	TArray<FName> GetIngredientsID() const
 	{
@@ -174,11 +174,11 @@ struct FRepairRecipeData : public FTableRowBase
 	GENERATED_USTRUCT_BODY();
 
 	UPROPERTY(EditAnywhere)
-	FName RecipeName;
+	FName RecipeName = NAME_None;
 	UPROPERTY(EditAnywhere)
-	FName Ingredient1ID;
+	FName Ingredient1ID = NAME_None;
 	UPROPERTY(EditAnywhere)
-	int32 Ingredient1Amount;
+	int32 Ingredient1Amount = 0;
 	UPROPERTY(EditAnywhere)
 	FName Ingredient2ID;
 	UPROPERTY(EditAnywhere)
@@ -190,9 +190,9 @@ struct FRepairRecipeData : public FTableRowBase
 	UPROPERTY(EditAnywhere)
 	FName Ingredient4ID;
 	UPROPERTY(EditAnywhere)
-	int32 Ingredient4Amount;
+	int32 Ingredient4Amount = 0;
 	UPROPERTY(EditAnywhere)
-	float Duration;
+	float Duration = 0.0f;
 	UPROPERTY(EditAnywhere)
 	bool Complete = false;
 
@@ -275,5 +275,5 @@ struct FUnknownRecord : public FTableRowBase
 	UPROPERTY(EditAnywhere)
 	FText RecordContent;
 	UPROPERTY(EditAnywhere)
-	UTexture2D* RecordImage;
+	UTexture2D* RecordImage = nullptr;
 };
