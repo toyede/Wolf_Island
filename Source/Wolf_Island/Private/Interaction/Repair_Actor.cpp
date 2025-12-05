@@ -1,5 +1,5 @@
 #include "Interaction/Repair_Actor.h"
-
+#include "Kismet/GameplayStatics.h"
 #include "AdvancedFriendsGameInstance.h"
 #include "Data/ItemDataStruct.h"
 
@@ -134,9 +134,21 @@ void ARepair_Actor::CompleteRepair()
     CheckSteeringComplete();
     CheckRadarComplete();
     CheckAnchorComplete();
-
-    if (bIsBody && bIsEngine && bIsSteering && bIsRadar && bIsAnchor)
+    
+    FString CurrentMapName = UGameplayStatics::GetCurrentLevelName(this);
+    
+    //if (bIsBody && bIsEngine && bIsSteering && bIsRadar && bIsAnchor)
+    if (bIsBody && bIsEngine)
     {
+        if (CurrentMapName == "StartMap")
+        {
+            return;
+        }
+        else
+        {
+            UGameplayStatics::OpenLevel(this, FName("StartMap"));
+        }
+        
     }
 }
 

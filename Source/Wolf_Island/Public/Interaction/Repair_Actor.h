@@ -61,4 +61,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Repair|System")
 	void RestoreStateFromGameInstance();
+
+	bool bHasLevelLoadStarted = false;
 };
