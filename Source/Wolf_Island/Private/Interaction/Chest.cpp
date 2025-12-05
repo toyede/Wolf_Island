@@ -9,7 +9,7 @@
 
 AChest::AChest()
 {
-	SetReplicates(true);
+	//SetReplicates(true);
 	
 	ChestMesh = CreateDefaultSubobject<UStaticMeshComponent>("ChestMesh");
 	ChestCoverMesh = CreateDefaultSubobject<UStaticMeshComponent>("ChestCoverMesh");
