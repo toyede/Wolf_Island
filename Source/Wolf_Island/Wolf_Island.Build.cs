@@ -19,8 +19,9 @@ public class Wolf_Island : ModuleRules
 			"NavigationSystem",
 			"GameplayTasks",
 			"UMG",
-			"Niagara"
-		});
+			"Niagara",
+            "GameplayDebugger"
+        });
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
 

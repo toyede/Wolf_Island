@@ -3,11 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AIController.h"
+#include "AI/AIControllers/EnemyAIcontrollerbase.h"
 #include "EnemyAIBossController.generated.h"
 
-class UBehaviorTree;
-class UBehaviorTreeComponent;
+class UAISenseConfig_Sight;
 
 UENUM(BlueprintType)
 enum class EBossState : uint8
@@ -24,21 +23,35 @@ enum class EBossState : uint8
 	Stun UMETA(DisplayName = "Stun")
 };
 
-
 UCLASS()
-class WOLF_ISLAND_API AEnemyAIBossController : public AAIController
+class WOLF_ISLAND_API AEnemyAIBossController : public AEnemyAIControllerBase
 {
 	GENERATED_BODY()
 
 public:
 	AEnemyAIBossController();
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AttackTarget")
-	ACharacter* Player;
+protected:
+	virtual void BeginPlay() override;
+	virtual void OnPossess(APawn* InPawn) override;
+	virtual void OnPerceptionUpdated(const TArray<AActor*>& UpdatedActors) override;
 
+	//~ Perception Config
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|Perception")
+	TObjectPtr<UAISenseConfig_Sight> SightConfig;
+
+	//~ 상태
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI|State")
 	EBossState BossState = EBossState::Idle;
 
+	//~ Current Target
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI|Target")
+	TObjectPtr<ACharacter> CurrentTarget;
+
+	void InitializeAttackTarget();
+
+public:
+	//~ 상태 전환
 	UFUNCTION(BlueprintCallable, Category = "AI|State")
 	void SetNewState(EBossState NewState);
 
@@ -51,26 +64,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AI|State")
 	EBossState SetStateAsStun();
 
-	UFUNCTION()
-	void SetAttackTarget();
-
 	UFUNCTION(BlueprintPure, Category = "AI|State")
 	EBossState GetCurrentState() const { return BossState; }
-
-protected:
-	virtual void BeginPlay() override;
-	virtual void OnPossess(APawn* InPawn) override;
-
-	UPROPERTY(EditAnywhere, Category = "AI")
-	TObjectPtr<UBehaviorTree> BehaviorTreeAsset;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
-	TObjectPtr<UBehaviorTreeComponent> BehaviorComp;
-
-	UPROPERTY(EditDefaultsOnly, Category = "AI|Blackboard")
-	FName AttackTargetKey = TEXT("AttackTarget");
-
-	UPROPERTY(EditDefaultsOnly, Category = "AI|Blackboard")
-	FName BossStateKey = TEXT("State");
 };
-

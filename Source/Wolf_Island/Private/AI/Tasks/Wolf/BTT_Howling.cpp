@@ -6,7 +6,7 @@
 #include "GameFramework/Character.h"
 #include "Animation/AnimInstance.h"
 #include "Perception/AISense_Hearing.h"
-#include "AI/EnemyAIBase.h"
+#include "AI/Enemy_Character/EnemyAIBase.h"
 
 EBTNodeResult::Type UBTT_Howling::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {

@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "BehaviorTree/BTTaskNode.h"
-#include "AI/EnemyAIController.h"
+#include "AI/AIControllers/EnemyAIController.h"
 #include "BTT_SetStateAsPassive.generated.h"
 
 /**

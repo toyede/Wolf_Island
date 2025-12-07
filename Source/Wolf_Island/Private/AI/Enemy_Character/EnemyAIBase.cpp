@@ -1,11 +1,11 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "AI/EnemyAIBase.h"
+#include "AI/Enemy_Character/EnemyAIBase.h"
 #include "Components/WidgetComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "AI/EnemyAIController.h"
+#include "AI/AIControllers/EnemyAIController.h"
 #include "Animation/AnimInstance.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Components/StatusComponent.h"
@@ -78,12 +78,16 @@ void AEnemyAIBase::BeginPlay()
     HumanParts.Add(LegsMesh);
     HumanParts.Add(FeetMesh);
 	
-    if (NativePatrolRoute && WolfPatrolRoute) // ¿øÁÖ¹ÎÀ¸·Î ½ÃÀÛÇØ¼­ ±âº» ·çÆ®´Â ¿øÁÖ¹Î·çÆ®·Î
+    if (NativePatrolRoute && WolfPatrolRoute) // ì›ì£¼ë¯¼ìœ¼ë¡œ ì‹œì‘í•´ì„œ ê¸°ë³¸ ë£¨íŠ¸ëŠ” ì›ì£¼ë¯¼ë£¨íŠ¸ë¡œ
     {
 		AssignedPatrolRoute = NativePatrolRoute;
 
         CurrentPatrolIndex = GetRandomPointIndex();
     }
+
+    EnemyAIController = Cast<AEnemyAIController>(GetController());
+
+    OnHitResponse.AddDynamic(this, &AEnemyAIBase::HitResponse);
 }
 
 void AEnemyAIBase::Tick(float DeltaTime)
@@ -99,9 +103,9 @@ void AEnemyAIBase::ChangeForm(EEnemyForm Form)
     GetMesh()->SetVisibility(bIsHuman);
     GetMesh()->SetCollisionEnabled(bIsHuman ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
 
-	GetCapsuleComponent()->SetCapsuleSize(bIsHuman ? 42.f : 70.f, bIsHuman ? 96.f : 96.f); // Ä¸½¶ Å©±â º¯°æ
+	GetCapsuleComponent()->SetCapsuleSize(bIsHuman ? 42.f : 70.f, bIsHuman ? 96.f : 96.f); // ìº¡ìŠ í¬ê¸° ë³€ê²½
 
-    // Human ÆÄÃ÷ Åä±Û
+    // Human íŒŒì¸  í† ê¸€
     TArray<USkeletalMeshComponent*> Parts = { FaceMesh, TorsoMesh, LegsMesh, FeetMesh };
     for (USkeletalMeshComponent* Part : Parts)
     {
@@ -112,22 +116,25 @@ void AEnemyAIBase::ChangeForm(EEnemyForm Form)
         }
     }
 
-    // Wolf Åä±Û
+    // Wolf í† ê¸€
     if (WolfMesh)
     {
         WolfMesh->SetVisibility(!bIsHuman);
         WolfMesh->SetCollisionEnabled(!bIsHuman ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
     }
 
-    // ÆĞÆ®·Ñ·çÆ® ÀüÈ¯
+    // íŒ¨íŠ¸ë¡¤ë£¨íŠ¸ ì „í™˜
 	AssignedPatrolRoute = bIsHuman ? NativePatrolRoute : WolfPatrolRoute;
 
-    // ÆĞÆ®·Ñ ½ÃÀÛÁ¡ ÃÊ±âÈ­
+    // íŒ¨íŠ¸ë¡¤ ì‹œì‘ì  ì´ˆê¸°í™”
 	CurrentPatrolIndex = GetRandomPointIndex();
 
     SpawnParticle();
 
-    // ¾Ö´Ï¸ŞÀÌ¼Ç - GetMesh() ¾Æ´Ï°í °¢°¢ ¸Ş½Ã¿¡
+    // í¼ì— ë”°ë¥¸ íŒ¨íŠ¸ë¡¤ ì†ë„ ë³€í™”
+    PassiveSpeed = bIsHuman ? NativePatrolSpeed : WolfPatrolSpeed;
+
+    // ì• ë‹ˆë©”ì´ì…˜ - GetMesh() ì•„ë‹ˆê³  ê°ê° ë©”ì‹œì—
     if (bIsHuman && HumanAnimBP)
     {
         GetMesh()->SetAnimInstanceClass(HumanAnimBP);
@@ -137,7 +144,7 @@ void AEnemyAIBase::ChangeForm(EEnemyForm Form)
         WolfMesh->SetAnimInstanceClass(WolfAnimBP);
     }
 
-    // Blackboard ¾÷µ¥ÀÌÆ®
+    // Blackboard ì—…ë°ì´íŠ¸
     if (AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController()))
     {
         if (AICon->GetBlackboardComponent())
@@ -190,7 +197,7 @@ int32 AEnemyAIBase::GetRandomPointIndex()
         return 0;
     }
 
-    return FMath::RandRange(-1, AssignedPatrolRoute->SplinePoints->GetNumberOfSplinePoints() - 1); // ¿øÁÖ¹Î¸¶´Ù ·£´ı ½ºÅ¸Æ®
+    return FMath::RandRange(-1, AssignedPatrolRoute->SplinePoints->GetNumberOfSplinePoints() - 1); // ì›ì£¼ë¯¼ë§ˆë‹¤ ëœë¤ ìŠ¤íƒ€íŠ¸
 
 }
 
@@ -226,5 +233,134 @@ void AEnemyAIBase::Growling()
             AISoundAttenuation);
     }
 }
+
+// Interface Functions
+
+void AEnemyAIBase::SetMovementSpeed_Implementation(EEnemyState State)
+{
+    switch (State)
+    {
+        case EEnemyState::Passive:
+            GetCharacterMovement()->MaxWalkSpeed = PassiveSpeed;
+            break;
+        case EEnemyState::Attacking:
+            GetCharacterMovement()->MaxWalkSpeed = AttackingSpeed;
+            break;
+        case EEnemyState::Dead:
+            GetCharacterMovement()->MaxWalkSpeed = DeadSpeed;
+            break;
+        default:
+            break;
+    }
+}
+
+void AEnemyAIBase::ThrowObject_Implementation()
+{
+    UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+    if (!AnimInstance || !ThrowMontage)
+    {
+        return;
+    }
+
+    AnimInstance->Montage_Play(ThrowMontage);
+
+    if (ThrowSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, ThrowSound, GetActorLocation());
+    }
+}
+
+UAnimMontage* AEnemyAIBase::GetThrowMontage_Implementation()
+{
+    return ThrowMontage;
+}
+
+void AEnemyAIBase::HitResponse()
+{
+    EnemyAIController->SetStateAsFrozen();
+
+    StopAllMontages();
+    GetCharacterMovement()->StopMovementImmediately();
+
+    UAnimInstance* AnimInstance = nullptr;
+    UAnimMontage* MontageToPlay = nullptr;
+
+    if (bIsHuman)
+    {
+        AnimInstance = GetMesh()->GetAnimInstance();
+        MontageToPlay = FrozenMontage_Native;
+    }
+    else
+    {
+        AnimInstance = WolfMesh->GetAnimInstance();
+        MontageToPlay = FrozenMontage_Wolf;
+    }
+
+    if (AnimInstance && MontageToPlay)
+    {
+        AnimInstance->Montage_Play(MontageToPlay);
+
+        // ëª½íƒ€ì£¼ ëë‚˜ë©´ Attackingìœ¼ë¡œ ì „í™˜
+        FOnMontageEnded EndDelegate;
+        EndDelegate.BindUObject(this, &AEnemyAIBase::OnFrozenMontageEnded);
+        AnimInstance->Montage_SetEndDelegate(EndDelegate, MontageToPlay);
+    }
+
+    if (FrozenHitSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, FrozenHitSound, GetActorLocation());
+    }
+}
+
+void AEnemyAIBase::OnFrozenMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+    if (EnemyAIController && EnemyAIController->EnemyState != EEnemyState::Dead)
+    {
+        if (EnemyAIController->AttackTarget)
+        {
+            EnemyAIController->SetStateAsAttacking(EnemyAIController->AttackTarget, true);
+        }
+        else
+        {
+            EnemyAIController->SetStateAsPassive();
+        }
+    }
+}
+
+float AEnemyAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+    float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+    StatusComponent->DecreaseHP(ActualDamage);
+
+    // ì£½ìœ¼ë©´ HitResponse ì•ˆ í•˜ê³  ë°”ë¡œ Dead
+    if (StatusComponent->CurrentHP <= 0)
+    {
+        EnemyAIController->SetStateAsDead();
+
+        //DEAD ìƒíƒœë©´ ëª¨ë“  ëª½íƒ€ì£¼ ì¤‘ë‹¨ + EndDelegate ì œê±°
+        StopAllMontages();
+        FOnMontageEnded EmptyDelegate;
+        if (UAnimInstance* HumanAnim = GetMesh()->GetAnimInstance())
+            HumanAnim->Montage_SetEndDelegate(EmptyDelegate, nullptr);
+
+        if (WolfMesh)
+        {
+            if (UAnimInstance* WolfAnim = WolfMesh->GetAnimInstance())
+                WolfAnim->Montage_SetEndDelegate(EmptyDelegate, nullptr);
+        }
+
+        return ActualDamage;
+    }
+
+    else
+    {
+        OnHitResponse.Broadcast();
+    }
+
+    return ActualDamage;
+}
+
+
 
 
