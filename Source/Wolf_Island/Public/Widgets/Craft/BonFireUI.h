@@ -15,9 +15,12 @@ public:
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
 	class UCraftPanel* CraftPanel;
 
-	// WBP의 닫기 버튼 (이름을 CloseButton으로 맞춰주세요)
+	// WBP의 닫기 버튼
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
 	class UButton* CloseButton;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound")
+    TObjectPtr<USoundBase> FireSound;
 
 protected:
 	virtual void NativeConstruct() override;

@@ -7,6 +7,7 @@
 #include "InputMappingContext.h"
 #include "InputAction.h"
 #include "Interaction/InteractionInterface.h"
+#include "Data/ItemDataStruct.h"
 #include "MainPlayer.generated.h"
 
 class UItemBase;
@@ -43,16 +44,16 @@ public:
 	//class AMainHUD* HUD;
 	
 	//컴포넌트=========================================================================
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	class UCameraComponent* FirstPersonCamera;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	class UStatusComponent* StatusComponent;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	class UInventoryComponent* InventoryComponent;
 	//손에 들 아이템
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	UStaticMeshComponent* ItemMesh;
 	
 	//입력 관련 변수====================================================================
@@ -136,6 +137,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsHoldingItem = false;
 
+	//공격 중인지
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	bool IsAttacking = false;
+
 	//핫바 관련 변수==================================================================
 	//핫바 슬롯 인덱스
 	UPROPERTY(VisibleAnywhere, Category="HotBar")
@@ -163,16 +168,30 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction")
 	float InteractionDuration = 0.0f;
 
-	//애님 몽타주======================================================================
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Anim")
+	//애니메이션 변수======================================================================
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
 	class UAnimMontage* SlideMontage;
-
-	//위젯============================================================================
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
+	UAnimMontage* PunchMontage;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
+	UAnimMontage* FuckyouMontage;
+	
+	//위젯=============================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	TSubclassOf<class UPlayerHUD> HUDClass;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Widget")
 	UPlayerHUD* HUD;
 
+	//사운드============================================================================
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
+	class USoundBase* ItemGettingSound;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
+	USoundBase* JumpSound;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
+	USoundBase* EattingSound;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
+	USoundBase* PunchSound;
+	
 	//공격시 폴리지 판정
 	UPROPERTY(EditAnywhere, Category = "Interaction")
 	TMap<UStaticMesh*, TSubclassOf<class ATree>> FoliageToActorMap;
@@ -212,7 +231,7 @@ public:
 	UFUNCTION()
 	void StopRun();
 
-	UFUNCTION()
+	UFUNCTION(NetMulticast, Server, Reliable)
 	void ToggleCrouch();
 
 	UFUNCTION()
@@ -281,7 +300,17 @@ public:
 	void Interact(AActor* Interactor) override;
 
 	UFUNCTION(BlueprintCallable)
-	void DropItem(class UItemBase* ItemToDrop, const int32 AmountToDrop, bool IsWhole);
+	void DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool IsWhole);
+
+	UFUNCTION(BlueprintPure)
+	UItemBase* GetHoldingItemReference();
+
+	UFUNCTION(BlueprintPure)
+	EItemType GetHoldingItemType();
+	
+	//멀티플레이어
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
 };
 
 

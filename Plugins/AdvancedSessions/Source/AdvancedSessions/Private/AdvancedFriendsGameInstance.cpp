@@ -1,5 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 #include "AdvancedFriendsGameInstance.h"
+
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
 
@@ -232,6 +233,38 @@ void UAdvancedFriendsGameInstance::OnPlayerLoginStatusChangedMaster(int32 Player
 			UE_LOG(AdvancedFriendsInterfaceLog, Warning, TEXT("UAdvancedFriendsInstance Failed to get a controller with the specified index in OnPlayerLoginStatusChangedMaster!"));
 		}
 	}
+}
+
+void UAdvancedFriendsGameInstance::AddActorToLevelSave(FName LevelName, FSavedActorData NewActorData)
+{
+	FSavedActorList& ListWrapper = LevelDataMap.FindOrAdd(LevelName);
+	ListWrapper.Actors.Add(NewActorData);
+}
+
+bool UAdvancedFriendsGameInstance::GetSavedActorsFromLevel(FName LevelName, TArray<FSavedActorData>& OutActorList)
+{
+	if (FSavedActorList* FoundList = LevelDataMap.Find(LevelName))
+	{
+		OutActorList = FoundList->Actors;
+		return true;
+	}
+
+	return false;
+}
+
+void UAdvancedFriendsGameInstance::ClearLevelData(FName LevelName)
+{
+	LevelDataMap.Remove(LevelName);
+}
+
+void UAdvancedFriendsGameInstance::SaveRepairStatus(const TMap<FName, bool>& InStatusMap)
+{
+	GlobalRepairStatusMap = InStatusMap;
+}
+
+TMap<FName, bool> UAdvancedFriendsGameInstance::LoadRepairStatus()
+{
+	return GlobalRepairStatusMap;
 }
 
 void UAdvancedFriendsGameInstance::OnPlayerLoginChangedMaster(int32 PlayerNum)
