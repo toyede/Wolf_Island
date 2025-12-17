@@ -9,10 +9,15 @@
 #include "Animation/AnimInstance.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Components/StatusComponent.h"
+#include "Components/AttackCollisionComponent.h"
 #include "Actors/PatrolRoute.h"
 #include "Components/SplineComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundAttenuation.h"
+#include "BrainComponent.h"
+#include "Actors/Interfaces/SkyInterface.h"
+#include "Engine/DamageEvents.h"
+
 
 
 AEnemyAIBase::AEnemyAIBase()
@@ -62,7 +67,9 @@ AEnemyAIBase::AEnemyAIBase()
     AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
     AIControllerClass = AEnemyAIController::StaticClass();
 
+    // Components
     StatusComponent = CreateDefaultSubobject<UStatusComponent>(TEXT("StatusComponent"));
+    AttackCollisionComponent = CreateDefaultSubobject<UAttackCollisionComponent>(TEXT("AttackCollisionComponent"));
 
     AttackDamage = 10.0f;
 
@@ -88,12 +95,35 @@ void AEnemyAIBase::BeginPlay()
     EnemyAIController = Cast<AEnemyAIController>(GetController());
 
     OnHitResponse.AddDynamic(this, &AEnemyAIBase::HitResponse);
+
+    if (AttackCollisionComponent)
+    {
+        AttackCollisionComponent->OnHitActor.AddUObject(this, &AEnemyAIBase::OnAttackHit);
+        AttackCollisionComponent->AddIgnoredActor(this);
+    }
 }
 
 void AEnemyAIBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void AEnemyAIBase::NotifySkyRemoveSelf()
+{
+    TArray<AActor*> FoundActors;
+    UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("SkyManager"), FoundActors);
+
+    if (FoundActors.Num() > 0)
+    {
+        AActor* Sky = FoundActors[0];
+
+        // 인터페이스가 있으면 안전하게 호출 (없으면 아무 일도 안 일어남 -> 크래시 없음)
+        if (Sky && Sky->Implements<USkyInterface>())
+        {
+            ISkyInterface::Execute_RemoveEnemy(Sky, this);
+        }
+    }
 }
 
 void AEnemyAIBase::ChangeForm(EEnemyForm Form)
@@ -219,6 +249,14 @@ void AEnemyAIBase::StopAllMontages()
     }
 }
 
+void AEnemyAIBase::OnThrowMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+    if (!bInterrupted)
+    {
+        OnThrowEnd.Broadcast();
+    }
+}
+
 void AEnemyAIBase::Growling()
 {
     if (GrowlSound)
@@ -243,7 +281,7 @@ void AEnemyAIBase::SetMovementSpeed_Implementation(EEnemyState State)
         case EEnemyState::Passive:
             GetCharacterMovement()->MaxWalkSpeed = PassiveSpeed;
             break;
-        case EEnemyState::Attacking:
+        case EEnemyState::Combat:
             GetCharacterMovement()->MaxWalkSpeed = AttackingSpeed;
             break;
         case EEnemyState::Dead:
@@ -268,16 +306,64 @@ void AEnemyAIBase::ThrowObject_Implementation()
     {
         UGameplayStatics::PlaySoundAtLocation(this, ThrowSound, GetActorLocation());
     }
+
+    FOnMontageEnded EndDelegate;
+    EndDelegate.BindUObject(this, &AEnemyAIBase::OnThrowMontageEnded);
+    AnimInstance->Montage_SetEndDelegate(EndDelegate, ThrowMontage);
 }
 
-UAnimMontage* AEnemyAIBase::GetThrowMontage_Implementation()
+void AEnemyAIBase::Die_Implementation()
 {
-    return ThrowMontage;
+
+    GetCharacterMovement()->StopMovementImmediately();
+    StopAllMontages();
+
+    if (DieSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, DieSound, GetActorLocation());
+    }
+
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    WolfMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+    bIsDead = true;
+
+    NotifySkyRemoveSelf();
+
+    EnemyAIController->GetBrainComponent()->StopLogic("Enemy Dead");
+
+    SetLifeSpan(2.5f);
+}
+
+void AEnemyAIBase::NormalAttack()
+{
+    if (UAnimInstance* AnimInstance = WolfMesh->GetAnimInstance())
+    {
+        if (AttackMontage)
+        {
+            AnimInstance->Montage_Play(AttackMontage);
+        }
+
+        if (AttackSound)
+        {
+            UGameplayStatics::PlaySoundAtLocation(this, AttackSound, GetActorLocation());
+        }
+
+        FOnMontageEnded EndDelegate;
+        EndDelegate.BindUObject(this, &AEnemyAIBase::OnAttackMontageEnded);
+        AnimInstance->Montage_SetEndDelegate(EndDelegate, AttackMontage);
+    }
 }
 
 void AEnemyAIBase::HitResponse()
 {
-    EnemyAIController->SetStateAsFrozen();
+    if (!EnemyAIController)
+    {
+        return;
+    }
+
+    EnemyAIController->SetEnemyState(EEnemyState::Frozen);
 
     StopAllMontages();
     GetCharacterMovement()->StopMovementImmediately();
@@ -314,17 +400,40 @@ void AEnemyAIBase::HitResponse()
 
 void AEnemyAIBase::OnFrozenMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-    if (EnemyAIController && EnemyAIController->EnemyState != EEnemyState::Dead)
+    if (!EnemyAIController || EnemyAIController->EnemyState == EEnemyState::Dead)
     {
-        if (EnemyAIController->AttackTarget)
-        {
-            EnemyAIController->SetStateAsAttacking(EnemyAIController->AttackTarget, true);
-        }
-        else
-        {
-            EnemyAIController->SetStateAsPassive();
-        }
+        return;
     }
+
+    if (EnemyAIController->AttackTarget)
+    {
+        EnemyAIController->SetEnemyState(EEnemyState::Combat);
+    }
+    else
+    {
+        EnemyAIController->SetEnemyState(EEnemyState::Passive);
+    }
+}
+
+void AEnemyAIBase::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+    if (!bInterrupted)
+    {
+        OnAttackEnd.Broadcast();
+    }
+}
+
+void AEnemyAIBase::OnAttackHit(const FHitResult& HitResult)
+{
+    AActor* HitActor = HitResult.GetActor();
+    if (!HitActor)
+    {
+        return;
+    }
+
+    // 데미지 적용
+    FDamageEvent DamageEvent;
+    HitActor->TakeDamage(AttackDamage, DamageEvent, GetController(), this);
 }
 
 float AEnemyAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -332,14 +441,14 @@ float AEnemyAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
     float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
     StatusComponent->DecreaseHP(ActualDamage);
-
-    // 죽으면 HitResponse 안 하고 바로 Dead
+    
     if (StatusComponent->CurrentHP <= 0)
     {
-        EnemyAIController->SetStateAsDead();
+        if (EnemyAIController)
+        {
+            EnemyAIController->SetEnemyState(EEnemyState::Dead);
+        }
 
-        //DEAD 상태면 모든 몽타주 중단 + EndDelegate 제거
-        StopAllMontages();
         FOnMontageEnded EmptyDelegate;
         if (UAnimInstance* HumanAnim = GetMesh()->GetAnimInstance())
             HumanAnim->Montage_SetEndDelegate(EmptyDelegate, nullptr);
@@ -349,10 +458,7 @@ float AEnemyAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
             if (UAnimInstance* WolfAnim = WolfMesh->GetAnimInstance())
                 WolfAnim->Montage_SetEndDelegate(EmptyDelegate, nullptr);
         }
-
-        return ActualDamage;
     }
-
     else
     {
         OnHitResponse.Broadcast();

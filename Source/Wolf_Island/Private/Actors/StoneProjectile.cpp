@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Actors/StoneProjectile.h"
@@ -13,7 +13,7 @@ AStoneProjectile::AStoneProjectile()
     ProjectileComp->InitialSpeed = 2500.f;
     ProjectileComp->MaxSpeed = 2500.f;
     ProjectileComp->bRotationFollowsVelocity = true;
-    ProjectileComp->ProjectileGravityScale = 0.4f; // Á÷¼± ¿øÇÏ¸é 0
+    ProjectileComp->ProjectileGravityScale = 0.4f; // ì§ì„  ì›í•˜ë©´ 0
     ProjectileComp->bAutoActivate = false;
     InitialLifeSpan = 1.f;
 
@@ -24,7 +24,7 @@ void AStoneProjectile::LaunchProjectile(const FVector& Direction, float Speed)
     if (ProjectileComp)
     {
         ProjectileComp->Velocity = Direction * Speed;
-        ProjectileComp->Activate(true); // ²À ÇÊ¿ä
+        ProjectileComp->Activate(true); // ê¼­ í•„ìš”
     }
 }
 

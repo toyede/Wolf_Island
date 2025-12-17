@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "AI/Tasks/Wolf/BTT_SetStateAsPassive.h"
@@ -17,7 +17,7 @@ EBTNodeResult::Type UBTT_SetStateAsPassive::ExecuteTask(UBehaviorTreeComponent& 
 
 	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(AIPawn, 0);
 
-	AICon->SetStateAsPassive();
+	AICon->SetEnemyState(EEnemyState::Passive);
 
 	return EBTNodeResult::Succeeded;
 }

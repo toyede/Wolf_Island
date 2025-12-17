@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -20,10 +20,13 @@
 
 class APatrolRoute;
 class UAnimMontage;
+class UAttackCollisionComponent;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHitResponse);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHitResponse); // 맞을 때 피격 모션 바인딩용
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnThrowEnd); // 투척 공격 끝났음을 알리는 용도
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAttackEnd); // 기본 공격 끝났음을 알리는 용도
 
-UENUM(BlueprintType)
+UENUM(BlueprintType) // 상태 구분
 enum class EEnemyForm : uint8
 {
 	Human UMETA(DisplayName = "Human"),
@@ -41,24 +44,49 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Delegate")
 	FOnHitResponse OnHitResponse;
 
+	UPROPERTY(BlueprintAssignable, Category = "Delegate")
+	FOnThrowEnd OnThrowEnd;
+
+	UPROPERTY(BlueprintAssignable, Category = "Delegate")
+	FOnAttackEnd OnAttackEnd;
+
 protected:
 	virtual void BeginPlay() override;
 
 public:	
 	virtual void Tick(float DeltaTime) override;
 
+	// 하늘 가져와야 해!!!!!!!
+	UFUNCTION(BlueprintCallable)
+	void NotifySkyRemoveSelf();
+
+	// 패트롤
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Patrol Route")
-	TObjectPtr<APatrolRoute> AssignedPatrolRoute; // �̰� �ٷ� �Ҵ����� ����
+	TObjectPtr<APatrolRoute> AssignedPatrolRoute; // 이걸 바로 할당하진 않음
 
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Patrol Route")
-	TObjectPtr<APatrolRoute> NativePatrolRoute; // ���ֹ��� �� �� ��Ʈ�ѷ�Ʈ 
+	TObjectPtr<APatrolRoute> NativePatrolRoute; // 원주민일 때 쓸 패트롤루트 
 
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Patrol Route")
-	TObjectPtr<APatrolRoute> WolfPatrolRoute; // ������ �� �� ��Ʈ�ѷ�Ʈ 
+	TObjectPtr<APatrolRoute> WolfPatrolRoute; // 늑대일 때 쓸 패트롤루트 
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-	class UStatusComponent* StatusComponent;
+	UFUNCTION(BlueprintCallable)
+	int32 GetNextPoint();
 
+	UFUNCTION(BlueprintCallable)
+	int32 GetRandomPointIndex();
+
+	UPROPERTY(VisibleAnywhere)
+	int32 CurrentPatrolIndex = 0;
+
+	// 컴포넌트
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Stats")
+	class UStatusComponent* StatusComponent; 
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Attack")
+	UAttackCollisionComponent* AttackCollisionComponent;
+
+	//상태 변환 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Stats")
 	EEnemyForm EnemyForm;
 
@@ -68,9 +96,14 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Animation")
 	UAnimMontage* ChangeFormMontage;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Form Change")
+	bool bIsHuman = true;
+
+	// 임시 변수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	float AttackDamage;
 
+	// 메시
 	UPROPERTY(VisibleAnywhere, Category = "Mesh")
 	USkeletalMeshComponent* FaceMesh;
 
@@ -89,33 +122,22 @@ public:
 	UPROPERTY()
 	TArray<USkeletalMeshComponent*> HumanParts;
 
+	// 애님블프
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Form Change")
 	TSubclassOf<UAnimInstance> HumanAnimBP;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Form Change")
 	TSubclassOf<UAnimInstance> WolfAnimBP;
 
+	// 이펙트
 	UPROPERTY(EditAnywhere, Category = "Particle")
 	class UNiagaraSystem* FormChangeNiagaraEffect;
 
 	UFUNCTION()
 	void SpawnParticle();
 
-	UFUNCTION(BlueprintCallable)
-	int32 GetNextPoint();
-
-	UFUNCTION(BlueprintCallable)
-	int32 GetRandomPointIndex();
-
-	UPROPERTY(VisibleAnywhere)
-	int32 CurrentPatrolIndex = 0;
-
-	UFUNCTION(BlueprintCallable, Category = "Animation")
-	void StopAllMontages();
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Form Change")
-	bool bIsHuman = true;
-
+	//사운드
 	UFUNCTION(BlueprintCallable, Category = "Sound")
 	void Growling();
 
@@ -124,19 +146,37 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound")
 	USoundAttenuation* AISoundAttenuation;
-
+	
+	// 인터페이스
 	virtual void SetMovementSpeed_Implementation(EEnemyState State) override;
 
 	virtual void ThrowObject_Implementation() override;
 
-	virtual UAnimMontage* GetThrowMontage_Implementation() override;
+	virtual void Die_Implementation() override;
 
+	virtual void NormalAttack() override;
+	// 몽타주 제어
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	void StopAllMontages();
+
+	UFUNCTION()
+	void OnThrowMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	UFUNCTION()
+	void OnFrozenMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	UFUNCTION()
+	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	// 타격
 	UFUNCTION()
 	void HitResponse();
 
+	// 컨트롤러
 	UPROPERTY(BlueprintReadWrite, Category = "AI|Controller")
 	TObjectPtr<AEnemyAIController> EnemyAIController;
 
+	// 이동속도
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Movement")
 	float PassiveSpeed = 0.f;
 
@@ -152,6 +192,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float DeadSpeed = 0.f;
 
+	// 전투 관련
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|ThrowObject")
 	TSubclassOf<AActor> ProjectileClass;
 
@@ -173,9 +214,21 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Frozen")
 	TObjectPtr<USoundBase> FrozenHitSound;
 
-	UFUNCTION()
-	float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Dead")
+	bool bIsDead = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Dead")
+	TObjectPtr<USoundBase> DieSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Attack")
+	TObjectPtr<UAnimMontage> AttackMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Attack")
+	TObjectPtr<USoundBase> AttackSound;
 
 	UFUNCTION()
-	void OnFrozenMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	void OnAttackHit(const FHitResult& HitResult);
+
+	UFUNCTION()
+	float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser);
 };

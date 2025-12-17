@@ -1,9 +1,10 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+Ôªø// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "AI/AIControllers/EnemyAIcontrollerbase.h"
+#include "Perception/AIPerceptionTypes.h"
 #include "EnemyAIController.generated.h"
 
 class UAISenseConfig_Sight;
@@ -17,10 +18,10 @@ enum class EEnemyState : uint8
 {
 	None UMETA(DisplayName = "None"),
 	Passive UMETA(DisplayName = "Passive"),
-	Attacking UMETA(DisplayName = "Attacking"),
+	Combat UMETA(DisplayName = "Combat"),
 	Dead UMETA(DisplayName = "Dead"),
 	Frozen UMETA(DisplayName = "Frozen"),
-	Investigating UMETA(DisplayName = "Investigating")
+	Investigating UMETA(DisplayName = "Investigating"),
 };
 
 UCLASS()
@@ -31,13 +32,47 @@ class WOLF_ISLAND_API AEnemyAIController : public AEnemyAIControllerBase
 public:
 	AEnemyAIController();
 
+	// Blackboard Keys
+	UPROPERTY(EditDefaultsOnly, Category = "AI|Blackboard")
+	FName EnemyFormKey = TEXT("Form");
+
+	UPROPERTY(EditDefaultsOnly, Category = "AI|Blackboard")
+	FName PointOfInterestKey = TEXT("PointOfInterest");
+
+	// Current State
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|State")
+	EEnemyState EnemyState;
+
+	UFUNCTION(BlueprintCallable, Category = "AI|State")
+	void SetEnemyState(EEnemyState NewState);
+
 protected:
-	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnUnPossess() override;
-	virtual void OnPerceptionUpdated(const TArray<AActor*>& UpdatedActors) override;
 
-	//~ Perception Config
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
+	TObjectPtr<AEnemyAIBase> ControlledEnemy;
+
+	
+	UFUNCTION()
+	void OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus);
+
+	void HandleSight(AActor* Actor, const FAIStimulus& Stimulus);
+	void HandleDamage(AActor* Actor, const FAIStimulus& Stimulus);
+	void HandleHearing(AActor* Actor, const FAIStimulus& Stimulus);
+	void HandleScent(const FAIStimulus& Stimulus);
+
+	bool ShouldSwitchTarget(AActor* Newtarget) const;
+	bool IsTargetValid(AActor* Target) const;
+
+	void OnEnterState(EEnemyState NewState);
+	void OnExitState(EEnemyState OldState);
+
+	// ÌÉÄÏù¥Î®∏
+	FTimerHandle HearingReactTimer;
+	FTimerHandle ForgottenCheckTimer;
+
+	// ÌçºÏÖâÏÖò
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|Perception")
 	TObjectPtr<UAISenseConfig_Sight> SightConfig;
 
@@ -48,57 +83,12 @@ protected:
 	TObjectPtr<UAISenseConfig_Damage> DamageConfig;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|Perception")
-	TObjectPtr<UAISenseConfig_Scent> ScentConfig;
+	TObjectPtr<UAISenseConfig_Scent> ScentConfig;	
 
-	
-
-	//~ ∞®¡ˆµ» æ◊≈Õ
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI|Perception")
-	TArray<AActor*> KnownSeenActors;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
-	TObjectPtr<AEnemyAIBase> ControlledEnemy;
-
-	//~ ≈∏¿Ã∏”
-	FTimerHandle HearingReactTimer;
-	FTimerHandle ForgottenCheckTimer;
-
-	//~ ≥ª∫Œ «‘ºˆ
-	UFUNCTION(BlueprintCallable, Category = "AI|Perception")
-	bool CanSenseActor(AActor* Actor, FAIStimulus& OutStimulus);
-
-	UFUNCTION()
-	void CheckIfForgottenSeenActor();
-
-	UFUNCTION()
-	void HandleForgotActor(AActor* Actor);
+	void BindCharacterEvents();
 
 public:
-	//~ Blackboard Key
-	UPROPERTY(EditDefaultsOnly, Category = "AI|Blackboard")
-	FName EnemyFormKey = TEXT("Form");
-
-	//~ ªÛ≈¬ ¿¸»Ø
-	UFUNCTION(BlueprintCallable, Category = "AI|State")
-	void SetStateAsPassive();
-
-	UFUNCTION(BlueprintCallable, Category = "AI|State")
-	void SetStateAsAttacking(AActor* Actor, bool UseLastKnownAttackTarget);
-
-	UFUNCTION(BlueprintCallable, Category = "AI|State")
-	void SetStateAsFrozen();
-
-	UFUNCTION(BlueprintCallable, Category = "AI|State")
-	void SetStateAsInvestigating(FVector Location);
-
-	UFUNCTION(BlueprintCallable, Category = "AI|State")
-	void SetStateAsDead();
-
-	//~ Patrol
+	// Patrol
 	UFUNCTION(BlueprintCallable, Category = "AI|Patrol")
 	void MoveToNextRoute();
-
-	//~ ªÛ≈¬
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI|State")
-	EEnemyState EnemyState;
 };

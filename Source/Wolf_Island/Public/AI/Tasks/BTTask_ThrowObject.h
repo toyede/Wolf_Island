@@ -1,6 +1,8 @@
-#include "CoreMinimal.h"
+ï»¿#include "CoreMinimal.h"
 #include "BehaviorTree/BTTaskNode.h"
 #include "BTTask_ThrowObject.generated.h"
+
+class AEnemyAIBase;
 
 UCLASS()
 class WOLF_ISLAND_API UBTTask_ThrowObject : public UBTTaskNode
@@ -12,9 +14,13 @@ public:
 
     virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 
-    // ÀÌ ÇÔ¼ö°¡ ÀÖ¾î¾ß BT°¡ ÅÂ½ºÅ©¸¦ Áß°£¿¡ Ãë¼ÒÇÒ ¼ö ÀÖ½À´Ï´Ù.
     virtual EBTNodeResult::Type AbortTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 
 private:
-    void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted, UBehaviorTreeComponent* OwnerComp);
+    UFUNCTION()
+    void OnThrowFinished();
+
+    // ì•ˆì „í•œ ì–¸ë°”ì¸ë”©ê³¼ FinishLatentTaskë¥¼ ìœ„í•´ ìºì‹±
+    TWeakObjectPtr<AEnemyAIBase> CachedEnemy;
+    TWeakObjectPtr<UBehaviorTreeComponent> CachedOwnerComp;
 };

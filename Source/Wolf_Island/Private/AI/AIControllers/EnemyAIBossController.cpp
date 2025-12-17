@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "AI/AIControllers/EnemyAIBossController.h"
 
@@ -24,7 +24,7 @@ AEnemyAIBossController::AEnemyAIBossController()
 	SightConfig->DetectionByAffiliation.bDetectNeutrals = true;
 	SightConfig->SetMaxAge(10.0f);
 
-	// Perception¿¡ µî·Ï
+	// Perceptionì— ë“±ë¡
 	AIPerceptionComp->ConfigureSense(*SightConfig);
 	AIPerceptionComp->SetDominantSense(SightConfig->GetSenseImplementation());
 }

@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -36,22 +36,22 @@ protected:
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnPerceptionUpdated(const TArray<AActor*>& UpdatedActors) override;
 
-	//~ Perception Config
+	// í¼ì…‰ì…˜
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|Perception")
 	TObjectPtr<UAISenseConfig_Sight> SightConfig;
 
-	//~ »óÅÂ
+	// ì´ˆê¸° ìƒíƒœ
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI|State")
 	EBossState BossState = EBossState::Idle;
 
-	//~ Current Target
+	// ê³µê²© íƒ€ê²Ÿ
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI|Target")
 	TObjectPtr<ACharacter> CurrentTarget;
 
 	void InitializeAttackTarget();
 
 public:
-	//~ »óÅÂ ÀüÈ¯
+	// ìƒíƒœ ì „í™˜
 	UFUNCTION(BlueprintCallable, Category = "AI|State")
 	void SetNewState(EBossState NewState);
 

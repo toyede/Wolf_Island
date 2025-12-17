@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "AI/AIControllers/EnemyAIController.h"
 
@@ -49,7 +49,7 @@ AEnemyAIController::AEnemyAIController()
 	ScentConfig = CreateDefaultSubobject<UAISenseConfig_Scent>(TEXT("ScentConfig"));
 	ScentConfig->SetMaxAge(5.0f);
 
-	// Perception�� ���
+	// Perception에 등록
 	AIPerceptionComp->ConfigureSense(*SightConfig);
 	AIPerceptionComp->ConfigureSense(*HearingConfig);
 	AIPerceptionComp->ConfigureSense(*DamageConfig);
@@ -58,222 +58,230 @@ AEnemyAIController::AEnemyAIController()
 	AIPerceptionComp->SetDominantSense(SightConfig->GetSenseImplementation());
 }
 
-void AEnemyAIController::BeginPlay()
-{
-	Super::BeginPlay();
-}
-
 void AEnemyAIController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
 	ControlledEnemy = Cast<AEnemyAIBase>(InPawn);
-
 	if (ControlledEnemy)
 	{
-		SetStateAsPassive();
-		ControlledEnemy->ChangeForm(ControlledEnemy->EnemyForm);
+		SetEnemyState(EEnemyState::Passive);
+
+		// [이벤트 바인딩] 캐릭터 델리게이트 (공격 종료 등)
+		BindCharacterEvents();
 	}
 
-	// Forgotten Actor üũ Ÿ�̸�
-	GetWorld()->GetTimerManager().SetTimer(
-		ForgottenCheckTimer,
-		this,
-		&AEnemyAIController::CheckIfForgottenSeenActor,
-		0.5f,
-		true
-	);
+	// [핵심 변경] Perception Component의 델리게이트에 바인딩
+	// 배열이 아니라 개별 타겟/자극 단위로 호출됨
+	if (AIPerceptionComp)
+	{
+		AIPerceptionComp->OnTargetPerceptionUpdated.AddDynamic(this, &AEnemyAIController::OnTargetPerceptionUpdated);
+	}
 }
 
 void AEnemyAIController::OnUnPossess()
 {
 	Super::OnUnPossess();
 
-	GetWorld()->GetTimerManager().ClearTimer(ForgottenCheckTimer);
-	GetWorld()->GetTimerManager().ClearTimer(HearingReactTimer);
+	// 바인딩 해제
+	if (AIPerceptionComp)
+	{
+		AIPerceptionComp->OnTargetPerceptionUpdated.RemoveDynamic(this, &AEnemyAIController::OnTargetPerceptionUpdated);
+	}
+
+	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
 }
 
-void AEnemyAIController::OnPerceptionUpdated(const TArray<AActor*>& UpdatedActors)
+void AEnemyAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
 {
-	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
-	if (!PlayerPawn)
+	if (EnemyState == EEnemyState::Dead) return;
+
+	TSubclassOf<UAISense> SensedClass = UAIPerceptionSystem::GetSenseClassForStimulus(GetWorld(), Stimulus);
+
+	if (SensedClass == UAISense_Sight::StaticClass())
 	{
+		HandleSight(Actor, Stimulus);
+	}
+	else if (SensedClass == UAISense_Damage::StaticClass())
+	{
+		HandleDamage(Actor, Stimulus);
+	}
+	else if (SensedClass == UAISense_Hearing::StaticClass())
+	{
+		HandleHearing(Actor, Stimulus);
+	}
+	else if (SensedClass == UAISense_Scent::StaticClass())
+	{
+		HandleScent(Stimulus);
+	}
+}
+
+void AEnemyAIController::HandleSight(AActor* Actor, const FAIStimulus& Stimulus)
+{
+	// 1. 시야 소실 (Lost)
+	if (!Stimulus.WasSuccessfullySensed())
+	{
+		// 즉시 반응하기보다 CheckIfForgottenSeenActor 타이머에게 맡김 (깜빡임 방지)
 		return;
 	}
 
-	for (AActor* Actor : UpdatedActors)
+	// 2. 시야 감지 (Seen) & 플레이어 확인
+	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+	if (Actor == PlayerPawn)
 	{
-		FAIStimulus Stimulus;
-		if (!CanSenseActor(Actor, Stimulus))
+		// [Target Locking] 타겟을 바꿀지 말지 결정
+		if (ShouldSwitchTarget(Actor))
 		{
-			continue;
-		}
-
-		// Sight
-		if (Stimulus.Type == UAISense::GetSenseID<UAISense_Sight>() && Actor == PlayerPawn)
-		{
-			KnownSeenActors.AddUnique(Actor);
-			SetStateAsAttacking(Actor, false);
-		}
-		// Hearing (Howling)
-		else if (Stimulus.Type == UAISense::GetSenseID<UAISense_Hearing>() && Stimulus.Tag == FName("Howling"))
-		{
-			float RandomDelay = FMath::RandRange(1.0f, 2.0f);
-
-			GetWorld()->GetTimerManager().SetTimer(
-				HearingReactTimer,
-				FTimerDelegate::CreateLambda([this, Actor]()
-					{
-						SetStateAsAttacking(Actor, false);
-					}),
-				RandomDelay,
-				false
-			);
-		}
-
-		else if (Stimulus.Type == UAISense::GetSenseID<UAISense_Damage>())
-		{
-			SetStateAsAttacking(Actor, false);
-		}
-
-		// Scent
-		else if (Stimulus.Type == UAISense::GetSenseID<UAISense_Scent>() && Actor == PlayerPawn)
-		{
-			SetStateAsInvestigating(Stimulus.StimulusLocation);
+			AttackTarget = Actor;
+			SetEnemyState(EEnemyState::Combat);
 		}
 	}
 }
 
-bool AEnemyAIController::CanSenseActor(AActor* Actor, FAIStimulus& OutStimulus)
+void AEnemyAIController::HandleDamage(AActor* Actor, const FAIStimulus& Stimulus)
 {
-	if (!Actor || !AIPerceptionComp)
+	if (!Stimulus.WasSuccessfullySensed()) return;
+
+	// 피격은 최우선 순위 -> 무조건 타겟 변경 및 공격 태세
+	AttackTarget = Actor;
+	SetEnemyState(EEnemyState::Combat);
+}
+
+void AEnemyAIController::HandleHearing(AActor* Actor, const FAIStimulus& Stimulus)
+{
+	if (!Stimulus.WasSuccessfullySensed()) return;
+	if (Stimulus.Tag != FName("Howling")) return;
+
+	// 이미 교전 중이면 소리 무시
+	if (EnemyState == EEnemyState::Combat) return;
+
+	// 반응 딜레이
+	float RandomDelay = FMath::RandRange(1.0f, 2.0f);
+	FTimerDelegate TimerDel;
+	TimerDel.BindWeakLambda(this, [this, Actor]()
+		{
+			// 딜레이 후에도 타겟이 유효하고 아직 교전 중이 아니라면 공격 시작
+			if (IsValid(Actor) && EnemyState != EEnemyState::Combat && EnemyState != EEnemyState::Dead)
+			{
+				AttackTarget = Actor;
+				SetEnemyState(EEnemyState::Combat);
+			}
+		});
+
+	GetWorld()->GetTimerManager().SetTimer(HearingReactTimer, TimerDel, RandomDelay, false);
+}
+
+void AEnemyAIController::HandleScent(const FAIStimulus& Stimulus)
+{
+	if (!Stimulus.WasSuccessfullySensed()) return;
+
+	// 평화롭거나 조사 중일 때만 냄새 반응
+	if (EnemyState == EEnemyState::Passive || EnemyState == EEnemyState::Investigating)
+	{
+		// 냄새 위치 저장
+		if (UBlackboardComponent* BB = GetBlackboardComponent())
+		{
+			BB->SetValueAsVector(PointOfInterestKey, Stimulus.StimulusLocation);
+		}
+		SetEnemyState(EEnemyState::Investigating);
+	}
+}
+
+// ============================================================================
+// [2] Target Locking Helper
+// ============================================================================
+
+bool AEnemyAIController::ShouldSwitchTarget(AActor* NewTarget) const
+{
+	// 1. 현재 타겟이 없으면 -> 변경 허용
+	if (!IsTargetValid(AttackTarget)) return true;
+
+	// 2. 이미 공격 중(Combat)이고 현재 타겟이 살아있음 -> 변경 불가 (Locking)
+	if (EnemyState == EEnemyState::Combat)
 	{
 		return false;
 	}
 
-	FActorPerceptionBlueprintInfo Info;
-	AIPerceptionComp->GetActorsPerception(Actor, Info);
-
-	for (const FAIStimulus& Stimulus : Info.LastSensedStimuli)
-	{
-		if (Stimulus.WasSuccessfullySensed())
-		{
-			OutStimulus = Stimulus;
-			return true;
-		}
-	}
-
-	return false;
+	// 3. 그 외 상태(조사 중 등) -> 변경 허용
+	return true;
 }
 
-void AEnemyAIController::CheckIfForgottenSeenActor()
+bool AEnemyAIController::IsTargetValid(AActor* Target) const
 {
-	if (!AIPerceptionComp)
-	{
-		return;
-	}
-
-	TArray<AActor*> KnownPerceived;
-	AIPerceptionComp->GetKnownPerceivedActors(UAISense_Sight::StaticClass(), KnownPerceived);
-
-	for (AActor* Actor : KnownSeenActors)
-	{
-		if (!KnownPerceived.Contains(Actor))
-		{
-			HandleForgotActor(Actor);
-		}
-	}
+	return IsValid(Target); // 필요 시 죽음 여부 체크 추가 (Interface 등)
 }
 
-void AEnemyAIController::HandleForgotActor(AActor* Actor)
+// ============================================================================
+// [3] State Management (Switch-Case Centralized)
+// ============================================================================
+
+void AEnemyAIController::SetEnemyState(EEnemyState NewState)
 {
-	KnownSeenActors.Remove(Actor);
+	if (EnemyState == NewState) return;
 
-	if (Actor == AttackTarget)
-	{
-		SetStateAsPassive();
-	}
-}
+	OnExitState(EnemyState); // 이전 상태 정리
+	EnemyState = NewState;   // 상태 변경
 
-void AEnemyAIController::SetStateAsPassive()
-{
-	AttackTarget = nullptr;
-	EnemyState = EEnemyState::Passive;
-
+	// 블랙보드 Enum 업데이트
 	if (UBlackboardComponent* BB = GetBlackboardComponent())
 	{
 		BB->SetValueAsEnum(StateKey, static_cast<uint8>(EnemyState));
+	}
+
+	OnEnterState(NewState);  // 새 상태 진입
+}
+
+void AEnemyAIController::OnEnterState(EEnemyState NewState)
+{
+	UBlackboardComponent* BB = GetBlackboardComponent();
+	if (!BB) return;
+
+	switch (NewState)
+	{
+	case EEnemyState::Passive:
+		AttackTarget = nullptr;
 		BB->ClearValue(AttackTargetKey);
-	}
-}
+		break;
 
-void AEnemyAIController::SetStateAsAttacking(AActor* Actor, bool UseLastKnownAttackTarget)
-{
-	if (EnemyState == EEnemyState::Dead)
-	{
-		return;
-	}
+	case EEnemyState::Combat:
+		if (IsTargetValid(AttackTarget))
+		{
+			BB->SetValueAsObject(AttackTargetKey, AttackTarget);
+		}
+		else
+		{
+			SetEnemyState(EEnemyState::Passive); // 타겟 유효성 재확인
+		}
+		break;
 
-	AActor* NewAttackTarget;
-
-	if (UseLastKnownAttackTarget && Actor)
-	{
-		NewAttackTarget = Actor;
-	}
-	else
-	{
-		NewAttackTarget = AttackTarget;
-	}
-
-	if (!NewAttackTarget)
-	{
-		SetStateAsPassive();
-		return;
-	}
-
-	EnemyState = EEnemyState::Attacking;
-
-	if (UBlackboardComponent* BB = GetBlackboardComponent())
-	{
-		BB->SetValueAsEnum(StateKey, static_cast<uint8>(EnemyState));
-		BB->SetValueAsObject(AttackTargetKey, NewAttackTarget);
-	}
-
-	AttackTarget = NewAttackTarget;
-}
-
-void AEnemyAIController::SetStateAsFrozen()
-{
-
-	EnemyState = EEnemyState::Frozen;
-
-	if (UBlackboardComponent* BB = GetBlackboardComponent())
-	{
-		BB->SetValueAsEnum(StateKey, static_cast<uint8>(EnemyState));
-	}
-}
-
-void AEnemyAIController::SetStateAsInvestigating(FVector Location)
-{
-	EnemyState = EEnemyState::Investigating;
-
-	if (UBlackboardComponent* BB = GetBlackboardComponent())
-	{
-		//BB->SetValueAsVector()
-	}
-}
-
-void AEnemyAIController::SetStateAsDead()
-{
-
-	AttackTarget = nullptr;
-	EnemyState = EEnemyState::Dead;
-
-	if (UBlackboardComponent* BB = GetBlackboardComponent())
-	{
-		BB->SetValueAsEnum(StateKey, static_cast<uint8>(EnemyState));
+	case EEnemyState::Investigating:
+		AttackTarget = nullptr;
 		BB->ClearValue(AttackTargetKey);
+		break;
+
+	case EEnemyState::Dead:
+	case EEnemyState::Frozen:
+		StopMovement();
+		break;
 	}
+}
+
+void AEnemyAIController::OnExitState(EEnemyState OldState)
+{
+	// 필요 시 구현 (예: 타이머 클리어 등)
+}
+
+// ============================================================================
+// [4] Event Binding (Task Completion)
+// ============================================================================
+
+void AEnemyAIController::BindCharacterEvents()
+{
+	// 캐릭터 스크립트에 델리게이트가 있다고 가정 (예: OnAttackMontageEnded)
+	// if (ControlledEnemy)
+	// {
+	//    ControlledEnemy->OnAttackEnded.AddDynamic(this, &AEnemyAIController::OnCharacterAttackFinished);
+	// }
 }
 
 void AEnemyAIController::MoveToNextRoute()

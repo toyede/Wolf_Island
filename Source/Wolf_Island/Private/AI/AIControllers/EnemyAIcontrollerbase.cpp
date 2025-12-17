@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "AI/AIControllers/EnemyAIcontrollerbase.h"
 #include "BehaviorTree/BehaviorTree.h"
@@ -20,8 +20,6 @@ void AEnemyAIControllerBase::BeginPlay()
 	{
 		AIPerceptionComp->OnPerceptionUpdated.AddDynamic(this, &AEnemyAIControllerBase::OnPerceptionUpdated);
 	}
-
-	AttackTarget = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
 }
 
 void AEnemyAIControllerBase::OnPossess(APawn* InPawn)
@@ -46,5 +44,5 @@ void AEnemyAIControllerBase::OnUnPossess()
 
 void AEnemyAIControllerBase::OnPerceptionUpdated(const TArray<AActor*>& UpdatedActors)
 {
-	// ÀÚ½Ä Å¬·¡½º¿¡¼­ ±¸Çö
+	// ìì‹ í´ë˜ìŠ¤ì—ì„œ êµ¬í˜„
 }

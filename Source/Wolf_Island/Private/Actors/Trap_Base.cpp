@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Actors/Trap_Base.h"
@@ -53,7 +53,7 @@ void ATrap_Base::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* Oth
 
 			Enemy->GetCharacterMovement()->DisableMovement();
 
-			// SetLifeSpan ´ë½Å Å¸ÀÌ¸Ó »ç¿ë
+			// SetLifeSpan ëŒ€ì‹  íƒ€ì´ë¨¸ ì‚¬ìš©
 			GetWorldTimerManager().SetTimer(ReleaseTimerHandle, this, &ATrap_Base::ReleaseTrap, TrapSpan, false);
 		}
 	}
