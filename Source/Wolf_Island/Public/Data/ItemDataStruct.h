@@ -39,6 +39,8 @@ struct FItemNumericData
 	GENERATED_USTRUCT_BODY();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool IsStackable;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 MaxAmount;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Damage;
@@ -57,7 +59,9 @@ struct FItemNumericData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float InteractionDuration;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool IsStackable;
+	bool IsUsable;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float UseDuration;
 };
 
 //아이템 에셋 데이터 (아이콘, 메쉬, BP)

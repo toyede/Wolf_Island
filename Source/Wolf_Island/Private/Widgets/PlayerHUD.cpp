@@ -11,12 +11,13 @@
 #include "Components/TextBlock.h"
 #include "Components/WrapBox.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Widgets/Inventory/HotbarSlot.h"
 #include "Widgets/Inventory/InventorySlot.h"
 
 void UPlayerHUD::NativeConstruct()
 {
 	Super::NativeConstruct();
-	
+
 	RefreshHotBar();
 }
 
@@ -123,17 +124,21 @@ void UPlayerHUD::UpdateInteraction()
 void UPlayerHUD::RefreshHotBar()
 {
 	HotBar->ClearChildren();
+	HotBar->InvalidateLayoutAndVolatility();
 	
 	for (int i=0; i<6; i++)
 	{
-		UInventorySlot* HotSlot = CreateWidget<UInventorySlot>(this, SlotClass);
+		UHotbarSlot* HotSlot = CreateWidget<UHotbarSlot>(this, SlotClass);
 		HotSlot->SetDragDrop(false);
 		HotSlot->SetOwnerRef(PlayerRef->InventoryComponent);
+		HotSlot->SetSlotNumber(i+1);
 
 		if (UItemBase* Item = PlayerRef->InventoryComponent->GetInventory()[i].Item)
 		{
 			HotSlot->SetItemReference(Item);
 		}
+
+		HotSlot->SetUnSelectedSlot();
 		
 		if (PlayerRef->HotBarIndex == i)
 		{
@@ -142,4 +147,24 @@ void UPlayerHUD::RefreshHotBar()
 		
 		HotBar->AddChildToWrapBox(HotSlot);
 	}
+
+	/*for (UWidget* Child : HotBar->GetAllChildren())
+	{
+		int32 SlotIndex = HotBar->GetChildIndex(Child);
+		
+		if (UHotbarSlot* HotSlot = Cast<UHotbarSlot>(Child))
+		{
+			if (UItemBase* Item = PlayerRef->InventoryComponent->GetInventory()[SlotIndex].Item)
+			{
+				HotSlot->SetItemReference(Item);
+			}
+
+			HotSlot->SetUnSelectedSlot();
+		
+			if (PlayerRef->HotBarIndex == SlotIndex)
+			{
+				HotSlot->SetSelectedSlot();
+			}
+		}
+	}*/
 }

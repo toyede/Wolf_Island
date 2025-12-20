@@ -129,10 +129,7 @@ void APickup::PickUp(const AActor* Picker)
                 }
                 //디버깅 결과 메시지
                 UE_LOG(LogTemp, Warning, TEXT("%s"), *AddResult.ResultMessage.ToString());
-                if (const AMainPlayer* player = Cast<AMainPlayer>(Picker))
-                {
-                    
-                }
+  
             } else
             {
                 //디버깅 결과 메시지

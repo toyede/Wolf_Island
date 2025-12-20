@@ -12,6 +12,7 @@
 #include "Camera/CameraComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/InstancedStaticMeshComponent.h"
+#include "Components/WeaponComponent.h"
 #include "Item/Tree.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InventoryComponent.h"
@@ -34,6 +35,8 @@ AMainPlayer::AMainPlayer()
 	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>("FirstPersonCamera");
 
 	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>("InventoryComponent");
+
+	WeaponComponent = CreateDefaultSubobject<UWeaponComponent>("WeaponComponent");
 
 	//손에 든 아이템 메쉬
 	ItemMesh = CreateDefaultSubobject<UStaticMeshComponent>("Item");
@@ -147,7 +150,7 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 		EnhancedInputComponent->BindAction(UseItemAction, ETriggerEvent::Completed, this, &AMainPlayer::StopUseItem);
 
 		//핫바 숫자키
-		EnhancedInputComponent->BindAction(HotBarAction, ETriggerEvent::Started, this, &AMainPlayer::HandleHotBar);
+		EnhancedInputComponent->BindAction(HotBarAction, ETriggerEvent::Triggered, this, &AMainPlayer::HandleHotBar);
 		//핫바 마우스 휠
 		EnhancedInputComponent->BindAction(HotBarWheelAction, ETriggerEvent::Triggered, this, &AMainPlayer::HandleHotBarWithWheel);
 
@@ -406,7 +409,8 @@ void AMainPlayer::EndSliding(UAnimMontage* Montage, bool bInterrupted)
 
 void AMainPlayer::UseItem(UItemBase* Item)
 {
-	UE_LOG(LogTemp, Warning, TEXT("USE ITEM EXECUTED"))
+	UE_LOG(LogTemp, Warning, TEXT("USE ITEM EXECUTED"));
+	
 	if (InventoryComponent)
 	{
 		if (Item)
@@ -424,7 +428,7 @@ void AMainPlayer::UseItem(UItemBase* Item)
 			}
 		} else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("NO ITEM IN HOTBAR SLOT"))
+			UE_LOG(LogTemp, Warning, TEXT("NO ITEM IN HOTBAR SLOT"));
 		}
 	}
 }
@@ -434,10 +438,14 @@ void AMainPlayer::StartUseItem()
 {
 	if (UItemBase* TargetItem = InventoryComponent->GetItemAtIndex(HotBarIndex))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ITEM IS VALID AND START USE ITEM"))
+		//사용 가능한 아이템이 아니면 암것두 안하긔.
+		if (!TargetItem->NumericData.IsUsable) return;
+		
+		UE_LOG(LogTemp, Warning, TEXT("ITEM IS VALID AND START USE ITEM"));
+		
 		if (!GetWorld()->GetTimerManager().IsTimerActive(ItemUseTimer))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("TIMER EXECUTED"))
+			UE_LOG(LogTemp, Warning, TEXT("TIMER EXECUTED"));
 			UE_LOG(LogTemp, Warning, TEXT("TARGET ITEM : [ %s ] : DURATION : [ %f ]"), *TargetItem->TextData.Name.ToString(), TargetItem->NumericData.InteractionDuration);
 			
 			
@@ -452,7 +460,7 @@ void AMainPlayer::StartUseItem()
 			);
 		}else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("TIMER NOT EXECUTED"))
+			UE_LOG(LogTemp, Warning, TEXT("TIMER NOT EXECUTED"));
 		}
 	} else
 	{
@@ -462,7 +470,7 @@ void AMainPlayer::StartUseItem()
 
 void AMainPlayer::StopUseItem()
 {
-	UE_LOG(LogTemp, Warning, TEXT("USE ITEM TIMER CANCELED"))
+	UE_LOG(LogTemp, Warning, TEXT("USE ITEM TIMER CANCELED"));
 	GetWorld()->GetTimerManager().ClearTimer(ItemUseTimer);
 }
 
