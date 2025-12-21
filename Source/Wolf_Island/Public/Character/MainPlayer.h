@@ -224,58 +224,76 @@ public:
 
 	virtual void NotifyControllerChanged() override;
 
+	//점프 시작 함수
 	UFUNCTION()
 	void StartJump();
 
+	//착지 시 실행되는 함수
 	void Landed(const FHitResult& Hit) override;
 
+	//시야 조종 함수
 	UFUNCTION()
 	void Look(const FInputActionValue& Value);
-	
+
+	//이동 함수
 	UFUNCTION()
 	void Move(const FInputActionValue& Value);
 
+	//달리기 시작 함수
 	UFUNCTION()
 	void Run();
 
+	//달리기 중단 함수
 	UFUNCTION()
 	void StopRun();
 
+	//웅크리기 토글 함수
 	UFUNCTION(NetMulticast, Server, Reliable)
 	void ToggleCrouch();
 
+	//인벤토리 토글 함수
 	UFUNCTION()
 	void ToggleInventory();
 
-	UFUNCTION()
+	//슬라이딩 함수
+	UFUNCTION()	
 	void Sliding();
 
+	//슬라이딩 끝났을 시 함수
 	UFUNCTION()
 	void EndSliding(UAnimMontage* Montage, bool bInterrupted);
 
+	//아이템 사용 함수
 	UFUNCTION()
 	void UseItem(UItemBase* Item);
 
+	//아이템 사용 시작 함수
 	UFUNCTION()
 	void StartUseItem();
 
+	//아이템 사용 중단 함수
 	UFUNCTION()
 	void StopUseItem();
 
+	//핫바 숫자키 선택 함수
 	UFUNCTION()
 	void HandleHotBar(const FInputActionValue& Value);
 
+	//핫바 마우스 휠 선택 함수
 	UFUNCTION()
 	void HandleHotBarWithWheel(const FInputActionValue& Value);
-	
+
+	//사망 시 함수
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
 	void OnDeath();
 	virtual void OnDeath_Implementation();
 
+	//손 아이템 새로고침 함수
 	UFUNCTION(BlueprintCallable)
 	void RefreshHand();
 
-	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
+	//공격 함수
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	void Attack();
 	virtual void Attack_Implementation();
 
@@ -299,34 +317,40 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE bool IsInteracting() const { return GetWorldTimerManager().IsTimerActive(InteractionTimer); };
 
+	//인터랙션 실행 함수
+	UFUNCTION(BlueprintCallable)
+	void Interaction();
+	
 	UFUNCTION(BlueprintCallable)
 	void BeginInteract() override;
 	UFUNCTION(BlueprintCallable)
 	void EndInteract() override;
-	UFUNCTION(BlueprintCallable)
-	void Interaction();
-
 	UFUNCTION(BlueprintImplementableEvent)
 	void Interact(AActor* Interactor) override;
 
+	//아이템 떨구기 함수
 	UFUNCTION(BlueprintCallable)
 	void DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool IsWhole);
 
+	//손에 든 아이템 레퍼런스 반환 함수
 	UFUNCTION(BlueprintPure)
 	UItemBase* GetHoldingItemReference();
 
+	//손에 든 아이템 타입 반환 함수
 	UFUNCTION(BlueprintPure)
 	EItemType GetHoldingItemType();
 
+	//공격 무기 히트 트레이스 함수
 	UFUNCTION(BlueprintCallable)
 	void WeaponTrace();
-
+	//무기 공격 트레이스 시작 함수
 	UFUNCTION(BlueprintCallable)
 	void StartWeaponAttack();
+	//무기 공격 트레이스 종료 함수
 	UFUNCTION(BlueprintCallable)
 	void EndWeaponAttack();
 	
-	//멀티플레이어
+	//멀티플레이어==================================================================================
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 };

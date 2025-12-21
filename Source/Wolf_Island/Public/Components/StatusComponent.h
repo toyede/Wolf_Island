@@ -35,33 +35,44 @@ public:
 	FOnInfectionChanged OnInfectionChanged;
 
 	//늑대인간
+	//현재 감염률
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection")
 	float CurrentInfectionRate = 0.0f;
+	//감염 여부
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection")
 	bool IsInfected = false;
+	//감염 속도
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection")
 	float InfectionInterval = 0.01f;
+	//감염 증가율
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection")
 	float InfectionIncrement = 0.01f;
 
 	//체력
+	//현재 체력
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
 	float CurrentHP = 100.0f;
+	//최대 체력
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
 	float MaxHP = 100.0f;
 
 	//스태미나
+	//현재 스태미나
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
 	float CurrentStamina = 100.0f;
+	//최대 스태미나
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
 	float MaxStamina = 100.0f;
+	//
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
 	float DeadLineStamina = 5.0f;
 	float TempMaxStamina = 0.0f;
 
 	//배고픔
+	//현재 배고픔
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
 	float CurrentHunger = 100.0f;
+	//최대 배고픔
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
 	float MaxHunger = 100.0f;
 

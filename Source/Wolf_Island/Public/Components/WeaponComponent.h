@@ -7,6 +7,7 @@
 #include "Engine/DataTable.h"
 #include "WeaponComponent.generated.h"
 
+class UItemBase;
 //무기 데이터 (무기별 몽타주 재생 데이터 저장용)
 USTRUCT(BlueprintType)
 struct FWeaponData : public FTableRowBase
@@ -30,11 +31,15 @@ public:
 	// Sets default values for this component's properties
 	UWeaponComponent();
 
+	UPROPERTY(EditDefaultsOnly)
+	UDataTable* WeaponDataTable;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool IsEquipped;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FWeaponData CurrentWeapon;
 
+	UFUNCTION(BlueprintCallable)
+	void CheckWeapon(UItemBase* HandedItem);
 	UFUNCTION(BlueprintCallable)
 	void EquipeWeapon(FWeaponData WeaponData);
 	UFUNCTION(BlueprintCallable)

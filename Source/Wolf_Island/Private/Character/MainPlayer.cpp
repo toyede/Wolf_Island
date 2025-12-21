@@ -91,6 +91,11 @@ void AMainPlayer::BeginPlay()
 		InventoryComponent->OnInventoryUpdated.AddUObject(this, &AMainPlayer::RefreshHand);
 	}
 
+	if (WeaponComponent)
+	{
+		RefreshHand();
+	}
+
 	//HUD = Cast<AMainHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
 
 	HUD = CreateWidget<UPlayerHUD>(GetWorld(), HUDClass);
@@ -399,7 +404,7 @@ void AMainPlayer::Sliding()
 	}*/
 }
 
-//-31
+// -31 <-무슨 값이더라
 void AMainPlayer::EndSliding(UAnimMontage* Montage, bool bInterrupted)
 {
 	GetMesh()->SetRelativeLocation(FVector(0, 0, -90.0f));
@@ -538,9 +543,11 @@ void AMainPlayer::RefreshHand()
 		FTransform SocketTransform = ItemMesh->GetSocketTransform(TEXT("HandSocket"), RTS_Component);
 		ItemMesh->SetRelativeTransform(SocketTransform.Inverse());
 
+		WeaponComponent->CheckWeapon(Item);
 		//ItemMesh->SetRelativeScale3D(FVector(0.1f, 0.1f, 0.1f));
 	} else
 	{
+		WeaponComponent->CheckWeapon(nullptr);
 		IsHoldingItem = false;
 		ItemMesh->SetStaticMesh(nullptr);
 	}
@@ -549,7 +556,8 @@ void AMainPlayer::RefreshHand()
 
 void AMainPlayer::Attack_Implementation()
 {
-	
+	UE_LOG(LogTemp, Warning, TEXT("C++ Attack Executed."));
+	WeaponComponent->UseWeapon();
 }
 
 void AMainPlayer::CheckInteraction()
@@ -788,14 +796,24 @@ EItemType AMainPlayer::GetHoldingItemType()
 
 void AMainPlayer::WeaponTrace()
 {
-	FVector3d StartPos = ItemMesh->GetSocketLocation(FName("HitBoxStart"));
-	FVector3d EndPos = ItemMesh->GetSocketLocation(FName("HitBoxEnd"));
+	//기본적으론 주먹 위치
+	FVector3d StartPos = GetMesh()->GetSocketLocation(FName("hand_r"));
+	FVector3d EndPos = GetMesh()->GetSocketLocation(FName("hand_r"));
 
+	//무기를 장착 시 무기별 공격 범위로 설정
+	if (ItemMesh)
+	{
+		StartPos = ItemMesh->GetSocketLocation(FName("HitBoxStart"));
+		EndPos = ItemMesh->GetSocketLocation(FName("HitBoxEnd"));
+	}
+
+	//트레이스 파라미터 설정
 	ETraceTypeQuery TraceTypeQuery = ETraceTypeQuery();
 	TArray<AActor*> IgnoreActors;
 	IgnoreActors.Add(this);
 	FHitResult Hit;
-	
+
+	//스피어 트레이스 실행
 	if (UKismetSystemLibrary::SphereTraceSingle(
 		GetWorld(),
 		StartPos,
@@ -808,18 +826,26 @@ void AMainPlayer::WeaponTrace()
 		Hit,
 		true))
 	{
+		//맞은 액터
 		AActor* HitActor = Hit.GetActor();
 		UItemBase* HoldingItem = GetHoldingItemReference();
-		float Damage = 0.0f;
+
+		//기본 대미지
+		float Damage = 1.0f;
+
+		//무기 장착 시 무기 대미지로 설정
 		if (HoldingItem)
 		{
 			Damage = HoldingItem->NumericData.Damage;
 		}
 
+		//최초로 맞고 또 맞은 액터면 무시
 		if (DamagedActors.Contains(HitActor)) return;
 
+		//최초로 맞은 액터면 맞은 액터 배열에 추가
 		DamagedActors.Add(HitActor);
-		
+
+		//대미지 적용
 		UGameplayStatics::ApplyDamage(
 			HitActor,
 			Damage,
@@ -836,13 +862,15 @@ void AMainPlayer::StartWeaponAttack()
 		WeaponAttackTimer,
 		this,
 		&AMainPlayer::WeaponTrace,
-		0.01f,
+		GetWorld()->DeltaTimeSeconds,
 		true);
 }
 
 void AMainPlayer::EndWeaponAttack()
 {
+	//공격 트레이스 종료
 	GetWorld()->GetTimerManager().ClearTimer(WeaponAttackTimer);
+	//맞은 액터 배열 비우기
 	DamagedActors.Empty();
 }
 

@@ -3,11 +3,8 @@
 
 #include "Wolf_Island/Public/Components/StatusComponent.h"
 
-#include "Character/MainPlayer.h"
 #include "Components/InventoryComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
 #include "Item/ItemBase.h"
-#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 
 // Sets default values for this component's properties

@@ -4,6 +4,7 @@
 #include "Components/WeaponComponent.h"
 
 #include "GameFramework/Character.h"
+#include "Item/ItemBase.h"
 
 // Sets default values for this component's properties
 UWeaponComponent::UWeaponComponent()
@@ -33,6 +34,35 @@ void UWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	// ...
 }
 
+void UWeaponComponent::CheckWeapon(UItemBase* HandedItem)
+{
+	if (!WeaponDataTable)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("WeaponDataTable is NULL!!"));
+		return;
+	}
+
+	if (HandedItem)
+	{
+		FWeaponData* WeaponData = WeaponDataTable->FindRow<FWeaponData>(HandedItem->ID, "FindWeapon");
+
+		if (WeaponData)
+		{
+			EquipeWeapon(*WeaponData);
+		} else
+		{
+			FWeaponData* DefaultData = WeaponDataTable->FindRow<FWeaponData>(FName("EQ000"), "DefaultWeapon");
+			CurrentWeapon = *DefaultData;
+			UnequipeWeapon();
+		}
+	} else
+	{
+		FWeaponData* DefaultData = WeaponDataTable->FindRow<FWeaponData>(FName("EQ000"), "DefaultWeapon");
+		CurrentWeapon = *DefaultData;
+		UnequipeWeapon();
+	}
+}
+
 void UWeaponComponent::EquipeWeapon(FWeaponData WeaponData)
 {
 	IsEquipped = true;
@@ -48,8 +78,9 @@ void UWeaponComponent::UseWeapon()
 {
 	ACharacter* Owner = Cast<ACharacter>(GetOwner());
 
-	if (Owner && IsEquipped)
+	if (Owner)
 	{
+		UE_LOG(LogTemp,Warning,TEXT("Try Playing Montage"));
 		Owner->PlayAnimMontage(CurrentWeapon.Montage);
 	}
 	
