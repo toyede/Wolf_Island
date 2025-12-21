@@ -8,6 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Item/ItemBase.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
 
 // Sets default values for this component's properties
 UStatusComponent::UStatusComponent()
@@ -52,13 +53,8 @@ void UStatusComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 //체력 증가 함수
 void UStatusComponent::IncreaseHP(float amount)
 {
-	CurrentHP += amount;
-
-	//초과 방지
-	if (CurrentHP > MaxHP)
-	{
-		CurrentHP = MaxHP;
-	}
+	CurrentHP = UKismetMathLibrary::Clamp(CurrentHP+amount, 0, MaxHP);
+	
 	//음수 방지
 	if (CurrentHP <= 0)
 	{
@@ -70,13 +66,8 @@ void UStatusComponent::IncreaseHP(float amount)
 //체력 감소 함수
 void UStatusComponent::DecreaseHP(float amount)
 {
-	CurrentHP -= amount;
-
-	//초과 방지
-	if (CurrentHP > MaxHP)
-	{
-		CurrentHP = MaxHP;
-	}
+	CurrentHP = UKismetMathLibrary::Clamp(CurrentHP-amount, 0, MaxHP);
+	
 	//음수 방지
 	if (CurrentHP <= 0)
 	{
@@ -88,12 +79,10 @@ void UStatusComponent::DecreaseHP(float amount)
 //스태미나 증가 함수
 void UStatusComponent::IncreaseStamina(float amount)
 {
-	UE_LOG(LogTemp, Warning, TEXT("AMOUNT : %f"), FMath::Abs(amount) * AmountMultiplier);
-	UE_LOG(LogTemp, Warning, TEXT("MAX STAMINA : %f"), MaxStamina);
-	CurrentStamina += amount * AmountMultiplier;
+	CurrentStamina = UKismetMathLibrary::Clamp(CurrentStamina+amount*AmountMultiplier, 0, MaxStamina);
 	
 	//초과 방지
-	if (CurrentStamina > MaxStamina)
+	if (CurrentStamina >= MaxStamina)
 	{
 		CurrentStamina = MaxStamina;
 		StopRecoverStamina();
@@ -109,13 +98,8 @@ void UStatusComponent::IncreaseStamina(float amount)
 //스태미나 감소 함수
 void UStatusComponent::DecreaseStamina(float amount)
 {
-	CurrentStamina -= amount * AmountMultiplier;
-
-	//초과 방지
-	if (CurrentStamina > MaxStamina)
-	{
-		CurrentStamina = MaxStamina;
-	}
+	CurrentStamina = UKismetMathLibrary::Clamp(CurrentStamina-amount*AmountMultiplier, 0, MaxStamina);
+	
 	//음수 방지
 	if (CurrentStamina <= 0)
 	{
@@ -127,14 +111,9 @@ void UStatusComponent::DecreaseStamina(float amount)
 //배고픔 증가 함수
 void UStatusComponent::IncreaseHunger(float amount)
 {
-	CurrentHunger += amount;
+	CurrentHunger = UKismetMathLibrary::Clamp(CurrentHunger+amount, 0, MaxHunger);
 	StopHungerDeath();
-
-	//초과 방지
-	if (CurrentHunger > MaxHunger)
-	{
-		CurrentHunger = MaxHunger;
-	}
+	
 	//음수 방지
 	if (CurrentHunger <= 0)
 	{
@@ -146,13 +125,8 @@ void UStatusComponent::IncreaseHunger(float amount)
 //배고픔 감소 함수
 void UStatusComponent::DecreaseHunger(float amount)
 {
-	CurrentHunger -= amount * AmountMultiplier;
-
-	//초과 방지
-	if (CurrentHunger > MaxHunger)
-	{
-		CurrentHunger = MaxHunger;
-	}
+	CurrentHunger = UKismetMathLibrary::Clamp(CurrentHunger-amount*AmountMultiplier, 0, MaxHunger);
+	
 	//음수 방지
 	if (CurrentHunger <= 0)
 	{
@@ -164,14 +138,9 @@ void UStatusComponent::DecreaseHunger(float amount)
 //수분 증가 함수
 void UStatusComponent::IncreaseHydration(float amount)
 {
-	CurrentHydration += amount;
+	CurrentHydration = UKismetMathLibrary::Clamp(CurrentHydration+amount, 0, MaxHydration);
 	StopHydrationDeath();
-
-	//초과 방지
-	if (CurrentHydration > MaxHydration)
-	{
-		CurrentHydration = MaxHydration;
-	}
+	
 	//음수 방지
 	if (CurrentHydration <= 0)
 	{
@@ -183,13 +152,8 @@ void UStatusComponent::IncreaseHydration(float amount)
 //수분 감소 함수
 void UStatusComponent::DecreaseHydration(float amount)
 {
-	CurrentHydration -= amount * AmountMultiplier;
-
-	//초과 방지
-	if (CurrentHydration > MaxHydration)
-	{
-		CurrentHydration = MaxHydration;
-	}
+	CurrentHydration = UKismetMathLibrary::Clamp(CurrentHydration-amount*AmountMultiplier, 0, MaxHydration);
+	
 	//음수 방지
 	if (CurrentHydration <= 0)
 	{
@@ -200,19 +164,8 @@ void UStatusComponent::DecreaseHydration(float amount)
 
 void UStatusComponent::IncreaseWeight(float amount)
 {
-	CurrentWeight += amount;
-
-	//초과 방지
-	if (CurrentWeight > MaxWeight)
-	{
-		CurrentWeight = MaxWeight;
-	}
-	//음수 방지
-	if (CurrentWeight <= 0)
-	{
-		CurrentWeight = 0;
-	}
-
+	CurrentWeight = UKismetMathLibrary::Clamp(CurrentWeight+amount, 0, MaxWeight);
+	
 	//무게에 따른 감소율 증가분 설정
 	if (CurrentWeight == 100.0f)
 	{
@@ -233,19 +186,8 @@ void UStatusComponent::IncreaseWeight(float amount)
 
 void UStatusComponent::DecreaseWeight(float amount)
 {
-	CurrentWeight -= amount;
-
-	//초과 방지
-	if (CurrentWeight > MaxWeight)
-	{
-		CurrentWeight = MaxWeight;
-	}
-	//음수 방지
-	if (CurrentWeight <= 0)
-	{
-		CurrentWeight = 0;
-	}
-
+	CurrentWeight = UKismetMathLibrary::Clamp(CurrentWeight-amount, 0, MaxWeight);
+	
 	//무게에 따른 감소율 증가분 설정
 	if (CurrentWeight == 100.0f)
 	{

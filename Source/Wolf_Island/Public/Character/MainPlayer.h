@@ -195,6 +195,12 @@ public:
 	USoundBase* EattingSound;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
 	USoundBase* PunchSound;
+
+	//공격===============================================================================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Attack")
+	FTimerHandle WeaponAttackTimer;
+	UPROPERTY(VisibleAnywhere)
+	TArray<AActor*> DamagedActors;
 	
 	//공격시 폴리지 판정
 	UPROPERTY(EditAnywhere, Category = "Interaction")
@@ -311,6 +317,14 @@ public:
 
 	UFUNCTION(BlueprintPure)
 	EItemType GetHoldingItemType();
+
+	UFUNCTION(BlueprintCallable)
+	void WeaponTrace();
+
+	UFUNCTION(BlueprintCallable)
+	void StartWeaponAttack();
+	UFUNCTION(BlueprintCallable)
+	void EndWeaponAttack();
 	
 	//멀티플레이어
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;

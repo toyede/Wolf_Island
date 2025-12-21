@@ -713,6 +713,7 @@ void AMainPlayer::EndInteract()
 	}
 }
 
+
 void AMainPlayer::Interaction()
 {
 	//인터랙션 타이머 클리어
@@ -783,6 +784,66 @@ EItemType AMainPlayer::GetHoldingItemType()
 	}
 	
 	return EItemType::MATERIAL;
+}
+
+void AMainPlayer::WeaponTrace()
+{
+	FVector3d StartPos = ItemMesh->GetSocketLocation(FName("HitBoxStart"));
+	FVector3d EndPos = ItemMesh->GetSocketLocation(FName("HitBoxEnd"));
+
+	ETraceTypeQuery TraceTypeQuery = ETraceTypeQuery();
+	TArray<AActor*> IgnoreActors;
+	IgnoreActors.Add(this);
+	FHitResult Hit;
+	
+	if (UKismetSystemLibrary::SphereTraceSingle(
+		GetWorld(),
+		StartPos,
+		EndPos,
+		5.0f,
+		TraceTypeQuery,
+		true,
+		IgnoreActors,
+		EDrawDebugTrace::ForDuration,
+		Hit,
+		true))
+	{
+		AActor* HitActor = Hit.GetActor();
+		UItemBase* HoldingItem = GetHoldingItemReference();
+		float Damage = 0.0f;
+		if (HoldingItem)
+		{
+			Damage = HoldingItem->NumericData.Damage;
+		}
+
+		if (DamagedActors.Contains(HitActor)) return;
+
+		DamagedActors.Add(HitActor);
+		
+		UGameplayStatics::ApplyDamage(
+			HitActor,
+			Damage,
+			GetController(),
+			this,
+			UDamageType::StaticClass());
+	}
+
+}
+
+void AMainPlayer::StartWeaponAttack()
+{
+	GetWorld()->GetTimerManager().SetTimer(
+		WeaponAttackTimer,
+		this,
+		&AMainPlayer::WeaponTrace,
+		0.01f,
+		true);
+}
+
+void AMainPlayer::EndWeaponAttack()
+{
+	GetWorld()->GetTimerManager().ClearTimer(WeaponAttackTimer);
+	DamagedActors.Empty();
 }
 
 void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float DamageAmount)

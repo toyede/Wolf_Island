@@ -16,6 +16,8 @@ APickup::APickup()
     PickupMesh->SetCollisionProfileName("BlockAll");
     PickupMesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
     SetRootComponent(PickupMesh);
+
+    SetReplicates(true);
 }
 
 void APickup::BeginPlay()
