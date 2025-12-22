@@ -36,7 +36,7 @@ public:
 
 	//늑대인간
 	//현재 감염률
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Infection")
 	float CurrentInfectionRate = 0.0f;
 	//감염 여부
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection")
@@ -50,7 +50,7 @@ public:
 
 	//체력
 	//현재 체력
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status")
 	float CurrentHP = 100.0f;
 	//최대 체력
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
@@ -58,7 +58,7 @@ public:
 
 	//스태미나
 	//현재 스태미나
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status")
 	float CurrentStamina = 100.0f;
 	//최대 스태미나
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
@@ -70,20 +70,20 @@ public:
 
 	//배고픔
 	//현재 배고픔
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentHunger, VisibleAnywhere, BlueprintReadWrite, Category = "Status")
 	float CurrentHunger = 100.0f;
 	//최대 배고픔
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
 	float MaxHunger = 100.0f;
 
 	//수분
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status")
 	float CurrentHydration = 100.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
 	float MaxHydration = 100.0f;
 
 	//무게
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status")
 	float CurrentWeight = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
 	float MaxWeight = 100.0f;
@@ -295,4 +295,10 @@ public:
 	//디버그 함수
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Debug")
 	void DebugGetStatus(float &HP, float& Stamina, float& Hunger, float& Hydration, float& Weight);
+
+	//멀티플레이
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UFUNCTION()
+	void OnRep_CurrentHunger();
 };

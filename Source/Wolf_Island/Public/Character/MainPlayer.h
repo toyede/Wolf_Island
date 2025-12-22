@@ -16,11 +16,11 @@ struct FInputActionValue;
 USTRUCT(BlueprintType)
 struct FInteractionData
 {
-	GENERATED_USTRUCT_BODY();
+	GENERATED_USTRUCT_BODY()
+	;
 
 	FInteractionData() : CurrentInteractable(nullptr), LastInteractionCheckTime(0.0f)
 	{
-
 	};
 
 	UPROPERTY(BlueprintReadOnly)
@@ -31,7 +31,7 @@ struct FInteractionData
 };
 
 UCLASS()
-class WOLF_ISLAND_API AMainPlayer : public ACharacter , public IInteractionInterface
+class WOLF_ISLAND_API AMainPlayer : public ACharacter, public IInteractionInterface
 {
 	GENERATED_BODY()
 
@@ -42,11 +42,11 @@ public:
 	//HUD=============================================================================
 	//UPROPERTY(EditAnywhere)
 	//class AMainHUD* HUD;
-	
+
 	//컴포넌트=========================================================================
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	class UCameraComponent* FirstPersonCamera;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	class UStatusComponent* StatusComponent;
 
@@ -55,11 +55,11 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	class UWeaponComponent* WeaponComponent;
-	
+
 	//손에 들 아이템
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	UStaticMeshComponent* ItemMesh;
-	
+
 	//입력 관련 변수====================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputMappingContext* InputMappingContext;
@@ -104,7 +104,7 @@ public:
 	//뛰는 중인지
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsRunning = false;
-	
+
 	//웅크리는 중인지
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsCrouching = false;
@@ -112,7 +112,7 @@ public:
 	//슬라이딩 중인지
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsSliding = false;
-	
+
 	//1인칭 카메라인지
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsFirstPerson = true;
@@ -131,7 +131,7 @@ public:
 
 	//슬라이딩 소모 스태미나
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
-	float SlideConsumeAmount  = 2.0f;
+	float SlideConsumeAmount = 2.0f;
 
 	//인벤토리가 열려 있는지
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
@@ -179,7 +179,7 @@ public:
 	UAnimMontage* PunchMontage;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
 	UAnimMontage* FuckyouMontage;
-	
+
 	//위젯=============================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	TSubclassOf<class UPlayerHUD> HUDClass;
@@ -201,21 +201,21 @@ public:
 	FTimerHandle WeaponAttackTimer;
 	UPROPERTY(VisibleAnywhere)
 	TArray<AActor*> DamagedActors;
-	
+
 	//공격시 폴리지 판정
 	UPROPERTY(EditAnywhere, Category = "Interaction")
 	TMap<UStaticMesh*, TSubclassOf<class ATree>> FoliageToActorMap;
 
 	void TryConvertFoliageToActor(const FHitResult& HitResult, float DamageAmount);
-	
+
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void ProcessAttackHit(const FHitResult& HitResult, float DamageAmount);
-	
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:	
+public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
@@ -256,7 +256,7 @@ public:
 	void ToggleInventory();
 
 	//슬라이딩 함수
-	UFUNCTION()	
+	UFUNCTION()
 	void Sliding();
 
 	//슬라이딩 끝났을 시 함수
@@ -293,7 +293,7 @@ public:
 	void RefreshHand();
 
 	//공격 함수
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	UFUNCTION(NetMulticast, BlueprintCallable, Reliable)
 	void Attack();
 	virtual void Attack_Implementation();
 
@@ -304,15 +304,15 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE float GetInteractionDuration() { return InteractableData.InteractionDuration; };
-	
+
 	//인터랙션 액터를 찾았을 때
 	UFUNCTION()
 	void FoundInteractable(AActor* Interactable);
-	
+
 	//인터랙션 액터를 못 찾았을 때
 	UFUNCTION()
 	void NotFoundInteractable();
-	
+
 	//인터랙션 중인지 확인하는 함수==========================================
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE bool IsInteracting() const { return GetWorldTimerManager().IsTimerActive(InteractionTimer); };
@@ -320,7 +320,7 @@ public:
 	//인터랙션 실행 함수
 	UFUNCTION(BlueprintCallable)
 	void Interaction();
-	
+
 	UFUNCTION(BlueprintCallable)
 	void BeginInteract() override;
 	UFUNCTION(BlueprintCallable)
@@ -349,10 +349,39 @@ public:
 	//무기 공격 트레이스 종료 함수
 	UFUNCTION(BlueprintCallable)
 	void EndWeaponAttack();
-	
+
 	//멀티플레이어==================================================================================
+	//코드 리팩토링 방법 v1.0
+	//원래 싱글에서 작동해야할 코드를 멀티캐스트 실행 함수 코드에 작성.
+	//서버에서 실행하는 것은 멀티캐스트 함수.
+	//원래 함수에서는 클라이언트면 서버 함수 실행, 서버면 멀티캐스트 함수 실행.
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
+	//달리기
+	UFUNCTION(Server, Reliable)
+	void Server_Run();
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_Run();
+	UFUNCTION(Server, Reliable)
+	void Server_StopRun();
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_StopRun();
+
+	//웅크리기 
+	UFUNCTION(Server, Reliable)
+	void Server_ToggleCrouch();
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_ToggleCrouch();
+
+	//공격
+	UFUNCTION(Server, Reliable)
+	void Server_Attack();
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_Atack();
+
+	//손에 든 아이템 새로고침
+	UFUNCTION(Server, Reliable)
+	void Server_RefreshHand();
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_RefreshHand();
 };
-
-
