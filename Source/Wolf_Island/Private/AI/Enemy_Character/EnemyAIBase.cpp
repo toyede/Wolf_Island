@@ -17,8 +17,7 @@
 #include "BrainComponent.h"
 #include "Actors/Interfaces/SkyInterface.h"
 #include "Engine/DamageEvents.h"
-
-
+#include "Net/UnrealNetwork.h"
 
 AEnemyAIBase::AEnemyAIBase()
 {
@@ -73,11 +72,29 @@ AEnemyAIBase::AEnemyAIBase()
 
     AttackDamage = 10.0f;
 
+    bReplicates = true;
+    SetReplicateMovement(true);
+
 }
 
 void AEnemyAIBase::BeginPlay()
 {
 	Super::BeginPlay();
+
+    if (HasAuthority())
+    {
+        TArray<AActor*> Found;
+        UGameplayStatics::GetAllActorsWithTag(GetWorld(), TEXT("SkyManager"), Found);
+
+        for (AActor* Actor : Found)
+        {
+            if (IsValid(Actor) && Actor->Implements<USkyInterface>())
+            {
+                CachedSkyManager = Actor;
+                break;
+            }
+        }
+    }
 
     HumanParts.Empty();
     HumanParts.Add(FaceMesh);
@@ -111,19 +128,12 @@ void AEnemyAIBase::Tick(float DeltaTime)
 
 void AEnemyAIBase::NotifySkyRemoveSelf()
 {
-    TArray<AActor*> FoundActors;
-    UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("SkyManager"), FoundActors);
+    if (!HasAuthority()) return;
 
-    if (FoundActors.Num() > 0)
-    {
-        AActor* Sky = FoundActors[0];
-
-        // 인터페이스가 있으면 안전하게 호출 (없으면 아무 일도 안 일어남 -> 크래시 없음)
-        if (Sky && Sky->Implements<USkyInterface>())
+        if (CachedSkyManager && CachedSkyManager->Implements<USkyInterface>())
         {
-            ISkyInterface::Execute_RemoveEnemy(Sky, this);
+            ISkyInterface::Execute_RemoveEnemy(CachedSkyManager, this);
         }
-    }
 }
 
 void AEnemyAIBase::ChangeForm(EEnemyForm Form)
@@ -294,49 +304,41 @@ void AEnemyAIBase::SetMovementSpeed_Implementation(EEnemyState State)
 
 void AEnemyAIBase::ThrowObject_Implementation()
 {
-    UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-    if (!AnimInstance || !ThrowMontage)
+    if (HasAuthority())
     {
-        return;
+        Multicast_PlayThrowMontage();
     }
-
-    AnimInstance->Montage_Play(ThrowMontage);
-
-    if (ThrowSound)
-    {
-        UGameplayStatics::PlaySoundAtLocation(this, ThrowSound, GetActorLocation());
-    }
-
-    FOnMontageEnded EndDelegate;
-    EndDelegate.BindUObject(this, &AEnemyAIBase::OnThrowMontageEnded);
-    AnimInstance->Montage_SetEndDelegate(EndDelegate, ThrowMontage);
 }
-
 void AEnemyAIBase::Die_Implementation()
 {
+    if (!HasAuthority())
+        return;
 
-    GetCharacterMovement()->StopMovementImmediately();
-    StopAllMontages();
-
-    if (DieSound)
-    {
-        UGameplayStatics::PlaySoundAtLocation(this, DieSound, GetActorLocation());
-    }
-
-    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    WolfMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    if (bIsDead)
+        return;
 
     bIsDead = true;
 
+    // relevancy 밖에 있던 클라에게도 빠르게 상태를 밀어주기
+    FlushNetDormancy();
+    ForceNetUpdate();
+
+    // 서버에서도 같은 비주얼/콜리전 상태 적용(서버는 OnRep가 자동으로 안 돈다고 보는 게 안전)
+    ApplyDeadState();
+
+    // 서버 전용 로직은 여기서만
     NotifySkyRemoveSelf();
 
-    EnemyAIController->GetBrainComponent()->StopLogic("Enemy Dead");
+    if (EnemyAIController && EnemyAIController->GetBrainComponent())
+    {
+        EnemyAIController->GetBrainComponent()->StopLogic(TEXT("Enemy Dead"));
+    }
 
     SetLifeSpan(2.5f);
 }
 
-void AEnemyAIBase::NormalAttack()
+
+void AEnemyAIBase::NormalAttack_Implementation()
 {
     if (UAnimInstance* AnimInstance = WolfMesh->GetAnimInstance())
     {
@@ -421,6 +423,7 @@ void AEnemyAIBase::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted
     {
         OnAttackEnd.Broadcast();
     }
+   
 }
 
 void AEnemyAIBase::OnAttackHit(const FHitResult& HitResult)
@@ -466,6 +469,69 @@ float AEnemyAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 
     return ActualDamage;
 }
+
+void AEnemyAIBase::OnRep_IsDead()
+{
+    if (bIsDead)
+    {
+        ApplyDeadState();
+    }
+}
+
+void AEnemyAIBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(AEnemyAIBase, bIsDead);
+}
+
+void AEnemyAIBase::ApplyDeadState()
+{
+    GetCharacterMovement()->StopMovementImmediately();
+    StopAllMontages();
+
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    if (WolfMesh)
+    {
+        WolfMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    }
+
+    if (DieSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, DieSound, GetActorLocation());
+    }
+}
+
+
+void AEnemyAIBase::Multicast_PlayThrowMontage_Implementation()
+{
+    UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+    if (!AnimInstance || !ThrowMontage)
+    {
+        if (HasAuthority())
+        {
+            OnThrowEnd.Broadcast();
+        }
+        return;
+    }
+
+    AnimInstance->Montage_Play(ThrowMontage);
+
+    if (ThrowSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, ThrowSound, GetActorLocation());
+    }
+
+    if (HasAuthority())
+    {
+        FOnMontageEnded EndDelegate;
+        EndDelegate.BindUObject(this, &AEnemyAIBase::OnThrowMontageEnded);
+        AnimInstance->Montage_SetEndDelegate(EndDelegate, ThrowMontage);
+    }
+}
+
+
 
 
 

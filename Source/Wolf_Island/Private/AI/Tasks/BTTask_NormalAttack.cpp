@@ -27,29 +27,31 @@ EBTNodeResult::Type UBTTask_NormalAttack::ExecuteTask(UBehaviorTreeComponent& Ow
 
     Enemy->OnAttackEnd.AddDynamic(this, &UBTTask_NormalAttack::OnAttackFinished);
 
-    if (Enemy->GetClass()->ImplementsInterface(UEnemyCommonInterface::StaticClass()))
+    if (Enemy->Implements<UEnemyCommonInterface>())
     {
-        IEnemyCommonInterface* InterfaceObject = Cast<IEnemyCommonInterface>(Enemy);
-        if (InterfaceObject)
-        {
-            InterfaceObject->NormalAttack();
-            return EBTNodeResult::Succeeded;
-        }
+        IEnemyCommonInterface::Execute_NormalAttack(Enemy);
+        return EBTNodeResult::InProgress;
     }
 
-    return EBTNodeResult::Succeeded;
+    return EBTNodeResult::Failed;
 }
 
 EBTNodeResult::Type UBTTask_NormalAttack::AbortTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
-    return EBTNodeResult::Type();
+    // 델리게이트 정리
+    if (CachedEnemy.IsValid())
+    {
+        CachedEnemy->OnAttackEnd.RemoveDynamic(this, &UBTTask_NormalAttack::OnAttackFinished);
+    }
+
+    return EBTNodeResult::Aborted;
 }
 
 void UBTTask_NormalAttack::OnAttackFinished()
 {
     if (CachedEnemy.IsValid())
     {
-        CachedEnemy->OnThrowEnd.RemoveDynamic(this, &UBTTask_NormalAttack::OnAttackFinished);
+        CachedEnemy->OnAttackEnd.RemoveDynamic(this, &UBTTask_NormalAttack::OnAttackFinished);
     }
 
     if (CachedOwnerComp.IsValid())

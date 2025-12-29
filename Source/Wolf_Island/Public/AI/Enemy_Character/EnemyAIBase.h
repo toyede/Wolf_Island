@@ -79,6 +79,9 @@ public:
 	UPROPERTY(VisibleAnywhere)
 	int32 CurrentPatrolIndex = 0;
 
+	UPROPERTY()
+	TObjectPtr<AActor> CachedSkyManager = nullptr;
+
 	// 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Stats")
 	class UStatusComponent* StatusComponent; 
@@ -154,7 +157,7 @@ public:
 
 	virtual void Die_Implementation() override;
 
-	virtual void NormalAttack() override;
+	virtual void NormalAttack_Implementation() override;
 	// 몽타주 제어
 	UFUNCTION(BlueprintCallable, Category = "Animation")
 	void StopAllMontages();
@@ -214,7 +217,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Frozen")
 	TObjectPtr<USoundBase> FrozenHitSound;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Dead")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Dead", ReplicatedUsing = OnRep_IsDead)
 	bool bIsDead = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Dead")
@@ -229,6 +232,21 @@ public:
 	UFUNCTION()
 	void OnAttackHit(const FHitResult& HitResult);
 
+	virtual float TakeDamage(
+		float DamageAmount,
+		FDamageEvent const& DamageEvent,
+		AController* EventInstigator,
+		AActor* DamageCauser
+	) override;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayThrowMontage();
+
 	UFUNCTION()
-	float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser);
+	void OnRep_IsDead();
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	void ApplyDeadState();
+
 };

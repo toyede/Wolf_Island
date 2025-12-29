@@ -29,5 +29,6 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void Die();
 
-	virtual void NormalAttack() = 0;
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void NormalAttack();
 };

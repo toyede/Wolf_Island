@@ -4,6 +4,8 @@
 #include "AnimNotifies/ThrowStoneAnimNotify.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
+#include "AIController.h"
+#include "BehaviorTree/BlackboardComponent.h"
 
 void UThrowStoneAnimNotify::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)
 {
@@ -12,11 +14,22 @@ void UThrowStoneAnimNotify::Notify(USkeletalMeshComponent* MeshComp, UAnimSequen
     ACharacter* Owner = Cast<ACharacter>(MeshComp->GetOwner());
     if (!Owner || !ProjectileClass) return;
 
-    FVector HandLoc = MeshComp->GetSocketLocation(TEXT("hand_r"));
-    APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(Owner, 0);
-    if (!PlayerPawn) return;
+    if (!Owner->HasAuthority()) return;
 
-    FVector Dir = (PlayerPawn->GetActorLocation() - HandLoc).GetSafeNormal();
+    AActor* Target = nullptr;
+    if (AAIController* AICon = Cast<AAIController>(Owner->GetController()))
+    {
+        UBlackboardComponent* BB = AICon->GetBlackboardComponent();
+        if (BB)
+        {
+            Target = Cast<AActor>(BB->GetValueAsObject("AttackTarget"));
+            GEngine->AddOnScreenDebugMessage(1, 1, FColor::Black, *Target->GetName());
+        }
+    }
+    if (!Target) return;
+
+    FVector HandLoc = MeshComp->GetSocketLocation(TEXT("hand_r"));
+    FVector Dir = (Target->GetActorLocation() - HandLoc).GetSafeNormal();
     FRotator Rot = Dir.Rotation();
 
     UWorld* World = Owner->GetWorld();
@@ -25,6 +38,8 @@ void UThrowStoneAnimNotify::Notify(USkeletalMeshComponent* MeshComp, UAnimSequen
         AStoneProjectile* Projectile = World->SpawnActor<AStoneProjectile>(ProjectileClass, HandLoc, Rot);
         if (Projectile)
         {
+            Projectile->Mesh->IgnoreActorWhenMoving(Owner, true);
+            Projectile->SetOwner(Owner);
             Projectile->LaunchProjectile(Dir, 2000.f);
         }
     }
