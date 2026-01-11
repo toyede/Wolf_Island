@@ -11,6 +11,7 @@
 #include "Item/ItemBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Net/UnrealNetwork.h"
 
 // Sets default values for this component's properties
 UInventoryComponent::UInventoryComponent()
@@ -22,6 +23,35 @@ UInventoryComponent::UInventoryComponent()
 	//SetIsReplicated(true);
 	
 	// ...
+}
+
+// Called every frame
+void UInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+#if WITH_EDITOR
+	if (GEngine)
+	{
+		FString Owner = this->GetOwner()->GetName();
+		FString Name = FString::Printf(TEXT("INVENTORY OWNER [ %s ]"), *Owner);
+
+		UKismetSystemLibrary::PrintString(GetWorld(), Name, true, true, FLinearColor::Green, DeltaTime);
+		for (FItemSlot& Slot : InventoryContents)
+		{
+			FItemBaseData Item = Slot.ItemData;
+			FString IsPending = "NULL";
+			FString ItemName = "NULL";
+			if (Item.ItemID != NAME_None)
+			{
+				ItemName = GetItemData(Item)->TextData.Name.ToString();
+			}
+			FString Message = FString::Printf(TEXT("Slot: [ %s ] by %s"), *ItemName, *Owner);
+
+			UKismetSystemLibrary::PrintString(GetWorld(), Message, true, true, FLinearColor::Green, DeltaTime);
+		}
+	}
+#endif
 }
 
 void UInventoryComponent::SaveInventory()
@@ -122,10 +152,6 @@ UItemBase* UInventoryComponent::FindMatchingItem(UItemBase* Item) const
 	return nullptr;
 }
 
-		for (const FItemSlot& Slot : InventoryContents)
-		{
-			{
-				return Slot.Item;
 //부분 스택 찾기(풀스택이 아닌 아이템 스택)
 FItemBaseData* UInventoryComponent::FindNextPartialStack(const FItemBaseData* Item)
 {
