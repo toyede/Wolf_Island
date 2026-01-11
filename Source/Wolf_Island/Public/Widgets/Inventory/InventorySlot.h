@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/Border.h"
+#include "Data/ItemDataStruct.h"
 #include "InventorySlot.generated.h"
 
 class UInventoryComponent;
@@ -36,6 +37,8 @@ public:
 
 	
 protected:
+
+	//데이터
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category = "InventorySlot")
 	int32 Index;
 	
@@ -54,6 +57,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category="Inventory Slot")
 	UItemBase* ItemRef;
 
+	UPROPERTY(VisibleAnywhere, Category = "Inventory Slot")
+	FItemSlot ItemData;
+
+	//위젯
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
 	UBorder* ItemBorder;
 

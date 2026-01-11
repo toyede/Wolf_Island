@@ -369,23 +369,25 @@ void AMainPlayer::EndSliding(UAnimMontage* Montage, bool bInterrupted)
 	IsSliding = false;
 }
 
-void AMainPlayer::UseItem(UItemBase* Item)
+void AMainPlayer::UseItem(FItemBaseData& Item)
 {
 	UE_LOG(LogTemp, Warning, TEXT("USE ITEM EXECUTED"));
 	
 	if (InventoryComponent)
 	{
-		if (Item)
+		FItemData* ItemData = InventoryComponent->GetItemData(Item.ItemID);
+		
+		if (ItemData->IsNotEmpty())
 		{
-			UE_LOG(LogTemp, Warning, TEXT("TRY TO USE THIS : [ %s ]"), *Item->TextData.Name.ToString());
+			UE_LOG(LogTemp, Warning, TEXT("TRY TO USE THIS : [ %s ]"), *ItemData->TextData.Name.ToString());
 			
-			if (StatusComponent && Item->Type == EItemType::FOOD)
+			if (StatusComponent && ItemData->Type == EItemType::FOOD)
 			{
-				if (Item->Type == EItemType::FOOD && EattingSound)
+				if (ItemData->Type == EItemType::FOOD && EattingSound)
 				{
 					UGameplayStatics::PlaySound2D(GetWorld(), EattingSound);
 				}
-				StatusComponent->ApplyItem(Item);
+				StatusComponent->ApplyItem(*ItemData);
 				InventoryComponent->RemoveAmountOfItem(Item, 1);
 			}
 		} else
@@ -398,24 +400,26 @@ void AMainPlayer::UseItem(UItemBase* Item)
 //타이머 시간을 0으로 하면 실행이 안되는 사실 발견...
 void AMainPlayer::StartUseItem()
 {
-	if (UItemBase* TargetItem = InventoryComponent->GetItemAtIndex(HotBarIndex))
+	FItemBaseData* TargetItem = InventoryComponent->GetItemAtIndex(HotBarIndex);
+	
+	if (true)
 	{
 		//사용 가능한 아이템이 아니면 암것두 안하긔.
-		if (!TargetItem->NumericData.IsUsable) return;
+		if (!TargetItem.NumericData.IsUsable) return;
 		
 		UE_LOG(LogTemp, Warning, TEXT("ITEM IS VALID AND START USE ITEM"));
 		
 		if (!GetWorld()->GetTimerManager().IsTimerActive(ItemUseTimer))
 		{
 			UE_LOG(LogTemp, Warning, TEXT("TIMER EXECUTED"));
-			UE_LOG(LogTemp, Warning, TEXT("TARGET ITEM : [ %s ] : DURATION : [ %f ]"), *TargetItem->TextData.Name.ToString(), TargetItem->NumericData.InteractionDuration);
+			UE_LOG(LogTemp, Warning, TEXT("TARGET ITEM : [ %s ] : DURATION : [ %f ]"), *TargetItem.TextData.Name.ToString(), TargetItem->NumericData.InteractionDuration);
 			
 			
 			GetWorld()->GetTimerManager().SetTimer(
 			ItemUseTimer,
 			[this, TargetItem]()
 			{
-				UseItem(TargetItem);
+				UseItem(TargetItem.ID);
 			},
 			1,
 			false

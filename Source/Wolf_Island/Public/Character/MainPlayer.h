@@ -265,7 +265,7 @@ public:
 
 	//아이템 사용 함수
 	UFUNCTION()
-	void UseItem(UItemBase* Item);
+	void UseItem(FItemBaseData& Item);
 
 	//아이템 사용 시작 함수
 	UFUNCTION()

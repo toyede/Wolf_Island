@@ -85,7 +85,7 @@ struct FItemData : public FTableRowBase
 	GENERATED_USTRUCT_BODY();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
-	FName ID;
+	FName ID = NAME_None;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
 	EItemType Type;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
@@ -98,6 +98,34 @@ struct FItemData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
 	TSubclassOf<class UItemBase> ItemClass;
 	
+	bool IsEmpty() const { return ID == NAME_None; }
+	bool IsNotEmpty() const { return ID != NAME_None; }
+};
+
+//아이템 인스턴스 데이터
+USTRUCT(BlueprintType)
+struct FItemBaseData
+{
+	GENERATED_USTRUCT_BODY();
+	
+	UPROPERTY()
+	FName ItemID = NAME_None;
+	
+	UPROPERTY()
+	int32 Amount = 0;
+	
+	UPROPERTY()
+	float CurrentDurability = 0.0f;
+	
+	void SetAmount(const int32 NewAmount) { Amount = NewAmount; };
+	
+	bool operator==(const FItemBaseData& Other) const
+	{
+		return ItemID == Other.ItemID
+			&& Amount == Other.Amount
+			&& FMath::IsNearlyEqual(CurrentDurability, Other.CurrentDurability);
+	}
+	
 };
 
 //슬롯 데이터
@@ -106,9 +134,62 @@ struct FItemSlot
 {
 	GENERATED_USTRUCT_BODY();
 
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
 	UPROPERTY()
 	TObjectPtr<class UItemBase> Item = nullptr;
+	
+	UPROPERTY()
+	FItemBaseData ItemData;
+	
+	bool IsEmpty() const { return ItemData.ItemID == NAME_None; }
+	
+	bool IsNotEmpty() const { return ItemData.ItemID != NAME_None; }
+	
+	void SetAmount(const int32 NewAmount) { ItemData.Amount = NewAmount; }
+	
+	void Clear()
+	{
+		ItemData = FItemBaseData();
+	}
+};
+
+//슬롯 구조체로 재설계
+USTRUCT(BlueprintType)
+struct FSlotData
+{
+	GENERATED_USTRUCT_BODY();
+	
+	//아이템 데이터
+	UPROPERTY()
+	FItemData ItemData;
+	//아이템 코드
+	UPROPERTY()
+	FName ItemID = NAME_None;
+	//내구도
+	UPROPERTY()
+	float CurrentDurability = 0.0f;
+	//개수
+	UPROPERTY()
+	int32 Amount = 0;
+
+	void SetAmount(const int32 NewAmount) { Amount = NewAmount; };
+	
+	bool IsEmpty() const { return ItemID == NAME_None; };
+	
+	bool IsNotEmpty() const { return ItemID != NAME_None; };
+	
+	void Clear()
+	{
+		ItemID = NAME_None;
+		Amount = 0;
+		CurrentDurability = 0.0f;
+	}
+	
+	bool operator==(const FSlotData& Other) const
+	{
+		return ItemID == Other.ItemID
+			&& Amount == Other.Amount
+			&& FMath::IsNearlyEqual(CurrentDurability, Other.CurrentDurability);
+	}
 };
 
 //조합기 타입 (인벤토리, 화로 등)

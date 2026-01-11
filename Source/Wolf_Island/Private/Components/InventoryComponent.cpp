@@ -81,22 +81,22 @@ int32 UInventoryComponent::GetItemTotalAmountByID(FName ItemID)
 	return count;
 }
 
-void UInventoryComponent::SetItemAtIndex(UItemBase* Item, int32 Index)
+void UInventoryComponent::SetItemAtIndex(FItemBaseData* Item, int32 Index)
 {
-	UItemBase* RemovedItem = GetItemAtIndex(Index);
+	FItemBaseData* RemovedItem = GetItemAtIndex(Index);
 	if (RemovedItem)
 	{
-		CurrentWeight -= RemovedItem->GetItemSingleWeight() * RemovedItem->Amount;
+		CurrentWeight -= GetItemSingleWeight(*RemovedItem) * RemovedItem->Amount;
 	}
 	if (Item)
 	{
-		CurrentWeight += Item->GetItemSingleWeight() * Item->Amount;
-		InventoryContents[Index].Item = Item;
+		CurrentWeight += GetItemSingleWeight(*Item) * Item->Amount;
+		InventoryContents[Index].ItemData = *Item;
 		
 	} else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("NO INPUT ITEM"));
-		InventoryContents[Index].Item = nullptr;
+		InventoryContents[Index].Clear();
 	}
 	OnInventoryUpdated.Broadcast();
 }
@@ -122,31 +122,12 @@ UItemBase* UInventoryComponent::FindMatchingItem(UItemBase* Item) const
 	return nullptr;
 }
 
-//아이템 찾기
-UItemBase* UInventoryComponent::FindNextItemByID(UItemBase* Item) const
-{
-	if (Item)
-	{
-		/*if (const TArray<TObjectPtr<UItemBase>>::ElementType* Result = InventoryContents.FindByKey(Item))
-		{
-			return *Result;
-		}*/
-
 		for (const FItemSlot& Slot : InventoryContents)
 		{
-			if (Slot.Item && Slot.Item->ID == Item->ID)
 			{
 				return Slot.Item;
-			}
-		}
-		
-		return nullptr;
-	}
-	return nullptr;
-}
-
 //부분 스택 찾기(풀스택이 아닌 아이템 스택)
-UItemBase* UInventoryComponent::FindNextPartialStack(UItemBase* Item) const
+FItemBaseData* UInventoryComponent::FindNextPartialStack(const FItemBaseData* Item)
 {
 	/*if (const TArray<TObjectPtr<UItemBase>>::ElementType* Result =
 		InventoryContents.FindByPredicate([&Item](const UItemBase* InventoryItem)
@@ -157,60 +138,33 @@ UItemBase* UInventoryComponent::FindNextPartialStack(UItemBase* Item) const
 	{
 		return *Result;
 	}*/
-	for (const FItemSlot& Slot : InventoryContents)
+	for (FItemSlot& Slot : InventoryContents)
 	{
-		if (Slot.Item && Slot.Item->ID == Item->ID && !Slot.Item->IsFullStack())
+		if (Slot.IsNotEmpty() && Slot.ItemData.ItemID == Item->ItemID && !IsSlotFullStack(Slot))
 		{
-			return Slot.Item;
+			return &Slot.ItemData;
 		}
 	}
 	
 	return nullptr;
 }
 
-void UInventoryComponent::RemoveSingleInstanceOfItem(UItemBase* Item)
-{
-	//InventoryContents.RemoveSingle(Item);
-	
-	for (FItemSlot& Slot : InventoryContents)
-	{
-		if (Slot.Item == Item)
-		{
-			Slot.Item = nullptr;        // 삭제 대신 null 처리
-			break;                      // 첫 번째 일치 항목만 처리
-		}
-	}
-	
-	OnInventoryUpdated.Broadcast();
-}
 
-int32 UInventoryComponent::RemoveAmountOfItem(UItemBase* Item, int32 DesiredRemovedAmount)
+int32 UInventoryComponent::RemoveAmountOfItem(FItemBaseData& Slot, int32 DesiredRemovedAmount)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Item Amount : %d | Desired Amount : %d"), Item->Amount, DesiredRemovedAmount);
+	UE_LOG(LogTemp, Warning, TEXT("Item Amount : %d | Desired Amount : %d"), Slot.Amount, DesiredRemovedAmount);
 	//삭제하고 싶은 개수와 실제 아이템 개수 중 작은 값
-	const int32 ActualAmountToRemove = FMath::Min(DesiredRemovedAmount, Item->Amount);
+	const int32 ActualAmountToRemove = FMath::Min(DesiredRemovedAmount, Slot.Amount);
 	//아이템 개수에서 실제 삭제 개수 빼기
-	Item->SetAmount(Item->Amount - ActualAmountToRemove);
+	Slot.SetAmount(Slot.Amount - ActualAmountToRemove);
 	//무게에서 삭제된 만큼 빼기
-	CurrentWeight -= ActualAmountToRemove * Item->GetItemSingleWeight();
+	CurrentWeight -= ActualAmountToRemove * GetItemSingleWeight(Slot.ItemID);
 	//그 사실을 널리 알리기
 	OnInventoryUpdated.Broadcast();
 	//실제 삭제된 개수 반환
 	return ActualAmountToRemove;
 }
 
-//아이템 스택 쪼개기 함수(마크 우클릭 마냥)
-void UInventoryComponent::SplitExistingStack(UItemBase* Item, const int32 AmountToSplit)
-{
-	//인벤토리 개수를 초과하지 않으면 (1칸 빈 공간이 있으면)
-	if (GetEmptySlotCount() > 0)
-	{
-		//쪼갤 만큼 삭제하고
-		RemoveAmountOfItem(Item, AmountToSplit);
-		//쪼갤 만큼 다시 추가
-		AddNewItem(Item, AmountToSplit);
-	}
-}
 
 void UInventoryComponent::IncreaseCurrentWeight(float Weight)
 {
@@ -226,77 +180,52 @@ void UInventoryComponent::DecreaseCurrentWeight(float Weight)
 	if (CurrentWeight > WeightCapacity) CurrentWeight = WeightCapacity;
 }
 
-//아이템 추가 태스크 함수
-FItemAddResult UInventoryComponent::HandleAddItem(UItemBase* AddedItem)
+//아이템 추가 태스크 함수 - 아이템 먹을 때 Pickup 클래스에서 실행되는 함수
+FItemAddResult UInventoryComponent::HandleAddItem(FItemBaseData& AddedItem)
 {
-	if (GetOwner())
+	//클라이언트 실행
+	if (!GetOwner()->HasAuthority())
 	{
-		//추가할 아이템 개수
-		const int32 RequestedAmount = AddedItem->Amount;
-
-		//여러개 못 드는 아이템일 때 (IsStackable = false 아이템)
-		if (!AddedItem->NumericData.IsStackable)
-		{
-			//단일 아이템 추가 태스크 함수 실행
-			return HandleNoneStackableItem(AddedItem);
-		}
-
-		//스택 가능 아이템일 때
-		//넣은 개수
-		const int32 AddedAmount = HandleStackableItem(AddedItem, RequestedAmount);
-
-		//넣은 개수가 추가할 개수랑 같으면
-		if (AddedAmount == RequestedAmount)
-		{
-			//몽땅 추가
-			return FItemAddResult::AddedAll(AddedItem->TextData.Name, RequestedAmount, FText::Format(FText::FromString("Success [ {0} : x{1} ]"), AddedItem->TextData.Name, RequestedAmount));
-		}
-		//넣은 개수가 추가할 개수보다 작거나, 넣은 개수가 0 초과면
-		if (AddedAmount < RequestedAmount && AddedAmount > 0)
-		{
-			//부분 추가
-			return FItemAddResult::AddedPartial(AddedItem->TextData.Name, AddedAmount, FText::Format(FText::FromString("Partial Added [ {0} : x{1} ]"), AddedItem->TextData.Name, AddedAmount));
-		}
-		//넣은 개수가 0보다 작거나 같다면
-		if (AddedAmount <= 0)
-		{
-			//추가 안해부러
-			return FItemAddResult::AddedNone(FText::Format(FText::FromString("Failed Slot Overflow [ {0} : x{1} ]"), AddedItem->TextData.Name, RequestedAmount), EItemFailReason::SlotOverflow);
-		}
+		Server_HandleAddItem(AddedItem);
+		
+		return FItemAddResult::AddedNone(
+			FText::FromString(TEXT("Request Sent")),
+			EItemFailReason::NoReason);
 	}
 	
-	return FItemAddResult::AddedNone(FText::FromString(TEXT("Can't Find Owner")),EItemFailReason::SystemError);
+	//서버 실행
+	return Internal_HandleAddItem(AddedItem);
 }
 
 //단일 아이템 추가 태스크 함수
-FItemAddResult UInventoryComponent::HandleNoneStackableItem(UItemBase* AddedItem)
+FItemAddResult UInventoryComponent::HandleNoneStackableItem(FItemBaseData& AddedItem)
 {
 	//추가할 아이템 무게 췤. 음수인 지 음수면 아무것도 안 함
-	if (FMath::IsNearlyZero(AddedItem->GetItemSingleWeight()) || AddedItem->GetItemSingleWeight() < 0)
+	if (FMath::IsNearlyZero(GetItemSingleWeight(AddedItem)) || GetItemSingleWeight(AddedItem) < 0)
 	{
-		return FItemAddResult::AddedNone(FText::Format(FText::FromString("[WEIGHT ERROR] [ {0} : x{1} ]"),AddedItem->TextData.Name, AddedItem->GetItemSingleWeight()), EItemFailReason::SystemError);
+		return FItemAddResult::AddedNone(FText::Format(FText::FromString("[WEIGHT ERROR] [ {0} : x{1} ]"),GetItemData(AddedItem)->TextData.Name, GetItemSingleWeight(AddedItem)), EItemFailReason::SystemError);
 	}
 	//무게 용량 초과면 아무것도 안 함
-	if (CurrentWeight + AddedItem->GetItemSingleWeight() > GetWeightCapacity())
+	if (CurrentWeight + GetItemSingleWeight(AddedItem) > GetWeightCapacity())
 	{
-		return FItemAddResult::AddedNone(FText::Format(FText::FromString("[WEIGHT OVERFLOW] [ {0} : x{1} ]"),AddedItem->TextData.Name, AddedItem->GetItemSingleWeight()), EItemFailReason::WeightOverflow);
+		return FItemAddResult::AddedNone(FText::Format(FText::FromString("[WEIGHT OVERFLOW] [ {0} : x{1} ]"),GetItemData(AddedItem)->TextData.Name, GetItemSingleWeight(AddedItem)), EItemFailReason::WeightOverflow);
 	}
 	//아이템 슬롯 초과 했능가? 초과면 아무것도 안 함
 	if (GetEmptySlotCount() <= 0 )
 	{
-		return FItemAddResult::AddedNone(FText::Format(FText::FromString("[SLOT OVERFLOW] [ {0} : x{1} ]"),AddedItem->TextData.Name, 1), EItemFailReason::SlotOverflow);
+		return FItemAddResult::AddedNone(FText::Format(FText::FromString("[SLOT OVERFLOW] [ {0} : x{1} ]"),GetItemData(AddedItem)->TextData.Name, 1), EItemFailReason::SlotOverflow);
 	}
 
 	//이상할 것이 없으면 추가
-	AddNewItem(AddedItem->CreateItemCopy(), 1);
-	return FItemAddResult::AddedAll(AddedItem->TextData.Name, 1, FText::Format(FText::FromString("[ADDING SUCCESS] [ {0} : x{1} ]"), AddedItem->TextData.Name, 1));
+	AddNewItem(AddedItem, 1);
+	return FItemAddResult::AddedAll(GetItemData(AddedItem)->TextData.Name, 1, FText::Format(FText::FromString("[ADDING SUCCESS] [ {0} : x{1} ]"), GetItemData(AddedItem)->TextData.Name, 1));
 }
 
 //스택 가능 아이템 추가 태스크 함수
-int32 UInventoryComponent::HandleStackableItem(UItemBase* AddedItem, int32 RequestedAmount)
+int32 UInventoryComponent::HandleStackableItem(FItemBaseData* AddedItem, int32 RequestedAmount)
 {
 	//아이템 개수가 0이거나 음수면 0 반환
-	if (RequestedAmount <= 0 || FMath::IsNearlyZero(AddedItem->GetItemStackWeight()))
+	if (RequestedAmount <= 0 || FMath::IsNearlyZero(GetItemStackWeight(*AddedItem)))
 	{
 		return 0;
 	}
@@ -304,7 +233,7 @@ int32 UInventoryComponent::HandleStackableItem(UItemBase* AddedItem, int32 Reque
 	//인벤토리에 넣을 양
 	int32 AmountToDistribute = RequestedAmount;
 	//인벤토리에 있는 풀스택이 아닌 같은 아이템 스택
-	UItemBase* ExistingItemStack = FindNextPartialStack(AddedItem);
+	FItemBaseData* ExistingItemStack = FindNextPartialStack(AddedItem);
 	
 	//인벤토리에 풀스택이 아닌 같은 아이템이 없을 때까지 반복
 	while (ExistingItemStack)
@@ -321,7 +250,7 @@ int32 UInventoryComponent::HandleStackableItem(UItemBase* AddedItem, int32 Reque
 			//인벤토리에 있던 아이템 개수 추가
 			ExistingItemStack->SetAmount(ExistingItemStack->Amount + WeightLimitAddAmount);
 			//개수 추가한 만큼 인벤토리 무게 추가
-			CurrentWeight += ExistingItemStack->GetItemSingleWeight() * WeightLimitAddAmount;
+			CurrentWeight += GetItemSingleWeight(*ExistingItemStack) * WeightLimitAddAmount;
 
 			//넣을 양에서 넣은 양 빼기
 			AmountToDistribute -= WeightLimitAddAmount;
@@ -384,14 +313,14 @@ int32 UInventoryComponent::HandleStackableItem(UItemBase* AddedItem, int32 Reque
 				AddedItem->SetAmount(AmountToDistribute);
 
 				//아이템 복사본을 무게 초과하지 않는 개수만큼 추가
-				AddNewItem(AddedItem, WeightLimitAddAmount);
+				AddNewItem(*AddedItem, WeightLimitAddAmount);
 				//요청한 개수에서 넣으려는 개수 빼고 반환
 				UE_LOG(LogTemp, Warning, TEXT("WeightLimitAmount over 0"));
 				return RequestedAmount - AmountToDistribute;
 			}
 			//아니면 넣으려는 수 만큼 아이템 추가
 			UE_LOG(LogTemp, Warning, TEXT("Amount to Distribute : %d"), AmountToDistribute);
-			AddNewItem(AddedItem, AmountToDistribute);
+			AddNewItem(*AddedItem, AmountToDistribute);
 			return RequestedAmount;
 		}
 	}
@@ -403,10 +332,10 @@ int32 UInventoryComponent::HandleStackableItem(UItemBase* AddedItem, int32 Reque
 }
 
 //무게에 따른 추가 개수 계산 함수
-int32 UInventoryComponent::CalculateWeightAddAmount(UItemBase* Item, int32 Amount)
+int32 UInventoryComponent::CalculateWeightAddAmount(FItemBaseData* Item, int32 Amount)
 {
 	//남은 용량에서 더 추가할 수 있는 개수
-	const int32 WeightMaxAddAmount = FMath::FloorToInt((GetWeightCapacity() - CurrentWeight) / Item->GetItemSingleWeight());
+	const int32 WeightMaxAddAmount = FMath::FloorToInt((GetWeightCapacity() - CurrentWeight) / GetItemSingleWeight(*Item));
 	UE_LOG(LogTemp, Warning, TEXT("Addable Weight Max Amount : %d"),WeightMaxAddAmount);
 	//추가할 아이템이 가능한 개수보다 적으면 추가할 개수 반환
 	if (WeightMaxAddAmount >= Amount)
@@ -418,21 +347,21 @@ int32 UInventoryComponent::CalculateWeightAddAmount(UItemBase* Item, int32 Amoun
 }
 
 //스택 아이템 추가 개수 계산 함수
-int32 UInventoryComponent::CalculateAmountForFullStackAmount(UItemBase* StackableItem, int32 Amount)
+int32 UInventoryComponent::CalculateAmountForFullStackAmount(FItemBaseData* StackableItem, int32 Amount)
 {
 	//풀 스택 만들기 위해 남은 개수
-	const int32 AmountToMakeFullStack = StackableItem->NumericData.MaxAmount - StackableItem->Amount;
+	const int32 AmountToMakeFullStack = GetItemMaxAmount(*StackableItem) - StackableItem->Amount;
 
 	//둘 중 더 작은 값 반환
 	return FMath::Min(Amount, AmountToMakeFullStack);
 }
 
 //실직적 아이템 추가 함수
-void UInventoryComponent::AddNewItem(UItemBase* Item, const int32 Amount)
+void UInventoryComponent::AddNewItem(FItemBaseData& Item, const int32 Amount)
 {
-	UItemBase* NewItem;
+	FItemBaseData* NewItem;
 
-	//이미 복사된 아이템이거나 월드에 떨궈진 거면
+	/*//이미 복사된 아이템이거나 월드에 떨궈진 거면
 	if (Item->IsCopy || Item->IsPickup)
 	{
 		NewItem = Item;
@@ -443,15 +372,15 @@ void UInventoryComponent::AddNewItem(UItemBase* Item, const int32 Amount)
 		NewItem = Item->CreateItemCopy();
 	}
 	
-	NewItem->OwningInventory = this;
+	NewItem->OwningInventory = this;*/
 	NewItem->SetAmount(Amount);
 
 	//인벤토리에 추가
 	//InventoryContents.Add(NewItem);
-	FindEmptySlot()->Item = NewItem;
+	FindEmptySlot()->ItemData = *NewItem;
 	
 	//무게 추가
-	CurrentWeight += NewItem->GetItemStackWeight();
+	CurrentWeight += GetItemStackWeight(*NewItem);
 	//그 사실을 널리 알리기
 	OnInventoryUpdated.Broadcast();
 }
@@ -473,7 +402,7 @@ FItemSlot* UInventoryComponent::FindEmptySlot()
 {
 	for (FItemSlot& Slot : InventoryContents)
 	{
-		if (!Slot.Item)
+		if (Slot.IsEmpty())
 		{
 			return &Slot;
 		}
@@ -524,7 +453,7 @@ int32 UInventoryComponent::RemoveItemsByID(FName ItemID, int32 Amount)
 	return Amount - DesiredRemoveAmount;
 }
 
-UItemBase* UInventoryComponent::CreateItemByID(FName ItemID, int32 Amount)
+FItemBaseData* UInventoryComponent::CreateItemByID(FName ItemID, int32 Amount)
 {
 	//데이터 데이블에서 아이템 데이터 가져오기
 	if (!ItemDataTable)
@@ -542,19 +471,14 @@ UItemBase* UInventoryComponent::CreateItemByID(FName ItemID, int32 Amount)
 	}
 	
 	//아이템 데이터 생성
-	UItemBase* NewItem = NewObject<UItemBase>(StaticClass());
+	FItemBaseData NewItem = FItemBaseData();
 
 	//데이터 테이블에서 아이템 데이터 삽입
-	NewItem->ID = ItemData->ID;
-	NewItem->Type = ItemData->Type;
-	NewItem->NumericData = ItemData->NumericData;
-	NewItem->TextData = ItemData->TextData;
-	NewItem->AssetData = ItemData->AssetData;
-	NewItem->OwningInventory = this;
-	NewItem->SetAmount(Amount);
+	NewItem.ItemID = ItemData->ID;
+	NewItem.SetAmount(Amount);
 
 	//아이템 데이터 반환
-	return NewItem;
+	return &NewItem;
 }
 
 bool UInventoryComponent::CheckCanMakeRecipe(FRecipeData Recipe)
@@ -613,7 +537,8 @@ bool UInventoryComponent::MakeItem(FRecipeData Recipe)
 		RemoveItemsByID(Recipe.Ingredient3ID, Recipe.Ingredient3Amount);
 
 		//결과물 아이템 생성
-		UItemBase* ResultItem = CreateItemByID(Recipe.ResultID, Recipe.ResultAmount);
+		FItemBaseData* ResultItem = CreateItemByID(Recipe.ResultID, Recipe.ResultAmount);
+		
 		if (ResultItem)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Result Item Created."));
@@ -625,7 +550,7 @@ bool UInventoryComponent::MakeItem(FRecipeData Recipe)
 			//있으면 추가
 			else
 			{
-				AddNewItem(ResultItem, ResultItem->Amount);
+				AddNewItem(*ResultItem, ResultItem->Amount);
 			}
 			
 			return true;
@@ -653,11 +578,12 @@ bool UInventoryComponent::RepairShip(FRepairRecipeData Recipes)
 	return false;
 }
 
-void UInventoryComponent::InsertItemToIndex(int32 Index, UItemBase* Item)
+void UInventoryComponent::InsertItemToIndex(int32 Index, FItemBaseData Item)
 {
 	if (InventoryContents.IsValidIndex(Index))
 	{
-		InventoryContents[Index].Item = Item;
+		InventoryContents[Index].ItemData = Item;
+		
 		OnInventoryUpdated.Broadcast();
 	}
 }
@@ -669,7 +595,7 @@ void UInventoryComponent::SwapItems(int32 A, int32 B)
 	FItemSlot& SlotB = InventoryContents[B];
 	
 	//서로 다른 아이템이거나 하나라도 빈 슬롯이면 자리 교환
-	if (!SlotA.Item || !SlotB.Item || SlotA.Item->ID != SlotB.Item->ID)
+	if ( SlotA.IsEmpty() || SlotB.IsEmpty() || SlotA.ItemData.ItemID != SlotB.ItemData.ItemID)
 	{
 		Swap(SlotA, SlotB);
 	}
@@ -678,17 +604,17 @@ void UInventoryComponent::SwapItems(int32 A, int32 B)
 	{
 		// 같은 아이템이면 스택 합치기
 		//분배할 총 개수
-		int32 TotalAmount = SlotA.Item->Amount + SlotB.Item->Amount;
+		int32 TotalAmount = SlotA.ItemData.Amount + SlotB.ItemData.Amount;
 		//최대 스택 개수
-		int32 MaxStack = SlotB.Item->NumericData.MaxAmount;
+		int32 MaxStack = GetItemMaxAmount(SlotB.ItemData);
 		
 		//옮길(B) 슬롯에 총 개수와 최대 스택 개수 중 작은 것 할당
-		SlotB.Item->Amount = FMath::Min(TotalAmount, MaxStack);
+		SlotB.ItemData.Amount = FMath::Min(TotalAmount, MaxStack);
 		//옮기는(A) 슬롯에 총 개수 - 옮길(B) 슬롯 개수 할당
-		SlotA.Item->Amount = TotalAmount - SlotB.Item->Amount;
+		SlotA.ItemData.Amount = TotalAmount - SlotB.ItemData.Amount;
 
-		if (SlotA.Item->Amount <= 0){
-			SlotA.Item = nullptr;
+		if (SlotA.ItemData.Amount <= 0){
+			SlotA.Clear();
 		}
 	}
 	
@@ -703,20 +629,18 @@ void UInventoryComponent::SwapItemsBetweenInventory(
 	FItemSlot& TargetSlot = TargetInventoryComponent->InventoryContents[TargetIndex];
 	
 	//서로 다른 아이템이거나 하나라도 빈 슬롯이면 그냥자리 교환
-	if (!OriginSlot.Item || !TargetSlot.Item || OriginSlot.Item->ID != TargetSlot.Item->ID)
+	if (OriginSlot.IsEmpty() || TargetSlot.IsEmpty() || OriginSlot.ItemData.ItemID != TargetSlot.ItemData.ItemID)
 	{
 		//아이템 소유 인벤토리 변경 및 무게 증감
-		if (OriginSlot.Item)
+		if (OriginSlot.IsNotEmpty())
 		{
-			OriginSlot.Item->OwningInventory = TargetInventoryComponent;
-			OriginInventoryComponent->CurrentWeight -= OriginSlot.Item->GetItemSingleWeight() * OriginSlot.Item->Amount;
-			TargetInventoryComponent->CurrentWeight += OriginSlot.Item->GetItemSingleWeight() * OriginSlot.Item->Amount;
+			OriginInventoryComponent->CurrentWeight -= GetItemSingleWeight(OriginSlot.ItemData) * OriginSlot.ItemData.Amount;
+			TargetInventoryComponent->CurrentWeight += GetItemSingleWeight(OriginSlot.ItemData) * OriginSlot.ItemData.Amount;
 		}
-		if (TargetSlot.Item)
+		if (TargetSlot.IsNotEmpty())
 		{
-			TargetSlot.Item->OwningInventory = OriginInventoryComponent;
-			OriginInventoryComponent->CurrentWeight += TargetSlot.Item->GetItemSingleWeight() * TargetSlot.Item->Amount;
-			TargetInventoryComponent->CurrentWeight -= TargetSlot.Item->GetItemSingleWeight() * TargetSlot.Item->Amount;
+			OriginInventoryComponent->CurrentWeight += GetItemSingleWeight(TargetSlot.ItemData) * TargetSlot.ItemData.Amount;
+			TargetInventoryComponent->CurrentWeight -= GetItemSingleWeight(TargetSlot.ItemData) * TargetSlot.ItemData.Amount;
 		}
 		
 		Swap(OriginSlot, TargetSlot);
@@ -726,25 +650,25 @@ void UInventoryComponent::SwapItemsBetweenInventory(
 	{
 		// 같은 아이템이면 스택 합치기
 		//분배할 총 개수
-		int32 TotalAmount = OriginSlot.Item->Amount + TargetSlot.Item->Amount;
+		int32 TotalAmount = OriginSlot.ItemData.Amount + TargetSlot.ItemData.Amount;
 		//최대 스택 개수
-		int32 MaxStack = TargetSlot.Item->NumericData.MaxAmount;
+		int32 MaxStack = GetItemMaxAmount(TargetSlot.ItemData);
 
 		//일단 무게 빼기
-		OriginInventoryComponent->CurrentWeight -= OriginSlot.Item->GetItemSingleWeight() * OriginSlot.Item->Amount;
-		TargetInventoryComponent->CurrentWeight -= TargetSlot.Item->GetItemSingleWeight() * TargetSlot.Item->Amount;
+		OriginInventoryComponent->CurrentWeight -= GetItemSingleWeight(OriginSlot.ItemData) * OriginSlot.ItemData.Amount;
+		TargetInventoryComponent->CurrentWeight -= GetItemSingleWeight(TargetSlot.ItemData) * TargetSlot.ItemData.Amount;
 		
 		//드래그 가져온 슬롯에 총 개수와 최대 스택 개수 중 작은 것 할당
-		OriginSlot.Item->Amount = FMath::Min(TotalAmount, MaxStack);
+		OriginSlot.ItemData.Amount = FMath::Min(TotalAmount, MaxStack);
 		//드롭 받는 슬롯에 총 개수 - 가져온 슬롯 개수 할당
-		TargetSlot.Item->Amount = TotalAmount - OriginSlot.Item->Amount;
+		TargetSlot.ItemData.Amount = TotalAmount - OriginSlot.ItemData.Amount;
 
 		//분배한 만큼 무게 추가
-		OriginInventoryComponent->CurrentWeight += OriginSlot.Item->GetItemSingleWeight() * OriginSlot.Item->Amount;
-		TargetInventoryComponent->CurrentWeight += TargetSlot.Item->GetItemSingleWeight() * TargetSlot.Item->Amount;
+		OriginInventoryComponent->CurrentWeight += GetItemSingleWeight(OriginSlot.ItemData) * OriginSlot.ItemData.Amount;
+		TargetInventoryComponent->CurrentWeight += GetItemSingleWeight(TargetSlot.ItemData) * TargetSlot.ItemData.Amount;
 
-		if (TargetSlot.Item->Amount <= 0){
-			TargetSlot.Item = nullptr;
+		if (TargetSlot.ItemData.Amount <= 0){
+			TargetSlot.Clear();
 		}
 	}
 	
@@ -755,7 +679,7 @@ void UInventoryComponent::SwapItemsBetweenInventory(
 void UInventoryComponent::DropItemBetweenInventory(
 	UInventoryComponent* OriginInventoryComponent, int32 OriginIndex,
 	UInventoryComponent* TargetInventoryComponent, int32 TargetIndex,
-	UItemBase* DraggedItem)
+	FItemBaseData* DraggedItem)
 {
 	//드래그 가져온 슬롯
 	FItemSlot& OriginSlot = OriginInventoryComponent->InventoryContents[OriginIndex];
@@ -763,15 +687,14 @@ void UInventoryComponent::DropItemBetweenInventory(
 	FItemSlot& TargetSlot = TargetInventoryComponent->InventoryContents[TargetIndex];
 	
 	//빈 슬롯이면 삽입
-	if (!TargetSlot.Item)
+	if (TargetSlot.IsEmpty())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("DIBI: EMPTY SLOT INSERT"));
-		TargetInventoryComponent->InsertItemToIndex(TargetIndex, DraggedItem);
-		DraggedItem->OwningInventory = TargetInventoryComponent;
+		TargetInventoryComponent->InsertItemToIndex(TargetIndex, *DraggedItem);
 
 		//무게 업데이트
-		OriginInventoryComponent->CurrentWeight -= DraggedItem->GetItemSingleWeight() * DraggedItem->Amount;
-		TargetInventoryComponent->CurrentWeight += DraggedItem->GetItemSingleWeight() * DraggedItem->Amount;
+		OriginInventoryComponent->CurrentWeight -= GetItemSingleWeight(DraggedItem->ItemID) * DraggedItem->Amount;
+		TargetInventoryComponent->CurrentWeight += GetItemSingleWeight(DraggedItem->ItemID) * DraggedItem->Amount;
 		
 		OriginInventoryComponent->OnInventoryUpdated.Broadcast();
 		TargetInventoryComponent->OnInventoryUpdated.Broadcast();
@@ -779,81 +702,116 @@ void UInventoryComponent::DropItemBetweenInventory(
 		return;
 	}
 	//다른 아이템이면 원상복구
-	if (TargetSlot.Item->ID != DraggedItem->ID)
+	if (TargetSlot.ItemData.ItemID != DraggedItem->ItemID)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("DIBI: BACK TO NORMAL"));
-		UItemBase* OriginItem = OriginSlot.Item;
+		/*UItemBase* OriginItem = OriginSlot.Item;
 		OriginItem->Amount += DraggedItem->Amount;
 
 		OriginInventoryComponent->OnInventoryUpdated.Broadcast();
-		TargetInventoryComponent->OnInventoryUpdated.Broadcast();
+		TargetInventoryComponent->OnInventoryUpdated.Broadcast();*/
 
 		return;
 	}
 	//같은 아이템이면 연산 후 정리
 	//분배할 총 개수
-	int32 TotalAmount = OriginSlot.Item->Amount + DraggedItem->Amount;
+	int32 TotalAmount = OriginSlot.ItemData.Amount + DraggedItem->Amount;
 	//최대 스택 개수
-	int32 MaxStack = TargetSlot.Item->NumericData.MaxAmount;
+	int32 MaxStack = GetItemMaxAmount(TargetSlot.ItemData.ItemID);
 
 	//일단 무게 빼기
-	OriginInventoryComponent->CurrentWeight -= OriginSlot.Item->GetItemSingleWeight() * OriginSlot.Item->Amount;
-	TargetInventoryComponent->CurrentWeight -= TargetSlot.Item->GetItemSingleWeight() * TargetSlot.Item->Amount;
+	OriginInventoryComponent->CurrentWeight -= GetItemSingleWeight(OriginSlot.ItemData) * OriginSlot.ItemData.Amount;
+	TargetInventoryComponent->CurrentWeight -= GetItemSingleWeight(TargetSlot.ItemData) * TargetSlot.ItemData.Amount;
 
 	//드롭 받는 슬롯에 총 개수와 최대 스택 개수 중 작은 것 할당
-	TargetSlot.Item->Amount = FMath::Min(TotalAmount, MaxStack);
+	TargetSlot.ItemData.Amount = FMath::Min(TotalAmount, MaxStack);
 	//드래그 가져온 슬롯에 총 개수 - 드롭 받는 슬롯 개수 할당
-	OriginSlot.Item->Amount = TotalAmount - TargetSlot.Item->Amount;
+	OriginSlot.ItemData.Amount = TotalAmount - TargetSlot.ItemData.Amount;
 
 	//무게 업데이트
-	OriginInventoryComponent->CurrentWeight += OriginSlot.Item->GetItemSingleWeight() * OriginSlot.Item->Amount;
-	TargetInventoryComponent->CurrentWeight += TargetSlot.Item->GetItemSingleWeight() * TargetSlot.Item->Amount;
+	OriginInventoryComponent->CurrentWeight += GetItemSingleWeight(OriginSlot.ItemData) * OriginSlot.ItemData.Amount;
+	TargetInventoryComponent->CurrentWeight += GetItemSingleWeight(TargetSlot.ItemData) * TargetSlot.ItemData.Amount;
 
-	if (OriginSlot.Item->Amount <= 0)
+	if (OriginSlot.ItemData.Amount <= 0)
 	{
-		OriginSlot.Item = nullptr;
+		OriginSlot.Clear();
 	}
 
 	OriginInventoryComponent->OnInventoryUpdated.Broadcast();
 	TargetInventoryComponent->OnInventoryUpdated.Broadcast();
 }
 
-bool UInventoryComponent::CheckSameItemAtIndex(int32 Index, UItemBase* Item)
+bool UInventoryComponent::CheckSameItemAtIndex(int32 Index, FName ItemID)
 {
-	if (InventoryContents[Index].Item)
+	if (InventoryContents[Index].IsNotEmpty())
 	{
-		return InventoryContents[Index].Item->ID == Item->ID;
+		return InventoryContents[Index].ItemData.ItemID == ItemID;
 	}
 	return false;
 }
 
-// Called every frame
-void UInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void UInventoryComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-#if WITH_EDITOR
-	if (!GEngine)
+	DOREPLIFETIME(UInventoryComponent, CurrentWeight);
+	DOREPLIFETIME(UInventoryComponent, InventoryContents);
+}
+
+void UInventoryComponent::Server_HandleAddItem_Implementation(FItemBaseData& AddedItem)
+{
+	Internal_HandleAddItem(AddedItem);
+}
+
+FItemAddResult UInventoryComponent::Internal_HandleAddItem(FItemBaseData& AddedItem)
+{
+	if (GetOwner())
 	{
-		FString Owner = this->GetOwner()->GetName();
-		FString Name = FString::Printf(TEXT("INVENTORY OWBER [ %s ]"), *Owner);
+		//추가할 아이템 개수
+		const int32 RequestedAmount = AddedItem.Amount;
 
-		UKismetSystemLibrary::PrintString(GetWorld(), Name, true, true, FLinearColor::Green, DeltaTime);
-		for (FItemSlot& Slot : InventoryContents)
+		//여러개 못 드는 아이템일 때 (IsStackable = false 아이템)
+		if (!IsStackableItem(AddedItem))
 		{
-			const UItemBase* Item = Slot.Item;
-			FString IsPending = "NULL";
-			FString ItemName = "NULL";
-			if (Item)
-			{
-				IsPending = Item->IsUnreachable() ? "WILL DESTROY" : "NORMAL";
-				ItemName = Item ? Item->GetName() : TEXT("Empty");
-			}
-			FString Message = FString::Printf(TEXT("Slot: [ %s ] | [ %s ]"), *ItemName, *IsPending);
+			//단일 아이템 추가 태스크 함수 실행
+			return HandleNoneStackableItem(AddedItem);
+		}
 
-			UKismetSystemLibrary::PrintString(GetWorld(), Message, true, true, FLinearColor::Green, DeltaTime);
+		//스택 가능 아이템일 때
+		//넣은 개수
+		const int32 AddedAmount = HandleStackableItem(&AddedItem, RequestedAmount);
+
+		//넣은 개수가 추가할 개수랑 같으면
+		if (AddedAmount == RequestedAmount)
+		{
+			//몽땅 추가
+			return FItemAddResult::AddedAll(GetItemData(AddedItem)->TextData.Name, RequestedAmount, FText::Format(FText::FromString("Success [ {0} : x{1} ]"), GetItemData(AddedItem)->TextData.Name, RequestedAmount));
+		}
+		//넣은 개수가 추가할 개수보다 작거나, 넣은 개수가 0 초과면
+		if (AddedAmount < RequestedAmount && AddedAmount > 0)
+		{
+			//부분 추가
+			return FItemAddResult::AddedPartial(GetItemData(AddedItem)->TextData.Name, AddedAmount, FText::Format(FText::FromString("Partial Added [ {0} : x{1} ]"), GetItemData(AddedItem)->TextData.Name, AddedAmount));
+		}
+		//넣은 개수가 0보다 작거나 같다면
+		if (AddedAmount <= 0)
+		{
+			//추가 안해부러
+			return FItemAddResult::AddedNone(FText::Format(FText::FromString("Failed Slot Overflow [ {0} : x{1} ]"), GetItemData(AddedItem)->TextData.Name, RequestedAmount), EItemFailReason::SlotOverflow);
 		}
 	}
-#endif
+	
+	return FItemAddResult::AddedNone(FText::FromString(TEXT("Can't Find Owner")),EItemFailReason::SystemError);
+
+}
+
+void UInventoryComponent::OnRep_InventoryContents()
+{
+	OnInventoryUpdated.Broadcast();
+}
+
+void UInventoryComponent::OnRep_CurrentWeight()
+{
+	OnInventoryUpdated.Broadcast();
 }
 

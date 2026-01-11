@@ -449,14 +449,14 @@ void UStatusComponent::DecreaseInfection(float Amount)
 	OnInfectionChanged.Broadcast();
 }
 
-void UStatusComponent::ApplyItem(UItemBase* Item)
+void UStatusComponent::ApplyItem(FItemData Item)
 {
-	if (Item)
+	if (Item.IsNotEmpty())
 	{
-		IncreaseHP(Item->NumericData.Health);
-		IncreaseStamina(Item->NumericData.Stamina);
-		IncreaseHunger(Item->NumericData.Hunger);
-		IncreaseHydration(Item->NumericData.Hydration);
+		IncreaseHP(Item.NumericData.Health);
+		IncreaseStamina(Item.NumericData.Stamina);
+		IncreaseHunger(Item.NumericData.Hunger);
+		IncreaseHydration(Item.NumericData.Hydration);
 	}
 }
 

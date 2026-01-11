@@ -278,7 +278,7 @@ public:
 
 	//아이템 사용 스탯 적용 함수
 	UFUNCTION(BlueprintCallable)
-	void ApplyItem(UItemBase* Item);
+	void ApplyItem(FItemData Item);
 
 	//값 반환 함수
 	UFUNCTION(BlueprintCallable, BlueprintPure)
