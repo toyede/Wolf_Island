@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Data/ItemDataStruct.h"
 #include "Interaction/InteractableActor.h"
 #include "Pickup.generated.h"
 
@@ -25,16 +26,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data", Meta = (ExposeOnSpawn = "true"))
 	FDataTableRowHandle ItemHandle;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
-	class UItemBase* ItemReference;
+	FItemBaseData ItemReference;
 	UPROPERTY(EditAnywhere, Category = "Item Data")
 	bool IsPhysics = true;
 	
 	UFUNCTION(BlueprintCallable, Category = "Item Data")
 	void InitializePickUp(const TSubclassOf<UItemBase> BaseClass, const int32 InAmount);
 
-	void InitializeDrop(UItemBase* ItemToDrop, const int32 InAmount);
+	void InitializeDrop(FItemBaseData& ItemToDrop, const int32 InAmount);
 
-	FORCEINLINE UItemBase* GetItemData() { return ItemReference; };
+	FORCEINLINE FItemBaseData& GetItemData() { return ItemReference; };
 
 	virtual void Interact(AActor* Interactor) override;
 

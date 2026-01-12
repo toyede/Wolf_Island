@@ -153,7 +153,7 @@ public:
 	void DropItemBetweenInventory(
 		UInventoryComponent* OriginInventoryComponent, int32 OriginIndex,
 		UInventoryComponent* TargetInventoryComponent, int32 TargetIndex,
-		FItemBaseData* DraggedItem);
+		FItemBaseData DraggedItem);
 	
 	//아이템 데이터 불러오기
 	FItemData* GetItemData(FName ItemID) const
@@ -279,6 +279,27 @@ public:
 		return false;
 	}
 	
+	//사용 가능한 아이템인 지 체크
+	bool IsUsableItem(FName ItemID)
+	{
+		if (const FItemData* ItemData = GetItemData(ItemID))
+		{
+			return ItemData->NumericData.IsUsable;
+		}
+		
+		return false;
+	}
+	
+	bool IsUsableItem(const FItemBaseData& Item)
+	{
+		if (const FItemData* ItemData = GetItemData(Item.ItemID))
+		{
+			return ItemData->NumericData.IsUsable;
+		}
+		
+		return false;
+	}
+	
 	//특정 인덱스의 아이템 비교
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	bool CheckSameItemAtIndex(int32 Index, FName ItemID);
@@ -291,9 +312,9 @@ public:
 	};
 	
 	//특정 인덱스의 아이템 데이터 반환
-	FItemBaseData* GetItemAtIndex(int32 Index)
+	FItemBaseData& GetItemAtIndex(int32 Index)
 	{
-		return &InventoryContents[Index].ItemData;
+		return InventoryContents[Index].ItemData;
 	};
 	//해당 ID의 아이템이 있는 슬롯 반환
 	FItemSlot* FindSlotByID(FName ItemID);
@@ -306,11 +327,10 @@ public:
 	void SetItemAtIndex(FItemBaseData* Item, int32 Index);
 	
 	//인벤토리에 있는 아이템과 중복되는 아이템인가 체크(인벤토리에서 불러온 아이템인지)
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	UItemBase* FindMatchingItem(UItemBase* Item) const;
+	FItemBaseData* FindMatchingItem(FItemBaseData& Item) const;
 
 	//아이템의 다음 스택 찾기
-	FItemBaseData* FindNextPartialStack(const FItemBaseData* Item);
+	FItemBaseData* FindNextPartialStack(const FItemBaseData& Item);
 	
 	//아이템 다량 삭제 함수
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -385,11 +405,11 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	FItemAddResult HandleNoneStackableItem(FItemBaseData& AddedItem);
 	//스택 가능 아이템 추가 함수
-	int32 HandleStackableItem(FItemBaseData* AddedItem, int32 RequestedAmount);
+	int32 HandleStackableItem(FItemBaseData& AddedItem, int32 RequestedAmount);
 	//아이템 무게 계산
-	int32 CalculateWeightAddAmount(FItemBaseData* Item, int32 Amount);
+	int32 CalculateWeightAddAmount(FItemBaseData& Item, int32 Amount);
 	//아이템 최대 스택 개수 계산
-	int32 CalculateAmountForFullStackAmount(FItemBaseData* StackableItem, int32 Amount);
+	int32 CalculateAmountForFullStackAmount(FItemBaseData& StackableItem, int32 Amount);
 	//아이템 찐 추가 함수
 	void AddNewItem(FItemBaseData& Item, const int32 Amount);
 	//아이템 있는 슬롯 개수 반환
@@ -407,7 +427,7 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	int32 RemoveItemsByID(FName ItemID, int32 Amount);
 	//ID와 개수에 따른 아이템 데이터 생성
-	FItemBaseData* CreateItemByID(FName ItemID, int32 Amount);
+	FItemBaseData CreateItemByID(FName ItemID, int32 Amount);
 
 public:	
 	// Called every frame
@@ -418,7 +438,7 @@ public:
 
 	//아이템 추가
 	UFUNCTION(Server, Reliable)
-	void Server_HandleAddItem(FItemBaseData& AddedItem);
+	void Server_HandleAddItem(FItemBaseData AddedItem);
 	UFUNCTION()
 	FItemAddResult Internal_HandleAddItem(FItemBaseData& AddedItem);
 

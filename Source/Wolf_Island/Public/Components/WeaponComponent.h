@@ -39,7 +39,7 @@ public:
 	FWeaponData CurrentWeapon;
 
 	UFUNCTION(BlueprintCallable)
-	void CheckWeapon(UItemBase* HandedItem);
+	void CheckWeapon(FItemBaseData HandedItem);
 	UFUNCTION(BlueprintCallable)
 	void EquipeWeapon(FWeaponData WeaponData);
 	UFUNCTION(BlueprintCallable)

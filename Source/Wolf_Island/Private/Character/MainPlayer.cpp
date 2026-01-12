@@ -88,12 +88,12 @@ void AMainPlayer::BeginPlay()
 	if (InventoryComponent)
 	{
 		//아이템 업데이트 바인딩
-		InventoryComponent->OnInventoryUpdated.AddUObject(this, &AMainPlayer::RefreshHand);
+		//InventoryComponent->OnInventoryUpdated.AddUObject(this, &AMainPlayer::RefreshHand);
 	}
 
 	if (WeaponComponent)
 	{
-		RefreshHand();
+		//RefreshHand();
 	}
 
 	//HUD = Cast<AMainHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
@@ -400,26 +400,28 @@ void AMainPlayer::UseItem(FItemBaseData& Item)
 //타이머 시간을 0으로 하면 실행이 안되는 사실 발견...
 void AMainPlayer::StartUseItem()
 {
-	FItemBaseData* TargetItem = InventoryComponent->GetItemAtIndex(HotBarIndex);
+	FItemBaseData* TargetItem = &InventoryComponent->GetItemAtIndex(HotBarIndex);
 	
 	if (true)
 	{
 		//사용 가능한 아이템이 아니면 암것두 안하긔.
-		if (!TargetItem.NumericData.IsUsable) return;
+		if (!InventoryComponent->IsUsableItem(*TargetItem)) return;
 		
 		UE_LOG(LogTemp, Warning, TEXT("ITEM IS VALID AND START USE ITEM"));
 		
 		if (!GetWorld()->GetTimerManager().IsTimerActive(ItemUseTimer))
 		{
+			FItemData* ItemData = InventoryComponent->GetItemData(*TargetItem);
+			
 			UE_LOG(LogTemp, Warning, TEXT("TIMER EXECUTED"));
-			UE_LOG(LogTemp, Warning, TEXT("TARGET ITEM : [ %s ] : DURATION : [ %f ]"), *TargetItem.TextData.Name.ToString(), TargetItem->NumericData.InteractionDuration);
+			UE_LOG(LogTemp, Warning, TEXT("TARGET ITEM : [ %s ] : DURATION : [ %f ]"), *ItemData->TextData.Name.ToString(), ItemData->NumericData.InteractionDuration);
 			
 			
 			GetWorld()->GetTimerManager().SetTimer(
 			ItemUseTimer,
 			[this, TargetItem]()
 			{
-				UseItem(TargetItem.ID);
+				UseItem(*TargetItem);
 			},
 			1,
 			false
@@ -496,7 +498,7 @@ void AMainPlayer::RefreshHand()
 		Server_RefreshHand();
 	} else
 	{
-		Multi_RefreshHand();	
+		//Multi_RefreshHand();	
 	}
 }
 
@@ -690,11 +692,11 @@ void AMainPlayer::Interaction()
 	}
 }
 
-void AMainPlayer::DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool IsWhole)
+void AMainPlayer::DropItem(FItemBaseData& ItemToDrop, const int32 AmountToDrop, bool IsWhole)
 {
-	UInventoryComponent* OriginInventory =  ItemToDrop->OwningInventory;
+	//UInventoryComponent* OriginInventory = ItemToDrop->OwningInventory;
 	
-	if (OriginInventory->FindMatchingItem(ItemToDrop))
+	if (InventoryComponent->FindMatchingItem(ItemToDrop))
 	{
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.Owner = this;
@@ -704,7 +706,7 @@ void AMainPlayer::DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool
 		const FVector SpawnLocation(GetActorLocation() + (GetActorForwardVector() * 50.0f));
 		const FTransform SpawnTransform(GetActorRotation(), SpawnLocation);
 		
-		const int32 RemovedAmount = OriginInventory->RemoveAmountOfItem(ItemToDrop, AmountToDrop);
+		const int32 RemovedAmount = InventoryComponent->RemoveAmountOfItem(ItemToDrop, AmountToDrop);
 		
 		APickup* Pickup = GetWorld()->SpawnActor<APickup>(APickup::StaticClass(), SpawnTransform, SpawnParams);
 		
@@ -721,7 +723,7 @@ void AMainPlayer::DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool
 	}
 }
 
-UItemBase* AMainPlayer::GetHoldingItemReference()
+FItemBaseData AMainPlayer::GetHoldingItemReference()
 {
 	if (InventoryComponent)
 	{
@@ -731,15 +733,18 @@ UItemBase* AMainPlayer::GetHoldingItemReference()
 		}
 	}
 	
-	return nullptr;
+	return FItemBaseData();
 }
 
 EItemType AMainPlayer::GetHoldingItemType()
 {
-	UItemBase* HoldingItem = GetHoldingItemReference();
-	if (HoldingItem)
+	FItemBaseData HoldingItem = GetHoldingItemReference();
+	
+	if (HoldingItem.IsValid())
 	{
-		return HoldingItem->Type;
+		FItemData* ItemData = InventoryComponent->GetItemData(HoldingItem);
+		
+		return ItemData->Type;
 	}
 	
 	return EItemType::MATERIAL;
@@ -779,15 +784,16 @@ void AMainPlayer::WeaponTrace()
 	{
 		//맞은 액터
 		AActor* HitActor = Hit.GetActor();
-		UItemBase* HoldingItem = GetHoldingItemReference();
+		FItemBaseData HoldingItem = GetHoldingItemReference();
 
 		//기본 대미지
 		float Damage = 1.0f;
 
 		//무기 장착 시 무기 대미지로 설정
-		if (HoldingItem)
+		if (HoldingItem.IsValid())
 		{
-			Damage = HoldingItem->NumericData.Damage;
+			FItemData* ItemData = InventoryComponent->GetItemData(HoldingItem);
+			Damage = ItemData->NumericData.Damage;
 		}
 
 		//최초로 맞고 또 맞은 액터면 무시
@@ -1008,16 +1014,20 @@ void AMainPlayer::Multi_Atack_Implementation()
 
 void AMainPlayer::Server_RefreshHand_Implementation()
 {
-	Multi_RefreshHand();
+	//Multi_RefreshHand();
 }
 
 void AMainPlayer::Multi_RefreshHand_Implementation()
 {
+	FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
+	
 	//해당 인덱스 인벤토리 칸에 아이템이 있으면 그 아이템 들기.
-	if (UItemBase* Item = InventoryComponent->GetItemAtIndex(HotBarIndex))
+	if (Item.IsValid())
 	{
+		FItemData* ItemData = InventoryComponent->GetItemData(Item);
+		
 		IsHoldingItem = true;
-		ItemMesh->SetStaticMesh(Item->AssetData.Mesh);
+		ItemMesh->SetStaticMesh(ItemData->AssetData.Mesh);
 		ItemMesh->AttachToComponent(
 		GetMesh(),
 		FAttachmentTransformRules::KeepRelativeTransform,
@@ -1030,7 +1040,7 @@ void AMainPlayer::Multi_RefreshHand_Implementation()
 		//ItemMesh->SetRelativeScale3D(FVector(0.1f, 0.1f, 0.1f));
 	} else
 	{
-		WeaponComponent->CheckWeapon(nullptr);
+		WeaponComponent->CheckWeapon(FItemBaseData());
 		IsHoldingItem = false;
 		ItemMesh->SetStaticMesh(nullptr);
 	}

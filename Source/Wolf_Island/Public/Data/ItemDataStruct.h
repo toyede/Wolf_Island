@@ -112,6 +112,9 @@ struct FItemBaseData
 	FName ItemID = NAME_None;
 	
 	UPROPERTY()
+	FText ItemName = FText::GetEmpty();
+	
+	UPROPERTY()
 	int32 Amount = 0;
 	
 	UPROPERTY()
@@ -119,11 +122,19 @@ struct FItemBaseData
 	
 	void SetAmount(const int32 NewAmount) { Amount = NewAmount; };
 	
+	void SetName(const FText Name) { ItemName = Name; };
+	
 	bool operator==(const FItemBaseData& Other) const
 	{
 		return ItemID == Other.ItemID
+			&& ItemName.EqualTo(Other.ItemName)
 			&& Amount == Other.Amount
 			&& FMath::IsNearlyEqual(CurrentDurability, Other.CurrentDurability);
+	}
+	
+	bool IsValid() const
+	{
+		return ItemID != NAME_None;
 	}
 	
 };

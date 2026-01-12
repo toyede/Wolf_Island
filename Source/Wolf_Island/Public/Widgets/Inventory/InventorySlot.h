@@ -58,7 +58,7 @@ protected:
 	UItemBase* ItemRef;
 
 	UPROPERTY(VisibleAnywhere, Category = "Inventory Slot")
-	FItemSlot ItemData;
+	FItemSlot SlotData;
 
 	//위젯
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))

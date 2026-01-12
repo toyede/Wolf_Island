@@ -45,22 +45,20 @@ void APickup::InitializePickUp(const TSubclassOf<UItemBase> BaseClass, const int
             ClassToUse = UItemBase::StaticClass();
         }
 
-        ItemReference = NewObject<UItemBase>(this, ClassToUse);
-
-        if (ItemReference)
+        //ItemReference = NewObject<UItemBase>(this, ClassToUse);
+        ItemReference = FItemBaseData();
+        
+        //if (ItemReference)
         {
-            ItemReference->ID = ItemData->ID;
-            ItemReference->Type = ItemData->Type;
-            ItemReference->NumericData = ItemData->NumericData;
-            ItemReference->TextData = ItemData->TextData;
-            ItemReference->AssetData = ItemData->AssetData;
-            InteractableData.InteractionDuration = ItemReference->NumericData.InteractionDuration;
+            ItemReference.ItemID = ItemData->ID;
+            ItemReference.CurrentDurability = ItemData->NumericData.Durability;
+            //InteractableData.InteractionDuration = ItemReference->NumericData.InteractionDuration;
 
-            InAmount <= 0 ? ItemReference->SetAmount(1) : ItemReference->SetAmount(InAmount);
+            InAmount <= 0 ? ItemReference.SetAmount(1) : ItemReference.SetAmount(InAmount);
 
-            if (ItemReference->NumericData.MaxAmount < InAmount)
+            if (ItemData->NumericData.MaxAmount < InAmount)
             {
-                ItemReference->SetAmount(ItemReference->NumericData.MaxAmount);
+                ItemReference.SetAmount(ItemData->NumericData.MaxAmount);
             }
         }
        
@@ -72,13 +70,14 @@ void APickup::InitializePickUp(const TSubclassOf<UItemBase> BaseClass, const int
     }
 }
 
-void APickup::InitializeDrop(UItemBase* ItemToDrop, const int32 InAmount)
+void APickup::InitializeDrop(FItemBaseData& ItemToDrop, const int32 InAmount)
 {
-    ItemReference = ItemToDrop->CreateItemCopy();
-    ItemReference->OwningInventory = nullptr;
-    InteractableData.InteractionDuration = ItemReference->NumericData.InteractionDuration;
-    InAmount <= 0 ? ItemReference->SetAmount(1) : ItemReference->SetAmount(InAmount);
-    PickupMesh->SetStaticMesh(ItemReference->AssetData.Mesh);
+    const FItemData* ItemData = 
+        ItemHandle.DataTable->FindRow<FItemData>(ItemToDrop.ItemID, ItemToDrop.ItemName.ToString());
+
+    InteractableData.InteractionDuration = ItemData->NumericData.InteractionDuration;
+    InAmount <= 0 ? ItemReference.SetAmount(1) : ItemReference.SetAmount(InAmount);
+    PickupMesh->SetStaticMesh(ItemData->AssetData.Mesh);
 }
 
 void APickup::Interact(AActor* Interactor)
@@ -93,7 +92,7 @@ void APickup::PickUp(const AActor* Picker)
 {
     if (!IsPendingKillPending())
     {
-        if (ItemReference)
+        //if (ItemReference)
         {
             //인벤토리 컴포넌트 가져오기
             if (UInventoryComponent* PickerInventory = Picker->GetComponentByClass<UInventoryComponent>())
@@ -137,10 +136,6 @@ void APickup::PickUp(const AActor* Picker)
                 //디버깅 결과 메시지
                 UE_LOG(LogTemp, Warning, TEXT("Inventory Component is invalid"));
             }
-        } else
-        {
-            //디버깅 결과 메시지
-            UE_LOG(LogTemp, Warning, TEXT("Item Reference is invalid"));
         }
     }
 }

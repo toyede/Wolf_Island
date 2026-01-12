@@ -24,17 +24,25 @@ void UInventorySlot::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if (ItemRef)
+	if (SlotData.IsNotEmpty())
 	{
-		ItemIcon->SetBrushFromTexture(ItemRef->AssetData.Icon);
+		if (OwnerInventoryRef)
+		{
+			const FItemData* ItemData = OwnerInventoryRef->GetItemData(SlotData.ItemData);
+			
+			if(ItemData)
+			{
+				ItemIcon->SetBrushFromTexture(ItemData->AssetData.Icon);
 
-		if (ItemRef->NumericData.IsStackable)
-		{
-			ItemAmount->SetVisibility(ESlateVisibility::Visible);
-			ItemAmount->SetText(FText::AsNumber(ItemRef->Amount));
-		} else
-		{
-			ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
+				if (ItemData->NumericData.IsStackable)
+				{
+					ItemAmount->SetVisibility(ESlateVisibility::Visible);
+					ItemAmount->SetText(FText::AsNumber(SlotData.ItemData.Amount));
+				} else
+				{
+					ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
+				}
+			}
 		}
 	} else
 	{
@@ -42,7 +50,7 @@ void UInventorySlot::NativeConstruct()
 		ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
 	}
 	
-	if (ToolTipClass && ItemRef && CanDragDrop)
+	if (ToolTipClass && SlotData.IsNotEmpty() && CanDragDrop)
 	{
 		UInventoryToolTip* ToolTip = CreateWidget<UInventoryToolTip>(this, ToolTipClass);
 		ToolTip->InventorySlotBeingHovered = this;
@@ -182,18 +190,18 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 			else if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
 			{
 				//같은 아이템이 아니면
-				if (!OriginInventoryRef->CheckSameItemAtIndex(Index, ItemDragDrop->SourceItem))
+				if (!OriginInventoryRef->CheckSameItemAtIndex(Index, ItemDragDrop->SourceItemData.ItemID))
 				{
 					UE_LOG(LogTemp, Warning, TEXT("RIGHT SLOT DROP DETECTED"));
 					//빈 슬롯이면 그대로 삽입
 					if (OriginInventoryRef->CheckEmptySlotAtIndex(Index))
 					{
-						OriginInventoryRef->InsertItemToIndex(Index, ItemDragDrop->SourceItem);
+						OriginInventoryRef->InsertItemToIndex(Index, ItemDragDrop->SourceItemData);
 						return true;
 					}
 					//아니면 제자리로
 					//원래 인덱스 아이템 개수 원상 복구 후 끝
-					OriginInventoryRef->GetItemAtIndex(ItemDragDrop->SourceIndex)->Amount += ItemDragDrop->SourceItem->Amount;
+					OriginInventoryRef->GetItemAtIndex(ItemDragDrop->SourceIndex).Amount += ItemDragDrop->SourceItem->Amount;
 					OriginInventoryRef->OnInventoryUpdated.Broadcast();
 				
 					return true;
@@ -211,7 +219,7 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 					//최대 스택 개수랑 총 분배할 개수 중 작은 것을 기존 슬롯에 분배
 					ItemRef->Amount = FMath::Min(TotalAmount, MaxStack);
 					ItemDragDrop->SourceItem->Amount = TotalAmount - ItemRef->Amount;
-					OriginInventoryRef->GetItemAtIndex(ItemDragDrop->SourceIndex)->Amount += ItemDragDrop->SourceItem->Amount;
+					OriginInventoryRef->GetItemAtIndex(ItemDragDrop->SourceIndex).Amount += ItemDragDrop->SourceItem->Amount;
 					OriginInventoryRef->OnInventoryUpdated.Broadcast();
 				}
 			}
@@ -236,7 +244,7 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 				OwnerInventoryRef->DropItemBetweenInventory(
 					OriginInventoryRef, ItemDragDrop->SourceIndex,
 					OwnerInventoryRef, Index,
-					ItemDragDrop->SourceItem);
+					ItemDragDrop->SourceItemData);
 
 				return true;
 			}

@@ -34,7 +34,7 @@ void UWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	// ...
 }
 
-void UWeaponComponent::CheckWeapon(UItemBase* HandedItem)
+void UWeaponComponent::CheckWeapon(FItemBaseData HandedItem)
 {
 	if (!WeaponDataTable)
 	{
@@ -42,9 +42,9 @@ void UWeaponComponent::CheckWeapon(UItemBase* HandedItem)
 		return;
 	}
 
-	if (HandedItem)
+	if (HandedItem.IsValid())
 	{
-		FWeaponData* WeaponData = WeaponDataTable->FindRow<FWeaponData>(HandedItem->ID, "FindWeapon");
+		FWeaponData* WeaponData = WeaponDataTable->FindRow<FWeaponData>(HandedItem.ItemID, "FindWeapon");
 
 		if (WeaponData)
 		{

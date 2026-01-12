@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/DragDropOperation.h"
+#include "Data/ItemDataStruct.h"
 #include "ItemDragDropOperation.generated.h"
 
 /**
@@ -20,7 +21,10 @@ public:
 	int32 SourceIndex;
 	
 	UPROPERTY()
-	class UItemBase* SourceItem;
+	UItemBase* SourceItem;
+	
+	UPROPERTY()
+	FItemBaseData SourceItemData;
 
 	UPROPERTY()
 	class UInventoryComponent* SourceInventory;

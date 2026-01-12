@@ -330,11 +330,11 @@ public:
 
 	//아이템 떨구기 함수
 	UFUNCTION(BlueprintCallable)
-	void DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool IsWhole);
+	void DropItem(FItemBaseData& ItemToDrop, const int32 AmountToDrop, bool IsWhole);
 
 	//손에 든 아이템 레퍼런스 반환 함수
-	UFUNCTION(BlueprintPure)
-	UItemBase* GetHoldingItemReference();
+	//UFUNCTION(BlueprintPure)
+	FItemBaseData GetHoldingItemReference();
 
 	//손에 든 아이템 타입 반환 함수
 	UFUNCTION(BlueprintPure)
