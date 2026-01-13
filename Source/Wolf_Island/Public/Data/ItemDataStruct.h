@@ -127,7 +127,6 @@ struct FItemBaseData
 	bool operator==(const FItemBaseData& Other) const
 	{
 		return ItemID == Other.ItemID
-			&& ItemName.EqualTo(Other.ItemName)
 			&& Amount == Other.Amount
 			&& FMath::IsNearlyEqual(CurrentDurability, Other.CurrentDurability);
 	}
@@ -135,6 +134,13 @@ struct FItemBaseData
 	bool IsValid() const
 	{
 		return ItemID != NAME_None;
+	}
+	
+	void LogData()
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ItemID : %s"), *ItemID.ToString());
+		UE_LOG(LogTemp, Warning, TEXT("ItemName : %s"), *ItemName.ToString());
+		UE_LOG(LogTemp, Warning, TEXT("ItemAmount : %d"), Amount);
 	}
 	
 };

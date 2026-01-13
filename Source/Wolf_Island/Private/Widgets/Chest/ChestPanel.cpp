@@ -45,7 +45,7 @@ void UChestPanel::RefreshChest()
 			
 			if (InventorySlot.Item)
 			{
-				ItemSlot->SetItemReference(InventorySlot.Item);
+				ItemSlot->SetItemReference(&InventorySlot.ItemData);
 			}
 			
 			ChestPanel->AddChildToWrapBox(ItemSlot);

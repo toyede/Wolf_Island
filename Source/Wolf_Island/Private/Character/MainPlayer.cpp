@@ -696,7 +696,7 @@ void AMainPlayer::DropItem(FItemBaseData& ItemToDrop, const int32 AmountToDrop, 
 {
 	//UInventoryComponent* OriginInventory = ItemToDrop->OwningInventory;
 	
-	if (InventoryComponent->FindMatchingItem(ItemToDrop))
+	if (ItemToDrop.IsValid())
 	{
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.Owner = this;

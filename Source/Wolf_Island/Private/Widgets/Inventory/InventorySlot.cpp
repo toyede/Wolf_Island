@@ -23,13 +23,13 @@ void UInventorySlot::NativeOnInitialized()
 void UInventorySlot::NativeConstruct()
 {
 	Super::NativeConstruct();
-
-	if (SlotData.IsNotEmpty())
+	
+	if (OwnerInventoryRef)
 	{
-		if (OwnerInventoryRef)
-		{
-			const FItemData* ItemData = OwnerInventoryRef->GetItemData(SlotData.ItemData);
-			
+		FItemData* ItemData = OwnerInventoryRef->GetItemData(*ItemRef);
+		
+		if (ItemRef)
+		{			
 			if(ItemData)
 			{
 				ItemIcon->SetBrushFromTexture(ItemData->AssetData.Icon);
@@ -37,24 +37,35 @@ void UInventorySlot::NativeConstruct()
 				if (ItemData->NumericData.IsStackable)
 				{
 					ItemAmount->SetVisibility(ESlateVisibility::Visible);
-					ItemAmount->SetText(FText::AsNumber(SlotData.ItemData.Amount));
+					ItemAmount->SetText(FText::AsNumber(ItemRef->Amount));
 				} else
 				{
 					ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
 				}
+			
 			}
+		} else
+		{
+			ItemIcon->SetVisibility(ESlateVisibility::Collapsed);
+			ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
+		}
+	
+	
+		if (ToolTipClass && ItemRef && CanDragDrop)
+		{
+			UInventoryToolTip* ToolTip = CreateWidget<UInventoryToolTip>(this, ToolTipClass);
+			ToolTip->InventorySlotBeingHovered = this;
+			
+			if (ItemData)
+			{
+				ToolTip->ItemData = ItemData;
+			}
+			
+			SetToolTip(ToolTip);
 		}
 	} else
 	{
-		ItemIcon->SetVisibility(ESlateVisibility::Collapsed);
-		ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
-	}
-	
-	if (ToolTipClass && SlotData.IsNotEmpty() && CanDragDrop)
-	{
-		UInventoryToolTip* ToolTip = CreateWidget<UInventoryToolTip>(this, ToolTipClass);
-		ToolTip->InventorySlotBeingHovered = this;
-		SetToolTip(ToolTip);
+		UE_LOG(LogTemp, Warning, TEXT("SLOT : Item Data is Empty"))
 	}
 }
 
@@ -88,21 +99,23 @@ void UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPo
 	Super::NativeOnDragDetected(InGeometry, InMouseEvent, OutOperation);
 	
 	if (!CanDragDrop) return;
-
+	
+	FItemData* ItemData = OwnerInventoryRef->GetItemData(*ItemRef);
+	
 	//좌클릭 드래그면 이동
 	if (InMouseEvent.IsMouseButtonDown(EKeys::LeftMouseButton))
 	{
 		if (DragItemVisualClass && ItemRef)
-		{
+		{			
 			const TObjectPtr<UDragItemVisual> DragVisual = CreateWidget<UDragItemVisual>(this, DragItemVisualClass);
-			DragVisual->ItemIcon->SetBrushFromTexture(ItemRef->AssetData.Icon);
+			DragVisual->ItemIcon->SetBrushFromTexture(ItemData->AssetData.Icon);
 			DragVisual->ItemBorder->SetBrush(UnSelectedSlotBrush);
 			DragVisual->ItemAmount->SetText(FText::AsNumber(ItemRef->Amount));
 
 			UItemDragDropOperation* DragItemOperation = NewObject<UItemDragDropOperation>();
-			DragItemOperation->SourceItem = ItemRef;
-			DragItemOperation->SourceInventory = ItemRef->OwningInventory;
+			DragItemOperation->SourceInventory = OwnerInventoryRef;
 			DragItemOperation->SourceIndex = Index;
+			DragItemOperation->SourceItemData = ItemRef;
 
 			DragItemOperation->DefaultDragVisual = DragVisual;
 			DragItemOperation->Pivot = EDragPivot::MouseDown;
@@ -132,22 +145,20 @@ void UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPo
 
 			//드래그 아이템 위젯 생성 (비주얼만 만드는 거임)
 			const TObjectPtr<UDragItemVisual> DragVisual = CreateWidget<UDragItemVisual>(this, DragItemVisualClass);
-			DragVisual->ItemIcon->SetBrushFromTexture(ItemRef->AssetData.Icon);
+			DragVisual->ItemIcon->SetBrushFromTexture(ItemData->AssetData.Icon);
 			DragVisual->ItemBorder->SetBrush(UnSelectedSlotBrush);
 			DragVisual->ItemAmount->SetText(FText::AsNumber(MovedAmount));
 
 			//드래그 아이템 데이터 생성
 			UItemDragDropOperation* DragItemOperation = NewObject<UItemDragDropOperation>();
-			DragItemOperation->SourceItem = ItemRef->CreateItemCopy();
-			DragItemOperation->SourceInventory = ItemRef->OwningInventory;
+			DragItemOperation->SourceInventory = OwnerInventoryRef;
+			DragItemOperation->SourceItemData = ItemRef;
 			DragItemOperation->SourceIndex = Index;
-			DragItemOperation->SourceItem->Amount = MovedAmount;
-			DragItemOperation->SourceItem->OwningInventory = ItemRef->OwningInventory;
 			
 			DragItemOperation->DefaultDragVisual = DragVisual;
 			DragItemOperation->Pivot = EDragPivot::MouseDown;
 
-			ItemRef->OwningInventory->OnInventoryUpdated.Broadcast();
+			OwnerInventoryRef->OnInventoryUpdated.Broadcast();
 			
 			OutOperation = DragItemOperation;
 			
@@ -169,6 +180,8 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 	
 	UInventoryComponent* OriginInventoryRef = ItemDragDrop->SourceInventory;
 	
+	FItemData* ItemData = OwnerInventoryRef->GetItemData(*ItemRef);
+	
 	if (OriginInventoryRef)
 	{
 		//같은 인벤토리 안에서 이동이면,
@@ -181,7 +194,8 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 				UE_LOG(LogTemp, Warning, TEXT("LEFT SLOT DROP DETECTED"));
 				//같은 칸이면 무시
 				if (ItemDragDrop->SourceIndex == Index) return false;
-
+				
+				UE_LOG(LogTemp, Warning, TEXT("Drop %d Item on %d"), ItemDragDrop->SourceIndex, Index);
 				//다른 칸이면 스왑
 				OriginInventoryRef->SwapItems(ItemDragDrop->SourceIndex, Index);
 				return true;
@@ -190,15 +204,19 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 			else if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
 			{
 				//같은 아이템이 아니면
-				if (!OriginInventoryRef->CheckSameItemAtIndex(Index, ItemDragDrop->SourceItemData.ItemID))
+				if (!OriginInventoryRef->CheckSameItemAtIndex(Index, ItemDragDrop->SourceItemData->ItemID))
 				{
 					UE_LOG(LogTemp, Warning, TEXT("RIGHT SLOT DROP DETECTED"));
 					//빈 슬롯이면 그대로 삽입
 					if (OriginInventoryRef->CheckEmptySlotAtIndex(Index))
 					{
 						OriginInventoryRef->InsertItemToIndex(Index, ItemDragDrop->SourceItemData);
+						OriginInventoryRef->GetItemAtIndex(ItemDragDrop->SourceIndex).Amount -= ItemDragDrop->SourceItemData->Amount;
+						ItemDragDrop->SourceInventory->OnInventoryUpdated.Broadcast();
+						
 						return true;
 					}
+					
 					//아니면 제자리로
 					//원래 인덱스 아이템 개수 원상 복구 후 끝
 					OriginInventoryRef->GetItemAtIndex(ItemDragDrop->SourceIndex).Amount += ItemDragDrop->SourceItem->Amount;
@@ -214,7 +232,7 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 					//총 분배 개수
 					int32 TotalAmount = ItemRef->Amount + ItemDragDrop->SourceItem->Amount;
 					//최대 스택 개수
-					int32 MaxStack = ItemRef->NumericData.MaxAmount;
+					int32 MaxStack = ItemData->NumericData.MaxAmount;
 
 					//최대 스택 개수랑 총 분배할 개수 중 작은 것을 기존 슬롯에 분배
 					ItemRef->Amount = FMath::Min(TotalAmount, MaxStack);

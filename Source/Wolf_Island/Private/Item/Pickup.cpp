@@ -16,6 +16,14 @@ APickup::APickup()
     PickupMesh->SetCollisionProfileName("BlockAll");
     PickupMesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
     SetRootComponent(PickupMesh);
+    
+    static ConstructorHelpers::FObjectFinder<UDataTable>
+        DT_ItemData(TEXT("/Game/item/DT_ItemData.DT_ItemData"));
+
+    if (DT_ItemData.Succeeded())
+    {
+        ItemDataTable = DT_ItemData.Object;
+    }
 
     SetReplicates(true);
 }
@@ -45,21 +53,18 @@ void APickup::InitializePickUp(const TSubclassOf<UItemBase> BaseClass, const int
             ClassToUse = UItemBase::StaticClass();
         }
 
-        //ItemReference = NewObject<UItemBase>(this, ClassToUse);
         ItemReference = FItemBaseData();
         
-        //if (ItemReference)
+        ItemReference.ItemID = ItemData->ID;
+        ItemReference.ItemName = ItemData->TextData.Name;
+        ItemReference.CurrentDurability = ItemData->NumericData.Durability;
+        InteractableData.InteractionDuration = ItemData->NumericData.InteractionDuration;
+
+        InAmount <= 0 ? ItemReference.SetAmount(1) : ItemReference.SetAmount(InAmount);
+
+        if (ItemData->NumericData.MaxAmount < InAmount)
         {
-            ItemReference.ItemID = ItemData->ID;
-            ItemReference.CurrentDurability = ItemData->NumericData.Durability;
-            //InteractableData.InteractionDuration = ItemReference->NumericData.InteractionDuration;
-
-            InAmount <= 0 ? ItemReference.SetAmount(1) : ItemReference.SetAmount(InAmount);
-
-            if (ItemData->NumericData.MaxAmount < InAmount)
-            {
-                ItemReference.SetAmount(ItemData->NumericData.MaxAmount);
-            }
+            ItemReference.SetAmount(ItemData->NumericData.MaxAmount);
         }
        
         if (ItemData->AssetData.Mesh)
@@ -72,12 +77,20 @@ void APickup::InitializePickUp(const TSubclassOf<UItemBase> BaseClass, const int
 
 void APickup::InitializeDrop(FItemBaseData& ItemToDrop, const int32 InAmount)
 {
-    const FItemData* ItemData = 
-        ItemHandle.DataTable->FindRow<FItemData>(ItemToDrop.ItemID, ItemToDrop.ItemName.ToString());
-
-    InteractableData.InteractionDuration = ItemData->NumericData.InteractionDuration;
-    InAmount <= 0 ? ItemReference.SetAmount(1) : ItemReference.SetAmount(InAmount);
-    PickupMesh->SetStaticMesh(ItemData->AssetData.Mesh);
+    if (ItemDataTable)
+    {
+        const FItemData* ItemData = 
+        ItemDataTable->FindRow<FItemData>(ItemToDrop.ItemID, ItemToDrop.ItemName.ToString());
+        
+        ItemReference = ItemToDrop;
+        InteractableData.InteractionDuration = ItemData->NumericData.InteractionDuration;
+        InAmount <= 0 ? ItemReference.SetAmount(1) : ItemReference.SetAmount(InAmount);
+        PickupMesh->SetStaticMesh(ItemData->AssetData.Mesh);
+    } else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Item Data Table is not valid"));
+    }
+    
 }
 
 void APickup::Interact(AActor* Interactor)

@@ -132,8 +132,10 @@ void UPlayerHUD::RefreshHotBar()
 		HotSlot->SetDragDrop(false);
 		HotSlot->SetOwnerRef(PlayerRef->InventoryComponent);
 		HotSlot->SetSlotNumber(i+1);
-
-		if (UItemBase* Item = PlayerRef->InventoryComponent->GetInventory()[i].Item)
+		
+		FItemBaseData* Item = &PlayerRef->InventoryComponent->GetInventory()[i].ItemData;
+		
+		if (Item)
 		{
 			HotSlot->SetItemReference(Item);
 		}

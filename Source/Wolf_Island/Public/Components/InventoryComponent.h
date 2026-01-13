@@ -137,7 +137,7 @@ public:
 	FItemAddResult HandleAddItem(FItemBaseData& AddedItem);
 	
 	//특정 인덱스에 아이템 넣기
-	void InsertItemToIndex(int32 Index, FItemBaseData Item);
+	void InsertItemToIndex(int32 Index, FItemBaseData* Item);
 	
 	//인덱스 A,B 아이템 바꾸기
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -153,11 +153,23 @@ public:
 	void DropItemBetweenInventory(
 		UInventoryComponent* OriginInventoryComponent, int32 OriginIndex,
 		UInventoryComponent* TargetInventoryComponent, int32 TargetIndex,
-		FItemBaseData DraggedItem);
+		FItemBaseData* DraggedItem);
 	
 	//아이템 데이터 불러오기
 	FItemData* GetItemData(FName ItemID) const
 	{
+		if (!IsValid(ItemDataTable))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("ItemDataTable is not valid"));
+			return nullptr;
+		}
+		
+		if (ItemID.IsNone())
+		{
+			UE_LOG(LogTemp, Error, TEXT("ItemID is NAME_None"));
+			return nullptr;
+		}
+		
 		if (ItemDataTable)
 		{
 			return ItemDataTable->FindRow<FItemData>(ItemID, "SearchingItem");
@@ -168,6 +180,18 @@ public:
 	
 	FItemData* GetItemData(FItemBaseData Item) const
 	{
+		if (!IsValid(ItemDataTable))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("ItemDataTable is not valid"));
+			return nullptr;
+		}
+		
+		if (Item.ItemID.IsNone())
+		{
+			UE_LOG(LogTemp, Error, TEXT("ItemID is NAME_None"));
+			return nullptr;
+		}
+		
 		if (ItemDataTable)
 		{
 			return ItemDataTable->FindRow<FItemData>(Item.ItemID, "SearchingItem");
@@ -183,6 +207,7 @@ public:
 
 		if (const FItemData* ItemData = GetItemData(ItemID))
 		{
+			UE_LOG(LogTemp, Warning, TEXT("GetItemData on GetItemSingleWeight : %s"), *ItemID.ToString());
 			Weight = ItemData->NumericData.Weight;
 		}
 		
@@ -195,6 +220,7 @@ public:
 
 		if (const FItemData* ItemData = GetItemData(Item.ItemID))
 		{
+			UE_LOG(LogTemp, Warning, TEXT("GetItemData on GetItemSingleWeight : %s | %f"), *Item.ItemID.ToString(), ItemData->NumericData.Weight);
 			Weight = ItemData->NumericData.Weight;
 		}
 		
@@ -208,6 +234,7 @@ public:
 
 		if (const FItemData* ItemData = GetItemData(ItemID))
 		{
+			UE_LOG(LogTemp, Warning, TEXT("GetItemData on GetItemStackWeight : %s"), *ItemID.ToString());
 			Weight = ItemData->NumericData.Weight * ItemData->NumericData.MaxAmount;
 		}
 		
@@ -220,6 +247,7 @@ public:
 
 		if (const FItemData* ItemData = GetItemData(Item.ItemID))
 		{
+			UE_LOG(LogTemp, Warning, TEXT("GetItemData on GetItemStackWeight : %s"), *Item.ItemID.ToString());
 			Weight = ItemData->NumericData.Weight * ItemData->NumericData.MaxAmount;
 		}
 		
@@ -231,6 +259,7 @@ public:
 	{
 		if (const FItemData* ItemData = GetItemData(Slot.ItemData.ItemID))
 		{
+			UE_LOG(LogTemp, Warning, TEXT("GetItemData on IsSlotFullStack : %s"), *Slot.ItemData.ItemID.ToString());
 			return Slot.ItemData.Amount == ItemData->NumericData.MaxAmount;
 		}
 		
@@ -242,6 +271,7 @@ public:
 	{
 		if (const FItemData* ItemData = GetItemData(ItemID))
 		{
+			UE_LOG(LogTemp, Warning, TEXT("GetItemData on GetItemMaxAmount : %s"), *ItemID.ToString());
 			return ItemData->NumericData.MaxAmount;
 		}
 		
@@ -252,6 +282,7 @@ public:
 	{
 		if (const FItemData* ItemData = GetItemData(Item.ItemID))
 		{
+			UE_LOG(LogTemp, Warning, TEXT("GetItemData on GetItemMaxAmount : %s"), *Item.ItemID.ToString());
 			return ItemData->NumericData.MaxAmount;
 		}
 		
@@ -263,7 +294,12 @@ public:
 	{
 		if (const FItemData* ItemData = GetItemData(ItemID))
 		{
+			UE_LOG(LogTemp, Warning, TEXT("GetItemData on IsStackableItem : %s | %d"), *ItemID.ToString(), ItemData->NumericData.IsStackable);
 			return ItemData->NumericData.IsStackable;
+		} else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("No Item Data on [ %s ]"), *ItemID.ToString());
+
 		}
 		
 		return false;
@@ -273,7 +309,11 @@ public:
 	{
 		if (const FItemData* ItemData = GetItemData(Item.ItemID))
 		{
+			UE_LOG(LogTemp, Warning, TEXT("GetItemData on IsStackableItem : %s | %d"), *Item.ItemID.ToString(), ItemData->NumericData.IsStackable);
 			return ItemData->NumericData.IsStackable;
+		} else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("No Item Data on [ %s ]"), *Item.ItemID.ToString());
 		}
 		
 		return false;
@@ -332,9 +372,12 @@ public:
 	//아이템의 다음 스택 찾기
 	FItemBaseData* FindNextPartialStack(const FItemBaseData& Item);
 	
+	//아이템 인벤토리에서 삭제
+	void RemoveSingleInstanceOfItem(FItemBaseData& Item);
+	
 	//아이템 다량 삭제 함수
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	int32 RemoveAmountOfItem(FItemBaseData& Slot, int32 DesiredRemovedAmount);
+	int32 RemoveAmountOfItem(FItemBaseData& Item, int32 DesiredRemovedAmount);
 
 	//인벤토리 총 무게 반환
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -428,6 +471,10 @@ protected:
 	int32 RemoveItemsByID(FName ItemID, int32 Amount);
 	//ID와 개수에 따른 아이템 데이터 생성
 	FItemBaseData CreateItemByID(FName ItemID, int32 Amount);
+	
+	//인벤토리 확인 디버그 함수
+	UFUNCTION(BlueprintCallable, Category = "Debug")
+	void PrintInventory(float DeltaTime);
 
 public:	
 	// Called every frame
@@ -440,7 +487,7 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_HandleAddItem(FItemBaseData AddedItem);
 	UFUNCTION()
-	FItemAddResult Internal_HandleAddItem(FItemBaseData& AddedItem);
+	FItemAddResult Internal_HandleAddItem(FItemBaseData AddedItem);
 
 	//인벤토리(InventoryContents) 변경 시
 	UFUNCTION()

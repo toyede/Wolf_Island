@@ -61,12 +61,9 @@ void UInventoryPanel::RefreshInventory()
 			ItemSlot->SetIndex(Index++);
 			ItemSlot->SetOwnerRef(InventoryRef);
 			
-			if (InventorySlot.Item)
+			if (InventorySlot.ItemData.IsValid())
 			{
-				ItemSlot->SetItemReference(InventorySlot.Item);
-			} else
-			{
-				//UE_LOG(LogTemp, Warning, TEXT("NO ITEM IN SLOT [%d]"), Index);
+				ItemSlot->SetItemReference(&InventorySlot.ItemData);
 			}
 			
 			//핫바 슬롯( 첫번째부터 6칸 ( 0 ~ 5 ) )

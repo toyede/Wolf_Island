@@ -41,10 +41,9 @@ bool UInventory::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent&
 {
 	const UItemDragDropOperation* ItemDragDrop = Cast<UItemDragDropOperation>(InOperation);
 
-	UItemBase* Item = ItemDragDrop->SourceItem;
-	FItemBaseData ItemData = ItemDragDrop->SourceItemData;
+	FItemBaseData* ItemData = ItemDragDrop->SourceItemData;
 	
-	if (PlayerRef && Item)
+	if (PlayerRef && ItemData)
 	{
 		if (InventoryPanel)
 		{
@@ -61,7 +60,7 @@ bool UInventory::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent&
 				//우클릭이면 떨구기면 반갈한 거 원위치
 				if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
 				{
-					ItemDragDrop->SourceInventory->GetItemAtIndex(ItemDragDrop->SourceIndex).Amount += Item->Amount;
+					ItemDragDrop->SourceInventory->GetItemAtIndex(ItemDragDrop->SourceIndex).Amount += ItemData->Amount;
 					ItemDragDrop->SourceInventory->OnInventoryUpdated.Broadcast();
 				}
 				return false;
@@ -72,13 +71,17 @@ bool UInventory::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent&
 		if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("RIGHT CLICK DROP"));
-			PlayerRef->DropItem(ItemData, Item->Amount, false);
+			PlayerRef->DropItem(*ItemData, ItemData->Amount, false);
 			return true;
 		}
 		
+		//좌클릭 떨구기면 싹다 버리기
 		UE_LOG(LogTemp, Warning, TEXT("LEFT CLICK DROP"));
-		PlayerRef->DropItem(ItemData, Item->Amount, true);
+		PlayerRef->DropItem(*ItemData, ItemData->Amount, true);
 		return true;
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DROP ON PANEL ITEM INVALID"));
 	}
 	return false;
 }

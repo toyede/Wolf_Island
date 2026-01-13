@@ -24,8 +24,8 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<class UInventoryToolTip> ToolTipClass;
 
-	UFUNCTION()
-	void SetCraftSlot(const struct FItemData& ItemData, int32 Amount);
+	//UFUNCTION()
+	void SetCraftSlot(struct FItemData* ItemData, int32 Amount);
 
 protected:
 
