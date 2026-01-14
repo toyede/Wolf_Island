@@ -26,7 +26,7 @@ void UInventorySlot::NativeConstruct()
 	
 	if (OwnerInventoryRef)
 	{
-		FItemData* ItemData = OwnerInventoryRef->GetItemData(*ItemRef);
+		FItemData* ItemData = nullptr;// = OwnerInventoryRef->GetItemData(*ItemRef);
 		
 		if (ItemRef)
 		{			
@@ -115,7 +115,7 @@ void UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPo
 			UItemDragDropOperation* DragItemOperation = NewObject<UItemDragDropOperation>();
 			DragItemOperation->SourceInventory = OwnerInventoryRef;
 			DragItemOperation->SourceIndex = Index;
-			DragItemOperation->SourceItemData = ItemRef;
+			DragItemOperation->SourceItemData = *ItemRef;
 
 			DragItemOperation->DefaultDragVisual = DragVisual;
 			DragItemOperation->Pivot = EDragPivot::MouseDown;
@@ -152,7 +152,7 @@ void UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPo
 			//드래그 아이템 데이터 생성
 			UItemDragDropOperation* DragItemOperation = NewObject<UItemDragDropOperation>();
 			DragItemOperation->SourceInventory = OwnerInventoryRef;
-			DragItemOperation->SourceItemData = ItemRef;
+			DragItemOperation->SourceItemData = *ItemRef;
 			DragItemOperation->SourceIndex = Index;
 			
 			DragItemOperation->DefaultDragVisual = DragVisual;
@@ -197,21 +197,27 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 				
 				UE_LOG(LogTemp, Warning, TEXT("Drop %d Item on %d"), ItemDragDrop->SourceIndex, Index);
 				//다른 칸이면 스왑
-				OriginInventoryRef->SwapItems(ItemDragDrop->SourceIndex, Index);
+				//TODO: 서버 호출 함수로 변경
+				OriginInventoryRef->Server_SwapItem(ItemDragDrop->SourceIndex, Index);
+				//SwapItems(ItemDragDrop->SourceIndex, Index);
 				return true;
 			}
 			//우클릭 떨구기면 연산 후 삽입
 			else if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
 			{
 				//같은 아이템이 아니면
-				if (!OriginInventoryRef->CheckSameItemAtIndex(Index, ItemDragDrop->SourceItemData->ItemID))
+				if (!OriginInventoryRef->CheckSameItemAtIndex(Index, ItemDragDrop->SourceItemData.ItemID))
 				{
 					UE_LOG(LogTemp, Warning, TEXT("RIGHT SLOT DROP DETECTED"));
 					//빈 슬롯이면 그대로 삽입
+					//TODO: 서버 호출 함수로 변경
 					if (OriginInventoryRef->CheckEmptySlotAtIndex(Index))
 					{
-						OriginInventoryRef->InsertItemToIndex(Index, ItemDragDrop->SourceItemData);
-						OriginInventoryRef->GetItemAtIndex(ItemDragDrop->SourceIndex).Amount -= ItemDragDrop->SourceItemData->Amount;
+						OriginInventoryRef->Server_SetItemAtSlot(Index, ItemDragDrop->SourceItemData);
+						//InsertItemToIndex(Index, *ItemDragDrop->SourceItemData);
+						//TODO: 서버 호출 함수로 변경
+						OriginInventoryRef->Server_RemoveItemAmountAtSlot(ItemDragDrop->SourceIndex, ItemDragDrop->SourceItemData.Amount);
+						//GetItemAtIndex(ItemDragDrop->SourceIndex).Amount -= ItemDragDrop->SourceItemData->Amount;
 						ItemDragDrop->SourceInventory->OnInventoryUpdated.Broadcast();
 						
 						return true;
@@ -219,7 +225,10 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 					
 					//아니면 제자리로
 					//원래 인덱스 아이템 개수 원상 복구 후 끝
-					OriginInventoryRef->GetItemAtIndex(ItemDragDrop->SourceIndex).Amount += ItemDragDrop->SourceItem->Amount;
+					//TODO: 서버 호출 함수로 변경
+					OriginInventoryRef->Server_AddItemAmountAtSlot(ItemDragDrop->SourceIndex, ItemDragDrop->SourceItemData.Amount);
+					//GetItemAtIndex(ItemDragDrop->SourceIndex).Amount += ItemDragDrop->SourceItem->Amount;
+					
 					OriginInventoryRef->OnInventoryUpdated.Broadcast();
 				
 					return true;
@@ -237,7 +246,9 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 					//최대 스택 개수랑 총 분배할 개수 중 작은 것을 기존 슬롯에 분배
 					ItemRef->Amount = FMath::Min(TotalAmount, MaxStack);
 					ItemDragDrop->SourceItem->Amount = TotalAmount - ItemRef->Amount;
-					OriginInventoryRef->GetItemAtIndex(ItemDragDrop->SourceIndex).Amount += ItemDragDrop->SourceItem->Amount;
+					//TODO: 서버 호출 함수로 변경
+					OriginInventoryRef->Server_AddItemAmountAtSlot(ItemDragDrop->SourceIndex, ItemDragDrop->SourceItemData.Amount);
+					//GetItemAtIndex(ItemDragDrop->SourceIndex).Amount += ItemDragDrop->SourceItem->Amount;
 					OriginInventoryRef->OnInventoryUpdated.Broadcast();
 				}
 			}
@@ -249,9 +260,14 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 			if (InDragDropEvent.GetEffectingButton() == EKeys::LeftMouseButton)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("LEFT DROP BETWEEN OTHERS"))
-				OwnerInventoryRef->SwapItemsBetweenInventory(
+				//TODO: 서버 호출 함수로 변경
+				//OriginInventoryRef는 외부에서 온 슬롯의 인벤토리
+				//드롭받는 현재 인벤토리의 슬롯과 외부에서 온 슬롯과 교환하는 코드이다.
+				OwnerInventoryRef->Server_SwapItemBetweenInventory(
+					OriginInventoryRef, ItemDragDrop->SourceIndex, Index);
+				/*SwapItemsBetweenInventory(
 					OwnerInventoryRef, Index,
-					OriginInventoryRef, ItemDragDrop->SourceIndex);
+					OriginInventoryRef, ItemDragDrop->SourceIndex);*/
 				
 				return true;
 			}
@@ -259,10 +275,14 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 			else if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("RIGHT DROP BETWEEN OTHERS"))
-				OwnerInventoryRef->DropItemBetweenInventory(
+				//TODO: 서버 호출 함수로 변경
+				//외부에서 온 슬롯이 드롭받는 슬롯에 떨어졌을 때 연산
+				OwnerInventoryRef->Server_DropItemBetweenInventory(
+					OriginInventoryRef, ItemDragDrop->SourceIndex, Index, ItemDragDrop->SourceItemData);
+				/*DropItemBetweenInventory(
 					OriginInventoryRef, ItemDragDrop->SourceIndex,
 					OwnerInventoryRef, Index,
-					ItemDragDrop->SourceItemData);
+					ItemDragDrop->SourceItemData);*/
 
 				return true;
 			}

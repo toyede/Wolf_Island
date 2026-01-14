@@ -5,7 +5,6 @@
 #include "Item/ItemBase.h"
 #include "Data/ItemDataStruct.h"
 #include "Kismet/GameplayStatics.h"
-#include "Slate/SGameLayerManager.h"
 #include "Widgets/PlayerHUD.h"
 
 APickup::APickup()
@@ -111,7 +110,10 @@ void APickup::PickUp(const AActor* Picker)
             if (UInventoryComponent* PickerInventory = Picker->GetComponentByClass<UInventoryComponent>())
             {
                 //아이템 추가 시퀀스 실행
-                const FItemAddResult AddResult = PickerInventory->HandleAddItem(ItemReference);
+                const FItemAddResult AddResult;
+                
+                //TODO: 서버 호출 함수로 변경
+                PickerInventory->Server_HandleAddItem(ItemReference);
 
                 const AMainPlayer* Player = Cast<AMainPlayer>(Picker);
                 

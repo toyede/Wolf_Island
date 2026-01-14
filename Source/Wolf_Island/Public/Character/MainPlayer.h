@@ -384,4 +384,8 @@ public:
 	void Server_RefreshHand();
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_RefreshHand();
+	
+	//아이템 드롭
+	UFUNCTION(Server, Reliable)
+	void Server_DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop);
 };

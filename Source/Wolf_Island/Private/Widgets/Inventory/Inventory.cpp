@@ -41,7 +41,7 @@ bool UInventory::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent&
 {
 	const UItemDragDropOperation* ItemDragDrop = Cast<UItemDragDropOperation>(InOperation);
 
-	FItemBaseData* ItemData = ItemDragDrop->SourceItemData;
+	const FItemBaseData* ItemData = &ItemDragDrop->SourceItemData;
 	
 	if (PlayerRef && ItemData)
 	{
@@ -60,7 +60,9 @@ bool UInventory::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent&
 				//우클릭이면 떨구기면 반갈한 거 원위치
 				if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
 				{
-					ItemDragDrop->SourceInventory->GetItemAtIndex(ItemDragDrop->SourceIndex).Amount += ItemData->Amount;
+					//TODO: 서버 호출 함수로 변경
+					ItemDragDrop->SourceInventory->Server_AddItemAmountAtSlot(ItemDragDrop->SourceIndex, ItemData->Amount);
+					//GetItemAtIndex(ItemDragDrop->SourceIndex).Amount += ItemData->Amount;
 					ItemDragDrop->SourceInventory->OnInventoryUpdated.Broadcast();
 				}
 				return false;
@@ -71,13 +73,19 @@ bool UInventory::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent&
 		if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("RIGHT CLICK DROP"));
-			PlayerRef->DropItem(*ItemData, ItemData->Amount, false);
+			//TODO: 서버 호출 함수로 변경
+			PlayerRef->Server_DropItem(
+				ItemDragDrop->SourceInventory, ItemDragDrop->SourceIndex, ItemData->Amount);
+			//DropItem(ItemData, ItemData->Amount, false);
 			return true;
 		}
 		
 		//좌클릭 떨구기면 싹다 버리기
 		UE_LOG(LogTemp, Warning, TEXT("LEFT CLICK DROP"));
-		PlayerRef->DropItem(*ItemData, ItemData->Amount, true);
+		//TODO: 서버 호출 함수로 변경
+		PlayerRef->Server_DropItem(
+			ItemDragDrop->SourceInventory, ItemDragDrop->SourceIndex, ItemData->Amount);
+		//DropItem(ItemData, ItemData->Amount, true);
 		return true;
 	} else
 	{

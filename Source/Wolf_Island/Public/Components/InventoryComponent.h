@@ -134,10 +134,10 @@ public:
 	void LoadInventory();
 
 	//아이템 추가 함수 - 아이템 먹을 때 Pickup 클래스에서 실행되는 함수
-	FItemAddResult HandleAddItem(FItemBaseData& AddedItem);
+	FItemAddResult HandleAddItem(FItemBaseData AddedItem);
 	
 	//특정 인덱스에 아이템 넣기
-	void InsertItemToIndex(int32 Index, FItemBaseData* Item);
+	void InsertItemToIndex(int32 Index, FItemBaseData Item);
 	
 	//인덱스 A,B 아이템 바꾸기
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -437,11 +437,11 @@ protected:
 	float WeightCapacity;
 
 	//현재 인벤토리 무게
-	UPROPERTY(Replicated, EditDefaultsOnly, Category = "Inventory")
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentWeight, EditDefaultsOnly, Category = "Inventory")
 	float CurrentWeight;
 
 	//인벤토리 슬롯
-	UPROPERTY(Replicated, EditAnywhere, Category = "Inventory")
+	UPROPERTY(ReplicatedUsing = OnRep_InventoryContents, EditAnywhere, Category = "Inventory")
 	TArray<FItemSlot> InventoryContents;
 
 	//단일 아이템 추가 함수
@@ -482,18 +482,41 @@ public:
 
 	//멀티플레이
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
-
+	
+	//인벤토리를 건드는 모든 로직들을 추가해야 한다.
 	//아이템 추가
 	UFUNCTION(Server, Reliable)
 	void Server_HandleAddItem(FItemBaseData AddedItem);
-	UFUNCTION()
-	FItemAddResult Internal_HandleAddItem(FItemBaseData AddedItem);
-
+	//아이템 삭제(슬롯 인덱스로 해야할 듯)
+	UFUNCTION(Server, Reliable)
+	void Server_RemoveItemAtSlot(int32 Index, FItemBaseData Item);
+	//아이템 수정(슬롯 인덱스로..?)
+	UFUNCTION(Server, Reliable)
+	void Server_SetItemAtSlot(int32 Index, FItemBaseData Item);
+	//아이템 수량 추가
+	UFUNCTION(Server, Reliable)
+	void Server_AddItemAmountAtSlot(int32 Index, int32 AddedAmount);
+	//아이템 수량 감소
+	UFUNCTION(Server, Reliable)
+	void Server_RemoveItemAmountAtSlot(int32 Index, int32 AddedAmount);
+	//슬롯 스왑
+	UFUNCTION(Server, Reliable)
+	void Server_SwapItem(int32 IndexA, int32 IndexB);
+	//다른 인벤토리 간 슬롯 스왑
+	UFUNCTION(Server, Reliable)
+	void Server_SwapItemBetweenInventory(UInventoryComponent* TargetInventory, int32 TargetIndex, int32 SourceIndex);
+	//다른 인벤토리 슬롯에 드롭
+	UFUNCTION(Server, Reliable)
+	void Server_DropItemBetweenInventory(UInventoryComponent* TargetInventory, int32 TargetIndex, int32 SourceIndex, FItemBaseData Item);
+	
 	//인벤토리(InventoryContents) 변경 시
 	UFUNCTION()
 	void OnRep_InventoryContents();
 	//인벤토리 무게 변경 시
 	UFUNCTION()
 	void OnRep_CurrentWeight();
+	
+private:
+	
 	
 };

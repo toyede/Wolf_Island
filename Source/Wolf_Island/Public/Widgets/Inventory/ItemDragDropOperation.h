@@ -23,8 +23,8 @@ public:
 	UPROPERTY()
 	UItemBase* SourceItem;
 	
-	//UPROPERTY()
-	FItemBaseData* SourceItemData;
+	UPROPERTY()
+	FItemBaseData SourceItemData;
 
 	UPROPERTY()
 	class UInventoryComponent* SourceInventory;

@@ -234,21 +234,48 @@ void UInventoryComponent::DecreaseCurrentWeight(float Weight)
 }
 
 //아이템 추가 태스크 함수 - 아이템 먹을 때 Pickup 클래스에서 실행되는 함수
-FItemAddResult UInventoryComponent::HandleAddItem(FItemBaseData& AddedItem)
+FItemAddResult UInventoryComponent::HandleAddItem(FItemBaseData AddedItem)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Item Check on HadleAddItem : %s"), *AddedItem.ItemName.ToString());
-	//클라이언트 실행
-	if (!GetOwner()->HasAuthority())
+	if (GetOwner())
 	{
-		Server_HandleAddItem(AddedItem);
+		//추가할 아이템 개수
+		const int32 RequestedAmount = AddedItem.Amount;
 		
-		return FItemAddResult::AddedNone(
-			FText::FromString(TEXT("Request Sent")),
-			EItemFailReason::NoReason);
+		UE_LOG(LogTemp, Warning, TEXT("%s is Stackable? : %d"), *AddedItem.ItemID.ToString(), IsStackableItem(AddedItem));
+
+		//여러개 못 드는 아이템일 때 (IsStackable = false 아이템)
+		if (!IsStackableItem(AddedItem))
+		{
+			//단일 아이템 추가 태스크 함수 실행
+			return HandleNoneStackableItem(AddedItem);
+		}
+
+		//스택 가능 아이템일 때
+		//넣은 개수
+		const int32 AddedAmount = HandleStackableItem(AddedItem, RequestedAmount);
+
+		//넣은 개수가 추가할 개수랑 같으면
+		if (AddedAmount == RequestedAmount)
+		{
+			//몽땅 추가
+			return FItemAddResult::AddedAll(GetItemData(AddedItem)->TextData.Name, RequestedAmount, FText::Format(FText::FromString("Success [ {0} : x{1} ]"), GetItemData(AddedItem)->TextData.Name, RequestedAmount));
+		}
+		//넣은 개수가 추가할 개수보다 작거나, 넣은 개수가 0 초과면
+		if (AddedAmount < RequestedAmount && AddedAmount > 0)
+		{
+			//부분 추가
+			return FItemAddResult::AddedPartial(GetItemData(AddedItem)->TextData.Name, AddedAmount, FText::Format(FText::FromString("Partial Added [ {0} : x{1} ]"), GetItemData(AddedItem)->TextData.Name, AddedAmount));
+		}
+		//넣은 개수가 0보다 작거나 같다면
+		if (AddedAmount <= 0)
+		{
+			//추가 안해부러
+			return FItemAddResult::AddedNone(FText::Format(FText::FromString("Failed Slot Overflow [ {0} : x{1} ]"), GetItemData(AddedItem)->TextData.Name, RequestedAmount), EItemFailReason::SlotOverflow);
+		}
 	}
 	
-	//서버 실행
-	return Internal_HandleAddItem(AddedItem);
+	return FItemAddResult::AddedNone(FText::FromString(TEXT("Can't Find Owner")),EItemFailReason::SystemError);
+
 }
 
 //단일 아이템 추가 태스크 함수
@@ -644,11 +671,11 @@ bool UInventoryComponent::RepairShip(FRepairRecipeData Recipes)
 	return false;
 }
 
-void UInventoryComponent::InsertItemToIndex(int32 Index, FItemBaseData* Item)
+void UInventoryComponent::InsertItemToIndex(int32 Index, FItemBaseData Item)
 {
 	if (InventoryContents.IsValidIndex(Index))
 	{
-		InventoryContents[Index].ItemData = *Item;
+		InventoryContents[Index].ItemData = Item;
 		
 		OnInventoryUpdated.Broadcast();
 	}
@@ -756,7 +783,7 @@ void UInventoryComponent::DropItemBetweenInventory(
 	if (TargetSlot.IsEmpty())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("DIBI: EMPTY SLOT INSERT"));
-		TargetInventoryComponent->InsertItemToIndex(TargetIndex, DraggedItem);
+		TargetInventoryComponent->InsertItemToIndex(TargetIndex, *DraggedItem);
 
 		//무게 업데이트
 		OriginInventoryComponent->CurrentWeight -= GetItemSingleWeight(DraggedItem->ItemID) * DraggedItem->Amount;
@@ -826,51 +853,43 @@ void UInventoryComponent::GetLifetimeReplicatedProps(TArray<class FLifetimePrope
 
 void UInventoryComponent::Server_HandleAddItem_Implementation(FItemBaseData AddedItem)
 {
-	Internal_HandleAddItem(AddedItem);
+	HandleAddItem(AddedItem);
 }
 
-FItemAddResult UInventoryComponent::Internal_HandleAddItem(FItemBaseData AddedItem)
+void UInventoryComponent::Server_RemoveItemAtSlot_Implementation(int32 Index, FItemBaseData Item)
 {
-	if (GetOwner())
-	{
-		//추가할 아이템 개수
-		const int32 RequestedAmount = AddedItem.Amount;
-		
-		UE_LOG(LogTemp, Warning, TEXT("%s is Stackable? : %d"), *AddedItem.ItemID.ToString(), IsStackableItem(AddedItem));
-
-		//여러개 못 드는 아이템일 때 (IsStackable = false 아이템)
-		if (!IsStackableItem(AddedItem))
-		{
-			//단일 아이템 추가 태스크 함수 실행
-			return HandleNoneStackableItem(AddedItem);
-		}
-
-		//스택 가능 아이템일 때
-		//넣은 개수
-		const int32 AddedAmount = HandleStackableItem(AddedItem, RequestedAmount);
-
-		//넣은 개수가 추가할 개수랑 같으면
-		if (AddedAmount == RequestedAmount)
-		{
-			//몽땅 추가
-			return FItemAddResult::AddedAll(GetItemData(AddedItem)->TextData.Name, RequestedAmount, FText::Format(FText::FromString("Success [ {0} : x{1} ]"), GetItemData(AddedItem)->TextData.Name, RequestedAmount));
-		}
-		//넣은 개수가 추가할 개수보다 작거나, 넣은 개수가 0 초과면
-		if (AddedAmount < RequestedAmount && AddedAmount > 0)
-		{
-			//부분 추가
-			return FItemAddResult::AddedPartial(GetItemData(AddedItem)->TextData.Name, AddedAmount, FText::Format(FText::FromString("Partial Added [ {0} : x{1} ]"), GetItemData(AddedItem)->TextData.Name, AddedAmount));
-		}
-		//넣은 개수가 0보다 작거나 같다면
-		if (AddedAmount <= 0)
-		{
-			//추가 안해부러
-			return FItemAddResult::AddedNone(FText::Format(FText::FromString("Failed Slot Overflow [ {0} : x{1} ]"), GetItemData(AddedItem)->TextData.Name, RequestedAmount), EItemFailReason::SlotOverflow);
-		}
-	}
 	
-	return FItemAddResult::AddedNone(FText::FromString(TEXT("Can't Find Owner")),EItemFailReason::SystemError);
+}
 
+void UInventoryComponent::Server_SetItemAtSlot_Implementation(int32 Index, FItemBaseData Item)
+{
+	
+}
+
+void UInventoryComponent::Server_SwapItem_Implementation(int32 IndexA, int32 IndexB)
+{
+	
+}
+
+void UInventoryComponent::Server_AddItemAmountAtSlot_Implementation(int32 Index, int32 AddedAmount)
+{
+	
+}
+
+void UInventoryComponent::Server_RemoveItemAmountAtSlot_Implementation(int32 Index, int32 AddedAmount)
+{
+	
+}
+
+void UInventoryComponent::Server_SwapItemBetweenInventory_Implementation(UInventoryComponent* TargetInventory, int32 TargetIndex, int32 SourceIndex)
+{
+	
+}
+
+void UInventoryComponent::Server_DropItemBetweenInventory_Implementation(UInventoryComponent* TargetInventory,
+	int32 TargetIndex, int32 SourceIndex, FItemBaseData Item)
+{
+	
 }
 
 void UInventoryComponent::OnRep_InventoryContents()

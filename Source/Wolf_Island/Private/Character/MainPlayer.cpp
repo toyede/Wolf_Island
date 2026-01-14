@@ -908,6 +908,11 @@ void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
+void AMainPlayer::Server_DropItem_Implementation(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop)
+{
+	
+}
+
 void AMainPlayer::Server_ToggleCrouch_Implementation()
 {
 	Multi_ToggleCrouch();
