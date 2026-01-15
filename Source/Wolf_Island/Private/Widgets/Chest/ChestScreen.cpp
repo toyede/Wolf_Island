@@ -28,7 +28,7 @@ bool UChestScreen::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEven
 	const UItemDragDropOperation* ItemDragDrop = Cast<UItemDragDropOperation>(InOperation);
 
 	UItemBase* Item = ItemDragDrop->SourceItem;
-	FItemBaseData* ItemData = ItemDragDrop->SourceItemData;
+	FItemBaseData ItemData = ItemDragDrop->SourceItemData;
 	
 	UE_LOG(LogTemp, Warning, TEXT("CHEST SCREEN DROP DETECTED"));
 	
@@ -66,12 +66,12 @@ bool UChestScreen::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEven
 		if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("RIGHT CLICK DROP"));
-			PlayerRef->DropItem(*ItemData, Item->Amount, false);
+			PlayerRef->DropItem(ItemData, Item->Amount, false);
 			return true;
 		}
 		
 		UE_LOG(LogTemp, Warning, TEXT("LEFT CLICK DROP"));
-		PlayerRef->DropItem(*ItemData, Item->Amount, true);
+		PlayerRef->DropItem(ItemData, Item->Amount, true);
 		return true;
 	} else
 	{

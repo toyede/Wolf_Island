@@ -363,22 +363,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	int32 GetItemTotalAmountByID(FName ItemID);
 	
-	//특정 인덱스에 아이템 삽입
-	void SetItemAtIndex(FItemBaseData* Item, int32 Index);
-	
 	//인벤토리에 있는 아이템과 중복되는 아이템인가 체크(인벤토리에서 불러온 아이템인지)
 	FItemBaseData* FindMatchingItem(FItemBaseData& Item) const;
 
 	//아이템의 다음 스택 찾기
 	FItemBaseData* FindNextPartialStack(const FItemBaseData& Item);
-	
-	//아이템 인벤토리에서 삭제
-	void RemoveSingleInstanceOfItem(FItemBaseData& Item);
-	
-	//아이템 다량 삭제 함수
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	int32 RemoveAmountOfItem(FItemBaseData& Item, int32 DesiredRemovedAmount);
-
+		
 	//인벤토리 총 무게 반환
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	FORCEINLINE float GetCurrentWeight() const { return CurrentWeight; };
@@ -419,6 +409,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Craft")
 	bool MakeItem(FRecipeData Recipe);
 	bool RepairShip(FRepairRecipeData Recipes);
+	
+	//아이템 다량 삭제 함수
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	int32 RemoveAmountOfItem(FItemBaseData& Item, int32 DesiredRemovedAmount);
+
 
 protected:
 	// Called when the game starts
@@ -446,31 +441,68 @@ protected:
 
 	//단일 아이템 추가 함수
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	FItemAddResult HandleNoneStackableItem(FItemBaseData& AddedItem);
+	FItemAddResult HandleNoneStackableItem(FItemBaseData AddedItem);
+	
 	//스택 가능 아이템 추가 함수
 	int32 HandleStackableItem(FItemBaseData& AddedItem, int32 RequestedAmount);
+	
 	//아이템 무게 계산
 	int32 CalculateWeightAddAmount(FItemBaseData& Item, int32 Amount);
+	
 	//아이템 최대 스택 개수 계산
 	int32 CalculateAmountForFullStackAmount(FItemBaseData& StackableItem, int32 Amount);
+	
 	//아이템 찐 추가 함수
 	void AddNewItem(FItemBaseData& Item, const int32 Amount);
+	
 	//아이템 있는 슬롯 개수 반환
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Inventory")
 	FORCEINLINE int32 GetFilledSlots() { return InventoryContents.Num(); };
+	
 	//배열 max 반환
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Inventory")
 	FORCEINLINE int32 GetMaxSlots() { return InventoryContents.Max(); };
+	
 	//빈 슬롯 반환
 	FItemSlot* FindEmptySlot();
+	
 	//빈 슬롯 개수 반환
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Inventory")
 	int32 GetEmptySlotCount();
+	
 	//해당 ID의 아이템을 개수만큼 인벤토리에서 삭제
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	int32 RemoveItemsByID(FName ItemID, int32 Amount);
+	
 	//ID와 개수에 따른 아이템 데이터 생성
 	FItemBaseData CreateItemByID(FName ItemID, int32 Amount);
+	
+	//특정 인덱스에 아이템 삽입
+	void SetItemAtIndex(FItemBaseData* Item, int32 Index);
+	
+	//아이템 인벤토리에서 삭제
+	void RemoveSingleInstanceOfItem(FItemBaseData& Item);
+	
+	//슬롯에 아이템 삭제
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void RemoveItemAtSlot(int32 Index, FItemBaseData Item);
+	
+	//아이템 수량 감소 함수(슬롯에서)
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void RemoveItemAmountAtSlot(int32 Index, int32 Amount);
+	
+	//아이템 수량 증가 함수(슬롯에서)
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void AddItemAmountAtSlot(int32 Index, int32 Amount);
+	
+	//서로 다른 인벤토리 간 아이템 스왑
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void SwapItemBetweenInventory(UInventoryComponent* TargetInventory, int32 TargetIndex, int32 SourceIndex);
+	
+	//서로 다른 인벤토리 간 아이템 드롭
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void DropItemBetweenInventory(UInventoryComponent* TargetInventory,
+	int32 TargetIndex, int32 SourceIndex, FItemBaseData Item);
 	
 	//인벤토리 확인 디버그 함수
 	UFUNCTION(BlueprintCallable, Category = "Debug")

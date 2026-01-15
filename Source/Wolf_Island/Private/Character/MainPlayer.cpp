@@ -388,7 +388,9 @@ void AMainPlayer::UseItem(FItemBaseData& Item)
 					UGameplayStatics::PlaySound2D(GetWorld(), EattingSound);
 				}
 				StatusComponent->ApplyItem(*ItemData);
-				InventoryComponent->RemoveAmountOfItem(Item, 1);
+				//TODO: 서버 호출 함수로 벼경
+				//InventoryComponent->
+				//RemoveAmountOfItem(Item, 1);
 			}
 		} else
 		{
