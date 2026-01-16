@@ -63,6 +63,7 @@ void UInventoryPanel::RefreshInventory()
 			
 			if (InventorySlot.ItemData.IsValid())
 			{
+				UE_LOG(LogTemp, Warning, TEXT("[ %d ] SET SLOT ITEM DATA"), Index);
 				ItemSlot->SetItemReference(&InventorySlot.ItemData);
 			}
 			

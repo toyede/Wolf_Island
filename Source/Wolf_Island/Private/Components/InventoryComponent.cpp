@@ -12,6 +12,7 @@
 #include "AdvancedFriendsGameInstance.h"
 #include "IDetailTreeNode.h"
 #include "Item/ItemBase.h"
+#include "Item/Pickup.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
@@ -23,7 +24,7 @@ UInventoryComponent::UInventoryComponent()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
-	//SetIsReplicated(true);
+	SetIsReplicated(true);
 	
 	// ...
 }
@@ -34,7 +35,7 @@ void UInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 #if WITH_EDITOR
-	if (!GEngine)
+	if (GEngine)
 	{
 		FString Owner = this->GetOwner()->GetName();
 		FString Name = FString::Printf(TEXT("INVENTORY OWNER [ %s ]"), *Owner);
@@ -132,7 +133,7 @@ void UInventoryComponent::SetItemAtIndex(FItemBaseData* Item, int32 Index)
 		UE_LOG(LogTemp, Warning, TEXT("NO INPUT ITEM"));
 		InventoryContents[Index].Clear();
 	}
-	OnInventoryUpdated.Broadcast();
+	//OnInventoryUpdated.Broadcast();
 }
 
 FItemBaseData* UInventoryComponent::FindMatchingItem(FItemBaseData& Item) const
@@ -195,7 +196,11 @@ void UInventoryComponent::RemoveSingleInstanceOfItem(FItemBaseData& Item)
 		}
 	}
 	
-	OnInventoryUpdated.Broadcast();
+	//OnInventoryUpdated.Broadcast();
+}
+
+void UInventoryComponent::RemoveItemAtSlot(int32 Index, FItemBaseData Item)
+{
 }
 
 
@@ -214,7 +219,7 @@ int32 UInventoryComponent::RemoveAmountOfItem(FItemBaseData& Item, int32 Desired
 	//무게에서 삭제된 만큼 빼기
 	CurrentWeight -= ActualAmountToRemove * GetItemSingleWeight(Item.ItemID);
 	//그 사실을 널리 알리기
-	OnInventoryUpdated.Broadcast();
+	//OnInventoryUpdated.Broadcast();
 	//실제 삭제된 개수 반환
 	return ActualAmountToRemove;
 }
@@ -374,7 +379,7 @@ int32 UInventoryComponent::HandleStackableItem(FItemBaseData& AddedItem, int32 R
 			//무게 용량 초과면
 			if (CurrentWeight >= WeightCapacity)
 			{
-				OnInventoryUpdated.Broadcast();
+				//OnInventoryUpdated.Broadcast();
 				//요청한 개수에서 넣을 개수 빼고 반환
 				UE_LOG(LogTemp, Warning, TEXT("OVERWEIGHT"));
 				return RequestedAmount - AmountToDistribute;
@@ -386,7 +391,7 @@ int32 UInventoryComponent::HandleStackableItem(FItemBaseData& AddedItem, int32 R
 			//넣을 개수가 요청한 개수랑 다르다면
 			if (AmountToDistribute != RequestedAmount)
 			{
-				OnInventoryUpdated.Broadcast();
+				//OnInventoryUpdated.Broadcast();
 				//요청한 개수에서 넣을 개수 빼고 반환
 				UE_LOG(LogTemp, Warning, TEXT("Distribute Request Not Same"));
 				return RequestedAmount - AmountToDistribute;
@@ -399,7 +404,7 @@ int32 UInventoryComponent::HandleStackableItem(FItemBaseData& AddedItem, int32 R
 		//넣을 개수가 0이하면
 		if (AmountToDistribute <= 0)
 		{
-			OnInventoryUpdated.Broadcast();
+			//OnInventoryUpdated.Broadcast();
 			//요청한 개수 반환
 			UE_LOG(LogTemp, Warning, TEXT("Distribute under 0"));
 			return RequestedAmount;
@@ -439,7 +444,7 @@ int32 UInventoryComponent::HandleStackableItem(FItemBaseData& AddedItem, int32 R
 		}
 	}
 
-	OnInventoryUpdated.Broadcast();
+	//OnInventoryUpdated.Broadcast();
 	//요청한 개수에서 넣은 개수 빼고 반환
 	UE_LOG(LogTemp, Warning, TEXT("REQUEST - DISTRIBUTE"));
 	return RequestedAmount - AmountToDistribute;
@@ -550,7 +555,7 @@ int32 UInventoryComponent::RemoveItemsByID(FName ItemID, int32 Amount)
 		}
 	}
 	
-	OnInventoryUpdated.Broadcast();
+	//OnInventoryUpdated.Broadcast();
 	return Amount - DesiredRemoveAmount;
 }
 
@@ -700,7 +705,7 @@ void UInventoryComponent::InsertItemToIndex(int32 Index, FItemBaseData Item)
 	{
 		InventoryContents[Index].ItemData = Item;
 		
-		OnInventoryUpdated.Broadcast();
+		//OnInventoryUpdated.Broadcast();
 	}
 }
 
@@ -734,7 +739,7 @@ void UInventoryComponent::SwapItems(int32 A, int32 B)
 		}
 	}
 	
-	OnInventoryUpdated.Broadcast();
+	//OnInventoryUpdated.Broadcast();
 }
 
 void UInventoryComponent::SwapItemsBetweenInventory(
@@ -788,8 +793,8 @@ void UInventoryComponent::SwapItemsBetweenInventory(
 		}
 	}
 	
-	OriginInventoryComponent->OnInventoryUpdated.Broadcast();
-	TargetInventoryComponent->OnInventoryUpdated.Broadcast();
+	//OriginInventoryComponent->OnInventoryUpdated.Broadcast();
+	//TargetInventoryComponent->OnInventoryUpdated.Broadcast();
 }
 
 void UInventoryComponent::SwapItemBetweenInventory(UInventoryComponent* TargetInventory, int32 TargetIndex,
@@ -899,6 +904,35 @@ void UInventoryComponent::DropItemBetweenInventory(UInventoryComponent* TargetIn
 	}
 }
 
+void UInventoryComponent::PickupItem(APickup* Item)
+{
+	if (!Item->IsPendingKillPending())
+	{
+		const FItemAddResult AddResult = HandleAddItem(Item->ItemReference);
+		
+		switch (AddResult.OperationResult)
+		{
+			//아이템 추가 안됨
+		case EItemAddedResult::NoItemAdded:
+			//디버깅 결과 메시지
+			UE_LOG(LogTemp, Warning, TEXT("Didn't Eat Item"));
+			break;
+			//아이템 부분만 먹음
+		case EItemAddedResult::PartiallyItemAdded:
+			//디버깅 결과 메시지
+			UE_LOG(LogTemp, Warning, TEXT("Remain Some"));
+			break;
+			//아이템 싹싹김치
+		case EItemAddedResult::AllItemAdded:
+			//디버깅 결과 메시지
+			UE_LOG(LogTemp, Warning, TEXT("Got All Item"));
+			//UGameplayStatics::PlaySound2D(GetWorld(), Player->ItemGettingSound);
+			Item->Destroy();
+			break;
+		}
+	}
+}
+
 void UInventoryComponent::DropItemBetweenInventory(
 	UInventoryComponent* OriginInventoryComponent, int32 OriginIndex,
 	UInventoryComponent* TargetInventoryComponent, int32 TargetIndex,
@@ -919,8 +953,8 @@ void UInventoryComponent::DropItemBetweenInventory(
 		OriginInventoryComponent->CurrentWeight -= GetItemSingleWeight(DraggedItem->ItemID) * DraggedItem->Amount;
 		TargetInventoryComponent->CurrentWeight += GetItemSingleWeight(DraggedItem->ItemID) * DraggedItem->Amount;
 		
-		OriginInventoryComponent->OnInventoryUpdated.Broadcast();
-		TargetInventoryComponent->OnInventoryUpdated.Broadcast();
+		//OriginInventoryComponent->OnInventoryUpdated.Broadcast();
+		//TargetInventoryComponent->OnInventoryUpdated.Broadcast();
 		
 		return;
 	}
@@ -960,8 +994,8 @@ void UInventoryComponent::DropItemBetweenInventory(
 		OriginSlot.Clear();
 	}
 
-	OriginInventoryComponent->OnInventoryUpdated.Broadcast();
-	TargetInventoryComponent->OnInventoryUpdated.Broadcast();
+	//OriginInventoryComponent->OnInventoryUpdated.Broadcast();
+	//TargetInventoryComponent->OnInventoryUpdated.Broadcast();
 }
 
 bool UInventoryComponent::CheckSameItemAtIndex(int32 Index, FName ItemID)
@@ -981,6 +1015,107 @@ void UInventoryComponent::GetLifetimeReplicatedProps(TArray<class FLifetimePrope
 	DOREPLIFETIME(UInventoryComponent, InventoryContents);
 }
 
+void UInventoryComponent::Request_HandleAddItem(FItemBaseData AddedItem)
+{
+	if (GetOwner()->HasAuthority())
+	{
+		HandleAddItem(AddedItem);
+	} else
+	{
+		Server_HandleAddItem(AddedItem);
+	}
+}
+
+void UInventoryComponent::Request_RemoveItemAtSlot(int32 Index, FItemBaseData Item)
+{
+	if (GetOwner()->HasAuthority())
+	{
+		RemoveItemAtSlot(Index, Item);
+	} else
+	{
+		Server_RemoveItemAtSlot(Index, Item);
+	}
+}
+
+void UInventoryComponent::Request_SetItemAtSlot(int32 Index, FItemBaseData Item)
+{
+	if (GetOwner()->HasAuthority())
+	{
+		InsertItemToIndex(Index, Item);
+	} else
+	{
+		Server_SetItemAtSlot(Index, Item);
+	}
+}
+
+void UInventoryComponent::Request_AddItemAmountAtSlot(int32 Index, int32 AddedAmount)
+{
+	if (GetOwner()->HasAuthority())
+	{
+		AddItemAmountAtSlot(Index, AddedAmount);
+	} else
+	{
+		Server_AddItemAmountAtSlot(Index, AddedAmount);
+	}
+}
+
+void UInventoryComponent::Request_RemoveItemAmountAtSlot(int32 Index, int32 AddedAmount)
+{
+	if (GetOwner()->HasAuthority())
+	{
+		RemoveItemAmountAtSlot(Index, AddedAmount);
+	} else
+	{
+		Server_RemoveItemAmountAtSlot(Index, AddedAmount);
+	}
+}
+
+void UInventoryComponent::Request_SwapItem(int32 IndexA, int32 IndexB)
+{
+	if (GetOwner()->HasAuthority())
+	{
+		SwapItems(IndexA, IndexB);
+	} else
+	{
+		Server_SwapItem(IndexA, IndexB);
+	}
+}
+
+void UInventoryComponent::Request_SwapItemBetweenInventory(UInventoryComponent* TargetInventory, int32 TargetIndex,
+	int32 SourceIndex)
+{
+	if (GetOwner()->HasAuthority())
+	{
+		SwapItemBetweenInventory(TargetInventory, TargetIndex, SourceIndex);
+	} else
+	{
+		Server_SwapItemBetweenInventory(TargetInventory, TargetIndex, SourceIndex);
+	}
+}
+
+void UInventoryComponent::Request_DropItemBetweenInventory(UInventoryComponent* TargetInventory, int32 TargetIndex,
+	int32 SourceIndex, FItemBaseData Item)
+{
+	if (GetOwner()->HasAuthority())
+	{
+		DropItemBetweenInventory(TargetInventory, TargetIndex, SourceIndex, Item);
+	} else
+	{
+		Server_DropItemBetweenInventory(TargetInventory, TargetIndex, SourceIndex, Item);
+	}
+}
+
+void UInventoryComponent::Request_PickUp(APickup* Item)
+{
+	if (GetOwner()->HasAuthority())
+	{
+		PickupItem(Item);
+	} else
+	{
+		Server_PickUp(Item);
+	}
+}
+
 void UInventoryComponent::Server_HandleAddItem_Implementation(FItemBaseData AddedItem)
 {
 	HandleAddItem(AddedItem);
@@ -988,7 +1123,7 @@ void UInventoryComponent::Server_HandleAddItem_Implementation(FItemBaseData Adde
 
 void UInventoryComponent::Server_RemoveItemAtSlot_Implementation(int32 Index, FItemBaseData Item)
 {
-	
+	RemoveItemAtSlot(Index, Item);
 }
 
 void UInventoryComponent::Server_SetItemAtSlot_Implementation(int32 Index, FItemBaseData Item)
@@ -1022,8 +1157,14 @@ void UInventoryComponent::Server_DropItemBetweenInventory_Implementation(UInvent
 	DropItemBetweenInventory(TargetInventory, TargetIndex, SourceIndex, Item);
 }
 
+void UInventoryComponent::Server_PickUp_Implementation(APickup* Item)
+{
+	PickupItem(Item);
+}
+
 void UInventoryComponent::OnRep_InventoryContents()
 {
+	UE_LOG(LogTemp, Warning, TEXT("INVENTORY REPLICATED"));
 	OnInventoryUpdated.Broadcast();
 }
 

@@ -27,7 +27,8 @@ public:
 	int32 ItemAmount = 1;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data", Meta = (ExposeOnSpawn = "true"))
 	FDataTableRowHandle ItemHandle;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
+	
+	UPROPERTY(Replicated ,EditAnywhere, BlueprintReadWrite, Category = "Item Data")
 	FItemBaseData ItemReference;
 	UPROPERTY(EditAnywhere, Category = "Item Data")
 	bool IsPhysics = true;
@@ -52,4 +53,8 @@ public:
 public:
 
 	virtual void BeginPlay() override;
+	
+	//멀티플레이 코드
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
 };

@@ -33,6 +33,7 @@ public:
 	FORCEINLINE UInventoryComponent* GetOwnerRef() const { return OwnerInventoryRef; };
 	void SetSelectedSlot();
 	void SetUnSelectedSlot();
+	void SetEmptySlot();
 	FLinearColor GetBrushColor() const { return ItemBorder->GetBrushColor(); };
 
 protected:
@@ -55,6 +56,8 @@ protected:
 	
 	//UPROPERTY(VisibleAnywhere, Category = "Inventory Slot")
 	FItemBaseData* ItemRef;
+	
+	FItemData* ItemData;
 
 	//위젯
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))

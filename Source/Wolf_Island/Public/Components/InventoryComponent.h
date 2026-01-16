@@ -504,6 +504,10 @@ protected:
 	void DropItemBetweenInventory(UInventoryComponent* TargetInventory,
 	int32 TargetIndex, int32 SourceIndex, FItemBaseData Item);
 	
+	//월드 드롭 아이템 먹기
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void PickupItem(APickup* Item);
+	
 	//인벤토리 확인 디버그 함수
 	UFUNCTION(BlueprintCallable, Category = "Debug")
 	void PrintInventory(float DeltaTime);
@@ -519,27 +523,56 @@ public:
 	//아이템 추가
 	UFUNCTION(Server, Reliable)
 	void Server_HandleAddItem(FItemBaseData AddedItem);
+	UFUNCTION()
+	void Request_HandleAddItem(FItemBaseData AddedItem);
+	
 	//아이템 삭제(슬롯 인덱스로 해야할 듯)
 	UFUNCTION(Server, Reliable)
 	void Server_RemoveItemAtSlot(int32 Index, FItemBaseData Item);
+	UFUNCTION()
+	void Request_RemoveItemAtSlot(int32 Index, FItemBaseData Item);
+	
 	//아이템 수정(슬롯 인덱스로..?)
 	UFUNCTION(Server, Reliable)
 	void Server_SetItemAtSlot(int32 Index, FItemBaseData Item);
+	UFUNCTION()
+	void Request_SetItemAtSlot(int32 Index, FItemBaseData Item);
+	
 	//아이템 수량 추가
 	UFUNCTION(Server, Reliable)
 	void Server_AddItemAmountAtSlot(int32 Index, int32 AddedAmount);
+	UFUNCTION()
+	void Request_AddItemAmountAtSlot(int32 Index, int32 AddedAmount);
+	
 	//아이템 수량 감소
 	UFUNCTION(Server, Reliable)
 	void Server_RemoveItemAmountAtSlot(int32 Index, int32 AddedAmount);
+	UFUNCTION()
+	void Request_RemoveItemAmountAtSlot(int32 Index, int32 AddedAmount);
+	
 	//슬롯 스왑
 	UFUNCTION(Server, Reliable)
 	void Server_SwapItem(int32 IndexA, int32 IndexB);
+	UFUNCTION()
+	void Request_SwapItem(int32 IndexA, int32 IndexB);
+	
 	//다른 인벤토리 간 슬롯 스왑
 	UFUNCTION(Server, Reliable)
 	void Server_SwapItemBetweenInventory(UInventoryComponent* TargetInventory, int32 TargetIndex, int32 SourceIndex);
+	UFUNCTION()
+	void Request_SwapItemBetweenInventory(UInventoryComponent* TargetInventory, int32 TargetIndex, int32 SourceIndex);
+	
 	//다른 인벤토리 슬롯에 드롭
 	UFUNCTION(Server, Reliable)
 	void Server_DropItemBetweenInventory(UInventoryComponent* TargetInventory, int32 TargetIndex, int32 SourceIndex, FItemBaseData Item);
+	UFUNCTION()
+	void Request_DropItemBetweenInventory(UInventoryComponent* TargetInventory, int32 TargetIndex, int32 SourceIndex, FItemBaseData Item);
+	
+	//월드 드롭 아이템 먹기
+	UFUNCTION(Server, Reliable)
+	void Server_PickUp(APickup* Item);
+	UFUNCTION()
+	void Request_PickUp(APickup* Item);
 	
 	//인벤토리(InventoryContents) 변경 시
 	UFUNCTION()

@@ -5,6 +5,7 @@
 #include "Item/ItemBase.h"
 #include "Data/ItemDataStruct.h"
 #include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 #include "Widgets/PlayerHUD.h"
 
 APickup::APickup()
@@ -96,7 +97,11 @@ void APickup::Interact(AActor* Interactor)
 {
     if (Interactor)
     {
-        PickUp(Interactor);
+        //인벤토리 컴포넌트 가져오기
+        if (UInventoryComponent* PickerInventory = Interactor->GetComponentByClass<UInventoryComponent>())
+        {
+            PickerInventory->Request_PickUp(this);
+        }
     }    
 }
 
@@ -113,7 +118,7 @@ void APickup::PickUp(const AActor* Picker)
                 const FItemAddResult AddResult;
                 
                 //TODO: 서버 호출 함수로 변경
-                PickerInventory->Server_HandleAddItem(ItemReference);
+                PickerInventory->HandleAddItem(ItemReference);
 
                 const AMainPlayer* Player = Cast<AMainPlayer>(Picker);
                 
@@ -153,6 +158,13 @@ void APickup::PickUp(const AActor* Picker)
             }
         }
     }
+}
+
+void APickup::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+    
+    DOREPLIFETIME(APickup, ItemReference);
 }
 
 //에디터에서만 실행

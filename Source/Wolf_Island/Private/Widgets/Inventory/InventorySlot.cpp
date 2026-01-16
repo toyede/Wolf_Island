@@ -26,7 +26,7 @@ void UInventorySlot::NativeConstruct()
 	
 	if (OwnerInventoryRef)
 	{
-		FItemData* ItemData = nullptr;// = OwnerInventoryRef->GetItemData(*ItemRef);
+		ItemData = OwnerInventoryRef->GetItemData(*ItemRef);
 		
 		if (ItemRef)
 		{			
@@ -46,8 +46,7 @@ void UInventorySlot::NativeConstruct()
 			}
 		} else
 		{
-			ItemIcon->SetVisibility(ESlateVisibility::Collapsed);
-			ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
+			SetEmptySlot();
 		}
 	
 	
@@ -99,8 +98,6 @@ void UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPo
 	Super::NativeOnDragDetected(InGeometry, InMouseEvent, OutOperation);
 	
 	if (!CanDragDrop) return;
-	
-	FItemData* ItemData = OwnerInventoryRef->GetItemData(*ItemRef);
 	
 	//좌클릭 드래그면 이동
 	if (InMouseEvent.IsMouseButtonDown(EKeys::LeftMouseButton))
@@ -179,8 +176,6 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 	UE_LOG(LogTemp, Warning, TEXT("SLOT DROP DETECTED"));
 	
 	UInventoryComponent* OriginInventoryRef = ItemDragDrop->SourceInventory;
-	
-	FItemData* ItemData = OwnerInventoryRef->GetItemData(*ItemRef);
 	
 	if (OriginInventoryRef)
 	{
@@ -301,3 +296,11 @@ void UInventorySlot::SetUnSelectedSlot()
 {
 	ItemBorder->SetBrush(UnSelectedSlotBrush);
 }
+
+void UInventorySlot::SetEmptySlot()
+{
+	ItemIcon->SetVisibility(ESlateVisibility::Collapsed);
+	ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
+}
+
+

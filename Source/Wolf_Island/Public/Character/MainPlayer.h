@@ -10,6 +10,7 @@
 #include "Data/ItemDataStruct.h"
 #include "MainPlayer.generated.h"
 
+class APickup;
 class UItemBase;
 struct FInputActionValue;
 
@@ -388,4 +389,5 @@ public:
 	//아이템 드롭
 	UFUNCTION(Server, Reliable)
 	void Server_DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop);
+
 };
