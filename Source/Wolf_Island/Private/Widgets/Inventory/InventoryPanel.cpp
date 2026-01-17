@@ -20,7 +20,7 @@ void UInventoryPanel::NativeOnInitialized()
 		
 		if (InventoryRef)
 		{
-			//InventoryRef->OnInventoryUpdated.AddUObject(this, &UInventoryPanel::RefreshInventory);
+			InventoryRef->OnInventoryUpdated.AddUObject(this, &UInventoryPanel::SetInfoText);
 			SetInfoText();
 			//UE_LOG(LogTemp, Warning, TEXT("RefreshInventory Registered"));
 		}

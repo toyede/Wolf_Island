@@ -200,6 +200,7 @@ void UInventoryComponent::RemoveSingleInstanceOfItem(FItemBaseData& Item)
 
 void UInventoryComponent::RemoveItemAtSlot(int32 Index, FItemBaseData Item)
 {
+	
 }
 
 
@@ -225,6 +226,8 @@ int32 UInventoryComponent::RemoveAmountOfItem(FItemBaseData& Item, int32 Desired
 
 void UInventoryComponent::RemoveItemAmountAtSlot(int32 Index, int32 Amount)
 {
+	if (!GetItemAtIndex(Index).IsValid()) return;
+	
 	int32 RemoveAmount = FMath::Min(Amount, InventoryContents[Index].ItemData.Amount);
 	
 	InventoryContents[Index].ItemData.Amount -= RemoveAmount;
@@ -239,6 +242,8 @@ void UInventoryComponent::RemoveItemAmountAtSlot(int32 Index, int32 Amount)
 
 void UInventoryComponent::AddItemAmountAtSlot(int32 Index, int32 Amount)
 {
+	if (!GetItemAtIndex(Index).IsValid() || Amount == 0) return;
+	
 	int32 AddAmount = FMath::Min(Amount, GetItemMaxAmount(InventoryContents[Index].ItemData)-InventoryContents[Index].ItemData.Amount);
 
 	InventoryContents[Index].ItemData.Amount += AddAmount;
@@ -703,8 +708,7 @@ void UInventoryComponent::InsertItemToIndex(int32 Index, FItemBaseData Item)
 	if (InventoryContents.IsValidIndex(Index))
 	{
 		InventoryContents[Index].ItemData = Item;
-		
-		//OnInventoryUpdated.Broadcast();
+		CurrentWeight += GetItemData(Item)->NumericData.Weight * Item.Amount;
 	}
 }
 
@@ -932,6 +936,16 @@ void UInventoryComponent::PickupItem(APickup* Item)
 	}
 }
 
+void UInventoryComponent::SetItemAmountAtSlot(int32 Index, int32 Amount)
+{
+	//일단 원래 있던 무게 빼고
+	CurrentWeight -= InventoryContents[Index].ItemData.Amount * GetItemSingleWeight(InventoryContents[Index].ItemData);
+	//개수 강제 세팅 개수로 수정하고
+	InventoryContents[Index].ItemData.Amount = Amount;
+	//수정된 개수 만큼 무게 추가
+	CurrentWeight += Amount * GetItemSingleWeight(InventoryContents[Index].ItemData);
+}
+
 void UInventoryComponent::DropItemBetweenInventory(
 	UInventoryComponent* OriginInventoryComponent, int32 OriginIndex,
 	UInventoryComponent* TargetInventoryComponent, int32 TargetIndex,
@@ -1071,6 +1085,24 @@ void UInventoryComponent::Request_RemoveItemAmountAtSlot(int32 Index, int32 Adde
 	} else
 	{
 		Server_RemoveItemAmountAtSlot(Index, AddedAmount);
+	}
+}
+
+void UInventoryComponent::Server_SetItemAmountAtSlot_Implementation(int32 Index, int32 Amount)
+{
+	SetItemAmountAtSlot(Index, Amount);
+	InventoryChanged();
+}
+
+void UInventoryComponent::Request_SetItemAmountAtSlot(int32 Index, int32 Amount)
+{
+	if (GetOwner()->HasAuthority())
+	{
+		SetItemAmountAtSlot(Index, Amount);
+		InventoryChanged();
+	} else
+	{
+		Server_SetItemAmountAtSlot(Index, Amount);
 	}
 }
 

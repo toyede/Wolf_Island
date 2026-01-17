@@ -161,13 +161,13 @@ public:
 	{
 		if (!IsValid(ItemDataTable))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("ItemDataTable is not valid"));
+			//UE_LOG(LogTemp, Warning, TEXT("ItemDataTable is not valid"));
 			return nullptr;
 		}
 		
 		if (ItemID.IsNone())
 		{
-			UE_LOG(LogTemp, Error, TEXT("ItemID is NAME_None"));
+			//UE_LOG(LogTemp, Error, TEXT("ItemID is NAME_None"));
 			return nullptr;
 		}
 		
@@ -183,13 +183,13 @@ public:
 	{
 		if (!IsValid(ItemDataTable))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("ItemDataTable is not valid"));
+			//UE_LOG(LogTemp, Warning, TEXT("ItemDataTable is not valid"));
 			return nullptr;
 		}
 		
 		if (Item.ItemID.IsNone())
 		{
-			UE_LOG(LogTemp, Error, TEXT("ItemID is NAME_None"));
+			//UE_LOG(LogTemp, Error, TEXT("ItemID is NAME_None"));
 			return nullptr;
 		}
 		
@@ -208,7 +208,7 @@ public:
 
 		if (const FItemData* ItemData = GetItemData(ItemID))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("GetItemData on GetItemSingleWeight : %s"), *ItemID.ToString());
+			//UE_LOG(LogTemp, Warning, TEXT("GetItemData on GetItemSingleWeight : %s"), *ItemID.ToString());
 			Weight = ItemData->NumericData.Weight;
 		}
 		
@@ -221,7 +221,7 @@ public:
 
 		if (const FItemData* ItemData = GetItemData(Item.ItemID))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("GetItemData on GetItemSingleWeight : %s | %f"), *Item.ItemID.ToString(), ItemData->NumericData.Weight);
+			//UE_LOG(LogTemp, Warning, TEXT("GetItemData on GetItemSingleWeight : %s | %f"), *Item.ItemID.ToString(), ItemData->NumericData.Weight);
 			Weight = ItemData->NumericData.Weight;
 		}
 		
@@ -235,7 +235,7 @@ public:
 
 		if (const FItemData* ItemData = GetItemData(ItemID))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("GetItemData on GetItemStackWeight : %s"), *ItemID.ToString());
+			//UE_LOG(LogTemp, Warning, TEXT("GetItemData on GetItemStackWeight : %s"), *ItemID.ToString());
 			Weight = ItemData->NumericData.Weight * ItemData->NumericData.MaxAmount;
 		}
 		
@@ -248,7 +248,7 @@ public:
 
 		if (const FItemData* ItemData = GetItemData(Item.ItemID))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("GetItemData on GetItemStackWeight : %s"), *Item.ItemID.ToString());
+			//UE_LOG(LogTemp, Warning, TEXT("GetItemData on GetItemStackWeight : %s"), *Item.ItemID.ToString());
 			Weight = ItemData->NumericData.Weight * ItemData->NumericData.MaxAmount;
 		}
 		
@@ -260,7 +260,7 @@ public:
 	{
 		if (const FItemData* ItemData = GetItemData(Slot.ItemData.ItemID))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("GetItemData on IsSlotFullStack : %s"), *Slot.ItemData.ItemID.ToString());
+			//UE_LOG(LogTemp, Warning, TEXT("GetItemData on IsSlotFullStack : %s"), *Slot.ItemData.ItemID.ToString());
 			return Slot.ItemData.Amount == ItemData->NumericData.MaxAmount;
 		}
 		
@@ -272,7 +272,7 @@ public:
 	{
 		if (const FItemData* ItemData = GetItemData(ItemID))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("GetItemData on GetItemMaxAmount : %s"), *ItemID.ToString());
+			//UE_LOG(LogTemp, Warning, TEXT("GetItemData on GetItemMaxAmount : %s"), *ItemID.ToString());
 			return ItemData->NumericData.MaxAmount;
 		}
 		
@@ -283,7 +283,7 @@ public:
 	{
 		if (const FItemData* ItemData = GetItemData(Item.ItemID))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("GetItemData on GetItemMaxAmount : %s"), *Item.ItemID.ToString());
+			//UE_LOG(LogTemp, Warning, TEXT("GetItemData on GetItemMaxAmount : %s"), *Item.ItemID.ToString());
 			return ItemData->NumericData.MaxAmount;
 		}
 		
@@ -295,11 +295,11 @@ public:
 	{
 		if (const FItemData* ItemData = GetItemData(ItemID))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("GetItemData on IsStackableItem : %s | %d"), *ItemID.ToString(), ItemData->NumericData.IsStackable);
+			//UE_LOG(LogTemp, Warning, TEXT("GetItemData on IsStackableItem : %s | %d"), *ItemID.ToString(), ItemData->NumericData.IsStackable);
 			return ItemData->NumericData.IsStackable;
 		} else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("No Item Data on [ %s ]"), *ItemID.ToString());
+			//UE_LOG(LogTemp, Warning, TEXT("No Item Data on [ %s ]"), *ItemID.ToString());
 
 		}
 		
@@ -310,11 +310,11 @@ public:
 	{
 		if (const FItemData* ItemData = GetItemData(Item.ItemID))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("GetItemData on IsStackableItem : %s | %d"), *Item.ItemID.ToString(), ItemData->NumericData.IsStackable);
+			//UE_LOG(LogTemp, Warning, TEXT("GetItemData on IsStackableItem : %s | %d"), *Item.ItemID.ToString(), ItemData->NumericData.IsStackable);
 			return ItemData->NumericData.IsStackable;
 		} else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("No Item Data on [ %s ]"), *Item.ItemID.ToString());
+			//UE_LOG(LogTemp, Warning, TEXT("No Item Data on [ %s ]"), *Item.ItemID.ToString());
 		}
 		
 		return false;
@@ -339,6 +339,13 @@ public:
 		}
 		
 		return false;
+	}
+	
+	//특정 인덱스의 아이템 개수 반환
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	int32 GetItemAmountAtSlot(int32 Index)
+	{
+		return InventoryContents[Index].ItemData.Amount;
 	}
 	
 	//특정 인덱스의 아이템 비교
@@ -509,6 +516,10 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void PickupItem(APickup* Item);
 	
+	//아이템 개수 강제 세팅 함수
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void SetItemAmountAtSlot(int32 Index, int32 Amount);
+	
 	//인벤토리 확인 디버그 함수
 	UFUNCTION(BlueprintCallable, Category = "Debug")
 	void PrintInventory(float DeltaTime);
@@ -550,6 +561,12 @@ public:
 	void Server_RemoveItemAmountAtSlot(int32 Index, int32 AddedAmount);
 	UFUNCTION()
 	void Request_RemoveItemAmountAtSlot(int32 Index, int32 AddedAmount);
+	
+	//아이템 수량 설정 - 특정 개수로 강제 세팅
+	UFUNCTION(Server, Reliable)
+	void Server_SetItemAmountAtSlot(int32 Index, int32 Amount);
+	UFUNCTION()
+	void Request_SetItemAmountAtSlot(int32 Index, int32 Amount);
 	
 	//슬롯 스왑
 	UFUNCTION(Server, Reliable)

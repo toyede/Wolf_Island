@@ -50,7 +50,7 @@ void UInventorySlot::SetEmptySlot()
 
 void UInventorySlot::RefreshSlot()
 {
-	UE_LOG(LogTemp, Warning, TEXT("%s's [ %d ] SLOT REFRESHING"), *OwnerInventoryRef->GetOwner()->GetName() ,Index);
+	//UE_LOG(LogTemp, Warning, TEXT("%s's [ %d ] SLOT REFRESHING"), *OwnerInventoryRef->GetOwner()->GetName() ,Index);
 	ItemRef = &OwnerInventoryRef->GetItemAtIndex(Index);
 	
 	ItemData = OwnerInventoryRef->GetItemData(*ItemRef);
@@ -70,7 +70,7 @@ void UInventorySlot::RefreshSlot()
 		}
 	} else
 	{
-		UE_LOG(LogTemp, Warning, TEXT(">> NO ITEM DATA IN SLOT <<"));
+		//UE_LOG(LogTemp, Warning, TEXT(">> NO ITEM DATA IN SLOT <<"));
 		SetEmptySlot();
 	}
 	
@@ -151,14 +151,14 @@ void UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPo
 		{
 			//반갈 개수
 			int32 MovedAmount = ItemRef->Amount/2;
+			//1개면 우클릭 불가능
+			if (MovedAmount == 0 ) return;
+			
 			//기존 슬롯에 남은 아이템 개수
 			int32 RemaindAmount = ItemRef->Amount - MovedAmount;
 
-			//1개면 우클릭 불가능
-			if (MovedAmount == 0 ) return;
-
-			//아이템 개수
-			ItemRef->Amount = RemaindAmount;
+			//기존 슬롯 아이템 개수 설정 - 드래그 떼어 간 만큼 감소
+			OwnerInventoryRef->Server_RemoveItemAmountAtSlot(Index, MovedAmount);
 
 			//드래그 아이템 위젯 생성 (비주얼만 만드는 거임)
 			const TObjectPtr<UDragItemVisual> DragVisual = CreateWidget<UDragItemVisual>(this, DragItemVisualClass);
@@ -170,12 +170,13 @@ void UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPo
 			UItemDragDropOperation* DragItemOperation = NewObject<UItemDragDropOperation>();
 			DragItemOperation->SourceInventory = OwnerInventoryRef;
 			DragItemOperation->SourceItemData = *ItemRef;
+			DragItemOperation->SourceItemData.Amount = MovedAmount;
 			DragItemOperation->SourceIndex = Index;
 			
 			DragItemOperation->DefaultDragVisual = DragVisual;
 			DragItemOperation->Pivot = EDragPivot::MouseDown;
 
-			OwnerInventoryRef->OnInventoryUpdated.Broadcast();
+			RefreshSlot();
 			
 			OutOperation = DragItemOperation;
 			
@@ -214,7 +215,6 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 				//다른 칸이면 스왑
 				//TODO: 서버 호출 함수로 변경
 				OriginInventoryRef->Server_SwapItem(ItemDragDrop->SourceIndex, Index);
-				//SwapItems(ItemDragDrop->SourceIndex, Index);
 				return true;
 			}
 			//우클릭 떨구기면 연산 후 삽입
@@ -228,11 +228,9 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 					//TODO: 서버 호출 함수로 변경
 					if (OriginInventoryRef->CheckEmptySlotAtIndex(Index))
 					{
+						//슬롯에 아이템 넣기
 						OriginInventoryRef->Server_SetItemAtSlot(Index, ItemDragDrop->SourceItemData);
-						//InsertItemToIndex(Index, *ItemDragDrop->SourceItemData);
 						//TODO: 서버 호출 함수로 변경
-						OriginInventoryRef->Server_RemoveItemAmountAtSlot(ItemDragDrop->SourceIndex, ItemDragDrop->SourceItemData.Amount);
-						//GetItemAtIndex(ItemDragDrop->SourceIndex).Amount -= ItemDragDrop->SourceItemData->Amount;
 						ItemDragDrop->SourceInventory->OnInventoryUpdated.Broadcast();
 						
 						return true;
@@ -242,9 +240,6 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 					//원래 인덱스 아이템 개수 원상 복구 후 끝
 					//TODO: 서버 호출 함수로 변경
 					OriginInventoryRef->Server_AddItemAmountAtSlot(ItemDragDrop->SourceIndex, ItemDragDrop->SourceItemData.Amount);
-					//GetItemAtIndex(ItemDragDrop->SourceIndex).Amount += ItemDragDrop->SourceItem->Amount;
-					
-					OriginInventoryRef->OnInventoryUpdated.Broadcast();
 				
 					return true;
 				}
@@ -252,19 +247,25 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 				else
 				{
 					//옮길 곳에 최대로 더하고 남은 건 원래 자리로
-					//옮길 곳 : Index | 옮기는 것 : SourceIndex
-					//총 분배 개수
-					int32 TotalAmount = ItemRef->Amount + ItemDragDrop->SourceItem->Amount;
+					//옮길(드롭 받는) 곳 : Index | 옮기는(드래그 한) 것 : SourceIndex
+					//총 분배 개수 - 드롭 받는 곳의 아이템 개수와 드래그 한 아이템 개수의 합
+					int32 TotalAmount = ItemRef->Amount + ItemDragDrop->SourceItemData.Amount;
 					//최대 스택 개수
 					int32 MaxStack = ItemData->NumericData.MaxAmount;
 
-					//최대 스택 개수랑 총 분배할 개수 중 작은 것을 기존 슬롯에 분배
-					ItemRef->Amount = FMath::Min(TotalAmount, MaxStack);
-					ItemDragDrop->SourceItem->Amount = TotalAmount - ItemRef->Amount;
+					//최대 스택 개수랑 총 분배할 개수 중 작은 것을 드롭 받는 슬롯에 설정
+					OriginInventoryRef->Server_SetItemAmountAtSlot(Index, FMath::Min(TotalAmount, MaxStack));
+					//ItemRef->Amount = FMath::Min(TotalAmount, MaxStack);
+					
+					//남은 아이템 개수는 총 분배 개수 - 드롭 받는 슬롯의 아이템 개수
+					int32 Remained = TotalAmount - OriginInventoryRef->GetItemAmountAtSlot(Index);
+					UE_LOG(LogTemp, Warning, TEXT("REMAINED : %d"), Remained);
+					//ItemDragDrop->SourceItem->Amount = TotalAmount - ItemRef->Amount;
 					//TODO: 서버 호출 함수로 변경
-					OriginInventoryRef->Server_AddItemAmountAtSlot(ItemDragDrop->SourceIndex, ItemDragDrop->SourceItemData.Amount);
+					OriginInventoryRef->Server_AddItemAmountAtSlot(ItemDragDrop->SourceIndex, Remained);
 					//GetItemAtIndex(ItemDragDrop->SourceIndex).Amount += ItemDragDrop->SourceItem->Amount;
-					OriginInventoryRef->OnInventoryUpdated.Broadcast();
+					
+					return true;
 				}
 			}
 		}
