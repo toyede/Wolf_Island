@@ -36,7 +36,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Item Data")
 	void InitializePickUp(const TSubclassOf<UItemBase> BaseClass, const int32 InAmount);
 
-	void InitializeDrop(FItemBaseData& ItemToDrop, const int32 InAmount);
+	void InitializeDrop(FItemBaseData ItemToDrop, const int32 InAmount);
 
 	FORCEINLINE FItemBaseData& GetItemData() { return ItemReference; };
 

@@ -725,6 +725,39 @@ void AMainPlayer::DropItem(FItemBaseData& ItemToDrop, const int32 AmountToDrop, 
 	}
 }
 
+void AMainPlayer::DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop)
+{
+	FItemBaseData ItemData = SourceInventory->GetInventory()[SourceIndex].ItemData;
+	
+	//아이템 데이터가 있으면
+	if (ItemData.IsValid())
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = this;
+		SpawnParams.bNoFail = true;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+		const FVector SpawnLocation(GetActorLocation() + (GetActorForwardVector() * 50.0f));
+		const FTransform SpawnTransform(GetActorRotation(), SpawnLocation);
+		
+		InventoryComponent->Request_RemoveItemAmountAtSlot(SourceIndex, AmountToDrop);
+		SourceInventory->InventoryChanged();
+		
+		APickup* Pickup = GetWorld()->SpawnActor<APickup>(APickup::StaticClass(), SpawnTransform, SpawnParams);
+		
+		Pickup->InitializeDrop(ItemData, AmountToDrop);
+
+		if (ItemGettingSound)
+		{
+			UGameplayStatics::PlaySound2D(GetWorld(), ItemGettingSound);
+		}
+		
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("CAN'T FIND MATCHED ITEM."))
+	}
+}
+
 FItemBaseData AMainPlayer::GetHoldingItemReference()
 {
 	if (InventoryComponent)
@@ -910,9 +943,20 @@ void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
+void AMainPlayer::Request_DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop)
+{
+	if (HasAuthority())
+	{
+		DropItem(SourceInventory, SourceIndex, AmountToDrop);
+	} else
+	{
+		Server_DropItem(SourceInventory, SourceIndex, AmountToDrop);
+	}
+}
+
 void AMainPlayer::Server_DropItem_Implementation(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop)
 {
-	
+	DropItem(SourceInventory, SourceIndex, AmountToDrop);
 }
 
 void AMainPlayer::Server_ToggleCrouch_Implementation()

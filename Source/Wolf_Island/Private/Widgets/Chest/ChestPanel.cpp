@@ -42,16 +42,13 @@ void UChestPanel::RefreshChest()
 			UInventorySlot* ItemSlot = CreateWidget<UInventorySlot>(this, SlotClass);
 			ItemSlot->SetIndex(Index++);
 			ItemSlot->SetOwnerRef(ChestInventoryRef);
+			ItemSlot->RefreshSlot();
 			
-			if (InventorySlot.Item)
-			{
-				ItemSlot->SetItemReference(&InventorySlot.ItemData);
-			}
 			
 			ChestPanel->AddChildToWrapBox(ItemSlot);
 		}
 	}
-	RefreshInventory();
+	//RefreshInventory();
 }
 
 void UChestPanel::SetInventoryComponent(AChest* Chest, AActor* Interactor)

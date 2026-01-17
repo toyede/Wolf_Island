@@ -18,6 +18,8 @@ class WOLF_ISLAND_API UHotbarSlot : public UInventorySlot
 	UTextBlock* SlotNumber;
 
 public:
+	
+	virtual void NativeConstruct() override;
 
 	UFUNCTION()
 	void SetSlotNumber(int32 SlotIndex);

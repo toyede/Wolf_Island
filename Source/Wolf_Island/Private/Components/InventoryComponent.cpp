@@ -10,7 +10,6 @@
 #include <string>
 
 #include "AdvancedFriendsGameInstance.h"
-#include "IDetailTreeNode.h"
 #include "Item/ItemBase.h"
 #include "Item/Pickup.h"
 #include "Kismet/GameplayStatics.h"
@@ -35,7 +34,7 @@ void UInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 #if WITH_EDITOR
-	if (GEngine)
+	if (!GEngine)
 	{
 		FString Owner = this->GetOwner()->GetName();
 		FString Name = FString::Printf(TEXT("INVENTORY OWNER [ %s ]"), *Owner);
@@ -1020,6 +1019,7 @@ void UInventoryComponent::Request_HandleAddItem(FItemBaseData AddedItem)
 	if (GetOwner()->HasAuthority())
 	{
 		HandleAddItem(AddedItem);
+		InventoryChanged();
 	} else
 	{
 		Server_HandleAddItem(AddedItem);
@@ -1031,6 +1031,7 @@ void UInventoryComponent::Request_RemoveItemAtSlot(int32 Index, FItemBaseData It
 	if (GetOwner()->HasAuthority())
 	{
 		RemoveItemAtSlot(Index, Item);
+		InventoryChanged();
 	} else
 	{
 		Server_RemoveItemAtSlot(Index, Item);
@@ -1042,6 +1043,7 @@ void UInventoryComponent::Request_SetItemAtSlot(int32 Index, FItemBaseData Item)
 	if (GetOwner()->HasAuthority())
 	{
 		InsertItemToIndex(Index, Item);
+		InventoryChanged();
 	} else
 	{
 		Server_SetItemAtSlot(Index, Item);
@@ -1053,6 +1055,7 @@ void UInventoryComponent::Request_AddItemAmountAtSlot(int32 Index, int32 AddedAm
 	if (GetOwner()->HasAuthority())
 	{
 		AddItemAmountAtSlot(Index, AddedAmount);
+		InventoryChanged();
 	} else
 	{
 		Server_AddItemAmountAtSlot(Index, AddedAmount);
@@ -1064,6 +1067,7 @@ void UInventoryComponent::Request_RemoveItemAmountAtSlot(int32 Index, int32 Adde
 	if (GetOwner()->HasAuthority())
 	{
 		RemoveItemAmountAtSlot(Index, AddedAmount);
+		InventoryChanged();
 	} else
 	{
 		Server_RemoveItemAmountAtSlot(Index, AddedAmount);
@@ -1075,6 +1079,7 @@ void UInventoryComponent::Request_SwapItem(int32 IndexA, int32 IndexB)
 	if (GetOwner()->HasAuthority())
 	{
 		SwapItems(IndexA, IndexB);
+		InventoryChanged();
 	} else
 	{
 		Server_SwapItem(IndexA, IndexB);
@@ -1087,6 +1092,7 @@ void UInventoryComponent::Request_SwapItemBetweenInventory(UInventoryComponent* 
 	if (GetOwner()->HasAuthority())
 	{
 		SwapItemBetweenInventory(TargetInventory, TargetIndex, SourceIndex);
+		InventoryChanged();
 	} else
 	{
 		Server_SwapItemBetweenInventory(TargetInventory, TargetIndex, SourceIndex);
@@ -1099,6 +1105,7 @@ void UInventoryComponent::Request_DropItemBetweenInventory(UInventoryComponent* 
 	if (GetOwner()->HasAuthority())
 	{
 		DropItemBetweenInventory(TargetInventory, TargetIndex, SourceIndex, Item);
+		InventoryChanged();
 	} else
 	{
 		Server_DropItemBetweenInventory(TargetInventory, TargetIndex, SourceIndex, Item);
@@ -1110,66 +1117,82 @@ void UInventoryComponent::Request_PickUp(APickup* Item)
 	if (GetOwner()->HasAuthority())
 	{
 		PickupItem(Item);
+		InventoryChanged();
 	} else
 	{
 		Server_PickUp(Item);
 	}
 }
 
+void UInventoryComponent::InventoryChanged()
+{
+	UE_LOG(LogTemp, Warning, TEXT("%hs INVENTORY CHANGED"), GetOwner()->HasAuthority() ? "SERVER" : "CLIENT");
+	OnInventoryUpdated.Broadcast();
+}
+
 void UInventoryComponent::Server_HandleAddItem_Implementation(FItemBaseData AddedItem)
 {
 	HandleAddItem(AddedItem);
+	InventoryChanged();
 }
 
 void UInventoryComponent::Server_RemoveItemAtSlot_Implementation(int32 Index, FItemBaseData Item)
 {
 	RemoveItemAtSlot(Index, Item);
+	InventoryChanged();
 }
 
 void UInventoryComponent::Server_SetItemAtSlot_Implementation(int32 Index, FItemBaseData Item)
 {
 	InsertItemToIndex(Index, Item);
+	InventoryChanged();
 }
 
 void UInventoryComponent::Server_SwapItem_Implementation(int32 IndexA, int32 IndexB)
 {
 	SwapItems(IndexA, IndexB);
+	InventoryChanged();
 }
 
 void UInventoryComponent::Server_AddItemAmountAtSlot_Implementation(int32 Index, int32 AddedAmount)
 {
 	AddItemAmountAtSlot(Index, AddedAmount);
+	InventoryChanged();
 }
 
 void UInventoryComponent::Server_RemoveItemAmountAtSlot_Implementation(int32 Index, int32 AddedAmount)
 {
 	RemoveItemAmountAtSlot(Index, AddedAmount);
+	InventoryChanged();
 }
 
 void UInventoryComponent::Server_SwapItemBetweenInventory_Implementation(UInventoryComponent* TargetInventory, int32 TargetIndex, int32 SourceIndex)
 {
 	SwapItemBetweenInventory(TargetInventory, TargetIndex, SourceIndex);
+	InventoryChanged();
 }
 
 void UInventoryComponent::Server_DropItemBetweenInventory_Implementation(UInventoryComponent* TargetInventory,
 	int32 TargetIndex, int32 SourceIndex, FItemBaseData Item)
 {
 	DropItemBetweenInventory(TargetInventory, TargetIndex, SourceIndex, Item);
+	InventoryChanged();
 }
 
 void UInventoryComponent::Server_PickUp_Implementation(APickup* Item)
 {
 	PickupItem(Item);
+	InventoryChanged();
 }
 
 void UInventoryComponent::OnRep_InventoryContents()
 {
 	UE_LOG(LogTemp, Warning, TEXT("INVENTORY REPLICATED"));
-	OnInventoryUpdated.Broadcast();
+	InventoryChanged();
 }
 
 void UInventoryComponent::OnRep_CurrentWeight()
 {
-	OnInventoryUpdated.Broadcast();
+	InventoryChanged();
 }
 

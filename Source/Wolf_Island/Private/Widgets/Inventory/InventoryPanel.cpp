@@ -20,10 +20,12 @@ void UInventoryPanel::NativeOnInitialized()
 		
 		if (InventoryRef)
 		{
-			InventoryRef->OnInventoryUpdated.AddUObject(this, &UInventoryPanel::RefreshInventory);
+			//InventoryRef->OnInventoryUpdated.AddUObject(this, &UInventoryPanel::RefreshInventory);
 			SetInfoText();
-			UE_LOG(LogTemp, Warning, TEXT("RefreshInventory Registered"));
+			//UE_LOG(LogTemp, Warning, TEXT("RefreshInventory Registered"));
 		}
+		
+		RefreshInventory();
 	}
 }
 
@@ -61,12 +63,6 @@ void UInventoryPanel::RefreshInventory()
 			ItemSlot->SetIndex(Index++);
 			ItemSlot->SetOwnerRef(InventoryRef);
 			
-			if (InventorySlot.ItemData.IsValid())
-			{
-				UE_LOG(LogTemp, Warning, TEXT("[ %d ] SET SLOT ITEM DATA"), Index);
-				ItemSlot->SetItemReference(&InventorySlot.ItemData);
-			}
-			
 			//핫바 슬롯( 첫번째부터 6칸 ( 0 ~ 5 ) )
 			if (Index >= 1 && Index <= 6)
 			{
@@ -77,6 +73,8 @@ void UInventoryPanel::RefreshInventory()
 			{
 				InventoryPanel->AddChildToWrapBox(ItemSlot);
 			}
+			
+			ItemSlot->RefreshSlot();
 		} 
 
 		SetInfoText();

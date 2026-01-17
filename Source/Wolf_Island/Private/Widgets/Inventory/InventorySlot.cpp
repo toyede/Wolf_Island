@@ -26,45 +26,65 @@ void UInventorySlot::NativeConstruct()
 	
 	if (OwnerInventoryRef)
 	{
-		ItemData = OwnerInventoryRef->GetItemData(*ItemRef);
-		
-		if (ItemRef)
-		{			
-			if(ItemData)
-			{
-				ItemIcon->SetBrushFromTexture(ItemData->AssetData.Icon);
+		OwnerInventoryRef->OnInventoryUpdated.AddUObject(this, &UInventorySlot::RefreshSlot);
+	}
+	
+	SetEmptySlot();
+}
 
-				if (ItemData->NumericData.IsStackable)
-				{
-					ItemAmount->SetVisibility(ESlateVisibility::Visible);
-					ItemAmount->SetText(FText::AsNumber(ItemRef->Amount));
-				} else
-				{
-					ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
-				}
-			
-			}
+void UInventorySlot::SetSelectedSlot()
+{
+	ItemBorder->SetBrush(SelectedSlotBrush);
+}
+
+void UInventorySlot::SetUnSelectedSlot()
+{
+	ItemBorder->SetBrush(UnSelectedSlotBrush);
+}
+
+void UInventorySlot::SetEmptySlot()
+{
+	ItemIcon->SetVisibility(ESlateVisibility::Collapsed);
+	ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
+}
+
+void UInventorySlot::RefreshSlot()
+{
+	UE_LOG(LogTemp, Warning, TEXT("%s's [ %d ] SLOT REFRESHING"), *OwnerInventoryRef->GetOwner()->GetName() ,Index);
+	ItemRef = &OwnerInventoryRef->GetItemAtIndex(Index);
+	
+	ItemData = OwnerInventoryRef->GetItemData(*ItemRef);
+	
+	if (ItemData)
+	{
+		ItemIcon->SetVisibility(ESlateVisibility::Visible);
+		ItemIcon->SetBrushFromTexture(ItemData->AssetData.Icon);
+
+		if (ItemData->NumericData.IsStackable)
+		{
+			ItemAmount->SetVisibility(ESlateVisibility::Visible);
+			ItemAmount->SetText(FText::AsNumber(ItemRef->Amount));
 		} else
 		{
-			SetEmptySlot();
-		}
-	
-	
-		if (ToolTipClass && ItemRef && CanDragDrop)
-		{
-			UInventoryToolTip* ToolTip = CreateWidget<UInventoryToolTip>(this, ToolTipClass);
-			ToolTip->InventorySlotBeingHovered = this;
-			
-			if (ItemData)
-			{
-				ToolTip->ItemData = ItemData;
-			}
-			
-			SetToolTip(ToolTip);
+			ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
 		}
 	} else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("SLOT : Item Data is Empty"))
+		UE_LOG(LogTemp, Warning, TEXT(">> NO ITEM DATA IN SLOT <<"));
+		SetEmptySlot();
+	}
+	
+	if (CanDragDrop && ToolTipClass && ItemRef->IsValid())
+	{
+		UInventoryToolTip* ToolTip = CreateWidget<UInventoryToolTip>(this, ToolTipClass);
+		ToolTip->InventorySlotBeingHovered = this;
+			
+		if (ItemData)
+		{
+			ToolTip->ItemData = ItemData;
+		}
+			
+		SetToolTip(ToolTip);
 	}
 }
 
@@ -286,21 +306,3 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 	
 	return false;
 }
-
-void UInventorySlot::SetSelectedSlot()
-{
-	ItemBorder->SetBrush(SelectedSlotBrush);
-}
-
-void UInventorySlot::SetUnSelectedSlot()
-{
-	ItemBorder->SetBrush(UnSelectedSlotBrush);
-}
-
-void UInventorySlot::SetEmptySlot()
-{
-	ItemIcon->SetVisibility(ESlateVisibility::Collapsed);
-	ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
-}
-
-

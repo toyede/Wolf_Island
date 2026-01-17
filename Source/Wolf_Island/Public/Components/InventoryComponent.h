@@ -8,6 +8,7 @@
 #include "Data/ItemDataStruct.h"
 #include "InventoryComponent.generated.h"
 
+class APickup;
 class UItemBase;
 DECLARE_MULTICAST_DELEGATE(FOnInventoryUpdated);
 
@@ -573,6 +574,10 @@ public:
 	void Server_PickUp(APickup* Item);
 	UFUNCTION()
 	void Request_PickUp(APickup* Item);
+	
+	//서버용 인벤토리 변경 알림
+	UFUNCTION()
+	void InventoryChanged();
 	
 	//인벤토리(InventoryContents) 변경 시
 	UFUNCTION()

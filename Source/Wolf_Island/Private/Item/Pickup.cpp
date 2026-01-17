@@ -24,8 +24,8 @@ APickup::APickup()
     {
         ItemDataTable = DT_ItemData.Object;
     }
-
-    SetReplicates(true);
+    
+    bReplicates = true;
 }
 
 void APickup::BeginPlay()
@@ -75,7 +75,7 @@ void APickup::InitializePickUp(const TSubclassOf<UItemBase> BaseClass, const int
     }
 }
 
-void APickup::InitializeDrop(FItemBaseData& ItemToDrop, const int32 InAmount)
+void APickup::InitializeDrop(FItemBaseData ItemToDrop, const int32 InAmount)
 {
     if (ItemDataTable)
     {

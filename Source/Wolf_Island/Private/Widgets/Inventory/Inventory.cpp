@@ -41,9 +41,9 @@ bool UInventory::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent&
 {
 	const UItemDragDropOperation* ItemDragDrop = Cast<UItemDragDropOperation>(InOperation);
 
-	const FItemBaseData* ItemData = &ItemDragDrop->SourceItemData;
+	const FItemBaseData ItemData = ItemDragDrop->SourceItemData;
 	
-	if (PlayerRef && ItemData)
+	if (PlayerRef && ItemData.IsValid())
 	{
 		if (InventoryPanel)
 		{
@@ -61,9 +61,9 @@ bool UInventory::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent&
 				if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
 				{
 					//TODO: 서버 호출 함수로 변경
-					ItemDragDrop->SourceInventory->Server_AddItemAmountAtSlot(ItemDragDrop->SourceIndex, ItemData->Amount);
+					ItemDragDrop->SourceInventory->Server_AddItemAmountAtSlot(ItemDragDrop->SourceIndex, ItemData.Amount);
 					//GetItemAtIndex(ItemDragDrop->SourceIndex).Amount += ItemData->Amount;
-					ItemDragDrop->SourceInventory->OnInventoryUpdated.Broadcast();
+					//ItemDragDrop->SourceInventory->OnInventoryUpdated.Broadcast();
 				}
 				return false;
 			}
@@ -74,8 +74,8 @@ bool UInventory::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent&
 		{
 			UE_LOG(LogTemp, Warning, TEXT("RIGHT CLICK DROP"));
 			//TODO: 서버 호출 함수로 변경
-			PlayerRef->Server_DropItem(
-				ItemDragDrop->SourceInventory, ItemDragDrop->SourceIndex, ItemData->Amount);
+			PlayerRef->Request_DropItem(
+				ItemDragDrop->SourceInventory, ItemDragDrop->SourceIndex, ItemData.Amount);
 			//DropItem(ItemData, ItemData->Amount, false);
 			return true;
 		}
@@ -83,8 +83,8 @@ bool UInventory::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent&
 		//좌클릭 떨구기면 싹다 버리기
 		UE_LOG(LogTemp, Warning, TEXT("LEFT CLICK DROP"));
 		//TODO: 서버 호출 함수로 변경
-		PlayerRef->Server_DropItem(
-			ItemDragDrop->SourceInventory, ItemDragDrop->SourceIndex, ItemData->Amount);
+		PlayerRef->Request_DropItem(
+			ItemDragDrop->SourceInventory, ItemDragDrop->SourceIndex, ItemData.Amount);
 		//DropItem(ItemData, ItemData->Amount, true);
 		return true;
 	} else

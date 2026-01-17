@@ -106,7 +106,7 @@ void UCraftPanel::SetRecipeInfo(FRecipeData RecipeData)
 		FItemData* ItemData = ItemDataTable->FindRow<FItemData>(Ingredient.Key, "Ingredients");
 		UCraftSlot* CraftSlot = CreateWidget<UCraftSlot>(GetWorld(), SlotClass);
 
-		UE_LOG(LogTemp, Warning, TEXT("%s : %d"), *FText::FromName(Ingredient.Key).ToString(), Ingredient.Value);
+		//UE_LOG(LogTemp, Warning, TEXT("%s : %d"), *FText::FromName(Ingredient.Key).ToString(), Ingredient.Value);
 		CraftSlot->SetCraftSlot(ItemData, Ingredient.Value);
 
 		IngredientList->AddChild(CraftSlot);		

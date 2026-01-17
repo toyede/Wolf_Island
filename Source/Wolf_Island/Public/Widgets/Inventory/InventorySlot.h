@@ -34,6 +34,7 @@ public:
 	void SetSelectedSlot();
 	void SetUnSelectedSlot();
 	void SetEmptySlot();
+	void RefreshSlot();
 	FLinearColor GetBrushColor() const { return ItemBorder->GetBrushColor(); };
 
 protected:

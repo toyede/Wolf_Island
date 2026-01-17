@@ -5,6 +5,13 @@
 
 #include "Components/TextBlock.h"
 
+void UHotbarSlot::NativeConstruct()
+{
+    Super::NativeConstruct();
+    
+    
+}
+
 void UHotbarSlot::SetSlotNumber(int32 SlotIndex)
 {
     SlotNumber->SetText(FText::AsNumber(SlotIndex));

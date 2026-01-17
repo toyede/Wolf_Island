@@ -14,13 +14,6 @@
 #include "Widgets/Inventory/HotbarSlot.h"
 #include "Widgets/Inventory/InventorySlot.h"
 
-void UPlayerHUD::NativeConstruct()
-{
-	Super::NativeConstruct();
-
-	RefreshHotBar();
-}
-
 void UPlayerHUD::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
@@ -29,8 +22,15 @@ void UPlayerHUD::NativeOnInitialized()
 
 	if (PlayerRef)
 	{
-		PlayerRef->InventoryComponent->OnInventoryUpdated.AddUObject(this, &UPlayerHUD::RefreshHotBar);
+		//PlayerRef->InventoryComponent->OnInventoryUpdated.AddUObject(this, &UPlayerHUD::RefreshHotBar);
 	}
+}
+
+void UPlayerHUD::NativeConstruct()
+{
+	Super::NativeConstruct();
+
+	RefreshHotBar();
 }
 
 void UPlayerHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -131,14 +131,8 @@ void UPlayerHUD::RefreshHotBar()
 		UHotbarSlot* HotSlot = CreateWidget<UHotbarSlot>(this, SlotClass);
 		HotSlot->SetDragDrop(false);
 		HotSlot->SetOwnerRef(PlayerRef->InventoryComponent);
+		HotSlot->SetIndex(i);
 		HotSlot->SetSlotNumber(i+1);
-		
-		FItemBaseData* Item = &PlayerRef->InventoryComponent->GetInventory()[i].ItemData;
-		
-		if (Item)
-		{
-			HotSlot->SetItemReference(Item);
-		}
 
 		HotSlot->SetUnSelectedSlot();
 		
@@ -147,26 +141,7 @@ void UPlayerHUD::RefreshHotBar()
 			HotSlot->SetSelectedSlot();
 		}
 		
+		HotSlot->RefreshSlot();
 		HotBar->AddChildToWrapBox(HotSlot);
 	}
-
-	/*for (UWidget* Child : HotBar->GetAllChildren())
-	{
-		int32 SlotIndex = HotBar->GetChildIndex(Child);
-		
-		if (UHotbarSlot* HotSlot = Cast<UHotbarSlot>(Child))
-		{
-			if (UItemBase* Item = PlayerRef->InventoryComponent->GetInventory()[SlotIndex].Item)
-			{
-				HotSlot->SetItemReference(Item);
-			}
-
-			HotSlot->SetUnSelectedSlot();
-		
-			if (PlayerRef->HotBarIndex == SlotIndex)
-			{
-				HotSlot->SetSelectedSlot();
-			}
-		}
-	}*/
 }
