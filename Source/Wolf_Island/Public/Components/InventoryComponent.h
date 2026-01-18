@@ -144,18 +144,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void SwapItems(int32 A, int32 B);
 	
-	//서로 다른 인벤토리의 인덱스 A,B 아이템 바꾸기
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	void SwapItemsBetweenInventory(
-		UInventoryComponent* OriginInventoryComponent, int32 OriginIndex,
-		UInventoryComponent* TargetInventoryComponent, int32 TargetIndex);
-	
-	//서로 다른 인벤토리의 인덱스 A,B에서
-	void DropItemBetweenInventory(
-		UInventoryComponent* OriginInventoryComponent, int32 OriginIndex,
-		UInventoryComponent* TargetInventoryComponent, int32 TargetIndex,
-		FItemBaseData* DraggedItem);
-	
 	//아이템 데이터 불러오기
 	FItemData* GetItemData(FName ItemID) const
 	{
@@ -505,12 +493,16 @@ protected:
 	
 	//서로 다른 인벤토리 간 아이템 스왑
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	void SwapItemBetweenInventory(UInventoryComponent* TargetInventory, int32 TargetIndex, int32 SourceIndex);
+	void SwapItemBetweenInventory(
+		UInventoryComponent* TargetInventory, int32 TargetIndex, 
+		UInventoryComponent* SourceInventory, int32 SourceIndex);
 	
 	//서로 다른 인벤토리 간 아이템 드롭
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	void DropItemBetweenInventory(UInventoryComponent* TargetInventory,
-	int32 TargetIndex, int32 SourceIndex, FItemBaseData Item);
+	void DropItemBetweenInventory(
+		UInventoryComponent* TargetInventory, int32 TargetIndex, 
+		UInventoryComponent* SourceInventory, int32 SourceIndex, 
+		FItemBaseData Item);
 	
 	//월드 드롭 아이템 먹기
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -519,6 +511,18 @@ protected:
 	//아이템 개수 강제 세팅 함수
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void SetItemAmountAtSlot(int32 Index, int32 Amount);
+	
+	//아이템 개수 감소(무게 제외 개수만)
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void RemoveOnlyItemAmountAtSlot(int32 Index, int32 AddedAmount);
+	
+	//아이템 개수 증가(무게 제외 개수만)
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void AddOnlyItemAmountAtSlot(int32 Index, int32 AddedAmount);
+	
+	//아이템 총 무게 계산 함수
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void RefreshCurrentWeight();
 	
 	//인벤토리 확인 디버그 함수
 	UFUNCTION(BlueprintCallable, Category = "Debug")
@@ -550,17 +554,29 @@ public:
 	UFUNCTION()
 	void Request_SetItemAtSlot(int32 Index, FItemBaseData Item);
 	
-	//아이템 수량 추가
+	//아이템 수량 추가(무게 포함)
 	UFUNCTION(Server, Reliable)
 	void Server_AddItemAmountAtSlot(int32 Index, int32 AddedAmount);
 	UFUNCTION()
 	void Request_AddItemAmountAtSlot(int32 Index, int32 AddedAmount);
 	
-	//아이템 수량 감소
+	//아이템 수량 추가무게 제외 수량만)-UI 우클릭 드래그용
+	UFUNCTION(Server, Reliable)
+	void Server_AddOnlyItemAmountAtSlot(int32 Index, int32 AddedAmount);
+	UFUNCTION()
+	void Request_AddOnlyItemAmountAtSlot(int32 Index, int32 AddedAmount);
+	
+	//아이템 수량 감소(무게 포함)
 	UFUNCTION(Server, Reliable)
 	void Server_RemoveItemAmountAtSlot(int32 Index, int32 AddedAmount);
 	UFUNCTION()
 	void Request_RemoveItemAmountAtSlot(int32 Index, int32 AddedAmount);
+	
+	//아이템 수량 감소(무게 제외 수량만)-UI 우클릭 드래그용
+	UFUNCTION(Server, Reliable)
+	void Server_RemoveOnlyItemAmountAtSlot(int32 Index, int32 AddedAmount);
+	UFUNCTION()
+	void Request_RemoveOnlyItemAmountAtSlot(int32 Index, int32 AddedAmount);
 	
 	//아이템 수량 설정 - 특정 개수로 강제 세팅
 	UFUNCTION(Server, Reliable)
@@ -576,15 +592,25 @@ public:
 	
 	//다른 인벤토리 간 슬롯 스왑
 	UFUNCTION(Server, Reliable)
-	void Server_SwapItemBetweenInventory(UInventoryComponent* TargetInventory, int32 TargetIndex, int32 SourceIndex);
+	void Server_SwapItemBetweenInventory(
+		UInventoryComponent* TargetInventory, int32 TargetIndex,
+		UInventoryComponent* SourceInventory, int32 SourceIndex);
 	UFUNCTION()
-	void Request_SwapItemBetweenInventory(UInventoryComponent* TargetInventory, int32 TargetIndex, int32 SourceIndex);
+	void Request_SwapItemBetweenInventory(
+		UInventoryComponent* TargetInventory, int32 TargetIndex, 
+		UInventoryComponent* SourceInventory, int32 SourceIndex);
 	
 	//다른 인벤토리 슬롯에 드롭
 	UFUNCTION(Server, Reliable)
-	void Server_DropItemBetweenInventory(UInventoryComponent* TargetInventory, int32 TargetIndex, int32 SourceIndex, FItemBaseData Item);
+	void Server_DropItemBetweenInventory(
+		UInventoryComponent* TargetInventory, int32 TargetIndex, 
+		UInventoryComponent* SourceInventory, int32 SourceIndex, 
+		FItemBaseData Item);
 	UFUNCTION()
-	void Request_DropItemBetweenInventory(UInventoryComponent* TargetInventory, int32 TargetIndex, int32 SourceIndex, FItemBaseData Item);
+	void Request_DropItemBetweenInventory(
+		UInventoryComponent* TargetInventory, int32 TargetIndex, 
+		UInventoryComponent* SourceInventory, int32 SourceIndex, 
+		FItemBaseData Item);
 	
 	//월드 드롭 아이템 먹기
 	UFUNCTION(Server, Reliable)

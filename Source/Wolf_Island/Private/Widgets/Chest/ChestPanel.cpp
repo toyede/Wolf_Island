@@ -29,6 +29,24 @@ bool UChestPanel::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent
 	return Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
 }
 
+void UChestPanel::SetInventoryComponent(AChest* Chest, AActor* Interactor)
+{
+	//상자 인벤토리 설정
+	ChestInventoryRef = Chest->InventoryComponent;
+	//연 플레이어 설정
+	PlayerRef = Cast<AMainPlayer>(Interactor);
+	
+	if (PlayerRef)
+	{
+		InventoryRef = PlayerRef->InventoryComponent;
+	} else
+	{
+		UE_LOG(LogTemp, Error, TEXT("CHEST PANEL : INTERACTOR PLAYER NOT FOUND"));
+	}
+
+	RefreshChest();
+}
+
 void UChestPanel::RefreshChest()
 {
 	UE_LOG(LogTemp, Warning, TEXT("RefreshChest"));
@@ -41,46 +59,12 @@ void UChestPanel::RefreshChest()
 		{
 			UInventorySlot* ItemSlot = CreateWidget<UInventorySlot>(this, SlotClass);
 			ItemSlot->SetIndex(Index++);
-			ItemSlot->SetOwnerRef(ChestInventoryRef);
-			ItemSlot->RefreshSlot();
-			
+			ItemSlot->SetOwner(PlayerRef);
+			ItemSlot->SetInventoryRef(ChestInventoryRef);
 			
 			ChestPanel->AddChildToWrapBox(ItemSlot);
+			
+			ItemSlot->RefreshSlot();
 		}
 	}
-	//RefreshInventory();
-}
-
-void UChestPanel::SetInventoryComponent(AChest* Chest, AActor* Interactor)
-{
-	ChestInventoryRef = Chest->InventoryComponent;
-	PlayerRef = Cast<AMainPlayer>(Interactor);
-	
-	if (PlayerRef)
-	{
-		InventoryRef = PlayerRef->InventoryComponent;
-	} else
-	{
-		UE_LOG(LogTemp, Error, TEXT("CHEST PANEL : INTERACTOR PLAYER NOT FOUND"));
-	}
-
-	if (InventoryRef)
-	{
-		FString Owner = InventoryRef->GetOwner()->GetName();
-		UE_LOG(LogTemp, Warning, TEXT("PLAYER INVENTORY OWNER : %s"), *Owner);
-	}
-	
-	if (ChestInventoryRef)
-	{
-		FString Owner = ChestInventoryRef->GetOwner()->GetName();
-		UE_LOG(LogTemp, Warning, TEXT("CHEST INVENTORY OWNER : %s"), *Owner);
-	}
-
-	if (ChestInventoryRef)
-	{
-		ChestInventoryRef->OnInventoryUpdated.AddUObject(this, &UChestPanel::RefreshChest);
-		UE_LOG(LogTemp, Warning, TEXT("CHEST UPDATE BINDING IN CHEST PANEL"));
-	}
-
-	RefreshChest();
 }

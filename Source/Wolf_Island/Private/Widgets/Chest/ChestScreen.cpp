@@ -104,8 +104,6 @@ void UChestScreen::InitializeChest(AChest* Chest, AActor* Interactor)
 	ChestRef = Chest;
 	PlayerRef = Cast<AMainPlayer>(Interactor);
 	ChestPanel->SetInventoryComponent(Chest, Interactor);
-	ChestPanel->RefreshChest();
-
 }
 
 void UChestScreen::CloseWidget()

@@ -8,6 +8,7 @@
 #include "Data/ItemDataStruct.h"
 #include "InventorySlot.generated.h"
 
+class AMainPlayer;
 class UInventoryComponent;
 /**
  * 
@@ -29,7 +30,8 @@ public:
 	FORCEINLINE void SetIndex(int32 InIndex) { Index = InIndex; };
 	FORCEINLINE FItemBaseData* GetItemReference() const { return ItemRef; };
 	FORCEINLINE void SetDragDrop(bool CanDD) { CanDragDrop = CanDD; };
-	FORCEINLINE void SetOwnerRef(UInventoryComponent* Inventory) { OwnerInventoryRef = Inventory; };
+	FORCEINLINE void SetOwner(AActor* Owner) { OwnerActor = Owner; };
+	FORCEINLINE void SetInventoryRef(UInventoryComponent* Inventory) { OwnerInventoryRef = Inventory; };
 	FORCEINLINE UInventoryComponent* GetOwnerRef() const { return OwnerInventoryRef; };
 	void SetSelectedSlot();
 	void SetUnSelectedSlot();
@@ -58,7 +60,12 @@ protected:
 	//UPROPERTY(VisibleAnywhere, Category = "Inventory Slot")
 	FItemBaseData* ItemRef;
 	
+	//UPROPERTY(VisibleAnywhere, Category = "Inventory Slot")
 	FItemData* ItemData;
+	
+	UPROPERTY(VisibleAnywhere, Category = "Inventory Slot")
+	AActor* OwnerActor;
+	
 
 	//위젯
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))

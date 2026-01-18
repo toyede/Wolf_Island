@@ -61,7 +61,8 @@ void UInventoryPanel::RefreshInventory()
 		{
 			UInventorySlot* ItemSlot = CreateWidget<UInventorySlot>(this, SlotClass);
 			ItemSlot->SetIndex(Index++);
-			ItemSlot->SetOwnerRef(InventoryRef);
+			ItemSlot->SetOwner(PlayerRef);
+			ItemSlot->SetInventoryRef(InventoryRef);
 			
 			//핫바 슬롯( 첫번째부터 6칸 ( 0 ~ 5 ) )
 			if (Index >= 1 && Index <= 6)

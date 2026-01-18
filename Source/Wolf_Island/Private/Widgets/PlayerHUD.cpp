@@ -130,7 +130,7 @@ void UPlayerHUD::RefreshHotBar()
 	{
 		UHotbarSlot* HotSlot = CreateWidget<UHotbarSlot>(this, SlotClass);
 		HotSlot->SetDragDrop(false);
-		HotSlot->SetOwnerRef(PlayerRef->InventoryComponent);
+		HotSlot->SetInventoryRef(PlayerRef->InventoryComponent);
 		HotSlot->SetIndex(i);
 		HotSlot->SetSlotNumber(i+1);
 

@@ -33,7 +33,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chest")
 	float ChestWeightCapacity = 2000.0f;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Chest")
+	UPROPERTY(Replicated ,VisibleAnywhere, BlueprintReadWrite, Category = "Chest")
 	bool IsOccupied = false;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Chest")
