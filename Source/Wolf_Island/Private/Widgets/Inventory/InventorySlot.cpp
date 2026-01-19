@@ -257,8 +257,7 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 					OriginInventoryRef->Request_SetItemAmountAtSlot(Index, FMath::Min(TotalAmount, MaxStack));
 					
 					//남은 아이템 개수는 총 분배 개수 - 드롭 받는 슬롯의 아이템 개수
-					int32 Remained = TotalAmount - OriginInventoryRef->GetItemAmountAtSlot(Index);
-					UE_LOG(LogTemp, Warning, TEXT("REMAINED : %d"), Remained);
+					int32 Remained = TotalAmount - FMath::Min(TotalAmount, MaxStack);
 					//TODO: 서버 호출 함수로 변경
 					OriginInventoryRef->Request_AddItemAmountAtSlot(ItemDragDrop->SourceIndex, Remained);
 					

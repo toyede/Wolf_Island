@@ -511,7 +511,7 @@ void AMainPlayer::Attack_Implementation()
 		Server_Attack();
 	} else
 	{
-		Multi_Atack();
+		Multi_Attack();
 	}
 }
 
@@ -725,7 +725,7 @@ void AMainPlayer::DropItem(FItemBaseData& ItemToDrop, const int32 AmountToDrop, 
 	}
 }
 
-void AMainPlayer::DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop)
+void AMainPlayer::DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop, bool IsWhole)
 {
 	FItemBaseData ItemData = SourceInventory->GetInventory()[SourceIndex].ItemData;
 	
@@ -740,8 +740,11 @@ void AMainPlayer::DropItem(UInventoryComponent* SourceInventory, int32 SourceInd
 		const FVector SpawnLocation(GetActorLocation() + (GetActorForwardVector() * 50.0f));
 		const FTransform SpawnTransform(GetActorRotation(), SpawnLocation);
 		
-		InventoryComponent->Request_RemoveItemAmountAtSlot(SourceIndex, AmountToDrop);
-		SourceInventory->InventoryChanged();
+		if (IsWhole)
+		{
+			SourceInventory->Request_RemoveItemAmountAtSlot(SourceIndex, AmountToDrop);
+			SourceInventory->InventoryChanged();
+		}
 		
 		APickup* Pickup = GetWorld()->SpawnActor<APickup>(APickup::StaticClass(), SpawnTransform, SpawnParams);
 		
@@ -943,20 +946,20 @@ void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
-void AMainPlayer::Request_DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop)
+void AMainPlayer::Request_DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop, bool IsWhole)
 {
 	if (HasAuthority())
 	{
-		DropItem(SourceInventory, SourceIndex, AmountToDrop);
+		DropItem(SourceInventory, SourceIndex, AmountToDrop, IsWhole);
 	} else
 	{
-		Server_DropItem(SourceInventory, SourceIndex, AmountToDrop);
+		Server_DropItem(SourceInventory, SourceIndex, AmountToDrop, IsWhole);
 	}
 }
 
-void AMainPlayer::Server_DropItem_Implementation(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop)
+void AMainPlayer::Server_DropItem_Implementation(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop, bool IsWhole)
 {
-	DropItem(SourceInventory, SourceIndex, AmountToDrop);
+	DropItem(SourceInventory, SourceIndex, AmountToDrop, IsWhole);
 }
 
 void AMainPlayer::Server_ToggleCrouch_Implementation()
@@ -1055,10 +1058,10 @@ void AMainPlayer::Multi_StopRun_Implementation()
 
 void AMainPlayer::Server_Attack_Implementation()
 {
-	Multi_Atack();
+	Multi_Attack();
 }
 
-void AMainPlayer::Multi_Atack_Implementation()
+void AMainPlayer::Multi_Attack_Implementation()
 {
 	WeaponComponent->UseWeapon();
 }

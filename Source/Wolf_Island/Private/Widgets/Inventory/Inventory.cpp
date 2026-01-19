@@ -62,8 +62,6 @@ bool UInventory::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent&
 				{
 					//TODO: 서버 호출 함수로 변경
 					ItemDragDrop->SourceInventory->Server_AddItemAmountAtSlot(ItemDragDrop->SourceIndex, ItemData.Amount);
-					//GetItemAtIndex(ItemDragDrop->SourceIndex).Amount += ItemData->Amount;
-					//ItemDragDrop->SourceInventory->OnInventoryUpdated.Broadcast();
 				}
 				return false;
 			}
@@ -75,8 +73,7 @@ bool UInventory::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent&
 			UE_LOG(LogTemp, Warning, TEXT("RIGHT CLICK DROP"));
 			//TODO: 서버 호출 함수로 변경
 			PlayerRef->Request_DropItem(
-				ItemDragDrop->SourceInventory, ItemDragDrop->SourceIndex, ItemData.Amount);
-			//DropItem(ItemData, ItemData->Amount, false);
+				ItemDragDrop->SourceInventory, ItemDragDrop->SourceIndex, ItemData.Amount, false);
 			return true;
 		}
 		
@@ -84,8 +81,7 @@ bool UInventory::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent&
 		UE_LOG(LogTemp, Warning, TEXT("LEFT CLICK DROP"));
 		//TODO: 서버 호출 함수로 변경
 		PlayerRef->Request_DropItem(
-			ItemDragDrop->SourceInventory, ItemDragDrop->SourceIndex, ItemData.Amount);
-		//DropItem(ItemData, ItemData->Amount, true);
+			ItemDragDrop->SourceInventory, ItemDragDrop->SourceIndex, ItemData.Amount, true);
 		return true;
 	} else
 	{

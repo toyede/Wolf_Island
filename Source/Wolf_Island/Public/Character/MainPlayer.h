@@ -332,7 +332,7 @@ public:
 	//아이템 떨구기 함수
 	UFUNCTION(BlueprintCallable)
 	void DropItem(FItemBaseData& ItemToDrop, const int32 AmountToDrop, bool IsWhole);
-	void DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop);
+	void DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop, bool IsWhole);
 
 	//손에 든 아이템 레퍼런스 반환 함수
 	//UFUNCTION(BlueprintPure)
@@ -379,7 +379,7 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_Attack();
 	UFUNCTION(NetMulticast, Reliable)
-	void Multi_Atack();
+	void Multi_Attack();
 
 	//손에 든 아이템 새로고침
 	UFUNCTION(Server, Reliable)
@@ -389,8 +389,8 @@ public:
 	
 	//아이템 드롭
 	UFUNCTION()
-	void Request_DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop);
+	void Request_DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop, bool IsWhole);
 	UFUNCTION(Server, Reliable)
-	void Server_DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop);
+	void Server_DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop, bool IsWhole);
 
 };
