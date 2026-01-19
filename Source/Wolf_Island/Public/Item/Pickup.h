@@ -28,13 +28,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data", Meta = (ExposeOnSpawn = "true"))
 	FDataTableRowHandle ItemHandle;
 	
-	UPROPERTY(Replicated ,EditAnywhere, BlueprintReadWrite, Category = "Item Data")
+	UPROPERTY(ReplicatedUsing = OnRep_ItemReference, EditAnywhere, BlueprintReadWrite, Category = "Item Data")
 	FItemBaseData ItemReference;
 	UPROPERTY(EditAnywhere, Category = "Item Data")
 	bool IsPhysics = true;
 	
 	UFUNCTION(BlueprintCallable, Category = "Item Data")
-	void InitializePickUp(const TSubclassOf<UItemBase> BaseClass, const int32 InAmount);
+	void InitializePickUp(const int32 InAmount);
 
 	void InitializeDrop(FItemBaseData ItemToDrop, const int32 InAmount);
 
@@ -56,5 +56,8 @@ public:
 	
 	//멀티플레이 코드
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
-
+	
+	//아이템 데이터 설정 시 액터 비주얼 세팅
+	UFUNCTION()
+	void OnRep_ItemReference();
 };

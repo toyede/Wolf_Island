@@ -32,10 +32,10 @@ void APickup::BeginPlay()
 {
     Super::BeginPlay();
     //게임 시작 시 아이템 정보 초기화
-    InitializePickUp(UItemBase::StaticClass(), ItemAmount);
+    InitializePickUp(ItemAmount);
 }
 
-void APickup::InitializePickUp(const TSubclassOf<UItemBase> BaseClass, const int32 InAmount)
+void APickup::InitializePickUp(const int32 InAmount)
 {
     if (ItemHandle.DataTable && !ItemHandle.RowName.IsNone())
     {
@@ -44,13 +44,6 @@ void APickup::InitializePickUp(const TSubclassOf<UItemBase> BaseClass, const int
         if (ItemData == nullptr) 
         {
             return;
-        }
-    
-        TSubclassOf<UItemBase> ClassToUse = BaseClass;
-
-        if (ClassToUse == nullptr)
-        {
-            ClassToUse = UItemBase::StaticClass();
         }
 
         ItemReference = FItemBaseData();
@@ -100,6 +93,7 @@ void APickup::Interact(AActor* Interactor)
         //인벤토리 컴포넌트 가져오기
         if (UInventoryComponent* PickerInventory = Interactor->GetComponentByClass<UInventoryComponent>())
         {
+            //그 인벤토리에 줍겠다고 요청
             PickerInventory->Request_PickUp(this);
         }
     }    
@@ -165,6 +159,18 @@ void APickup::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLif
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
     
     DOREPLIFETIME(APickup, ItemReference);
+}
+
+void APickup::OnRep_ItemReference()
+{
+    if (ItemDataTable)
+    {
+        const FItemData* ItemData = 
+        ItemDataTable->FindRow<FItemData>(ItemReference.ItemID, ItemReference.ItemName.ToString());
+        
+        InteractableData.InteractionDuration = ItemData->NumericData.InteractionDuration;
+        PickupMesh->SetStaticMesh(ItemData->AssetData.Mesh);
+    }
 }
 
 //에디터에서만 실행
