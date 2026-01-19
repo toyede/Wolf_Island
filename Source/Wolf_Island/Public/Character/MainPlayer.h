@@ -48,17 +48,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	class UCameraComponent* FirstPersonCamera;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Replicated)
 	class UStatusComponent* StatusComponent;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Replicated)
 	class UInventoryComponent* InventoryComponent;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Replicated)
 	class UWeaponComponent* WeaponComponent;
 
 	//손에 들 아이템
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
+	UPROPERTY(ReplicatedUsing=OnRep_HandedItem, EditAnywhere, BlueprintReadWrite, Replicated)
 	UStaticMeshComponent* ItemMesh;
 
 	//입력 관련 변수====================================================================
@@ -386,6 +386,9 @@ public:
 	void Server_RefreshHand();
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_RefreshHand();
+	//손에 든 아이템 메쉬 바뀌었을 때
+	UFUNCTION()
+	void OnRep_HandedItem();
 	
 	//아이템 드롭
 	UFUNCTION()

@@ -946,6 +946,11 @@ void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
+void AMainPlayer::OnRep_HandedItem()
+{
+	
+}
+
 void AMainPlayer::Request_DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop, bool IsWhole)
 {
 	if (HasAuthority())
