@@ -33,9 +33,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly)
 	UDataTable* WeaponDataTable;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
 	bool IsEquipped;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
 	FWeaponData CurrentWeapon;
 
 	UFUNCTION(BlueprintCallable)
@@ -44,7 +44,7 @@ public:
 	void EquipeWeapon(FWeaponData WeaponData);
 	UFUNCTION(BlueprintCallable)
 	void UnequipeWeapon();
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(NetMulticast ,BlueprintCallable, Unreliable)
 	void UseWeapon();
 
 protected:
@@ -55,5 +55,30 @@ public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-		
+	//멀티플레이 코드
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+	
+	//무기 확인
+	UFUNCTION()
+	void Request_CheckWeapon(FItemBaseData HandedItem);
+	UFUNCTION(Server, Reliable)
+	void Server_CheckWeapon(FItemBaseData HandedItem);
+	
+	//무기 장착
+	UFUNCTION()
+	void Request_EquipeWeapon(FWeaponData WeaponData);
+	UFUNCTION(Server, Reliable)
+	void Server_EquipeWeapon(FWeaponData WeaponData);
+	
+	//무기 해제
+	UFUNCTION()
+	void Request_UnequipeWeapon();
+	UFUNCTION(Server, Reliable)
+	void Server_UnequipeWeapon();
+	
+	//무기 사용
+	UFUNCTION()
+	void Request_UseWeapon();
+	UFUNCTION(Server, Reliable)
+	void Server_UseWeapon();	
 };

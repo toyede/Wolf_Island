@@ -19,7 +19,6 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Games/MainHUD.h"
 #include "Interaction/InteractionInterface.h"
-#include "Item/ItemBase.h"
 #include "Item/Pickup.h"
 #include "Widgets/PlayerHUD.h"
 
@@ -93,7 +92,7 @@ void AMainPlayer::BeginPlay()
 
 	if (WeaponComponent)
 	{
-		//RefreshHand();
+		Request_RefreshHand();
 	}
 
 	//HUD = Cast<AMainHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
@@ -168,14 +167,14 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 		//핫바 숫자키
 		EnhancedInputComponent->BindAction(HotBarAction, ETriggerEvent::Triggered,
-			this, &AMainPlayer::HandleHotBar);
+			this, &AMainPlayer::HandleHotBar); 
 		//핫바 마우스 휠
 		EnhancedInputComponent->BindAction(HotBarWheelAction, ETriggerEvent::Triggered,
 			this, &AMainPlayer::HandleHotBarWithWheel);
 
 		//공격
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started,
-			this, &AMainPlayer::Attack);
+			this, &AMainPlayer::Request_Attack);
 	}
 }
 
@@ -465,7 +464,7 @@ void AMainPlayer::HandleHotBar(const FInputActionValue& Value)
 					else if (Key == EKeys::Six)  HotBarIndex = 5;
 
 					HUD->RefreshHotBar();
-					RefreshHand();
+					Request_RefreshHand();
 				}
 			}
 		}
@@ -484,7 +483,7 @@ void AMainPlayer::HandleHotBarWithWheel(const FInputActionValue& Value)
 	}
 
 	HUD->RefreshHotBar();
-	RefreshHand();
+	Request_RefreshHand();
 }
 
 void AMainPlayer::OnDeath_Implementation()
@@ -495,24 +494,36 @@ void AMainPlayer::OnDeath_Implementation()
 //손에 든 아이템 업데이트 함수
 void AMainPlayer::RefreshHand()
 {
-	if (!HasAuthority())
+	FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
+	
+	//해당 인덱스 인벤토리 칸에 아이템이 있으면 그 아이템 들기.
+	if (Item.IsValid())
 	{
-		Server_RefreshHand();
+		FItemData* ItemData = InventoryComponent->GetItemData(Item);
+		
+		IsHoldingItem = true;
+		ItemMesh->SetStaticMesh(ItemData->AssetData.Mesh);
+		ItemMesh->AttachToComponent(
+		GetMesh(),
+		FAttachmentTransformRules::KeepRelativeTransform,
+		TEXT("hand_r"));
+		
+		FTransform SocketTransform = ItemMesh->GetSocketTransform(TEXT("HandSocket"), RTS_Component);
+		ItemMesh->SetRelativeTransform(SocketTransform.Inverse());
+
+		WeaponComponent->Request_CheckWeapon(Item);
+		//ItemMesh->SetRelativeScale3D(FVector(0.1f, 0.1f, 0.1f));
 	} else
 	{
-		//Multi_RefreshHand();	
+		WeaponComponent->Request_CheckWeapon(FItemBaseData());
+		IsHoldingItem = false;
+		ItemMesh->SetStaticMesh(nullptr);
 	}
 }
 
-void AMainPlayer::Attack_Implementation()
+void AMainPlayer::Attack()
 {
-	if (!HasAuthority())
-	{
-		Server_Attack();
-	} else
-	{
-		Multi_Attack();
-	}
+	WeaponComponent->Request_UseWeapon();
 }
 
 void AMainPlayer::CheckInteraction()
@@ -850,8 +861,13 @@ void AMainPlayer::WeaponTrace()
 	}
 }
 
+//공격 트레이스 시작 함수
 void AMainPlayer::StartWeaponAttack()
 {
+	//클라이언트 호출이면 유기
+	if (!HasAuthority()) return;
+	
+	//서버 실행일 때만 트레이스 시작
 	GetWorld()->GetTimerManager().SetTimer(
 		WeaponAttackTimer,
 		this,
@@ -860,8 +876,13 @@ void AMainPlayer::StartWeaponAttack()
 		true);
 }
 
+//공격 트레이스 종료 함수
 void AMainPlayer::EndWeaponAttack()
 {
+	//클라이언트 호출이면 유기
+	if (!HasAuthority()) return;
+	
+	//서버 실행일 때만 트레이스 종료
 	//공격 트레이스 종료
 	GetWorld()->GetTimerManager().ClearTimer(WeaponAttackTimer);
 	//맞은 액터 배열 비우기
@@ -946,9 +967,31 @@ void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
+void AMainPlayer::Request_Attack()
+{
+	if (HasAuthority())
+	{
+		Attack();
+	} else
+	{
+		Server_Attack();
+	}
+}
+
+void AMainPlayer::Request_RefreshHand()
+{
+	if (HasAuthority())
+	{
+		RefreshHand();
+	} else
+	{
+		Server_RefreshHand();
+	}
+}
+
 void AMainPlayer::OnRep_HandedItem()
 {
-	
+	RefreshHand();
 }
 
 void AMainPlayer::Request_DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop, bool IsWhole)
@@ -1063,17 +1106,17 @@ void AMainPlayer::Multi_StopRun_Implementation()
 
 void AMainPlayer::Server_Attack_Implementation()
 {
-	Multi_Attack();
+	Attack();
 }
 
 void AMainPlayer::Multi_Attack_Implementation()
 {
-	WeaponComponent->UseWeapon();
+	
 }
 
 void AMainPlayer::Server_RefreshHand_Implementation()
 {
-	//Multi_RefreshHand();
+	RefreshHand();
 }
 
 void AMainPlayer::Multi_RefreshHand_Implementation()

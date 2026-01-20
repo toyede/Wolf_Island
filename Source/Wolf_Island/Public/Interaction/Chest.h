@@ -24,7 +24,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Chest")
 	UStaticMeshComponent* ChestCoverMesh;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Chest", Replicated)
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Chest", Replicated)
 	class UInventoryComponent* InventoryComponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chest")
@@ -40,7 +40,7 @@ public:
 	TSubclassOf<class UChestScreen> ChestWidgetClass;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Chest")
-	class USoundBase* ChestSound;
+	USoundBase* ChestSound;
 
 	UFUNCTION(BlueprintCallable)
 	void OpenChest();

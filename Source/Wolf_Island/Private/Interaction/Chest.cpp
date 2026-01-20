@@ -10,7 +10,6 @@
 
 AChest::AChest()
 {
-	//SetReplicates(true);
 	bReplicates = true;
 	
 	ChestMesh = CreateDefaultSubobject<UStaticMeshComponent>("ChestMesh");
@@ -56,5 +55,6 @@ void AChest::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLife
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
+	DOREPLIFETIME(AChest, InventoryComponent);
 	DOREPLIFETIME(AChest, IsOccupied);
 }

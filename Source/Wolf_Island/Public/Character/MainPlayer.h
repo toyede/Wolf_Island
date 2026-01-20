@@ -48,17 +48,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	class UCameraComponent* FirstPersonCamera;
 
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Replicated)
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
 	class UStatusComponent* StatusComponent;
 
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Replicated)
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
 	class UInventoryComponent* InventoryComponent;
 
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Replicated)
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
 	class UWeaponComponent* WeaponComponent;
 
 	//손에 들 아이템
-	UPROPERTY(ReplicatedUsing=OnRep_HandedItem, EditAnywhere, BlueprintReadWrite, Replicated)
+	UPROPERTY(ReplicatedUsing=OnRep_HandedItem, EditAnywhere, BlueprintReadWrite)
 	UStaticMeshComponent* ItemMesh;
 
 	//입력 관련 변수====================================================================
@@ -103,15 +103,15 @@ public:
 
 	//상태 관련 변수 (뛰는 중인지, ~~하는 중인지 등등)=====================================
 	//뛰는 중인지
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsRunning = false;
 
 	//웅크리는 중인지
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsCrouching = false;
 
 	//슬라이딩 중인지
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsSliding = false;
 
 	//1인칭 카메라인지
@@ -119,36 +119,36 @@ public:
 	bool IsFirstPerson = true;
 
 	//행동불능 상태인지
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsInability = false;
 
 	//공격 소모 스태미나
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	float AttackConsumeAmount = 1.0f;
 
 	//점프 소모 스태미나
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	float JumpConsumeAmount = 1.0f;
 
 	//슬라이딩 소모 스태미나
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	float SlideConsumeAmount = 2.0f;
 
 	//인벤토리가 열려 있는지
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsInventoryOpen = false;
 
 	//손에 든 아이템이 있는지
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsHoldingItem = false;
 
 	//공격 중인지
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsAttacking = false;
 
 	//핫바 관련 변수==================================================================
 	//핫바 슬롯 인덱스
-	UPROPERTY(VisibleAnywhere, Category="HotBar")
+	UPROPERTY(Replicated, VisibleAnywhere, Category="HotBar")
 	int32 HotBarIndex = 0;
 	UPROPERTY(VisibleAnywhere, Category="HotBar")
 	FTimerHandle ItemUseTimer;
@@ -294,9 +294,8 @@ public:
 	void RefreshHand();
 
 	//공격 함수
-	UFUNCTION(NetMulticast, BlueprintCallable, Reliable)
+	UFUNCTION()
 	void Attack();
-	virtual void Attack_Implementation();
 
 	//인터랙션 관련 함수===================================================
 	//인터랙션 체크 함수 - 라인트레이스로 인터랙션 액터 체크
@@ -376,16 +375,21 @@ public:
 	void Multi_ToggleCrouch();
 
 	//공격
+	UFUNCTION()
+	void Request_Attack();
 	UFUNCTION(Server, Reliable)
 	void Server_Attack();
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_Attack();
 
 	//손에 든 아이템 새로고침
+	UFUNCTION()
+	void Request_RefreshHand();
 	UFUNCTION(Server, Reliable)
 	void Server_RefreshHand();
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_RefreshHand();
+	
 	//손에 든 아이템 메쉬 바뀌었을 때
 	UFUNCTION()
 	void OnRep_HandedItem();
