@@ -49,7 +49,7 @@ AMainPlayer::AMainPlayer()
 			));
 	
 	//메시에 카메라 붙이기
-	//FirstPersonCamera->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, "headSocket");
+	FirstPersonCamera->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, "headSocket");
 	//컨트롤러 마우스 위치 입력을 카메라 입력에 반영
 	FirstPersonCamera->SetupAttachment(GetMesh());
 	FirstPersonCamera->bUsePawnControlRotation = true;
@@ -969,6 +969,8 @@ void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 
 void AMainPlayer::Request_Attack()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[%S] Attack Request execute.")
+		,HasAuthority()?"SERVER":"CLIENT");
 	if (HasAuthority())
 	{
 		Attack();
