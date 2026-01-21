@@ -32,8 +32,6 @@ AMainPlayer::AMainPlayer()
 
 	StatusComponent = CreateDefaultSubobject<UStatusComponent>("StatusComponent");
 
-	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>("FirstPersonCamera");
-
 	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>("InventoryComponent");
 
 	WeaponComponent = CreateDefaultSubobject<UWeaponComponent>("WeaponComponent");
@@ -48,6 +46,8 @@ AMainPlayer::AMainPlayer()
 			FRotator(0, -90, 0),
 			FVector(0,0,-90)
 			));
+	/**/
+	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>("FirstPersonCamera");
 	
 	//메시에 카메라 붙이기
 	//FirstPersonCamera->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, "headSocket");
@@ -60,7 +60,8 @@ AMainPlayer::AMainPlayer()
 			FRotator(0, 90, -90),
 			FVector(0,10,0)
 			));
-
+	
+	
 	//인벤토리 초기화
 	InventoryComponent->SetSlotsCapacity(30);
 	InventoryComponent->SetWeightCapacity(StatusComponent->MaxWeight);
@@ -95,7 +96,7 @@ void AMainPlayer::BeginPlay()
 	if (InventoryComponent)
 	{
 		//아이템 업데이트 바인딩
-		//InventoryComponent->OnInventoryUpdated.AddUObject(this, &AMainPlayer::RefreshHand);
+		InventoryComponent->OnInventoryUpdated.AddUObject(this, &AMainPlayer::RefreshHand);
 	}
 
 	if (WeaponComponent)
@@ -494,12 +495,12 @@ void AMainPlayer::HandleHotBar(const FInputActionValue& Value)
 			{
 				if (PlayerController->IsInputKeyDown(Key))
 				{
-					if (Key == EKeys::One)      HotBarIndex = 0;
-					else if (Key == EKeys::Two) HotBarIndex = 1;
-					else if (Key == EKeys::Three) HotBarIndex = 2;
-					else if (Key == EKeys::Four) HotBarIndex = 3;
-					else if (Key == EKeys::Five) HotBarIndex = 4;
-					else if (Key == EKeys::Six)  HotBarIndex = 5;
+					if (Key == EKeys::One)      Request_SetHotbarIndex(0);
+					else if (Key == EKeys::Two) Request_SetHotbarIndex(1);
+					else if (Key == EKeys::Three) Request_SetHotbarIndex(2);
+					else if (Key == EKeys::Four) Request_SetHotbarIndex(3);
+					else if (Key == EKeys::Five) Request_SetHotbarIndex(4);
+					else if (Key == EKeys::Six)  Request_SetHotbarIndex(5);
 
 					HUD->RefreshHotBar();
 					Request_RefreshHand();
@@ -511,17 +512,21 @@ void AMainPlayer::HandleHotBar(const FInputActionValue& Value)
 
 void AMainPlayer::HandleHotBarWithWheel(const FInputActionValue& Value)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Wheel Value : %f"), Value.Get<float>());
 	if (Value.Get<float>() > 0)
 	{
-		HotBarIndex = (HotBarIndex + 1) % 6;
+		Request_SetHotbarIndex((HotBarIndex + 1) % 6);
 	} else
 	{
-		HotBarIndex = (HotBarIndex - 1 + 6) % 6;
+		Request_SetHotbarIndex((HotBarIndex - 1 + 6) % 6);
 	}
 
 	HUD->RefreshHotBar();
 	Request_RefreshHand();
+}
+
+void AMainPlayer::SetHotbarIndex(int32 Index)
+{
+	HotBarIndex = Index;
 }
 
 void AMainPlayer::OnDeath_Implementation()
@@ -576,7 +581,7 @@ void AMainPlayer::CheckInteraction()
 		FVector TraceEnd{ TraceStart + (FirstPersonCamera->GetForwardVector() * InteractionCheckDistance) };
 
 		//라인 트레이스 디버그 라인
-		DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, false, 1.0f);
+		//DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, false, 1.0f);
 		
 		//자기 메쉬에 안부딪히게 설정
 		FCollisionQueryParams QueryParams;
@@ -868,7 +873,8 @@ void AMainPlayer::WeaponTrace()
 		TraceTypeQuery,
 		true,
 		IgnoreActors,
-		EDrawDebugTrace::ForDuration,
+		EDrawDebugTrace::None,
+		//DrawDebugTrace::ForDuration,
 		Hit,
 		true))
 	{
@@ -1091,6 +1097,7 @@ void AMainPlayer::Request_Attack()
 	}
 }
 
+//TODO: 핫바 아이템 새로고침 시퀀스 고쳐보자
 void AMainPlayer::Request_RefreshHand()
 {
 	if (HasAuthority())
@@ -1100,6 +1107,27 @@ void AMainPlayer::Request_RefreshHand()
 	{
 		Server_RefreshHand();
 	}
+}
+
+void AMainPlayer::Request_SetHotbarIndex(int32 Index)
+{
+	if (HasAuthority())
+	{
+		SetHotbarIndex(Index);
+	} else
+	{
+		Server_SetHotbarIndex(Index);
+	}
+}
+
+void AMainPlayer::Server_SetHotbarIndex_Implementation(int32 Index)
+{
+	SetHotbarIndex(Index);
+}
+
+void AMainPlayer::OnRep_HotBarIndex()
+{
+	RefreshHand();
 }
 
 void AMainPlayer::OnRep_HandedItem()

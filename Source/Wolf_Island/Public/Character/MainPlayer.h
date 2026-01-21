@@ -148,7 +148,7 @@ public:
 
 	//핫바 관련 변수==================================================================
 	//핫바 슬롯 인덱스
-	UPROPERTY(Replicated, VisibleAnywhere, Category="HotBar")
+	UPROPERTY(ReplicatedUsing=OnRep_HotBarIndex, VisibleAnywhere, Category="HotBar")
 	int32 HotBarIndex = 0;
 	UPROPERTY(VisibleAnywhere, Category="HotBar")
 	FTimerHandle ItemUseTimer;
@@ -283,6 +283,10 @@ public:
 	//핫바 마우스 휠 선택 함수
 	UFUNCTION()
 	void HandleHotBarWithWheel(const FInputActionValue& Value);
+	
+	//핫바 인덱스 변경 함수
+	UFUNCTION()
+	void SetHotbarIndex(int32 Index);
 
 	//사망 시 함수
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
@@ -389,6 +393,14 @@ public:
 	void Request_RefreshHand();
 	UFUNCTION(Server, Reliable)
 	void Server_RefreshHand();
+	
+	//핫바 인덱스 수정
+	UFUNCTION()
+	void Request_SetHotbarIndex(int32 Index);
+	UFUNCTION(Server, Reliable)
+	void Server_SetHotbarIndex(int32 Index);
+	UFUNCTION()
+	void OnRep_HotBarIndex();
 	
 	//손에 든 아이템 메쉬 바뀌었을 때
 	UFUNCTION()
