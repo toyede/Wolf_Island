@@ -23,20 +23,26 @@ UStatusComponent::UStatusComponent()
 void UStatusComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
-	//스태미나 다 쓰면 15초 이동 불가
-	OnStaminaZero.AddDynamic(this, &UStatusComponent::ForcedRest);
-	//배고픔 0일 시
-	OnHungerZero.AddDynamic(this, &UStatusComponent::StartHungerDeath);
-	//수분 0일 시
-	OnHydrationZero.AddDynamic(this, &UStatusComponent::StartHydrationDeath);
+	
+	if (GetOwner()->HasAuthority())
+	{
+		//스태미나 다 쓰면 15초 이동 불가
+		OnStaminaZero.AddDynamic(this, &UStatusComponent::ForcedRest);
+		//배고픔 0일 시
+		OnHungerZero.AddDynamic(this, &UStatusComponent::StartHungerDeath);
+		//수분 0일 시
+		OnHydrationZero.AddDynamic(this, &UStatusComponent::StartHydrationDeath);
+	}
 }
 
 void UStatusComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 
-	ClearAllTimers();
+	if (GetOwner()->HasAuthority())
+	{
+		ClearAllTimers();
+	}
 }
 
 

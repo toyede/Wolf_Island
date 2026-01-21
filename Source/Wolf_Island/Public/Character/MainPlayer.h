@@ -103,11 +103,11 @@ public:
 
 	//상태 관련 변수 (뛰는 중인지, ~~하는 중인지 등등)=====================================
 	//뛰는 중인지
-	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(ReplicatedUsing=OnRep_IsRunning, EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsRunning = false;
 
 	//웅크리는 중인지
-	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(ReplicatedUsing=OnRep_IsCrouching,EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsCrouching = false;
 
 	//슬라이딩 중인지
@@ -249,7 +249,7 @@ public:
 	void StopRun();
 
 	//웅크리기 토글 함수
-	UFUNCTION(NetMulticast, Server, Reliable)
+	UFUNCTION()
 	void ToggleCrouch();
 
 	//인벤토리 토글 함수
@@ -359,36 +359,36 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 	//달리기
+	UFUNCTION()
+	void Request_Run();
 	UFUNCTION(Server, Reliable)
 	void Server_Run();
-	UFUNCTION(NetMulticast, Reliable)
-	void Multi_Run();
+	UFUNCTION()
+	void Request_StopRun();
 	UFUNCTION(Server, Reliable)
 	void Server_StopRun();
-	UFUNCTION(NetMulticast, Reliable)
-	void Multi_StopRun();
 
 	//웅크리기 
+	UFUNCTION()
+	void Request_ToggleCrouch();
 	UFUNCTION(Server, Reliable)
 	void Server_ToggleCrouch();
-	UFUNCTION(NetMulticast, Reliable)
-	void Multi_ToggleCrouch();
+	UFUNCTION()
+	void OnRep_IsCrouching();
 
 	//공격
 	UFUNCTION()
 	void Request_Attack();
 	UFUNCTION(Server, Reliable)
 	void Server_Attack();
-	UFUNCTION(NetMulticast, Reliable)
-	void Multi_Attack();
+	UFUNCTION()
+	void OnRep_IsRunning();
 
 	//손에 든 아이템 새로고침
 	UFUNCTION()
 	void Request_RefreshHand();
 	UFUNCTION(Server, Reliable)
 	void Server_RefreshHand();
-	UFUNCTION(NetMulticast, Reliable)
-	void Multi_RefreshHand();
 	
 	//손에 든 아이템 메쉬 바뀌었을 때
 	UFUNCTION()

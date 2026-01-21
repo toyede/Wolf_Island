@@ -20,6 +20,7 @@
 #include "Games/MainHUD.h"
 #include "Interaction/InteractionInterface.h"
 #include "Item/Pickup.h"
+#include "Net/UnrealNetwork.h"
 #include "Widgets/PlayerHUD.h"
 
 
@@ -49,20 +50,24 @@ AMainPlayer::AMainPlayer()
 			));
 	
 	//메시에 카메라 붙이기
-	FirstPersonCamera->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, "headSocket");
+	//FirstPersonCamera->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, "headSocket");
+	FirstPersonCamera->SetupAttachment(GetMesh(), "headSocket");
 	//컨트롤러 마우스 위치 입력을 카메라 입력에 반영
-	FirstPersonCamera->SetupAttachment(GetMesh());
 	FirstPersonCamera->bUsePawnControlRotation = true;
 	
 	FirstPersonCamera->SetRelativeTransform(
 		FTransform(
-			FRotator(-90, 90, 90),
+			FRotator(0, 90, -90),
 			FVector(0,10,0)
 			));
 
 	//인벤토리 초기화
 	InventoryComponent->SetSlotsCapacity(30);
 	InventoryComponent->SetWeightCapacity(StatusComponent->MaxWeight);
+
+	GetMovementComponent()->SetIsReplicated(true);
+	GetCharacterMovement()->MaxWalkSpeed = 300.0f;
+
 }
 
 // Called when the game starts or when spawned
@@ -73,15 +78,18 @@ void AMainPlayer::BeginPlay()
 	InteractableData.InteractionDuration = InteractionDuration;
 	
 	if(StatusComponent){
-		//상태 델리게이트 바인딩
-		StatusComponent->OnStaminaZero.AddDynamic(this, &AMainPlayer::StopRun);
+		if (HasAuthority())
+		{
+			//상태 델리게이트 바인딩
+			StatusComponent->OnStaminaZero.AddDynamic(this, &AMainPlayer::Request_StopRun);
 
-		//죽음 바인딩
-		StatusComponent->OnHPZero.AddDynamic(this, &AMainPlayer::OnDeath);
+			//죽음 바인딩
+			StatusComponent->OnHPZero.AddDynamic(this, &AMainPlayer::OnDeath);
 
-		//배고픔, 수분 감소 시작
-		StatusComponent->StartHunger();
-		StatusComponent->StartHydration();
+			//배고픔, 수분 감소 시작
+			StatusComponent->StartHunger();
+			StatusComponent->StartHydration();
+		}
 	}
 
 	if (InventoryComponent)
@@ -137,13 +145,13 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 		//달리기
 		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Triggered,
-			this, &AMainPlayer::Run);
+			this, &AMainPlayer::Request_Run);
 		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Completed,
-			this, &AMainPlayer::StopRun);
+			this, &AMainPlayer::Request_StopRun);
 
 		//웅크리기
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started,
-			this, &AMainPlayer::ToggleCrouch);
+			this, &AMainPlayer::Request_ToggleCrouch);
 
 		//슬라이딩
 		EnhancedInputComponent->BindAction(SlideAction, ETriggerEvent::Started,
@@ -284,29 +292,70 @@ void AMainPlayer::Move(const FInputActionValue& Value)
 //특정 시간 후 스태미나 회복 -> Shift 떼면 스태미나 소진
 void AMainPlayer::Run()
 {	
-	if (!HasAuthority())
-	{
-		Server_Run();
-	} else
-	{
-		Multi_Run();
+	//속도가 있는가? -> 뛰는 중인가?
+	if (GetVelocity().Size() > 0){
+
+		//낙하 중이면 달리기 불가
+		if (GetMovementComponent()->IsFalling())
+		{
+			if(IsRunning){
+				//스태미나 감소 중단
+				StatusComponent->StopStamina();
+				StatusComponent->StartRecoverStamina();
+				IsRunning = false;
+			}
+			return;
+		}
+		
+		if(!IsRunning){
+			//스태미나 0이거나 웅크리는 중이면
+			if (StatusComponent->CurrentStamina <= 0 || IsCrouching) return;
+	
+			GetCharacterMovement()->MaxWalkSpeed = 600.0f;
+			StatusComponent->StopStamina();
+
+			//이동 속도가 0 초과일 때만 스태미나 감소
+			if (GetVelocity().Size() > 0)
+			{
+				StatusComponent->StartStamina();
+			}
+	
+			IsRunning = true;
+		}
+
+	} else {
+
+		if(IsRunning){
+			//스태미나 감소 중단
+			StatusComponent->StopStamina();
+			StatusComponent->StartRecoverStamina();
+			IsRunning = false;
+		}
+
 	}
 }
 
 void AMainPlayer::StopRun()
 {
-	if (!HasAuthority())
+	//달리기 중일 때만 달리기 중지 시퀀스 작동
+	if (IsRunning)
 	{
-		Server_StopRun();
-	} else
-	{
-		Multi_StopRun();
+		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
+		//스태미나 감소 중단
+		StatusComponent->StopStamina();
+		//스태미나 회복 타이머가 실행 중이 아니면
+		if (!GetWorld()->GetTimerManager().TimerExists(StatusComponent->StaminaRecoverTimer))
+		{
+			//스태미나 회복 타이머 실행
+			StatusComponent->StartRecoverStamina();
+		}
+		IsRunning = false;
 	}
 }
 
-void AMainPlayer::ToggleCrouch_Implementation()
+void AMainPlayer::ToggleCrouch()
 {
-	/*//웅크리는 중이면
+	//웅크리는 중이면
 	if (IsCrouching)
 	{
 		UnCrouch();
@@ -317,17 +366,6 @@ void AMainPlayer::ToggleCrouch_Implementation()
 		Crouch();
 		GetCharacterMovement()->MaxWalkSpeed = 150.0f;
 		IsCrouching = true;
-	}*/
-	
-	//클라이언트 실행
-	if (!HasAuthority())
-	{
-		Server_ToggleCrouch();
-	}
-	//서버 실행
-	else
-	{
-		Multi_ToggleCrouch();
 	}
 }
 
@@ -538,7 +576,7 @@ void AMainPlayer::CheckInteraction()
 		FVector TraceEnd{ TraceStart + (FirstPersonCamera->GetForwardVector() * InteractionCheckDistance) };
 
 		//라인 트레이스 디버그 라인
-		//DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, false, 1.0f);
+		DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, false, 1.0f);
 		
 		//자기 메쉬에 안부딪히게 설정
 		FCollisionQueryParams QueryParams;
@@ -569,6 +607,9 @@ void AMainPlayer::CheckInteraction()
 				}
 			}
 		}
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("NO CAMERA"));
 	}
 	NotFoundInteractable();
 }
@@ -965,6 +1006,76 @@ void AMainPlayer::ProcessAttackHit(const FHitResult& HitResult, float DamageAmou
 void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(AMainPlayer, IsRunning);
+	DOREPLIFETIME(AMainPlayer, IsCrouching);
+	DOREPLIFETIME(AMainPlayer, IsSliding);
+	DOREPLIFETIME(AMainPlayer, IsInability);
+	DOREPLIFETIME(AMainPlayer, AttackConsumeAmount);
+	DOREPLIFETIME(AMainPlayer, SlideConsumeAmount);
+	DOREPLIFETIME(AMainPlayer, IsInventoryOpen);
+	DOREPLIFETIME(AMainPlayer, IsHoldingItem);
+	DOREPLIFETIME(AMainPlayer, IsAttacking);
+	DOREPLIFETIME(AMainPlayer, HotBarIndex);
+	DOREPLIFETIME(AMainPlayer, StatusComponent);
+	DOREPLIFETIME(AMainPlayer, InventoryComponent);
+	DOREPLIFETIME(AMainPlayer, WeaponComponent);
+	DOREPLIFETIME(AMainPlayer, ItemMesh);
+}
+
+void AMainPlayer::Request_Run()
+{
+	if (HasAuthority())
+	{
+		Run();
+	} else
+	{
+		Server_Run();
+	}
+}
+
+void AMainPlayer::Request_StopRun()
+{
+	if (HasAuthority())
+	{
+		StopRun();	
+	} else
+	{
+		Server_StopRun();
+	}
+}
+
+void AMainPlayer::Request_ToggleCrouch()
+{
+	if (HasAuthority())
+	{
+		ToggleCrouch();
+	} else
+	{
+		Server_ToggleCrouch();
+	}
+}
+
+void AMainPlayer::OnRep_IsCrouching()
+{
+	if (IsCrouching)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = 150.0f;
+	} else
+	{
+		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
+	}
+}
+
+void AMainPlayer::OnRep_IsRunning()
+{
+	if (IsRunning)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = 600.0f;
+	} else
+	{
+		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
+	}
 }
 
 void AMainPlayer::Request_Attack()
@@ -1014,96 +1125,17 @@ void AMainPlayer::Server_DropItem_Implementation(UInventoryComponent* SourceInve
 
 void AMainPlayer::Server_ToggleCrouch_Implementation()
 {
-	Multi_ToggleCrouch();
-}
-
-void AMainPlayer::Multi_ToggleCrouch_Implementation()
-{
-	//웅크리는 중이면
-	if (IsCrouching)
-	{
-		UnCrouch();
-		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
-		IsCrouching = false;
-	} else
-	{
-		Crouch();
-		GetCharacterMovement()->MaxWalkSpeed = 150.0f;
-		IsCrouching = true;
-	}
+	ToggleCrouch();
 }
 
 void AMainPlayer::Server_Run_Implementation()
 {
-	Multi_Run();
-}
-
-void AMainPlayer::Multi_Run_Implementation()
-{
-	//속도가 있는가? -> 뛰는 중인가?
-	if (GetVelocity().Size() > 0){
-
-		//낙하 중이면 달리기 불가
-		if (GetMovementComponent()->IsFalling())
-		{
-			if(IsRunning){
-				//스태미나 감소 중단
-				StatusComponent->StopStamina();
-				StatusComponent->StartRecoverStamina();
-				IsRunning = false;
-			}
-			return;
-		}
-		
-		if(!IsRunning){
-			//스태미나 0이거나 웅크리는 중이면
-			if (StatusComponent->CurrentStamina <= 0 || IsCrouching) return;
-	
-			GetCharacterMovement()->MaxWalkSpeed = 600.0f;
-			StatusComponent->StopStamina();
-
-			//이동 속도가 0 초과일 때만 스태미나 감소
-			if (GetVelocity().Size() > 0)
-			{
-				StatusComponent->StartStamina();
-			}
-	
-			IsRunning = true;
-		}
-
-	} else {
-
-		if(IsRunning){
-			//스태미나 감소 중단
-			StatusComponent->StopStamina();
-			StatusComponent->StartRecoverStamina();
-			IsRunning = false;
-		}
-
-	}
+	Run();
 }
 
 void AMainPlayer::Server_StopRun_Implementation()
 {
-	Multi_StopRun();	
-}
-
-void AMainPlayer::Multi_StopRun_Implementation()
-{
-	//달리기 중일 때만 달리기 중지 시퀀스 작동
-	if (IsRunning)
-	{
-		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
-		//스태미나 감소 중단
-		StatusComponent->StopStamina();
-		//스태미나 회복 타이머가 실행 중이 아니면
-		if (!GetWorld()->GetTimerManager().TimerExists(StatusComponent->StaminaRecoverTimer))
-		{
-			//스태미나 회복 타이머 실행
-			StatusComponent->StartRecoverStamina();
-		}
-		IsRunning = false;
-	}
+	StopRun();	
 }
 
 void AMainPlayer::Server_Attack_Implementation()
@@ -1111,41 +1143,7 @@ void AMainPlayer::Server_Attack_Implementation()
 	Attack();
 }
 
-void AMainPlayer::Multi_Attack_Implementation()
-{
-	
-}
-
 void AMainPlayer::Server_RefreshHand_Implementation()
 {
 	RefreshHand();
-}
-
-void AMainPlayer::Multi_RefreshHand_Implementation()
-{
-	FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
-	
-	//해당 인덱스 인벤토리 칸에 아이템이 있으면 그 아이템 들기.
-	if (Item.IsValid())
-	{
-		FItemData* ItemData = InventoryComponent->GetItemData(Item);
-		
-		IsHoldingItem = true;
-		ItemMesh->SetStaticMesh(ItemData->AssetData.Mesh);
-		ItemMesh->AttachToComponent(
-		GetMesh(),
-		FAttachmentTransformRules::KeepRelativeTransform,
-		TEXT("hand_r"));
-		
-		FTransform SocketTransform = ItemMesh->GetSocketTransform(TEXT("HandSocket"), RTS_Component);
-		ItemMesh->SetRelativeTransform(SocketTransform.Inverse());
-
-		WeaponComponent->CheckWeapon(Item);
-		//ItemMesh->SetRelativeScale3D(FVector(0.1f, 0.1f, 0.1f));
-	} else
-	{
-		WeaponComponent->CheckWeapon(FItemBaseData());
-		IsHoldingItem = false;
-		ItemMesh->SetStaticMesh(nullptr);
-	}
 }
