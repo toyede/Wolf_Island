@@ -66,7 +66,7 @@ AMainPlayer::AMainPlayer()
 	InventoryComponent->SetSlotsCapacity(30);
 	InventoryComponent->SetWeightCapacity(StatusComponent->MaxWeight);
 
-	GetMovementComponent()->SetIsReplicated(true);
+	GetCharacterMovement()->SetIsReplicated(true);
 	GetCharacterMovement()->MaxWalkSpeed = 300.0f;
 
 }
@@ -101,13 +101,17 @@ void AMainPlayer::BeginPlay()
 
 	if (WeaponComponent)
 	{
-		Request_RefreshHand();
+		RefreshHand();
 	}
 
 	//HUD = Cast<AMainHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
 
-	HUD = CreateWidget<UPlayerHUD>(GetWorld(), HUDClass);
-	HUD->AddToViewport();
+	//플레이어 본인만 HUD 생성.
+	if (IsLocallyControlled())
+	{
+		HUD = CreateWidget<UPlayerHUD>(GetWorld(), HUDClass);
+		HUD->AddToViewport();
+	}
 }
 
 // Called every frame
@@ -184,6 +188,10 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 		//공격
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started,
 			this, &AMainPlayer::Request_Attack);
+		
+		//아이템 버리기
+		EnhancedInputComponent->BindAction(DropItemAction, ETriggerEvent::Started,
+			this, &AMainPlayer::DropItemOnHotBar);
 	}
 }
 
@@ -442,37 +450,33 @@ void AMainPlayer::StartUseItem()
 {
 	FItemBaseData* TargetItem = &InventoryComponent->GetItemAtIndex(HotBarIndex);
 	
-	if (true)
+	if (!TargetItem->IsValid()) return;
+	
+	//사용 가능한 아이템이 아니면 암것두 안하긔.
+	if (!InventoryComponent->IsUsableItem(*TargetItem)) return;
+	
+	UE_LOG(LogTemp, Warning, TEXT("ITEM IS VALID AND START USE ITEM"));
+	
+	if (!GetWorld()->GetTimerManager().IsTimerActive(ItemUseTimer))
 	{
-		//사용 가능한 아이템이 아니면 암것두 안하긔.
-		if (!InventoryComponent->IsUsableItem(*TargetItem)) return;
+		FItemData* ItemData = InventoryComponent->GetItemData(*TargetItem);
 		
-		UE_LOG(LogTemp, Warning, TEXT("ITEM IS VALID AND START USE ITEM"));
+		UE_LOG(LogTemp, Warning, TEXT("TIMER EXECUTED"));
+		UE_LOG(LogTemp, Warning, TEXT("TARGET ITEM : [ %s ] : DURATION : [ %f ]"), *ItemData->TextData.Name.ToString(), ItemData->NumericData.InteractionDuration);
 		
-		if (!GetWorld()->GetTimerManager().IsTimerActive(ItemUseTimer))
+		
+		GetWorld()->GetTimerManager().SetTimer(
+		ItemUseTimer,
+		[this, TargetItem]()
 		{
-			FItemData* ItemData = InventoryComponent->GetItemData(*TargetItem);
-			
-			UE_LOG(LogTemp, Warning, TEXT("TIMER EXECUTED"));
-			UE_LOG(LogTemp, Warning, TEXT("TARGET ITEM : [ %s ] : DURATION : [ %f ]"), *ItemData->TextData.Name.ToString(), ItemData->NumericData.InteractionDuration);
-			
-			
-			GetWorld()->GetTimerManager().SetTimer(
-			ItemUseTimer,
-			[this, TargetItem]()
-			{
-				UseItem(*TargetItem);
-			},
-			1,
-			false
-			);
-		}else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("TIMER NOT EXECUTED"));
-		}
-	} else
+			UseItem(*TargetItem);
+		},
+		1,
+		false
+		);
+	}else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("NO ITEM IN HOTBAR SLOT [%d]"), HotBarIndex+1);
+		UE_LOG(LogTemp, Warning, TEXT("TIMER NOT EXECUTED"));
 	}
 }
 
@@ -503,7 +507,6 @@ void AMainPlayer::HandleHotBar(const FInputActionValue& Value)
 					else if (Key == EKeys::Six)  Request_SetHotbarIndex(5);
 
 					HUD->RefreshHotBar();
-					Request_RefreshHand();
 				}
 			}
 		}
@@ -521,7 +524,6 @@ void AMainPlayer::HandleHotBarWithWheel(const FInputActionValue& Value)
 	}
 
 	HUD->RefreshHotBar();
-	Request_RefreshHand();
 }
 
 void AMainPlayer::SetHotbarIndex(int32 Index)
@@ -537,11 +539,13 @@ void AMainPlayer::OnDeath_Implementation()
 //손에 든 아이템 업데이트 함수
 void AMainPlayer::RefreshHand()
 {
+	//핫바 인덱스의 아이템 정보 가져오기.
 	FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
 	
 	//해당 인덱스 인벤토리 칸에 아이템이 있으면 그 아이템 들기.
 	if (Item.IsValid())
-	{
+	{	
+		//데이터 베이스에서 아이템 데이터 가져오기
 		FItemData* ItemData = InventoryComponent->GetItemData(Item);
 		
 		IsHoldingItem = true;
@@ -554,11 +558,11 @@ void AMainPlayer::RefreshHand()
 		FTransform SocketTransform = ItemMesh->GetSocketTransform(TEXT("HandSocket"), RTS_Component);
 		ItemMesh->SetRelativeTransform(SocketTransform.Inverse());
 
-		WeaponComponent->Request_CheckWeapon(Item);
+		//WeaponComponent->Request_CheckWeapon(Item);
 		//ItemMesh->SetRelativeScale3D(FVector(0.1f, 0.1f, 0.1f));
 	} else
 	{
-		WeaponComponent->Request_CheckWeapon(FItemBaseData());
+		//WeaponComponent->Request_CheckWeapon(FItemBaseData());
 		IsHoldingItem = false;
 		ItemMesh->SetStaticMesh(nullptr);
 	}
@@ -809,7 +813,7 @@ void AMainPlayer::DropItem(UInventoryComponent* SourceInventory, int32 SourceInd
 
 		if (ItemGettingSound)
 		{
-			UGameplayStatics::PlaySound2D(GetWorld(), ItemGettingSound);
+			Client_PlaySound2D(ItemGettingSound);
 		}
 		
 	} else
@@ -859,7 +863,7 @@ void AMainPlayer::WeaponTrace()
 	}
 
 	//트레이스 파라미터 설정
-	ETraceTypeQuery TraceTypeQuery = ETraceTypeQuery();
+	ETraceTypeQuery TraceTypeQuery = ETraceTypeQuery(ECC_Pawn);
 	TArray<AActor*> IgnoreActors;
 	IgnoreActors.Add(this);
 	FHitResult Hit;
@@ -883,7 +887,7 @@ void AMainPlayer::WeaponTrace()
 		FItemBaseData HoldingItem = GetHoldingItemReference();
 
 		//기본 대미지
-		float Damage = 1.0f;
+		float Damage = 10.0f;
 
 		//무기 장착 시 무기 대미지로 설정
 		if (HoldingItem.IsValid())
@@ -897,6 +901,7 @@ void AMainPlayer::WeaponTrace()
 
 		//최초로 맞은 액터면 맞은 액터 배열에 추가
 		DamagedActors.Add(HitActor);
+		UE_LOG(LogTemp, Warning, TEXT("Hit Actor: %s"), *HitActor->GetName());
 
 		//대미지 적용
 		UGameplayStatics::ApplyDamage(
@@ -934,6 +939,15 @@ void AMainPlayer::EndWeaponAttack()
 	GetWorld()->GetTimerManager().ClearTimer(WeaponAttackTimer);
 	//맞은 액터 배열 비우기
 	DamagedActors.Empty();
+}
+
+void AMainPlayer::DropItemOnHotBar()
+{
+	FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
+	if (Item.IsValid())
+	{
+		Request_DropItem(InventoryComponent, HotBarIndex, 1, true);
+	}
 }
 
 void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float DamageAmount)
@@ -1086,8 +1100,6 @@ void AMainPlayer::OnRep_IsRunning()
 
 void AMainPlayer::Request_Attack()
 {
-	UE_LOG(LogTemp, Warning, TEXT("[%S] Attack Request execute.")
-		,HasAuthority()?"SERVER":"CLIENT");
 	if (HasAuthority())
 	{
 		Attack();
@@ -1114,6 +1126,9 @@ void AMainPlayer::Request_SetHotbarIndex(int32 Index)
 	if (HasAuthority())
 	{
 		SetHotbarIndex(Index);
+		RefreshHand();
+		FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
+		WeaponComponent->Request_CheckWeapon(Item);
 	} else
 	{
 		Server_SetHotbarIndex(Index);
@@ -1132,7 +1147,7 @@ void AMainPlayer::OnRep_HotBarIndex()
 
 void AMainPlayer::OnRep_HandedItem()
 {
-	RefreshHand();
+	//RefreshHand();
 }
 
 void AMainPlayer::Request_DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop, bool IsWhole)
@@ -1144,6 +1159,11 @@ void AMainPlayer::Request_DropItem(UInventoryComponent* SourceInventory, int32 S
 	{
 		Server_DropItem(SourceInventory, SourceIndex, AmountToDrop, IsWhole);
 	}
+}
+
+void AMainPlayer::Client_PlaySound2D_Implementation(USoundBase* Sound)
+{
+	UGameplayStatics::PlaySound2D(GetWorld(), Sound);
 }
 
 void AMainPlayer::Server_DropItem_Implementation(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop, bool IsWhole)

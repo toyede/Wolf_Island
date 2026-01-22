@@ -43,7 +43,7 @@ public:
 	//HUD=============================================================================
 	//UPROPERTY(EditAnywhere)
 	//class AMainHUD* HUD;
-
+	
 	//컴포넌트=========================================================================
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	class UCameraComponent* FirstPersonCamera;
@@ -100,6 +100,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputAction* HotBarWheelAction;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
+	UInputAction* DropItemAction;
 
 	//상태 관련 변수 (뛰는 중인지, ~~하는 중인지 등등)=====================================
 	//뛰는 중인지
@@ -148,7 +151,7 @@ public:
 
 	//핫바 관련 변수==================================================================
 	//핫바 슬롯 인덱스
-	UPROPERTY(ReplicatedUsing=OnRep_HotBarIndex, VisibleAnywhere, Category="HotBar")
+	UPROPERTY(ReplicatedUsing=OnRep_HotBarIndex, VisibleAnywhere, BlueprintReadOnly, Category="HotBar")
 	int32 HotBarIndex = 0;
 	UPROPERTY(VisibleAnywhere, Category="HotBar")
 	FTimerHandle ItemUseTimer;
@@ -354,6 +357,10 @@ public:
 	//무기 공격 트레이스 종료 함수
 	UFUNCTION(BlueprintCallable)
 	void EndWeaponAttack();
+	
+	//손에 든 아이템 한 개 버리기
+	UFUNCTION(BlueprintCallable)
+	void DropItemOnHotBar();
 
 	//멀티플레이어==================================================================================
 	//코드 리팩토링 방법 v1.0
@@ -411,5 +418,8 @@ public:
 	void Request_DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop, bool IsWhole);
 	UFUNCTION(Server, Reliable)
 	void Server_DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop, bool IsWhole);
-
+	
+	//클라이언트 실행 함수 (UI 사운드 등 클라이언트 혼자만 보면 되는 것)
+	UFUNCTION(Client, Reliable)
+	void Client_PlaySound2D(USoundBase* Sound);
 };

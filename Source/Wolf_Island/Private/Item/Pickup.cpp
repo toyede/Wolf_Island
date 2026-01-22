@@ -113,14 +113,7 @@ void APickup::PickUp(const AActor* Picker)
                 
                 //TODO: 서버 호출 함수로 변경
                 PickerInventory->HandleAddItem(ItemReference);
-
-                const AMainPlayer* Player = Cast<AMainPlayer>(Picker);
                 
-                if (Player)
-                {
-                    Player->HUD->AddItemMessage(AddResult);
-                }
-
                 //결과에 따른 행동
                 switch (AddResult.OperationResult)
                 {
@@ -138,7 +131,6 @@ void APickup::PickUp(const AActor* Picker)
                     case EItemAddedResult::AllItemAdded:
                         //디버깅 결과 메시지
                         UE_LOG(LogTemp, Warning, TEXT("Got All Item"));
-                        UGameplayStatics::PlaySound2D(GetWorld(), Player->ItemGettingSound);
                         Destroy();
                         break;
                 }

@@ -37,6 +37,11 @@ public:
 	bool IsEquipped;
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
 	FWeaponData CurrentWeapon;
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
+	bool IsAttacking = false;
+	
+	UPROPERTY()
+	TObjectPtr<UAnimMontage> AttackMontage;
 
 	UFUNCTION(BlueprintCallable)
 	void CheckWeapon(FItemBaseData HandedItem);
@@ -44,8 +49,13 @@ public:
 	void EquipeWeapon(FWeaponData WeaponData);
 	UFUNCTION(BlueprintCallable)
 	void UnequipeWeapon();
-	UFUNCTION(NetMulticast ,BlueprintCallable, Unreliable)
+	UFUNCTION(NetMulticast, BlueprintCallable, Reliable)
 	void UseWeapon();
+	
+	UFUNCTION()
+	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	
+	
 
 protected:
 	// Called when the game starts

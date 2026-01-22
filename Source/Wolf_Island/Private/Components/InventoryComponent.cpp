@@ -10,11 +10,13 @@
 #include <string>
 
 #include "AdvancedFriendsGameInstance.h"
+#include "Character/MainPlayer.h"
 #include "Item/ItemBase.h"
 #include "Item/Pickup.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
+#include "Widgets/PlayerHUD.h"
 
 // Sets default values for this component's properties
 UInventoryComponent::UInventoryComponent()
@@ -24,6 +26,7 @@ UInventoryComponent::UInventoryComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 
 	SetIsReplicated(true);
+	SetIsReplicatedByDefault(true);
 	
 	// ...
 }
@@ -825,6 +828,7 @@ void UInventoryComponent::PickupItem(APickup* Item)
 	if (!Item->IsPendingKillPending())
 	{
 		const FItemAddResult AddResult = HandleAddItem(Item->ItemReference);
+		Client_AddResult(AddResult);
 		
 		switch (AddResult.OperationResult)
 		{
@@ -1152,5 +1156,22 @@ void UInventoryComponent::OnRep_InventoryContents()
 void UInventoryComponent::OnRep_CurrentWeight()
 {
 	InventoryChanged();
+}
+
+void UInventoryComponent::Client_AddResult_Implementation(FItemAddResult Result)
+{
+	AMainPlayer* Player = Cast<AMainPlayer>(GetOwner());
+	
+	if (Player)
+	{
+		Player->HUD->AddItemMessage(Result);
+		if (Result.OperationResult!=EItemAddedResult::NoItemAdded)
+		{
+			if (PickUpSound)
+			{
+				Player->Client_PlaySound2D(PickUpSound);
+			}
+		}
+	}
 }
 

@@ -126,6 +126,10 @@ public:
 		
 	//인벤토리 업데이트 델리게이트 (아이템 개수 변화 시 호출)
 	FOnInventoryUpdated OnInventoryUpdated;
+	
+	//사운드
+	UPROPERTY(EditDefaultsOnly, Category="Sound")
+	USoundBase* PickUpSound;
 
 	//인벤토리 저장 함수
 	UFUNCTION(BlueprintCallable, Category="Inventory Save")
@@ -348,6 +352,7 @@ public:
 	};
 	
 	//특정 인덱스의 아이템 데이터 반환
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Inventory")
 	FItemBaseData& GetItemAtIndex(int32 Index)
 	{
 		return InventoryContents[Index].ItemData;
@@ -628,6 +633,10 @@ public:
 	//인벤토리 무게 변경 시
 	UFUNCTION()
 	void OnRep_CurrentWeight();
+	
+	//아이템 획득 결과 전파
+	UFUNCTION(Client, Reliable)
+	void Client_AddResult(FItemAddResult Result);
 	
 private:
 	

@@ -28,6 +28,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data", Meta = (ExposeOnSpawn = "true"))
 	FDataTableRowHandle ItemHandle;
 	
+	//실제 아이템 정보
 	UPROPERTY(ReplicatedUsing = OnRep_ItemReference, EditAnywhere, BlueprintReadWrite, Category = "Item Data")
 	FItemBaseData ItemReference;
 	UPROPERTY(EditAnywhere, Category = "Item Data")

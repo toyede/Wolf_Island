@@ -14,6 +14,7 @@ UWeaponComponent::UWeaponComponent()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 	SetIsReplicated(true);
+	SetIsReplicatedByDefault(true);
 	// ...
 }
 
@@ -78,14 +79,33 @@ void UWeaponComponent::UnequipeWeapon()
 void UWeaponComponent::UseWeapon_Implementation()
 {
 	ACharacter* Owner = Cast<ACharacter>(GetOwner());
-
-	if (Owner)
+	if (!Owner || IsAttacking)
 	{
-		UE_LOG(LogTemp, Warning,TEXT("Try Playing Montage"));
-		UE_LOG(LogTemp, Warning, TEXT("Weapon ID is %s"), *CurrentWeapon.ID.ToString());
-		Owner->PlayAnimMontage(CurrentWeapon.Montage);
+		UE_LOG(LogTemp, Warning, TEXT("OWNER OR IsAttacking FALSE"));
+		return;
 	}
+
+	UAnimInstance* AnimInst = Owner->GetMesh() ? Owner->GetMesh()->GetAnimInstance() : nullptr;
+	if (!AnimInst || !CurrentWeapon.Montage) return;
 	
+	IsAttacking = true;
+	AttackMontage = CurrentWeapon.Montage;
+	
+	FOnMontageEnded EndDelegate;
+	EndDelegate.BindUObject(this, &UWeaponComponent::OnAttackMontageEnded);
+	
+	Owner->PlayAnimMontage(CurrentWeapon.Montage);
+	AnimInst->Montage_SetEndDelegate(EndDelegate, CurrentWeapon.Montage);
+
+	
+}
+
+void UWeaponComponent::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (Montage != AttackMontage) return;
+
+	IsAttacking = false;
+	AttackMontage = nullptr;
 }
 
 
@@ -94,6 +114,7 @@ void UWeaponComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
 	DOREPLIFETIME(UWeaponComponent, IsEquipped);
+	DOREPLIFETIME(UWeaponComponent, IsAttacking);
 	DOREPLIFETIME(UWeaponComponent, CurrentWeapon);
 }
 
@@ -147,6 +168,8 @@ void UWeaponComponent::Server_UnequipeWeapon_Implementation()
 
 void UWeaponComponent::Request_UseWeapon()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[%hs] REQUEST USE WEAPON"),
+		GetOwner()->HasAuthority()?"SERVER":"CLIENT");
 	if (GetOwner()->HasAuthority())
 	{
 		UseWeapon();

@@ -15,6 +15,7 @@ UStatusComponent::UStatusComponent()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 	SetIsReplicated(true);
+	SetIsReplicatedByDefault(true);
 	// ...
 }
 
@@ -504,5 +505,5 @@ void UStatusComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
 
 void UStatusComponent::OnRep_CurrentHunger()
 {
-	UE_LOG(LogTemp, Warning, TEXT("OnRep_CurrentHunger : %f"), CurrentHunger);
+	//UE_LOG(LogTemp, Warning, TEXT("OnRep_CurrentHunger : %f"), CurrentHunger);
 }

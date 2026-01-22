@@ -108,16 +108,16 @@ struct FItemBaseData
 {
 	GENERATED_USTRUCT_BODY();
 	
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite)
 	FName ItemID = NAME_None;
 	
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite)
 	FText ItemName = FText::GetEmpty();
 	
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite)
 	int32 Amount = 0;
 	
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite)
 	float CurrentDurability = 0.0f;
 	
 	void SetAmount(const int32 NewAmount) { Amount = NewAmount; };
