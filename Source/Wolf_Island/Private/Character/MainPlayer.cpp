@@ -1195,3 +1195,5 @@ void AMainPlayer::Server_RefreshHand_Implementation()
 {
 	RefreshHand();
 }
+
+//TODO: 시작 시 손에 든 아이템 새로고침, 손에 든 아이템 새로고침, 무기 체크, 웨폰 컴포넌트 공격 손보기.
