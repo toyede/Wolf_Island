@@ -102,8 +102,6 @@ void AMainPlayer::BeginPlay()
 	if (WeaponComponent)
 	{
 		RefreshHand();
-		FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
-		WeaponComponent->Request_CheckWeapon(Item);;
 	}
 
 	//HUD = Cast<AMainHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
@@ -532,7 +530,7 @@ void AMainPlayer::SetHotbarIndex(int32 Index)
 {
 	HotBarIndex = Index;
 	FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
-	WeaponComponent->Request_CheckWeapon(Item);
+	WeaponComponent->CheckWeapon(Item);
 }
 
 void AMainPlayer::OnDeath_Implementation()
@@ -563,8 +561,10 @@ void AMainPlayer::RefreshHand()
 		ItemMesh->SetRelativeTransform(SocketTransform.Inverse());
 
 		//ItemMesh->SetRelativeScale3D(FVector(0.1f, 0.1f, 0.1f));
+		WeaponComponent->CheckWeapon(Item);
 	} else
 	{
+		WeaponComponent->CheckWeapon(Item);
 		IsHoldingItem = false;
 		ItemMesh->SetStaticMesh(nullptr);
 	}
@@ -1130,7 +1130,7 @@ void AMainPlayer::Request_SetHotbarIndex(int32 Index)
 		SetHotbarIndex(Index);
 		RefreshHand();
 		FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
-		WeaponComponent->Request_CheckWeapon(Item);
+		WeaponComponent->CheckWeapon(Item);
 	} else
 	{
 		Server_SetHotbarIndex(Index);

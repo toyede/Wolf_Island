@@ -38,6 +38,7 @@ void UWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 
 void UWeaponComponent::CheckWeapon(FItemBaseData HandedItem)
 {
+	UE_LOG(LogTemp, Warning, TEXT("CheckWeapon Executed"));
 	if (!WeaponDataTable)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("WeaponDataTable is NULL!!"));
