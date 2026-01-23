@@ -38,7 +38,6 @@ void UWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 
 void UWeaponComponent::CheckWeapon(FItemBaseData HandedItem)
 {
-	UE_LOG(LogTemp, Warning, TEXT("CheckWeapon Executed"));
 	if (!WeaponDataTable)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("WeaponDataTable is NULL!!"));
@@ -51,18 +50,15 @@ void UWeaponComponent::CheckWeapon(FItemBaseData HandedItem)
 
 		if (WeaponData)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("HandedItem is VALID and equipped."))
 			EquipeWeapon(*WeaponData);
 		} else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("HandedItem is VALID but not weapon"))
 			FWeaponData* DefaultData = WeaponDataTable->FindRow<FWeaponData>(FName("EQ000"), "DefaultWeapon");
 			CurrentWeapon = *DefaultData;
 			UnequipeWeapon();
 		}
 	} else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("HandedItem is NOT VALID"))
 		FWeaponData* DefaultData = WeaponDataTable->FindRow<FWeaponData>(FName("EQ000"), "DefaultWeapon");
 		CurrentWeapon = *DefaultData;
 		UnequipeWeapon();

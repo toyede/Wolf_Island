@@ -55,6 +55,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void RefreshHotBar();
+	
+	UFUNCTION(BlueprintCallable)
+	void UpdateHotBar();
 
 protected:
 	

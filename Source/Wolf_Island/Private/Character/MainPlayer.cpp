@@ -8,6 +8,7 @@
 #include "MaterialHLSLTree.h"
 #include "Engine/DamageEvents.h"
 #include "Blueprint/UserWidget.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Components/StatusComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -505,8 +506,6 @@ void AMainPlayer::HandleHotBar(const FInputActionValue& Value)
 					else if (Key == EKeys::Four) Request_SetHotbarIndex(3);
 					else if (Key == EKeys::Five) Request_SetHotbarIndex(4);
 					else if (Key == EKeys::Six)  Request_SetHotbarIndex(5);
-
-					HUD->RefreshHotBar();
 				}
 			}
 		}
@@ -522,8 +521,6 @@ void AMainPlayer::HandleHotBarWithWheel(const FInputActionValue& Value)
 	{
 		Request_SetHotbarIndex((HotBarIndex - 1 + 6) % 6);
 	}
-
-	HUD->RefreshHotBar();
 }
 
 void AMainPlayer::SetHotbarIndex(int32 Index)
@@ -759,8 +756,6 @@ void AMainPlayer::Interaction()
 
 void AMainPlayer::DropItem(FItemBaseData& ItemToDrop, const int32 AmountToDrop, bool IsWhole)
 {
-	//UInventoryComponent* OriginInventory = ItemToDrop->OwningInventory;
-	
 	if (ItemToDrop.IsValid())
 	{
 		FActorSpawnParameters SpawnParams;
@@ -1128,6 +1123,7 @@ void AMainPlayer::Request_SetHotbarIndex(int32 Index)
 	if (HasAuthority())
 	{
 		SetHotbarIndex(Index);
+		HUD->UpdateHotBar();
 		RefreshHand();
 		FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
 		WeaponComponent->CheckWeapon(Item);
@@ -1144,12 +1140,13 @@ void AMainPlayer::Server_SetHotbarIndex_Implementation(int32 Index)
 
 void AMainPlayer::OnRep_HotBarIndex()
 {
+	HUD->UpdateHotBar();
 	RefreshHand();
 }
 
 void AMainPlayer::OnRep_HandedItem()
 {
-	//RefreshHand();
+	
 }
 
 void AMainPlayer::Request_DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop, bool IsWhole)
@@ -1197,5 +1194,3 @@ void AMainPlayer::Server_RefreshHand_Implementation()
 {
 	RefreshHand();
 }
-
-//TODO: 시작 시 손에 든 아이템 새로고침, 손에 든 아이템 새로고침, 무기 체크, 웨폰 컴포넌트 공격 손보기.

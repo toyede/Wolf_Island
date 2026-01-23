@@ -124,7 +124,7 @@ void UPlayerHUD::UpdateInteraction()
 void UPlayerHUD::RefreshHotBar()
 {
 	HotBar->ClearChildren();
-	HotBar->InvalidateLayoutAndVolatility();
+	//HotBar->InvalidateLayoutAndVolatility();
 	
 	for (int i=0; i<6; i++)
 	{
@@ -143,5 +143,26 @@ void UPlayerHUD::RefreshHotBar()
 		
 		HotSlot->RefreshSlot();
 		HotBar->AddChildToWrapBox(HotSlot);
+	}
+}
+
+void UPlayerHUD::UpdateHotBar()
+{
+	UE_LOG(LogTemp, Warning, TEXT("UpdateHotBar EXECUTED"));
+	if (HotBar&&HotBar->HasAnyChildren())
+	{
+		int32 Count = HotBar->GetChildrenCount();
+		
+		for (int i=0; i<Count; i++){
+			UHotbarSlot* HotSlot = Cast<UHotbarSlot>(HotBar->GetChildAt(i));
+			HotSlot->SetUnSelectedSlot();
+		
+			if (PlayerRef->HotBarIndex == i)
+			{
+				HotSlot->SetSelectedSlot();
+			}
+			
+			HotSlot->RefreshSlot();
+		}
 	}
 }
