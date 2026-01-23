@@ -50,15 +50,18 @@ void UWeaponComponent::CheckWeapon(FItemBaseData HandedItem)
 
 		if (WeaponData)
 		{
+			UE_LOG(LogTemp, Warning, TEXT("HandedItem is VALID and equipped."))
 			EquipeWeapon(*WeaponData);
 		} else
 		{
+			UE_LOG(LogTemp, Warning, TEXT("HandedItem is VALID but not weapon"))
 			FWeaponData* DefaultData = WeaponDataTable->FindRow<FWeaponData>(FName("EQ000"), "DefaultWeapon");
 			CurrentWeapon = *DefaultData;
 			UnequipeWeapon();
 		}
 	} else
 	{
+		UE_LOG(LogTemp, Warning, TEXT("HandedItem is NOT VALID"))
 		FWeaponData* DefaultData = WeaponDataTable->FindRow<FWeaponData>(FName("EQ000"), "DefaultWeapon");
 		CurrentWeapon = *DefaultData;
 		UnequipeWeapon();
@@ -95,11 +98,13 @@ void UWeaponComponent::UseWeapon_Implementation()
 	EndDelegate.BindUObject(this, &UWeaponComponent::OnAttackMontageEnded);
 	
 	Owner->PlayAnimMontage(CurrentWeapon.Montage);
+	//몽타주 실행 완료 후 공격 중 상태 변수 변경하는 델리게이트
 	AnimInst->Montage_SetEndDelegate(EndDelegate, CurrentWeapon.Montage);
 
 	
 }
 
+//공격 몽타주 재생 끝나면 공격 중 상태 변수 다시 false로 설정하는 함수
 void UWeaponComponent::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
 	if (Montage != AttackMontage) return;
