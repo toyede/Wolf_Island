@@ -2,14 +2,13 @@
 
 #include "Character/MainPlayer.h"
 #include "Components/InventoryComponent.h"
-#include "Item/ItemBase.h"
 #include "Data/ItemDataStruct.h"
-#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
-#include "Widgets/PlayerHUD.h"
 
 APickup::APickup()
 {
+    SetReplicates(true);
+    
     PickupMesh = CreateDefaultSubobject<UStaticMeshComponent>("PickupMesh");
     PickupMesh->SetSimulatePhysics(IsPhysics);
     PickupMesh->SetUseCCD(true);
@@ -24,8 +23,6 @@ APickup::APickup()
     {
         ItemDataTable = DT_ItemData.Object;
     }
-    
-    bReplicates = true;
 }
 
 void APickup::BeginPlay()
@@ -33,6 +30,13 @@ void APickup::BeginPlay()
     Super::BeginPlay();
     //게임 시작 시 아이템 정보 초기화
     InitializePickUp(ItemAmount);
+}
+
+void APickup::Tick(float DeltaSeconds)
+{
+    Super::Tick(DeltaSeconds);
+    
+    //UE_LOG(LogTemp, Warning, TEXT("[PICK UP] DURATION : %f"), InteractableData.InteractionDuration);
 }
 
 void APickup::InitializePickUp(const int32 InAmount)
@@ -51,7 +55,7 @@ void APickup::InitializePickUp(const int32 InAmount)
         ItemReference.ItemID = ItemData->ID;
         ItemReference.ItemName = ItemData->TextData.Name;
         ItemReference.CurrentDurability = ItemData->NumericData.Durability;
-        InteractableData.InteractionDuration = ItemData->NumericData.InteractionDuration;
+        SetInteractionDuration(ItemData->NumericData.InteractionDuration);
 
         InAmount <= 0 ? ItemReference.SetAmount(1) : ItemReference.SetAmount(InAmount);
 
@@ -76,7 +80,7 @@ void APickup::InitializeDrop(FItemBaseData ItemToDrop, const int32 InAmount)
         ItemDataTable->FindRow<FItemData>(ItemToDrop.ItemID, ItemToDrop.ItemName.ToString());
         
         ItemReference = ItemToDrop;
-        InteractableData.InteractionDuration = ItemData->NumericData.InteractionDuration;
+        SetInteractionDuration(ItemData->NumericData.InteractionDuration);
         InAmount <= 0 ? ItemReference.SetAmount(1) : ItemReference.SetAmount(InAmount);
         PickupMesh->SetStaticMesh(ItemData->AssetData.Mesh);
     } else
@@ -99,53 +103,6 @@ void APickup::Interact(AActor* Interactor)
     }    
 }
 
-void APickup::PickUp(const AActor* Picker)
-{
-    if (!IsPendingKillPending())
-    {
-        //if (ItemReference)
-        {
-            //인벤토리 컴포넌트 가져오기
-            if (UInventoryComponent* PickerInventory = Picker->GetComponentByClass<UInventoryComponent>())
-            {
-                //아이템 추가 시퀀스 실행
-                const FItemAddResult AddResult;
-                
-                //TODO: 서버 호출 함수로 변경
-                PickerInventory->HandleAddItem(ItemReference);
-                
-                //결과에 따른 행동
-                switch (AddResult.OperationResult)
-                {
-                    //아이템 추가 안됨
-                    case EItemAddedResult::NoItemAdded:
-                        //디버깅 결과 메시지
-                        UE_LOG(LogTemp, Warning, TEXT("Didn't Eat Item"));
-                        break;
-                    //아이템 부분만 먹음
-                    case EItemAddedResult::PartiallyItemAdded:
-                        //디버깅 결과 메시지
-                        UE_LOG(LogTemp, Warning, TEXT("Remain Some"));
-                        break;
-                    //아이템 싹싹김치
-                    case EItemAddedResult::AllItemAdded:
-                        //디버깅 결과 메시지
-                        UE_LOG(LogTemp, Warning, TEXT("Got All Item"));
-                        Destroy();
-                        break;
-                }
-                //디버깅 결과 메시지
-                UE_LOG(LogTemp, Warning, TEXT("%s"), *AddResult.ResultMessage.ToString());
-  
-            } else
-            {
-                //디버깅 결과 메시지
-                UE_LOG(LogTemp, Warning, TEXT("Inventory Component is invalid"));
-            }
-        }
-    }
-}
-
 void APickup::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -159,8 +116,7 @@ void APickup::OnRep_ItemReference()
     {
         const FItemData* ItemData = 
         ItemDataTable->FindRow<FItemData>(ItemReference.ItemID, ItemReference.ItemName.ToString());
-        
-        InteractableData.InteractionDuration = ItemData->NumericData.InteractionDuration;
+        SetInteractionDuration(ItemData->NumericData.InteractionDuration);
         PickupMesh->SetStaticMesh(ItemData->AssetData.Mesh);
     }
 }

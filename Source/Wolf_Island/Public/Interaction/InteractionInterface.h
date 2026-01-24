@@ -15,7 +15,7 @@ struct FInteractableData
 	FInteractableData() :
 	Name(FText::GetEmpty()),
 	Amount(0),
-	InteractionDuration(3.0f),
+	InteractionDuration(0.2f),
 	CanInteract(true)
 	{
 
@@ -52,7 +52,7 @@ class WOLF_ISLAND_API IInteractionInterface
 
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
-	FInteractableData InteractableData;
+	FInteractableData InteractableData = FInteractableData();
 	
 	virtual void BeginFocus();
 	virtual void EndFocus();

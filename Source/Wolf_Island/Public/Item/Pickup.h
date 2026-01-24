@@ -42,9 +42,7 @@ public:
 	FORCEINLINE FItemBaseData& GetItemData() { return ItemReference; };
 
 	virtual void Interact(AActor* Interactor) override;
-
-	void PickUp(const AActor* Picker);
-
+	
 //에디터에서만 실행
 #if WITH_EDITOR
 	//에디터에서 월드에 배치된 인스턴스 아이템 코드 바꿀 때마다 업데이트 되게 하는 함수
@@ -54,6 +52,8 @@ public:
 public:
 
 	virtual void BeginPlay() override;
+	
+	virtual void Tick(float DeltaSeconds) override;
 	
 	//멀티플레이 코드
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;

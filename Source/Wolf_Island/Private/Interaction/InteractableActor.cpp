@@ -16,7 +16,7 @@ void AInteractableActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	InteractableData.InteractionDuration = InteractionDuration;
+	//InteractableData.InteractionDuration = InteractionDuration;
 }
 
 // Called every frame
@@ -24,5 +24,10 @@ void AInteractableActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void AInteractableActor::SetInteractionDuration(float NewInteractionDuration)
+{
+	InteractableData.InteractionDuration = NewInteractionDuration;
 }
 

@@ -430,9 +430,9 @@ void AMainPlayer::UseItem(FItemBaseData& Item)
 			
 			if (StatusComponent && ItemData->Type == EItemType::FOOD)
 			{
-				if (ItemData->Type == EItemType::FOOD && EattingSound)
+				if (ItemData->Type == EItemType::FOOD && EatingSound)
 				{
-					UGameplayStatics::PlaySound2D(GetWorld(), EattingSound);
+					UGameplayStatics::PlaySound2D(GetWorld(), EatingSound);
 				}
 				StatusComponent->ApplyItem(*ItemData);
 				//TODO: 서버 호출 함수로 벼경
@@ -628,28 +628,27 @@ void AMainPlayer::FoundInteractable(AActor* Interactable)
 	{
 		EndInteract();
 	}
-
+	
 	//현재 인터랙션 액터 데이터가 있으면
 	if (InteractionData.CurrentInteractable)
 	{	
 		TargetInteractionInterface = InteractionData.CurrentInteractable;
 		TargetInteractionInterface->EndFocus();
 	}
-
+	
 	//인터랙션 액터 데이터 지정
 	InteractionData.CurrentInteractable = Interactable;
 	TargetInteractionInterface = Interactable;
-
+	
 	//인터랙터블 액터의 상태가 인터랙션 가능한 상태가 아니면
 	if (!TargetInteractionInterface->InteractableData.CanInteract)
 	{
-		//여기 인터랙션 UI 해제 코드 추가 예정
+		//TODO:여기 인터랙션 UI 해제 코드 추가 예정
 		TargetInteractionInterface->EndFocus();
 		return;
 	}
 	
 	//여기 인터랙션 UI 업데이트 코드 추가 예정
-
 	TargetInteractionInterface->BeginFocus();
 }
 
@@ -696,7 +695,6 @@ void AMainPlayer::BeginInteract()
 		{
 			//인터랙션 액터의 인터랙션 시작 함수 실행
 			TargetInteractionInterface->BeginInteract();
-
 			//즉시 인터랙션이 가능하면 (꾹 누르는 인터랙션이 아니면)
 			if (TargetInteractionInterface->InteractableData.InteractionDuration == 0.0f)
 			{
@@ -751,35 +749,6 @@ void AMainPlayer::Interaction()
 			//인터랙션 액터의 인터랙션 함수 실행
 			TargetInteractionInterface->Interact(this);
 		}
-	}
-}
-
-void AMainPlayer::DropItem(FItemBaseData& ItemToDrop, const int32 AmountToDrop, bool IsWhole)
-{
-	if (ItemToDrop.IsValid())
-	{
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.Owner = this;
-		SpawnParams.bNoFail = true;
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-
-		const FVector SpawnLocation(GetActorLocation() + (GetActorForwardVector() * 50.0f));
-		const FTransform SpawnTransform(GetActorRotation(), SpawnLocation);
-		
-		const int32 RemovedAmount = InventoryComponent->RemoveAmountOfItem(ItemToDrop, AmountToDrop);
-		
-		APickup* Pickup = GetWorld()->SpawnActor<APickup>(APickup::StaticClass(), SpawnTransform, SpawnParams);
-		
-		Pickup->InitializeDrop(ItemToDrop, RemovedAmount);
-
-		if (ItemGettingSound)
-		{
-			UGameplayStatics::PlaySound2D(GetWorld(), ItemGettingSound);
-		}
-		
-	} else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("CAN'T FIND MATCHED ITEM."))
 	}
 }
 

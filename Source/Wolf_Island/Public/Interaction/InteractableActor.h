@@ -33,4 +33,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE float GetInteractionDuration() { return InteractableData.InteractionDuration; };
+	
+	UFUNCTION(BlueprintCallable)
+	void SetInteractionDuration(float NewInteractionDuration);
 };

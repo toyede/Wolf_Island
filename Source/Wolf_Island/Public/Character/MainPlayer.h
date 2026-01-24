@@ -196,7 +196,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
 	USoundBase* JumpSound;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
-	USoundBase* EattingSound;
+	USoundBase* EatingSound;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
 	USoundBase* PunchSound;
 
@@ -337,7 +337,6 @@ public:
 
 	//아이템 떨구기 함수
 	UFUNCTION(BlueprintCallable)
-	void DropItem(FItemBaseData& ItemToDrop, const int32 AmountToDrop, bool IsWhole);
 	void DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop, bool IsWhole);
 
 	//손에 든 아이템 레퍼런스 반환 함수
