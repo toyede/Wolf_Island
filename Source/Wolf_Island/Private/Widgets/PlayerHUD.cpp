@@ -5,6 +5,7 @@
 #include "Widgets/Inventory/ItemAcquiredBlock.h"
 
 #include "Character/MainPlayer.h"
+#include "Components/Image.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
 #include "Components/ProgressBar.h"
@@ -19,11 +20,8 @@ void UPlayerHUD::NativeOnInitialized()
 	Super::NativeOnInitialized();
 
 	PlayerRef = Cast<AMainPlayer>(GetOwningPlayerPawn());
-
-	if (PlayerRef)
-	{
-		//PlayerRef->InventoryComponent->OnInventoryUpdated.AddUObject(this, &UPlayerHUD::RefreshHotBar);
-	}
+	DisplayDefault();
+	HideInteraction();
 }
 
 void UPlayerHUD::NativeConstruct()
@@ -86,12 +84,14 @@ void UPlayerHUD::DisplayInteraction()
 {
 	ShowInteraction = true;
 	InteractionBar->SetVisibility(ESlateVisibility::Visible);
+	CrossHair->SetVisibility(ESlateVisibility::Hidden);
 }
 
 void UPlayerHUD::HideInteraction()
 {
 	ShowInteraction = false;
 	InteractionBar->SetVisibility(ESlateVisibility::Hidden);
+	CrossHair->SetVisibility(ESlateVisibility::Visible);
 }
 
 void UPlayerHUD::ToggleInteraction()
@@ -119,6 +119,16 @@ void UPlayerHUD::UpdateInteraction()
 			}
 		}
 	}
+}
+
+void UPlayerHUD::DisplayInteractable()
+{
+	CrossHair->SetBrushFromTexture(InteractableCrossHair);
+}
+
+void UPlayerHUD::DisplayDefault()
+{
+	CrossHair->SetBrushFromTexture(DefaultCrossHair);
 }
 
 void UPlayerHUD::RefreshHotBar()

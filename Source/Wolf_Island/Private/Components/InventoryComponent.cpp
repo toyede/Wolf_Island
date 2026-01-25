@@ -983,33 +983,33 @@ void UInventoryComponent::Request_AddOnlyItemAmountAtSlot(int32 Index, int32 Add
 	}
 }
 
-void UInventoryComponent::Request_RemoveItemAmountAtSlot(int32 Index, int32 AddedAmount)
+void UInventoryComponent::Request_RemoveItemAmountAtSlot(int32 Index, int32 RemoveAmount)
 {
 	if (GetOwner()->HasAuthority())
 	{
-		RemoveItemAmountAtSlot(Index, AddedAmount);
+		RemoveItemAmountAtSlot(Index, RemoveAmount);
 		InventoryChanged();
 	} else
 	{
-		Server_RemoveItemAmountAtSlot(Index, AddedAmount);
+		Server_RemoveItemAmountAtSlot(Index, RemoveAmount);
 	}
 }
 
-void UInventoryComponent::Server_RemoveOnlyItemAmountAtSlot_Implementation(int32 Index, int32 AddedAmount)
+void UInventoryComponent::Server_RemoveOnlyItemAmountAtSlot_Implementation(int32 Index, int32 RemoveAmount)
 {
-	RemoveOnlyItemAmountAtSlot(Index, AddedAmount);
+	RemoveOnlyItemAmountAtSlot(Index, RemoveAmount);
 	InventoryChanged();
 }
 
-void UInventoryComponent::Request_RemoveOnlyItemAmountAtSlot(int32 Index, int32 AddedAmount)
+void UInventoryComponent::Request_RemoveOnlyItemAmountAtSlot(int32 Index, int32 RemoveAmount)
 {
 	if (GetOwner()->HasAuthority())
 	{
-		RemoveOnlyItemAmountAtSlot(Index, AddedAmount);
+		RemoveOnlyItemAmountAtSlot(Index, RemoveAmount);
 		InventoryChanged();
 	} else
 	{
-		Server_RemoveOnlyItemAmountAtSlot(Index, AddedAmount);
+		Server_RemoveOnlyItemAmountAtSlot(Index, RemoveAmount);
 	}
 }
 

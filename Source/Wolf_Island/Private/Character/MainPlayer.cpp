@@ -175,9 +175,9 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 		//아이템 사용 - 좌클릭 꾹 누르기
 		EnhancedInputComponent->BindAction(UseItemAction, ETriggerEvent::Started,
-			this, &AMainPlayer::StartUseItem);
+			this, &AMainPlayer::Request_StartUseItem);
 		EnhancedInputComponent->BindAction(UseItemAction, ETriggerEvent::Completed,
-			this, &AMainPlayer::StopUseItem);
+			this, &AMainPlayer::Request_StopUseItem);
 
 		//핫바 숫자키
 		EnhancedInputComponent->BindAction(HotBarAction, ETriggerEvent::Triggered,
@@ -416,13 +416,14 @@ void AMainPlayer::EndSliding(UAnimMontage* Montage, bool bInterrupted)
 	IsSliding = false;
 }
 
-void AMainPlayer::UseItem(FItemBaseData& Item)
+//TODO: 아이템 사용 로직 멀티로 전환하기
+void AMainPlayer::UseItem(int32 SlotIndex)
 {
 	UE_LOG(LogTemp, Warning, TEXT("USE ITEM EXECUTED"));
 	
 	if (InventoryComponent)
 	{
-		FItemData* ItemData = InventoryComponent->GetItemData(Item.ItemID);
+		FItemData* ItemData = InventoryComponent->GetItemDataAtIndex(SlotIndex);
 		
 		if (ItemData->IsNotEmpty())
 		{
@@ -435,9 +436,8 @@ void AMainPlayer::UseItem(FItemBaseData& Item)
 					UGameplayStatics::PlaySound2D(GetWorld(), EatingSound);
 				}
 				StatusComponent->ApplyItem(*ItemData);
-				//TODO: 서버 호출 함수로 벼경
-				//InventoryComponent->
-				//RemoveAmountOfItem(Item, 1);
+				//TODO: 서버 호출 함수로 변경
+				InventoryComponent->Request_RemoveItemAmountAtSlot(SlotIndex, 1);
 			}
 		} else
 		{
@@ -449,42 +449,43 @@ void AMainPlayer::UseItem(FItemBaseData& Item)
 //타이머 시간을 0으로 하면 실행이 안되는 사실 발견...
 void AMainPlayer::StartUseItem()
 {
-	FItemBaseData* TargetItem = &InventoryComponent->GetItemAtIndex(HotBarIndex);
-	
-	if (!TargetItem->IsValid()) return;
-	
-	//사용 가능한 아이템이 아니면 암것두 안하긔.
-	if (!InventoryComponent->IsUsableItem(*TargetItem)) return;
-	
-	UE_LOG(LogTemp, Warning, TEXT("ITEM IS VALID AND START USE ITEM"));
-	
-	if (!GetWorld()->GetTimerManager().IsTimerActive(ItemUseTimer))
+	if (!IsUsingItem)
 	{
-		FItemData* ItemData = InventoryComponent->GetItemData(*TargetItem);
+		IsUsingItem = true;
 		
-		UE_LOG(LogTemp, Warning, TEXT("TIMER EXECUTED"));
-		UE_LOG(LogTemp, Warning, TEXT("TARGET ITEM : [ %s ] : DURATION : [ %f ]"), *ItemData->TextData.Name.ToString(), ItemData->NumericData.InteractionDuration);
-		
-		
-		GetWorld()->GetTimerManager().SetTimer(
-		ItemUseTimer,
-		[this, TargetItem]()
+		FItemBaseData TargetItem = InventoryComponent->GetItemAtIndex(HotBarIndex);
+		int32 TargetIndex = HotBarIndex;
+		if (!TargetItem.IsValid()) return;
+	
+		//사용 가능한 아이템이 아니면 암것두 안하긔.
+		if (!InventoryComponent->IsUsableItem(TargetItem)) return;
+	
+		if (!GetWorld()->GetTimerManager().IsTimerActive(ItemUseTimer))
 		{
-			UseItem(*TargetItem);
-		},
-		1,
-		false
-		);
-	}else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("TIMER NOT EXECUTED"));
+			FItemData* ItemData = InventoryComponent->GetItemData(TargetItem);
+			//사용까지 꾹 눌러야 하는 시간
+			float UseDuration = ItemData->NumericData.UseDuration;
+		
+			GetWorld()->GetTimerManager().SetTimer(
+			ItemUseTimer,
+			[this, TargetIndex]()
+			{
+				UseItem(HotBarIndex);
+			},
+			UseDuration,
+			false
+			);
+		}
 	}
 }
 
 void AMainPlayer::StopUseItem()
 {
-	UE_LOG(LogTemp, Warning, TEXT("USE ITEM TIMER CANCELED"));
-	GetWorld()->GetTimerManager().ClearTimer(ItemUseTimer);
+	if (IsUsingItem)
+	{
+		GetWorld()->GetTimerManager().ClearTimer(ItemUseTimer);
+		IsUsingItem = false;
+	}
 }
 
 void AMainPlayer::HandleHotBar(const FInputActionValue& Value)
@@ -644,11 +645,19 @@ void AMainPlayer::FoundInteractable(AActor* Interactable)
 	if (!TargetInteractionInterface->InteractableData.CanInteract)
 	{
 		//TODO:여기 인터랙션 UI 해제 코드 추가 예정
+		if (IsLocallyControlled())
+		{
+			HUD->DisplayDefault();
+		}
 		TargetInteractionInterface->EndFocus();
 		return;
 	}
 	
-	//여기 인터랙션 UI 업데이트 코드 추가 예정
+	//TODO:여기 인터랙션 UI 업데이트 코드 추가 예정
+	if (IsLocallyControlled())
+	{
+		HUD->DisplayInteractable();
+	}
 	TargetInteractionInterface->BeginFocus();
 }
 
@@ -671,8 +680,12 @@ void AMainPlayer::NotFoundInteractable()
 			TargetInteractionInterface->EndFocus();
 		}
 
-		//여기 인터랙션 UI 업데이트 코드 추가 예정
-
+		//TODO:여기 인터랙션 UI 업데이트 코드 추가 예정
+		if (IsLocallyControlled())
+		{
+			HUD->DisplayDefault();
+		}
+		
 		//인터랙션 액터 데이터 비우기
 		InteractionData.CurrentInteractable = nullptr;
 		TargetInteractionInterface = nullptr;
@@ -708,6 +721,7 @@ void AMainPlayer::BeginInteract()
 			//꾹 누르는 인터랙션이면
 			else
 			{
+				HUD->DisplayInteraction();
 				//인터랙션 실행 시간 만큼 대기 후 인터랙션 실행
 				GetWorldTimerManager().SetTimer(InteractionTimer,
 					this,
@@ -722,7 +736,7 @@ void AMainPlayer::BeginInteract()
 void AMainPlayer::EndInteract()
 {
 	IInteractionInterface::EndInteract();
-
+	HUD->HideInteraction();
 	//인터랙션 타이머 클리어
 	GetWorldTimerManager().ClearTimer(InteractionTimer);
 
@@ -739,7 +753,7 @@ void AMainPlayer::Interaction()
 {
 	//인터랙션 타이머 클리어
 	GetWorldTimerManager().ClearTimer(InteractionTimer);
-	
+	HUD->HideInteraction();
 	//인터랙션 액터가 유효한 지 체크
 	if (IsValid(TargetInteractionInterface.GetObject()))
 	{
@@ -774,7 +788,6 @@ void AMainPlayer::DropItem(UInventoryComponent* SourceInventory, int32 SourceInd
 		}
 		
 		APickup* Pickup = GetWorld()->SpawnActor<APickup>(APickup::StaticClass(), SpawnTransform, SpawnParams);
-		
 		Pickup->InitializeDrop(ItemData, AmountToDrop);
 
 		if (ItemGettingSound)
@@ -1127,6 +1140,38 @@ void AMainPlayer::Request_DropItem(UInventoryComponent* SourceInventory, int32 S
 	{
 		Server_DropItem(SourceInventory, SourceIndex, AmountToDrop, IsWhole);
 	}
+}
+
+void AMainPlayer::Request_StartUseItem()
+{
+	if (HasAuthority())
+	{
+		StartUseItem();
+	} else
+	{
+		Server_StartUseItem();
+	}
+}
+
+void AMainPlayer::Server_StartUseItem_Implementation()
+{
+	StartUseItem();
+}
+
+void AMainPlayer::Request_StopUseItem()
+{
+	if (HasAuthority())
+	{
+		StopUseItem();
+	} else
+	{
+		Server_StopUseItem();
+	}
+}
+
+void AMainPlayer::Server_StopUseItem_Implementation()
+{
+	StopUseItem();
 }
 
 void AMainPlayer::Client_PlaySound2D_Implementation(USoundBase* Sound)

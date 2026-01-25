@@ -193,6 +193,30 @@ public:
 		return nullptr;
 	}
 	
+	FItemData* GetItemDataAtIndex(int32 Index)
+	{
+		if (!IsValid(ItemDataTable))
+		{
+			//UE_LOG(LogTemp, Warning, TEXT("ItemDataTable is not valid"));
+			return nullptr;
+		}
+		
+		FItemBaseData Item = GetItemAtIndex(Index);
+		
+		if (!Item.IsValid())
+		{
+			//UE_LOG(LogTemp, Error, TEXT("ItemID is NAME_None"));
+			return nullptr;
+		}
+		
+		if (ItemDataTable)
+		{
+			return ItemDataTable->FindRow<FItemData>(Item.ItemID, "SearchingItem");
+		}
+		
+		return nullptr;
+	}
+	
 	//아이템의 무게 반환
 	float GetItemSingleWeight(const FName ItemID) const
 	{
@@ -573,15 +597,15 @@ public:
 	
 	//아이템 수량 감소(무게 포함)
 	UFUNCTION(Server, Reliable)
-	void Server_RemoveItemAmountAtSlot(int32 Index, int32 AddedAmount);
+	void Server_RemoveItemAmountAtSlot(int32 Index, int32 RemoveAmount);
 	UFUNCTION()
-	void Request_RemoveItemAmountAtSlot(int32 Index, int32 AddedAmount);
+	void Request_RemoveItemAmountAtSlot(int32 Index, int32 RemoveAmount);
 	
 	//아이템 수량 감소(무게 제외 수량만)-UI 우클릭 드래그용
 	UFUNCTION(Server, Reliable)
-	void Server_RemoveOnlyItemAmountAtSlot(int32 Index, int32 AddedAmount);
+	void Server_RemoveOnlyItemAmountAtSlot(int32 Index, int32 RemoveAmount);
 	UFUNCTION()
-	void Request_RemoveOnlyItemAmountAtSlot(int32 Index, int32 AddedAmount);
+	void Request_RemoveOnlyItemAmountAtSlot(int32 Index, int32 RemoveAmount);
 	
 	//아이템 수량 설정 - 특정 개수로 강제 세팅
 	UFUNCTION(Server, Reliable)

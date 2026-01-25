@@ -7,7 +7,7 @@
 
 APickup::APickup()
 {
-    SetReplicates(true);
+    bReplicates = true;
     
     PickupMesh = CreateDefaultSubobject<UStaticMeshComponent>("PickupMesh");
     PickupMesh->SetSimulatePhysics(IsPhysics);

@@ -148,6 +148,10 @@ public:
 	//공격 중인지
 	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsAttacking = false;
+	
+	//아이템 사용 중인지
+	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	bool IsUsingItem = false;
 
 	//핫바 관련 변수==================================================================
 	//핫바 슬롯 인덱스
@@ -269,7 +273,7 @@ public:
 
 	//아이템 사용 함수
 	UFUNCTION()
-	void UseItem(FItemBaseData& Item);
+	void UseItem(int32 SlotIndex);
 
 	//아이템 사용 시작 함수
 	UFUNCTION()
@@ -417,6 +421,16 @@ public:
 	void Request_DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop, bool IsWhole);
 	UFUNCTION(Server, Reliable)
 	void Server_DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop, bool IsWhole);
+	
+	//아이템 사용
+	UFUNCTION()
+	void Request_StartUseItem();
+	UFUNCTION(Server, Reliable)
+	void Server_StartUseItem();
+	UFUNCTION()
+	void Request_StopUseItem();
+	UFUNCTION(Server, Reliable)
+	void Server_StopUseItem();
 	
 	//클라이언트 실행 함수 (UI 사운드 등 클라이언트 혼자만 보면 되는 것)
 	UFUNCTION(Client, Reliable)
