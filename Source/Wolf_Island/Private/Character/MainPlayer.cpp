@@ -433,7 +433,7 @@ void AMainPlayer::UseItem(int32 SlotIndex)
 			{
 				if (ItemData->Type == EItemType::FOOD && EatingSound)
 				{
-					UGameplayStatics::PlaySound2D(GetWorld(), EatingSound);
+					Multi_PlaySound(EatingSound, GetActorLocation());
 				}
 				StatusComponent->ApplyItem(*ItemData);
 				//TODO: 서버 호출 함수로 변경
@@ -1167,6 +1167,11 @@ void AMainPlayer::Request_StopUseItem()
 	{
 		Server_StopUseItem();
 	}
+}
+
+void AMainPlayer::Multi_PlaySound_Implementation(USoundBase* Sound, FVector Location)
+{
+	UGameplayStatics::PlaySoundAtLocation(GetWorld(), Sound, Location);
 }
 
 void AMainPlayer::Server_StopUseItem_Implementation()
