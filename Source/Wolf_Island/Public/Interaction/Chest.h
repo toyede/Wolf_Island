@@ -20,12 +20,6 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Chest")
 	USkeletalMeshComponent* ChestSkeletalMesh;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Chest")
-	UStaticMeshComponent* ChestMesh;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Chest")
-	UStaticMeshComponent* ChestCoverMesh;
 
 	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Chest", Replicated)
 	class UInventoryComponent* InventoryComponent;
@@ -58,6 +52,10 @@ public:
 	void CloseChest();
 
 	virtual void Interact(AActor* Interactor) override;
+	
+	virtual void BeginFocus() override;
+	
+	virtual void EndFocus() override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	

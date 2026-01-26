@@ -41,6 +41,7 @@ AMainPlayer::AMainPlayer()
 	ItemMesh = CreateDefaultSubobject<UStaticMeshComponent>("Item");
 	//손 소켓에 부-착!
 	ItemMesh->SetupAttachment(GetMesh(), "hand_r");
+	ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	
 	GetMesh()->SetRelativeTransform(
 		FTransform(
@@ -554,6 +555,7 @@ void AMainPlayer::RefreshHand()
 		GetMesh(),
 		FAttachmentTransformRules::KeepRelativeTransform,
 		TEXT("hand_r"));
+		ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 		
 		FTransform SocketTransform = ItemMesh->GetSocketTransform(TEXT("HandSocket"), RTS_Component);
 		ItemMesh->SetRelativeTransform(SocketTransform.Inverse());
@@ -1180,6 +1182,11 @@ void AMainPlayer::Request_StopUseItem()
 	{
 		Server_StopUseItem();
 	}
+}
+
+void AMainPlayer::Multi_PlayAnimMontage_Implementation(UAnimMontage* Anim)
+{
+	PlayAnimMontage(Anim);
 }
 
 void AMainPlayer::Multi_PlaySound_Implementation(USoundBase* Sound, FVector Location)

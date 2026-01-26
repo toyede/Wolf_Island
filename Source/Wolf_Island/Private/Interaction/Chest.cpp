@@ -13,15 +13,14 @@ AChest::AChest()
 	bReplicates = true;
 	
 	ChestSkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>("ChestSkeletalMesh");
-	ChestMesh = CreateDefaultSubobject<UStaticMeshComponent>("ChestMesh");
-	ChestCoverMesh = CreateDefaultSubobject<UStaticMeshComponent>("ChestCoverMesh");
 	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>("InventoryComponent");
 
 	ChestSkeletalMesh->SetCollisionProfileName("BlockAll");
 	
 	InventoryComponent->SetSlotsCapacity(ChestSlotsSize);
 	InventoryComponent->SetWeightCapacity(ChestWeightCapacity);
-	InteractionDuration = 0.0f;
+	
+	InteractableData.InteractionDuration = InteractionDuration;
 }
 
 void AChest::OpenChest(AActor* Interactor)
@@ -61,6 +60,26 @@ void AChest::CloseChest()
 void AChest::Interact(AActor* Interactor)
 {
 	OpenChest(Interactor);
+}
+
+void AChest::BeginFocus()
+{
+	Super::BeginFocus();
+	
+	if (ChestSkeletalMesh)
+	{
+		ChestSkeletalMesh->SetRenderCustomDepth(true);
+	}
+}
+
+void AChest::EndFocus()
+{
+	Super::EndFocus();
+	
+	if (ChestSkeletalMesh)
+	{
+		ChestSkeletalMesh->SetRenderCustomDepth(false);
+	}
 }
 
 void AChest::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const

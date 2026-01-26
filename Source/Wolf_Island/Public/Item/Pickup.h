@@ -43,6 +43,10 @@ public:
 
 	virtual void Interact(AActor* Interactor) override;
 	
+	virtual void BeginFocus() override;
+	
+	virtual void EndFocus() override;
+	
 //에디터에서만 실행
 #if WITH_EDITOR
 	//에디터에서 월드에 배치된 인스턴스 아이템 코드 바꿀 때마다 업데이트 되게 하는 함수

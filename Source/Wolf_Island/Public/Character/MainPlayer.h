@@ -187,6 +187,8 @@ public:
 	UAnimMontage* PunchMontage;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
 	UAnimMontage* FuckyouMontage;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
+	UAnimMontage* PickUpMontage;
 
 	//위젯=============================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
@@ -439,5 +441,8 @@ public:
 	//멀티캐스트 실행 함수
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_PlaySound(USoundBase* Sound, FVector Location);
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_PlayAnimMontage(UAnimMontage* Anim);
 	
 };

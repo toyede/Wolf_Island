@@ -846,7 +846,6 @@ void UInventoryComponent::PickupItem(APickup* Item)
 		case EItemAddedResult::AllItemAdded:
 			//디버깅 결과 메시지
 			UE_LOG(LogTemp, Warning, TEXT("Got All Item"));
-			//UGameplayStatics::PlaySound2D(GetWorld(), Player->ItemGettingSound);
 			Item->Destroy();
 			break;
 		}
@@ -855,12 +854,8 @@ void UInventoryComponent::PickupItem(APickup* Item)
 
 void UInventoryComponent::SetItemAmountAtSlot(int32 Index, int32 Amount)
 {
-	//일단 원래 있던 무게 빼고
-	//CurrentWeight -= InventoryContents[Index].ItemData.Amount * GetItemSingleWeight(InventoryContents[Index].ItemData);
-	//개수 강제 세팅 개수로 수정하고
+	//개수 강제 세팅 개수로 수정
 	InventoryContents[Index].ItemData.Amount = Amount;
-	//수정된 개수 만큼 무게 추가
-	//CurrentWeight += Amount * GetItemSingleWeight(InventoryContents[Index].ItemData);
 }
 
 void UInventoryComponent::RemoveOnlyItemAmountAtSlot(int32 Index, int32 AddedAmount)
@@ -1085,7 +1080,7 @@ void UInventoryComponent::Request_PickUp(APickup* Item)
 
 void UInventoryComponent::InventoryChanged()
 {
-	UE_LOG(LogTemp, Warning, TEXT("%hs INVENTORY CHANGED"), GetOwner()->HasAuthority() ? "SERVER" : "CLIENT");
+	//UE_LOG(LogTemp, Warning, TEXT("%hs INVENTORY CHANGED"), GetOwner()->HasAuthority() ? "SERVER" : "CLIENT");
 	RefreshCurrentWeight();
 	OnInventoryUpdated.Broadcast();
 }
@@ -1149,7 +1144,7 @@ void UInventoryComponent::Server_PickUp_Implementation(APickup* Item)
 
 void UInventoryComponent::OnRep_InventoryContents()
 {
-	UE_LOG(LogTemp, Warning, TEXT("INVENTORY REPLICATED"));
+	//UE_LOG(LogTemp, Warning, TEXT("INVENTORY REPLICATED"));
 	InventoryChanged();
 }
 

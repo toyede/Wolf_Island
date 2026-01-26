@@ -97,10 +97,40 @@ void APickup::Interact(AActor* Interactor)
         //인벤토리 컴포넌트 가져오기
         if (UInventoryComponent* PickerInventory = Interactor->GetComponentByClass<UInventoryComponent>())
         {
+            //픽업 몽타주 실행
+            if (AMainPlayer* Player = Cast<AMainPlayer>(Interactor))
+            {
+                if (Player->PickUpMontage)
+                {
+                    Player->Multi_PlayAnimMontage(Player->PickUpMontage);
+                }
+            }
             //그 인벤토리에 줍겠다고 요청
             PickerInventory->Request_PickUp(this);
         }
     }    
+}
+
+void APickup::BeginFocus()
+{
+    Super::BeginFocus();
+    
+    if (PickupMesh)
+    {
+        PickupMesh->SetRenderCustomDepth(true);
+    }
+    
+}
+
+void APickup::EndFocus()
+{
+    Super::EndFocus();
+    
+    if (PickupMesh)
+    {
+        PickupMesh->SetRenderCustomDepth(false);
+    }
+    
 }
 
 void APickup::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
