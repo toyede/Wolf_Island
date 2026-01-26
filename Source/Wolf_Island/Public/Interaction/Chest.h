@@ -18,6 +18,9 @@ public:
 
 	AChest();
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Chest")
+	USkeletalMeshComponent* ChestSkeletalMesh;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Chest")
 	UStaticMeshComponent* ChestMesh;
 	
@@ -33,22 +36,38 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chest")
 	float ChestWeightCapacity = 2000.0f;
 
-	UPROPERTY(Replicated ,VisibleAnywhere, BlueprintReadWrite, Category = "Chest")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Chest")
 	bool IsOccupied = false;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Chest")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Widget")
 	TSubclassOf<class UChestScreen> ChestWidgetClass;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Chest")
-	USoundBase* ChestSound;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Sound")
+	USoundBase* ChestOpenSound;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Sound")
+	USoundBase* ChestCloseSound;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation")
+	UAnimationAsset* OpenAnim;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation")
+	UAnimationAsset* CloseAnim;
 
 	UFUNCTION(BlueprintCallable)
-	void OpenChest();
+	void OpenChest(AActor* Interactor);
 	UFUNCTION(BlueprintCallable)
 	void CloseChest();
 
 	virtual void Interact(AActor* Interactor) override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+	
+	UFUNCTION(Client, Reliable)
+	void Client_OpenChest(AActor* Interactor);
+	
+	UFUNCTION(Server, Reliable)
+	void Server_CloseChest();
+	
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multi_PlayAnimAndSound(UAnimationAsset* Anim, USoundBase* Sound);
 	
 };

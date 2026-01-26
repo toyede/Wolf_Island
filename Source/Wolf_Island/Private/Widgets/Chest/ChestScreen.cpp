@@ -112,7 +112,7 @@ void UChestScreen::CloseWidget()
 	APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
 	PC->SetInputMode(GameOnly);
 	PC->bShowMouseCursor = false;
-	ChestRef->IsOccupied = false;
-	PlayerRef = nullptr;
+	
+	ChestRef->Server_CloseChest();
 	RemoveFromParent();
 }

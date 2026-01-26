@@ -321,7 +321,7 @@ void AMainPlayer::Run()
 			//스태미나 0이거나 웅크리는 중이면
 			if (StatusComponent->CurrentStamina <= 0 || IsCrouching) return;
 	
-			GetCharacterMovement()->MaxWalkSpeed = 600.0f;
+			GetCharacterMovement()->MaxWalkSpeed = 750.0f;
 			StatusComponent->StopStamina();
 
 			//이동 속도가 0 초과일 때만 스태미나 감소
@@ -706,6 +706,8 @@ void AMainPlayer::BeginInteract()
 		//인터랙션 액터가 유효하면
 		if (IsValid(TargetInteractionInterface.GetObject()))
 		{
+			//인터랙션 타겟 액터
+			AActor* Target = Cast<AActor>(TargetInteractionInterface.GetObject());
 			//인터랙션 액터의 인터랙션 시작 함수 실행
 			TargetInteractionInterface->BeginInteract();
 			//즉시 인터랙션이 가능하면 (꾹 누르는 인터랙션이 아니면)
@@ -715,7 +717,7 @@ void AMainPlayer::BeginInteract()
 				if (TargetInteractionInterface->InteractableData.CanInteract)
 				{
 					//인터랙션 실행
-					Interaction();
+					Interaction(Target);
 				}
 			}
 			//꾹 누르는 인터랙션이면
@@ -724,8 +726,11 @@ void AMainPlayer::BeginInteract()
 				HUD->DisplayInteraction();
 				//인터랙션 실행 시간 만큼 대기 후 인터랙션 실행
 				GetWorldTimerManager().SetTimer(InteractionTimer,
-					this,
-					&AMainPlayer::Interaction,
+					[this, Target]()
+					{
+						//인터랙션 실행
+						Interaction(Target);
+					},
 					TargetInteractionInterface->InteractableData.InteractionDuration,
 					false);
 			}
@@ -749,14 +754,20 @@ void AMainPlayer::EndInteract()
 }
 
 
-void AMainPlayer::Interaction()
+void AMainPlayer::Interaction_Implementation(AActor* Target)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[%hs] SERVER INTERACTION EXECUTED"), HasAuthority()?"SERVER":"CLIENT")
 	//인터랙션 타이머 클리어
 	GetWorldTimerManager().ClearTimer(InteractionTimer);
-	HUD->HideInteraction();
-	//인터랙션 액터가 유효한 지 체크
-	if (IsValid(TargetInteractionInterface.GetObject()))
+	if (IsLocallyControlled())
 	{
+		HUD->HideInteraction();
+	}
+	
+	//인터랙션 액터가 유효한 지 체크
+	if (IsValid(Target))
+	{
+		TargetInteractionInterface = Target;	
 		//인터랙션 액터가 인터랙션 가능한 상태이면
 		if (TargetInteractionInterface->InteractableData.CanInteract)
 		{
@@ -1070,7 +1081,7 @@ void AMainPlayer::OnRep_IsRunning()
 {
 	if (IsRunning)
 	{
-		GetCharacterMovement()->MaxWalkSpeed = 600.0f;
+		GetCharacterMovement()->MaxWalkSpeed = 750.0f;
 	} else
 	{
 		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
@@ -1117,7 +1128,6 @@ void AMainPlayer::Request_SetHotbarIndex(int32 Index)
 void AMainPlayer::Server_SetHotbarIndex_Implementation(int32 Index)
 {
 	SetHotbarIndex(Index);
-	HUD->UpdateHotBar();
 	RefreshHand();
 	FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
 	WeaponComponent->CheckWeapon(Item);

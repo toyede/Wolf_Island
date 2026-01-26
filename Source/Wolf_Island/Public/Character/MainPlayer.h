@@ -329,8 +329,8 @@ public:
 	FORCEINLINE bool IsInteracting() const { return GetWorldTimerManager().IsTimerActive(InteractionTimer); };
 
 	//인터랙션 실행 함수
-	UFUNCTION(BlueprintCallable)
-	void Interaction();
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void Interaction(AActor* Target);
 
 	UFUNCTION(BlueprintCallable)
 	void BeginInteract() override;
