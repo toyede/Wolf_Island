@@ -30,7 +30,7 @@ void UItemBase::SetAmount(const int32 NewAmount)
 
         if (OwningInventory) {
             if(Amount <= 0){
-                OwningInventory->RemoveSingleInstanceOfItem(this);
+                //OwningInventory->RemoveSingleInstanceOfItem(this);
             }
         }
     }

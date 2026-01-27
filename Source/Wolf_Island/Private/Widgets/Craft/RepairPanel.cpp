@@ -124,7 +124,7 @@ void URepairPanel::SetRepairInfo(FName RowName, FRepairRecipeData RecipeData)
         UCraftSlot* MaterialSlot = CreateWidget<UCraftSlot>(GetWorld(), SlotClass);
         if (MaterialSlot)
         {
-            MaterialSlot->SetCraftSlot(*ItemData, Ingredient.Value);
+            MaterialSlot->SetCraftSlot(ItemData, Ingredient.Value);
             IngredientList->AddChild(MaterialSlot);
         }
     }

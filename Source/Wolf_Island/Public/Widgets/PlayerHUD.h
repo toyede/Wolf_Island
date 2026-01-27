@@ -28,6 +28,9 @@ public:
 		
 	UPROPERTY(meta=(BindWidget))
 	UProgressBar* InteractionBar;
+	
+	UPROPERTY(meta=(BindWidget))
+	class UImage* CrossHair;
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UItemAcquiredBlock> ItemAcquiredBlockClass;
@@ -40,6 +43,11 @@ public:
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<class UInventorySlot> SlotClass;
+	
+	UPROPERTY(EditDefaultsOnly)
+	UTexture2D* DefaultCrossHair;
+	UPROPERTY(EditDefaultsOnly)
+	UTexture2D* InteractableCrossHair;
 
 	UPROPERTY()
 	bool ShowInteraction = true;
@@ -52,9 +60,16 @@ public:
 	void ToggleInteraction();
 	UFUNCTION(BlueprintCallable)
 	void UpdateInteraction();
+	UFUNCTION(BlueprintCallable)
+	void DisplayInteractable();
+	UFUNCTION(BlueprintCallable)
+	void DisplayDefault();
 
 	UFUNCTION(BlueprintCallable)
 	void RefreshHotBar();
+	
+	UFUNCTION(BlueprintCallable)
+	void UpdateHotBar();
 
 protected:
 	

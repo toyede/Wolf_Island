@@ -3,11 +3,10 @@
 
 #include "Wolf_Island/Public/Components/StatusComponent.h"
 
-#include "Character/MainPlayer.h"
 #include "Components/InventoryComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
 #include "Item/ItemBase.h"
-#include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Net/UnrealNetwork.h"
 
 // Sets default values for this component's properties
 UStatusComponent::UStatusComponent()
@@ -15,7 +14,8 @@ UStatusComponent::UStatusComponent()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-	//SetIsReplicated(true);
+	SetIsReplicated(true);
+	SetIsReplicatedByDefault(true);
 	// ...
 }
 
@@ -24,20 +24,26 @@ UStatusComponent::UStatusComponent()
 void UStatusComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
-	//스태미나 다 쓰면 15초 이동 불가
-	OnStaminaZero.AddDynamic(this, &UStatusComponent::ForcedRest);
-	//배고픔 0일 시
-	OnHungerZero.AddDynamic(this, &UStatusComponent::StartHungerDeath);
-	//수분 0일 시
-	OnHydrationZero.AddDynamic(this, &UStatusComponent::StartHydrationDeath);
+	
+	if (GetOwner()->HasAuthority())
+	{
+		//스태미나 다 쓰면 15초 이동 불가
+		OnStaminaZero.AddDynamic(this, &UStatusComponent::ForcedRest);
+		//배고픔 0일 시
+		OnHungerZero.AddDynamic(this, &UStatusComponent::StartHungerDeath);
+		//수분 0일 시
+		OnHydrationZero.AddDynamic(this, &UStatusComponent::StartHydrationDeath);
+	}
 }
 
 void UStatusComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 
-	ClearAllTimers();
+	if (GetOwner()->HasAuthority())
+	{
+		ClearAllTimers();
+	}
 }
 
 
@@ -52,13 +58,8 @@ void UStatusComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 //체력 증가 함수
 void UStatusComponent::IncreaseHP(float amount)
 {
-	CurrentHP += amount;
-
-	//초과 방지
-	if (CurrentHP > MaxHP)
-	{
-		CurrentHP = MaxHP;
-	}
+	CurrentHP = FMath::Clamp(CurrentHP+amount, 0.0f, MaxHP);
+	
 	//음수 방지
 	if (CurrentHP <= 0)
 	{
@@ -70,13 +71,8 @@ void UStatusComponent::IncreaseHP(float amount)
 //체력 감소 함수
 void UStatusComponent::DecreaseHP(float amount)
 {
-	CurrentHP -= amount;
-
-	//초과 방지
-	if (CurrentHP > MaxHP)
-	{
-		CurrentHP = MaxHP;
-	}
+	CurrentHP = FMath::Clamp(CurrentHP-amount, 0.0f, MaxHP);
+	
 	//음수 방지
 	if (CurrentHP <= 0)
 	{
@@ -88,12 +84,10 @@ void UStatusComponent::DecreaseHP(float amount)
 //스태미나 증가 함수
 void UStatusComponent::IncreaseStamina(float amount)
 {
-	UE_LOG(LogTemp, Warning, TEXT("AMOUNT : %f"), FMath::Abs(amount) * AmountMultiplier);
-	UE_LOG(LogTemp, Warning, TEXT("MAX STAMINA : %f"), MaxStamina);
-	CurrentStamina += amount * AmountMultiplier;
+	CurrentStamina = FMath::Clamp(CurrentStamina+amount*AmountMultiplier, 0.0f, MaxStamina);
 	
 	//초과 방지
-	if (CurrentStamina > MaxStamina)
+	if (CurrentStamina >= MaxStamina)
 	{
 		CurrentStamina = MaxStamina;
 		StopRecoverStamina();
@@ -109,13 +103,8 @@ void UStatusComponent::IncreaseStamina(float amount)
 //스태미나 감소 함수
 void UStatusComponent::DecreaseStamina(float amount)
 {
-	CurrentStamina -= amount * AmountMultiplier;
-
-	//초과 방지
-	if (CurrentStamina > MaxStamina)
-	{
-		CurrentStamina = MaxStamina;
-	}
+	CurrentStamina = FMath::Clamp(CurrentStamina-amount*AmountMultiplier, 0.0f, MaxStamina);
+	
 	//음수 방지
 	if (CurrentStamina <= 0)
 	{
@@ -127,14 +116,9 @@ void UStatusComponent::DecreaseStamina(float amount)
 //배고픔 증가 함수
 void UStatusComponent::IncreaseHunger(float amount)
 {
-	CurrentHunger += amount;
+	CurrentHunger = FMath::Clamp(CurrentHunger+amount, 0.0f, MaxHunger);
 	StopHungerDeath();
-
-	//초과 방지
-	if (CurrentHunger > MaxHunger)
-	{
-		CurrentHunger = MaxHunger;
-	}
+	
 	//음수 방지
 	if (CurrentHunger <= 0)
 	{
@@ -146,13 +130,8 @@ void UStatusComponent::IncreaseHunger(float amount)
 //배고픔 감소 함수
 void UStatusComponent::DecreaseHunger(float amount)
 {
-	CurrentHunger -= amount * AmountMultiplier;
-
-	//초과 방지
-	if (CurrentHunger > MaxHunger)
-	{
-		CurrentHunger = MaxHunger;
-	}
+	CurrentHunger = FMath::Clamp(CurrentHunger-amount*AmountMultiplier, 0.0f, MaxHunger);
+	
 	//음수 방지
 	if (CurrentHunger <= 0)
 	{
@@ -164,14 +143,9 @@ void UStatusComponent::DecreaseHunger(float amount)
 //수분 증가 함수
 void UStatusComponent::IncreaseHydration(float amount)
 {
-	CurrentHydration += amount;
+	CurrentHydration = FMath::Clamp(CurrentHydration+amount, 0.0f, MaxHydration);
 	StopHydrationDeath();
-
-	//초과 방지
-	if (CurrentHydration > MaxHydration)
-	{
-		CurrentHydration = MaxHydration;
-	}
+	
 	//음수 방지
 	if (CurrentHydration <= 0)
 	{
@@ -183,13 +157,8 @@ void UStatusComponent::IncreaseHydration(float amount)
 //수분 감소 함수
 void UStatusComponent::DecreaseHydration(float amount)
 {
-	CurrentHydration -= amount * AmountMultiplier;
-
-	//초과 방지
-	if (CurrentHydration > MaxHydration)
-	{
-		CurrentHydration = MaxHydration;
-	}
+	CurrentHydration = FMath::Clamp(CurrentHydration-amount*AmountMultiplier, 0.0f, MaxHydration);
+	
 	//음수 방지
 	if (CurrentHydration <= 0)
 	{
@@ -200,19 +169,8 @@ void UStatusComponent::DecreaseHydration(float amount)
 
 void UStatusComponent::IncreaseWeight(float amount)
 {
-	CurrentWeight += amount;
-
-	//초과 방지
-	if (CurrentWeight > MaxWeight)
-	{
-		CurrentWeight = MaxWeight;
-	}
-	//음수 방지
-	if (CurrentWeight <= 0)
-	{
-		CurrentWeight = 0;
-	}
-
+	CurrentWeight = FMath::Clamp(CurrentWeight+amount, 0.0f, MaxWeight);
+	
 	//무게에 따른 감소율 증가분 설정
 	if (CurrentWeight == 100.0f)
 	{
@@ -233,19 +191,8 @@ void UStatusComponent::IncreaseWeight(float amount)
 
 void UStatusComponent::DecreaseWeight(float amount)
 {
-	CurrentWeight -= amount;
-
-	//초과 방지
-	if (CurrentWeight > MaxWeight)
-	{
-		CurrentWeight = MaxWeight;
-	}
-	//음수 방지
-	if (CurrentWeight <= 0)
-	{
-		CurrentWeight = 0;
-	}
-
+	CurrentWeight = FMath::Clamp(CurrentWeight-amount, 0.0f, MaxWeight);
+	
 	//무게에 따른 감소율 증가분 설정
 	if (CurrentWeight == 100.0f)
 	{
@@ -274,7 +221,6 @@ void UStatusComponent::StartStamina()
 		[this]()
 		{
 			DecreaseStamina(StaminaDecreaseAmount);
-
 			DecreaseHydration(HydrationAmountWhileRunning);
 			DecreaseHunger(HungerAmountWhileRunning);
 		},
@@ -325,15 +271,17 @@ void UStatusComponent::StopRecoverStamina()
 //배고픔 감소 시작 함수
 void UStatusComponent::StartHunger()
 {
-	GetWorld()->GetTimerManager().SetTimer(
+	if (!GetWorld()->GetTimerManager().IsTimerActive(HungerTimer))
+	{
+		GetWorld()->GetTimerManager().SetTimer(
 		HungerTimer,
 		[this]()
 		{
 			DecreaseHunger(HungerAmount);
 		},
 		HungerRate,
-		true
-	);
+		true);
+	}
 }
 
 //배고픔 감소 중단 함수
@@ -508,14 +456,14 @@ void UStatusComponent::DecreaseInfection(float Amount)
 	OnInfectionChanged.Broadcast();
 }
 
-void UStatusComponent::ApplyItem(UItemBase* Item)
+void UStatusComponent::ApplyItem(FItemData Item)
 {
-	if (Item)
+	if (Item.IsNotEmpty())
 	{
-		IncreaseHP(Item->NumericData.Health);
-		IncreaseStamina(Item->NumericData.Stamina);
-		IncreaseHunger(Item->NumericData.Hunger);
-		IncreaseHydration(Item->NumericData.Hydration);
+		IncreaseHP(Item.NumericData.Health);
+		IncreaseStamina(Item.NumericData.Stamina);
+		IncreaseHunger(Item.NumericData.Hunger);
+		IncreaseHydration(Item.NumericData.Hydration);
 	}
 }
 
@@ -543,4 +491,19 @@ void UStatusComponent::DebugGetStatus(float &HP, float& Stamina, float& Hunger, 
 	{
 		Weight = Inven->GetCurrentWeight();
 	}
+}
+
+void UStatusComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UStatusComponent, CurrentHP);
+	DOREPLIFETIME(UStatusComponent, CurrentStamina);
+	DOREPLIFETIME(UStatusComponent, CurrentHunger);
+	DOREPLIFETIME(UStatusComponent, CurrentHydration);
+}
+
+void UStatusComponent::OnRep_CurrentHunger()
+{
+	//UE_LOG(LogTemp, Warning, TEXT("OnRep_CurrentHunger : %f"), CurrentHunger);
 }

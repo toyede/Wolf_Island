@@ -27,7 +27,8 @@ bool UChestScreen::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEven
 {
 	const UItemDragDropOperation* ItemDragDrop = Cast<UItemDragDropOperation>(InOperation);
 
-	UItemBase* Item = ItemDragDrop->SourceItem;
+	FItemBaseData ItemData = ItemDragDrop->SourceItemData;
+	
 	UE_LOG(LogTemp, Warning, TEXT("CHEST SCREEN DROP DETECTED"));
 	
 	if (PlayerRef)
@@ -52,9 +53,8 @@ bool UChestScreen::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEven
 				//우클릭이면 떨구기면 반갈한 거 원위치
 				if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
 				{
-					ItemDragDrop->SourceInventory->GetItemAtIndex(ItemDragDrop->SourceIndex)->Amount += Item->Amount;
-					ItemDragDrop->SourceInventory->OnInventoryUpdated.Broadcast();
-					ChestRef->InventoryComponent->OnInventoryUpdated.Broadcast();
+					//TODO: 서버 호출 함수로 변경
+					ItemDragDrop->SourceInventory->Server_AddItemAmountAtSlot(ItemDragDrop->SourceIndex, ItemData.Amount);
 				}
 				return false;
 			}
@@ -64,12 +64,14 @@ bool UChestScreen::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEven
 		if (InDragDropEvent.GetEffectingButton() == EKeys::RightMouseButton)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("RIGHT CLICK DROP"));
-			PlayerRef->DropItem(Item, Item->Amount, false);
+			PlayerRef->Request_DropItem(
+				ItemDragDrop->SourceInventory,ItemDragDrop->SourceIndex, ItemData.Amount, false);
 			return true;
 		}
 		
 		UE_LOG(LogTemp, Warning, TEXT("LEFT CLICK DROP"));
-		PlayerRef->DropItem(Item, Item->Amount, true);
+		PlayerRef->Request_DropItem(
+			ItemDragDrop->SourceInventory, ItemDragDrop->SourceIndex, ItemData.Amount, true);
 		return true;
 	} else
 	{
@@ -102,8 +104,6 @@ void UChestScreen::InitializeChest(AChest* Chest, AActor* Interactor)
 	ChestRef = Chest;
 	PlayerRef = Cast<AMainPlayer>(Interactor);
 	ChestPanel->SetInventoryComponent(Chest, Interactor);
-	ChestPanel->RefreshChest();
-
 }
 
 void UChestScreen::CloseWidget()
@@ -112,7 +112,7 @@ void UChestScreen::CloseWidget()
 	APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
 	PC->SetInputMode(GameOnly);
 	PC->bShowMouseCursor = false;
-	ChestRef->IsOccupied = false;
-	PlayerRef = nullptr;
+	
+	ChestRef->Server_CloseChest();
 	RemoveFromParent();
 }

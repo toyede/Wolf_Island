@@ -8,32 +8,19 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="367b04d5-c3d9-4599-86e8-ad54ff3b4b47" name="변경" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.Wolf_Island.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Wolf_Island.dir/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/JSY/Characters/Player/BP_MainPlayer.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/JSY/Characters/Player/BP_MainPlayer.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/JSY/Widgets/WBP_PlayerHUD.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/JSY/Widgets/WBP_PlayerHUD.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/JWY/Blueprints/BP_StopSky.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/JWY/Blueprints/BP_StopSky.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/JWY/Maps/StartMap.umap" beforeDir="false" afterPath="$PROJECT_DIR$/Content/JWY/Maps/StartMap.umap" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/KSH/AI/BP_EnemyAI_Boss.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/KSH/AI/BP_EnemyAI_Boss.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/LJH/Portal/BP_Portal.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/LJH/Portal/BP_Portal.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/LJH/Portal/BP_Portal1.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/LJH/Portal/BP_Portal1.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Maps/Cave.umap" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Maps/Cave.umap" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Maps/Island_Copy.umap" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Maps/Island_Copy.umap" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/item/ItemMesh/boat/boat_broken/BP_BrokenShip.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/ItemMesh/boat/boat_broken/BP_BrokenShip.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Private/Interaction/Repair_Actor.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Private/Interaction/Repair_Actor.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Public/Interaction/Repair_Actor.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Public/Interaction/Repair_Actor.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/item/DT_RepairRecipes.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/DT_RepairRecipes.uasset" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="DpaMonitoringSettings">
-    <option name="firstShow" value="false" />
-  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="file://$PROJECT_DIR$/../../Program Files/Epic Games/UE_5.5/Engine/Source/Runtime/Engine/Classes/GameFramework/Character.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/Wolf_Island/Private/Character/MainPlayer.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/Wolf_Island/Private/Components/StatusComponent.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/Wolf_Island/Private/Interaction/InteractableActor.cpp" root0="FORCE_HIGHLIGHTING" />
@@ -55,20 +42,20 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;Uproject.Wolf_Island.executor&quot;: &quot;Run&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;LJH&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "Uproject.Wolf_Island.executor": "Run",
+    "git-widget-placeholder": "Main__2",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RunManager">
     <configuration name="Wolf_Island" type="Uproject" factoryName="rider.uproject">
       <configuration_1 setup="1">
@@ -177,12 +164,6 @@
       <workItem from="1764314909634" duration="7791000" />
       <workItem from="1764544549794" duration="3103000" />
       <workItem from="1764550295303" duration="3996000" />
-      <workItem from="1764827422393" duration="4285000" />
-      <workItem from="1764834922040" duration="185000" />
-      <workItem from="1764836338071" duration="115000" />
-      <workItem from="1764837094669" duration="257000" />
-      <workItem from="1764854871406" duration="2051000" />
-      <workItem from="1764857798502" duration="2539000" />
     </task>
     <servers />
   </component>

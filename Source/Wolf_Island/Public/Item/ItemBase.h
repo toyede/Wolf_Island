@@ -17,6 +17,7 @@ class WOLF_ISLAND_API UItemBase : public UObject
 
 public:
 
+	//여기엔 지금 소유인벤토리, 아이템 개수, 아이템 정보들이 있다.
 	UItemBase();
 
 	UPROPERTY()
@@ -58,7 +59,7 @@ public:
 	void ResetItemFlags();
 	//사용 함수
 	UFUNCTION(BlueprintImplementableEvent, Category = "Item")
-	void Use(AActor* user);
+	void Use(AActor* User);
 	void Use_Implementation();
 
 protected:

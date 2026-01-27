@@ -106,8 +106,8 @@ void UCraftPanel::SetRecipeInfo(FRecipeData RecipeData)
 		FItemData* ItemData = ItemDataTable->FindRow<FItemData>(Ingredient.Key, "Ingredients");
 		UCraftSlot* CraftSlot = CreateWidget<UCraftSlot>(GetWorld(), SlotClass);
 
-		UE_LOG(LogTemp, Warning, TEXT("%s : %d"), *FText::FromName(Ingredient.Key).ToString(), Ingredient.Value);
-		CraftSlot->SetCraftSlot(*ItemData, Ingredient.Value);
+		//UE_LOG(LogTemp, Warning, TEXT("%s : %d"), *FText::FromName(Ingredient.Key).ToString(), Ingredient.Value);
+		CraftSlot->SetCraftSlot(ItemData, Ingredient.Value);
 
 		IngredientList->AddChild(CraftSlot);		
 	}
@@ -116,7 +116,7 @@ void UCraftPanel::SetRecipeInfo(FRecipeData RecipeData)
 	FItemData* ResultData = ItemDataTable->FindRow<FItemData>(RecipeData.ResultID, "ResultItem");
 	
 	//결과물 정보 세팅
-	ResultSlot->SetCraftSlot(*ResultData, RecipeData.ResultAmount);
+	ResultSlot->SetCraftSlot(ResultData, RecipeData.ResultAmount);
 	ItemName->SetText(ResultData->TextData.Name);
 	ItemDescription->SetText(ResultData->TextData.Description);
 

@@ -5,50 +5,113 @@
 
 #include "Components/InventoryComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 #include "Widgets/Chest/ChestScreen.h"
 
 AChest::AChest()
 {
-	//SetReplicates(true);
+	bReplicates = true;
 	
-	ChestMesh = CreateDefaultSubobject<UStaticMeshComponent>("ChestMesh");
-	ChestCoverMesh = CreateDefaultSubobject<UStaticMeshComponent>("ChestCoverMesh");
+	ChestSkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>("ChestSkeletalMesh");
 	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>("InventoryComponent");
 
+	ChestSkeletalMesh->SetCollisionProfileName("BlockAll");
+	
 	InventoryComponent->SetSlotsCapacity(ChestSlotsSize);
 	InventoryComponent->SetWeightCapacity(ChestWeightCapacity);
+	
+	InteractableData.InteractionDuration = InteractionDuration;
 }
 
-void AChest::OpenChest()
+void AChest::OpenChest(AActor* Interactor)
 {
+	//누가 사용 중이면 아무것도 안함
+	if (IsOccupied) return;
+
+	//사용 중이라고 설정
+	IsOccupied = true;
 	
+	//오너 설정
+	SetOwner(Interactor);
+	
+	if (OpenAnim&&ChestOpenSound)
+	{
+		Multi_PlayAnimAndSound(OpenAnim, ChestOpenSound);
+	}
+	
+	Client_OpenChest(Interactor);
 }
 
 void AChest::CloseChest()
 {
+	//사용 중 아니라고 설정
+	IsOccupied = false;
 	
+	if (CloseAnim&&ChestCloseSound)
+	{
+		Multi_PlayAnimAndSound(CloseAnim, ChestCloseSound);
+	}
+	
+	//오너 설정 해제
+	SetOwner(nullptr);
 }
 
 //상자를 누군가 열었다!
 void AChest::Interact(AActor* Interactor)
 {
-	if (IsOccupied) return;
+	OpenChest(Interactor);
+}
 
-	IsOccupied = true;
-
-	if (ChestCoverMesh)
+void AChest::BeginFocus()
+{
+	Super::BeginFocus();
+	
+	if (ChestSkeletalMesh)
 	{
-		UGameplayStatics:: PlaySound2D(GetWorld(), ChestSound);
+		ChestSkeletalMesh->SetRenderCustomDepth(true);
 	}
-		
-	//상자 위젯 생성
-	UChestScreen* ChestScreen = CreateWidget<UChestScreen>(GetWorld(), ChestWidgetClass);
-	ChestScreen->InitializeChest(this, Interactor);
-	ChestScreen->SetIsFocusable(true);
-	ChestScreen->AddToViewport();
+}
+
+void AChest::EndFocus()
+{
+	Super::EndFocus();
+	
+	if (ChestSkeletalMesh)
+	{
+		ChestSkeletalMesh->SetRenderCustomDepth(false);
+	}
 }
 
 void AChest::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(AChest, InventoryComponent);
+	DOREPLIFETIME(AChest, IsOccupied);
+}
+
+void AChest::Server_CloseChest_Implementation()
+{
+	CloseChest();
+}
+
+void AChest::Multi_PlayAnimAndSound_Implementation(UAnimationAsset* Anim, USoundBase* Sound)
+{
+	if (ChestSkeletalMesh)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, Sound, GetActorLocation());
+		ChestSkeletalMesh->PlayAnimation(Anim, false);
+	}
+}
+
+void AChest::Client_OpenChest_Implementation(AActor* Interactor)
+{
+	if (!IsValid(Interactor)) return;
+	if (!ChestWidgetClass) return;
+	
+	//상자 위젯 생성
+	UChestScreen* ChestScreen = CreateWidget<UChestScreen>(GetWorld(), ChestWidgetClass);
+	ChestScreen->InitializeChest(this, Interactor);
+	ChestScreen->SetIsFocusable(true);
+	ChestScreen->AddToViewport();
 }

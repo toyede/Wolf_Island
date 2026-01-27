@@ -5,8 +5,6 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
 #include "AI/EnemyAIBase.h"
-#include "Kismet/GameplayStatics.h" 
-#include "Sound/SoundBase.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 // Sets default values
@@ -47,11 +45,6 @@ void ATrap_Base::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* Oth
 		AEnemyAIBase* Enemy = Cast<AEnemyAIBase>(OtherActor);
 		if (Enemy)
 		{
-			if (ActivateSound)
-			{
-				UGameplayStatics::PlaySoundAtLocation(this, ActivateSound, GetActorLocation());
-			}
-			
 			TrappedEnemy = Enemy;
 
 			FVector TrapCenter = GetActorLocation();
@@ -60,7 +53,7 @@ void ATrap_Base::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* Oth
 
 			Enemy->GetCharacterMovement()->DisableMovement();
 
-			// SetLifeSpan ï¿½ï¿½ï¿½ Å¸ï¿½Ì¸ï¿½ ï¿½ï¿½ï¿½
+			// SetLifeSpan ´ë½Å Å¸ÀÌ¸Ó »ç¿ë
 			GetWorldTimerManager().SetTimer(ReleaseTimerHandle, this, &ATrap_Base::ReleaseTrap, TrapSpan, false);
 		}
 	}
@@ -68,11 +61,6 @@ void ATrap_Base::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* Oth
 
 void ATrap_Base::ReleaseTrap()
 {
-	if (ReleaseSound)
-	{
-		UGameplayStatics::PlaySoundAtLocation(this, ReleaseSound, GetActorLocation());
-	}
-	
 	if (TrappedEnemy && IsValid(TrappedEnemy))
 	{
 		TrappedEnemy->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
