@@ -12,7 +12,6 @@ void URepairUI::InitRepairWindow(ARepair_Actor* InActor)
 {
 if (WBP_RepairPanel)
     {
-        // 자식 패널에게 Actor 전달
         WBP_RepairPanel->InitRepairPanel(InActor);
     }
 }
@@ -27,19 +26,17 @@ void URepairUI::NativeConstruct()
 		UE_LOG(LogTemp, Log, TEXT("RepairUI: NativeConstruct에서 자동으로 Actor 연결 완료!"));
 	}
 	
-	// 2. 닫기 버튼 클릭 이벤트 연결
 	if (CloseButton)
 	{
 		CloseButton->OnClicked.AddDynamic(this, &URepairUI::HandleCloseClicked);
 	}
 
-	// 3. 입력 모드 설정 & 포커스 잡기
 	if (APlayerController* PC = GetOwningPlayer())
 	{
 		PC->SetShowMouseCursor(true);
 		
 		FInputModeUIOnly InputMode;
-		InputMode.SetWidgetToFocus(this->TakeWidget()); // 포커스를 이 위젯으로 고정
+		InputMode.SetWidgetToFocus(this->TakeWidget());
 		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
         
 		PC->SetInputMode(InputMode);
@@ -53,7 +50,6 @@ void URepairUI::NativeDestruct()
 {
 	Super::NativeDestruct();
 
-	// 위젯이 꺼질 때 게임 모드로 복귀
 	if (APlayerController* PC = GetOwningPlayer())
 	{
 		PC->SetShowMouseCursor(false);
@@ -63,7 +59,6 @@ void URepairUI::NativeDestruct()
 
 FReply URepairUI::NativeOnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent)
 {
-	// 누른 키가 'Tab' 키 이거나 'Escape(ESC)' 키라면
 	if (InKeyEvent.GetKey() == EKeys::Tab || InKeyEvent.GetKey() == EKeys::Escape)
 	{
 		HandleCloseClicked();
@@ -75,6 +70,5 @@ FReply URepairUI::NativeOnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& 
 
 void URepairUI::HandleCloseClicked()
 {
-	// 화면에서 제거
 	RemoveFromParent();
 }

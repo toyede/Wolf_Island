@@ -221,6 +221,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void ProcessAttackHit(const FHitResult& HitResult, float DamageAmount);
 
+	// 요리 및 수리 UI
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<class URepairUI> RepairUIClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<class UBonFireUI> BonfireUIClass;
+	
+	// 요리 및 수리 UI 생성
+	UFUNCTION(Client, Reliable, BlueprintCallable, Category="UI")
+	void Client_OpenRepairUI(class ARepair_Actor* TargetActor);
+
+	UFUNCTION(Client, Reliable, BlueprintCallable, Category="UI")
+	void Client_OpenBonfireUI();
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -444,5 +458,6 @@ public:
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_PlayAnimMontage(UAnimMontage* Anim);
+	
 	
 };

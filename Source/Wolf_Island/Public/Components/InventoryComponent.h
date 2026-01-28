@@ -6,6 +6,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Data/ItemDataStruct.h"
+#include "Interaction/Repair_Actor.h"
 #include "InventoryComponent.generated.h"
 
 class APickup;
@@ -147,6 +148,20 @@ public:
 	//인덱스 A,B 아이템 바꾸기
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void SwapItems(int32 A, int32 B);
+	
+	// 제작 요청 (서버로 전달)
+	UFUNCTION(BlueprintCallable, Category = "Craft")
+	void Request_MakeItem(FRecipeData Recipe);
+
+	UFUNCTION(Server, Reliable)
+	void Server_MakeItem(FRecipeData Recipe);
+
+	// 수리 요청 (서버로 전달)
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Repair")
+	void Request_RepairShip(FName RecipeName, FRepairRecipeData Recipe, ARepair_Actor* TargetActor);
+
+	UFUNCTION(Server, Reliable)
+	void Server_RepairShip(FName RecipeName, FRepairRecipeData Recipe, ARepair_Actor* TargetActor);
 	
 	//아이템 데이터 불러오기
 	FItemData* GetItemData(FName ItemID) const
@@ -433,7 +448,7 @@ public:
 	//레시피 아이템 제작
 	UFUNCTION(BlueprintCallable, Category = "Craft")
 	bool MakeItem(FRecipeData Recipe);
-	bool RepairShip(FRepairRecipeData Recipes);
+	bool RepairShip(FName RecipeName, FRepairRecipeData Recipe, ARepair_Actor* TargetActor);
 	
 	//아이템 다량 삭제 함수
 	UFUNCTION(BlueprintCallable, Category = "Inventory")

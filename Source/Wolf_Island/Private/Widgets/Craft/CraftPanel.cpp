@@ -24,6 +24,11 @@ void UCraftPanel::NativeConstruct()
 {
 	Super::NativeConstruct();
 
+	if (OwnerInventory)
+	{
+		OwnerInventory->OnInventoryUpdated.AddUObject(this, &UCraftPanel::RefreshRecipeList);
+	}
+
 	OwnerInventory = GetOwningPlayerPawn()->GetComponentByClass<UInventoryComponent>();
 	CraftButton->OnClicked.AddDynamic(this, &UCraftPanel::OnCraftButtonClicked);
 
@@ -32,9 +37,10 @@ void UCraftPanel::NativeConstruct()
 
 void UCraftPanel::OnCraftButtonClicked()
 {
-	if (OwnerInventory)
+	if (OwnerInventory && CurrentRecipeData.ResultID != NAME_None)
 	{
-		OwnerInventory->MakeItem(CurrentRecipeData);
+		OwnerInventory->Request_MakeItem(CurrentRecipeData);
+
 		SetCraftButton(CurrentRecipeData);
 	}
 }
