@@ -21,9 +21,12 @@
 #include "Games/MainHUD.h"
 #include "Interaction/InteractionInterface.h"
 #include "Item/Pickup.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Net/UnrealNetwork.h"
 #include "Widgets/PlayerHUD.h"
-
+#include "BuoyancyComponent.h"
+#include "Components/AudioComponent.h"
+#include "Components/BillboardComponent.h"
 
 // Sets default values
 AMainPlayer::AMainPlayer()
@@ -36,6 +39,12 @@ AMainPlayer::AMainPlayer()
 	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>("InventoryComponent");
 
 	WeaponComponent = CreateDefaultSubobject<UWeaponComponent>("WeaponComponent");
+	
+	BuoyancyComponent = CreateDefaultSubobject<UBuoyancyComponent>("BuoyancyComponent");
+	
+	WaterLevelCheckPoint = CreateDefaultSubobject<UBillboardComponent>("WaterLevelCheckPoint");
+	
+	WaterAmbience = CreateDefaultSubobject<UAudioComponent>("WaterAmbience");
 
 	//손에 든 아이템 메쉬
 	ItemMesh = CreateDefaultSubobject<UStaticMeshComponent>("Item");
@@ -69,7 +78,11 @@ AMainPlayer::AMainPlayer()
 	InventoryComponent->SetWeightCapacity(StatusComponent->MaxWeight);
 
 	GetCharacterMovement()->SetIsReplicated(true);
-	GetCharacterMovement()->MaxWalkSpeed = 300.0f;
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+	
+	//수영을 위한 부력 컴포넌트 세팅
+	WaterLevelCheckPoint->SetRelativeLocation(FVector(0.0f, 0.0f, 20.0f));
+	BuoyancyComponent->AddCustomPontoon(25.0f, WaterLevelCheckPoint->GetRelativeLocation());
 
 }
 
@@ -93,6 +106,9 @@ void AMainPlayer::BeginPlay()
 			StatusComponent->StartHunger();
 			StatusComponent->StartHydration();
 		}
+		
+		//산소 게이지 숨기기 바인딩(테스트용)
+		StatusComponent->OnAirFull.AddDynamic(this, &AMainPlayer::HideAirBar);
 	}
 
 	if (InventoryComponent)
@@ -104,6 +120,12 @@ void AMainPlayer::BeginPlay()
 	if (WeaponComponent)
 	{
 		RefreshHand();
+	}
+	
+	if (BuoyancyComponent)
+	{
+		BuoyancyComponent->OnEnteredWaterDelegate.AddDynamic(this, &AMainPlayer::EnterWater);
+		BuoyancyComponent->OnExitedWaterDelegate.AddDynamic(this, &AMainPlayer::ExitWater);
 	}
 
 	//HUD = Cast<AMainHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
@@ -121,7 +143,8 @@ void AMainPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
-	if (GetWorld()->TimeSince(InteractionData.LastInteractionCheckTime) > InteractionCheckFrequency)
+	if (IsLocallyControlled()&&
+		GetWorld()->TimeSince(InteractionData.LastInteractionCheckTime) > InteractionCheckFrequency)
 	{
 		CheckInteraction();
 	}
@@ -146,6 +169,10 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered,
 			this, &AMainPlayer::Move);
 		
+		//수영 오르내리기
+		EnhancedInputComponent->BindAction(WaterElevationAction, ETriggerEvent::Triggered,
+			this, &AMainPlayer::WaterElevation);
+		
 		// 시야
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered,
 			this, &AMainPlayer::Look);
@@ -159,10 +186,6 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 		//웅크리기
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started,
 			this, &AMainPlayer::Request_ToggleCrouch);
-
-		//슬라이딩
-		EnhancedInputComponent->BindAction(SlideAction, ETriggerEvent::Started,
-			this, &AMainPlayer::Sliding);
 		
 		//인터랙션
 		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started,
@@ -279,7 +302,7 @@ void AMainPlayer::Look(const FInputActionValue& Value)
 	//UE_LOG(LogTemp, Warning, TEXT("LOOK X: %f, Y: %f"), LookAxisVector.X, LookAxisVector.Y);
 	float sen = 1;
 
-	if (Controller != nullptr)
+	if (Controller)
 	{
 		AddControllerYawInput(LookAxisVector.X * sen);
 		AddControllerPitchInput(LookAxisVector.Y * sen);
@@ -292,10 +315,18 @@ void AMainPlayer::Move(const FInputActionValue& Value)
 	FVector2D MovementVector = Value.Get<FVector2D>();
 	//UE_LOG(LogTemp, Warning, TEXT("MOVE X: %f, Y: %f"), MovementVector.X, MovementVector.Y);
 
-	if (Controller != nullptr)
+	if (Controller)
 	{
-		AddMovementInput(GetActorForwardVector(), MovementVector.Y);
-		AddMovementInput(GetActorRightVector(), MovementVector.X);
+		if (IsSwimming)
+		{
+			FVector ForwardVector = UKismetMathLibrary::GetForwardVector(GetControlRotation());
+			AddMovementInput(GetActorRightVector(), MovementVector.X*WaterDeceleration);
+			AddMovementInput(ForwardVector, MovementVector.Y*WaterDeceleration);
+		} else
+		{
+			AddMovementInput(GetActorRightVector(), MovementVector.X);
+			AddMovementInput(GetActorForwardVector(), MovementVector.Y);
+		}
 	}
 }
 
@@ -322,7 +353,7 @@ void AMainPlayer::Run()
 			//스태미나 0이거나 웅크리는 중이면
 			if (StatusComponent->CurrentStamina <= 0 || IsCrouching) return;
 	
-			GetCharacterMovement()->MaxWalkSpeed = 750.0f;
+			GetCharacterMovement()->MaxWalkSpeed = RunSpeed;
 			StatusComponent->StopStamina();
 
 			//이동 속도가 0 초과일 때만 스태미나 감소
@@ -351,7 +382,7 @@ void AMainPlayer::StopRun()
 	//달리기 중일 때만 달리기 중지 시퀀스 작동
 	if (IsRunning)
 	{
-		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
+		GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 		//스태미나 감소 중단
 		StatusComponent->StopStamina();
 		//스태미나 회복 타이머가 실행 중이 아니면
@@ -370,12 +401,12 @@ void AMainPlayer::ToggleCrouch()
 	if (IsCrouching)
 	{
 		UnCrouch();
-		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
+		GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 		IsCrouching = false;
 	} else
 	{
 		Crouch();
-		GetCharacterMovement()->MaxWalkSpeed = 150.0f;
+		GetCharacterMovement()->MaxWalkSpeed = CrouchSpeed;
 		IsCrouching = true;
 	}
 }
@@ -392,29 +423,6 @@ void AMainPlayer::ToggleInventory()
 	{
 		IsInventoryOpen = true;
 	}
-}
-
-void AMainPlayer::Sliding()
-{
-	UAnimInstance* AnimInst = GetMesh()->GetAnimInstance();
-
-	if (AnimInst&&!IsSliding)
-	{
-		StatusComponent->DecreaseStamina(SlideConsumeAmount);
-		IsSliding = true;
-		GetCapsuleComponent()->SetCapsuleHalfHeight(30);
-		GetMesh()->SetRelativeLocation(FVector(0, 0, -31.0f));
-		AnimInst->Montage_Play(SlideMontage);
-		AnimInst->OnMontageEnded.AddDynamic(this, &AMainPlayer::EndSliding);
-	}
-}
-
-// -31 <-무슨 값이더라
-void AMainPlayer::EndSliding(UAnimMontage* Montage, bool bInterrupted)
-{
-	GetMesh()->SetRelativeLocation(FVector(0, 0, -90.0f));
-	GetCapsuleComponent()->SetCapsuleHalfHeight(88);
-	IsSliding = false;
 }
 
 //TODO: 아이템 사용 로직 멀티로 전환하기
@@ -942,6 +950,54 @@ void AMainPlayer::DropItemOnHotBar()
 	}
 }
 
+void AMainPlayer::WaterElevation(const FInputActionValue& Value)
+{
+	if (IsSwimming)
+	{
+		float Elevation = Value.Get<float>();
+		
+		AddMovementInput(GetActorUpVector(), Elevation*WaterDeceleration);
+	}
+}
+
+void AMainPlayer::EnterWater(const FSphericalPontoon& Pontoon)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Entering Water"));
+	IsSwimming = true;
+	GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+	StatusComponent->StartAir();
+	if (IsLocallyControlled())
+	{
+		HUD->DisplayAirBar();
+		if (UnderWaterAmbience)
+		{
+			WaterAmbience->SetSound(UnderWaterAmbience);
+			WaterAmbience->FadeIn(1.0f,0.5f);
+		}
+	}
+}
+
+void AMainPlayer::ExitWater(const FSphericalPontoon& Pontoon)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Exiting Water"));
+	IsSwimming = false;
+	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	StatusComponent->StartRecoverAir();
+	StatusComponent->StopAirDeath();
+	if (IsLocallyControlled())
+	{
+		WaterAmbience->FadeOut(1.0f,0);
+	}
+}
+
+void AMainPlayer::HideAirBar()
+{
+	if (IsLocallyControlled())
+	{
+		HUD->HideAirBar();
+	}
+}
+
 void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float DamageAmount)
 {
 	// 1. 맞은 컴포넌트가 유효한지 먼저 확인
@@ -1033,6 +1089,7 @@ void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 	DOREPLIFETIME(AMainPlayer, InventoryComponent);
 	DOREPLIFETIME(AMainPlayer, WeaponComponent);
 	DOREPLIFETIME(AMainPlayer, ItemMesh);
+	DOREPLIFETIME(AMainPlayer, IsSwimming);
 }
 
 void AMainPlayer::Request_Run()

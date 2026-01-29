@@ -12,6 +12,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStaminaZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHungerZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHydrationZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInfectionChanged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAirZero);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAirFull);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class WOLF_ISLAND_API UStatusComponent : public UActorComponent
@@ -33,6 +35,11 @@ public:
 	FOnHydrationZero OnHydrationZero;
 	UPROPERTY(BlueprintAssignable, Category="Status Delegate")
 	FOnInfectionChanged OnInfectionChanged;
+	UPROPERTY(BlueprintAssignable, Category="Status Delegate")
+	FOnAirZero OnAirZero;
+	UPROPERTY(BlueprintAssignable, Category="Status Delegate")
+	FOnAirFull OnAirFull;
+	
 
 	//늑대인간
 	//현재 감염률
@@ -91,6 +98,12 @@ public:
 	//무게에 따른 감소율 증가분
 	float AmountMultiplier = 1.0f;
 	
+	//산소
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status")
+	float CurrentAir = 100.0f;
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status")
+	float MaxAir = 100.0f;
+	
 
 	//타이머
 	//스태미나 타이머
@@ -120,6 +133,15 @@ public:
 	//감염 타이머
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
 	FTimerHandle InfectionTimer;
+	//산소 타이머
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
+	FTimerHandle AirTimer;
+	//산소 회복 타이머
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
+	FTimerHandle AirRecoverTimer;
+	//산소 사망 타이머
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
+	FTimerHandle AirDeathTimer;
 
 	//스태미나 감소 주기
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
@@ -165,7 +187,25 @@ public:
 	//수분 사망 타이머 시간(초)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
 	float HydrationDeathRate = 30.0f;
-
+	
+	//산소 감소 주기
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	float AirRate = 0.1f;
+	//산소 감소량
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	float AirAmount = 0.001f;
+	//산소 회복량
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	float AirRecoverAmount = 0.01f;
+	//산소 회복 주기
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	float AirRecoverRate = 0.01f;
+	//산소 부족으로 받는 대미지량
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	float SuffocatedDamage = 10.0f;
+	//산소 부족으로 받는 대미지 주기
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	float SuffocatedRate = 1.0f;
 
 	// 테스트용
 	UPROPERTY(BlueprintReadWrite, Category = "Status")
@@ -212,6 +252,12 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void DecreaseWeight(float amount);
+	
+	UFUNCTION(BlueprintCallable)
+	void IncreaseAir(float amount);
+	
+	UFUNCTION(BlueprintCallable)
+	void DecreaseAir(float amount);
 	
 	//-----------------------------------//
 
@@ -271,6 +317,20 @@ public:
 	//감염률 감소 함수
 	UFUNCTION(BlueprintCallable)
 	void DecreaseInfection(float Amount);
+	
+	//산소 시작 함수
+	UFUNCTION(BlueprintCallable)
+	void StartAir();
+	UFUNCTION(BlueprintCallable)
+	void StopAir();
+	UFUNCTION(BlueprintCallable)
+	void StartAirDeath();
+	UFUNCTION(BlueprintCallable)
+	void StopAirDeath();
+	UFUNCTION(BlueprintCallable)
+	void StartRecoverAir();
+	UFUNCTION(BlueprintCallable)
+	void StopRecoverAir();
 
 	//모든 타이머 삭제
 	UFUNCTION(BlueprintCallable)
@@ -291,6 +351,8 @@ public:
 	float GetHydrationPercent() { return CurrentHydration / MaxHydration; };
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	float GetWeightPercent() { return CurrentWeight / MaxWeight; };
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	float GetAirPercent() { return CurrentAir / MaxAir; };
 
 	//디버그 함수
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Debug")
