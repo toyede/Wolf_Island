@@ -19,6 +19,7 @@
 #include "Engine/DamageEvents.h"
 #include "Net/UnrealNetwork.h"
 #include "Perception/AISense_Hearing.h"
+#include "Perception/AISense_Damage.h"
 
 AEnemyAIBase::AEnemyAIBase()
 {
@@ -392,13 +393,17 @@ void AEnemyAIBase::Howling_Implementation()
 
 void AEnemyAIBase::HitResponse()
 {
-    if (!EnemyAIController)
-    {
-        return;
-    }
+    if (!HasAuthority()) return;
+
+    if (!EnemyAIController) return;
 
     EnemyAIController->SetEnemyState(EEnemyState::Frozen);
 
+    Multicast_HitResponse();
+}
+
+void AEnemyAIBase::Multicast_HitResponse_Implementation()
+{
     StopAllMontages();
     GetCharacterMovement()->StopMovementImmediately();
 
@@ -420,10 +425,12 @@ void AEnemyAIBase::HitResponse()
     {
         AnimInstance->Montage_Play(MontageToPlay);
 
-        // 몽타주 끝나면 Attacking으로 전환
-        FOnMontageEnded EndDelegate;
-        EndDelegate.BindUObject(this, &AEnemyAIBase::OnFrozenMontageEnded);
-        AnimInstance->Montage_SetEndDelegate(EndDelegate, MontageToPlay);
+        if (HasAuthority())
+        {
+            FOnMontageEnded EndDelegate;
+            EndDelegate.BindUObject(this, &AEnemyAIBase::OnFrozenMontageEnded);
+            AnimInstance->Montage_SetEndDelegate(EndDelegate, MontageToPlay);
+        }
     }
 
     if (FrozenHitSound)
@@ -431,7 +438,6 @@ void AEnemyAIBase::HitResponse()
         UGameplayStatics::PlaySoundAtLocation(this, FrozenHitSound, GetActorLocation());
     }
 }
-
 void AEnemyAIBase::OnFrozenMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
     if (!EnemyAIController || EnemyAIController->EnemyState == EEnemyState::Dead)
@@ -484,6 +490,15 @@ float AEnemyAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
     float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
     StatusComponent->DecreaseHP(ActualDamage);
+
+    UAISense_Damage::ReportDamageEvent(
+        GetWorld(),
+        this,
+        DamageCauser,
+        ActualDamage,
+        GetActorLocation(),
+        DamageCauser ? DamageCauser->GetActorLocation() : FVector::ZeroVector
+	);
     
     if (StatusComponent->CurrentHP <= 0)
     {

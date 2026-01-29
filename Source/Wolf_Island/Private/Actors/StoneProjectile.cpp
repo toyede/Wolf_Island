@@ -2,6 +2,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Engine/DamageEvents.h"
+#include "Character/MainPlayer.h"
 
 AStoneProjectile::AStoneProjectile()
 {
@@ -63,7 +64,7 @@ void AStoneProjectile::OnOverlap(
     if (!HasAuthority()) return;
     if (!OtherActor || OtherActor == GetOwner()) return;
 
-    if (OtherActor->ActorHasTag("Player"))
+    if (AMainPlayer* Player = Cast<AMainPlayer>(OtherActor))
     {
         FDamageEvent DamageEvent;
         OtherActor->TakeDamage(Damage, DamageEvent, nullptr, this);

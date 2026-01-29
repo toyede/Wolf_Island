@@ -191,6 +191,9 @@ public:
 	UFUNCTION()
 	void HitResponse();
 
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_HitResponse();
+
 	// 컨트롤러
 	UPROPERTY(BlueprintReadWrite, Category = "AI|Controller")
 	TObjectPtr<AEnemyAIController> EnemyAIController;
