@@ -18,6 +18,7 @@
 #include "Actors/Interfaces/SkyInterface.h"
 #include "Engine/DamageEvents.h"
 #include "Net/UnrealNetwork.h"
+#include "Perception/AISense_Hearing.h"
 
 AEnemyAIBase::AEnemyAIBase()
 {
@@ -136,9 +137,29 @@ void AEnemyAIBase::NotifySkyRemoveSelf()
         }
 }
 
-void AEnemyAIBase::ChangeForm(EEnemyForm Form)
+void AEnemyAIBase::OnRep_EnemyForm()
 {
-    bIsHuman = (Form == EEnemyForm::Human);
+    ApplyFormVisuals();
+}
+
+void AEnemyAIBase::ServerChangeForm_Implementation(EEnemyForm Form)
+{
+	EnemyForm = Form;
+
+    ApplyFormVisuals();
+
+    if (AEnemyAIController* AIC = Cast<AEnemyAIController>(GetController()))
+    {
+        if (AIC->GetBlackboardComponent())
+        {
+            AIC->GetBlackboardComponent()->SetValueAsEnum(AIC->EnemyFormKey, (uint8)Form);
+        }
+	}
+}
+
+void AEnemyAIBase::ApplyFormVisuals()
+{
+    bIsHuman = (EnemyForm == EEnemyForm::Human);
 
     GetMesh()->SetVisibility(bIsHuman);
     GetMesh()->SetCollisionEnabled(bIsHuman ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
@@ -171,9 +192,6 @@ void AEnemyAIBase::ChangeForm(EEnemyForm Form)
 
     SpawnParticle();
 
-    // 폼에 따른 패트롤 속도 변화
-    PassiveSpeed = bIsHuman ? NativePatrolSpeed : WolfPatrolSpeed;
-
     // 애니메이션 - GetMesh() 아니고 각각 메시에
     if (bIsHuman && HumanAnimBP)
     {
@@ -183,15 +201,34 @@ void AEnemyAIBase::ChangeForm(EEnemyForm Form)
     {
         WolfMesh->SetAnimInstanceClass(WolfAnimBP);
     }
+}
 
-    // Blackboard 업데이트
-    if (AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController()))
+void AEnemyAIBase::ApplySpeedByState(EEnemyState State)
+{
+    float SpeedToApply = 0.f;
+
+    switch (State)
     {
-        if (AICon->GetBlackboardComponent())
-        {
-            AICon->GetBlackboardComponent()->SetValueAsEnum(AICon->EnemyFormKey, (uint8)Form);
-        }
+    case EEnemyState::Passive:
+        // PassiveSpeed 변수 대신 직접 계산 (클라이언트도 동일한 값 보유)
+        SpeedToApply = bIsHuman ? NativePatrolSpeed : WolfPatrolSpeed;
+        break;
+    case EEnemyState::Combat:
+        SpeedToApply = AttackingSpeed;
+        break;
+    case EEnemyState::Dead:
+		SpeedToApply = DeadSpeed;
+		break;
+    case EEnemyState::Frozen:
+        break;
+    case EEnemyState::Investigating:
+        SpeedToApply = bIsHuman ? NativePatrolSpeed : WolfPatrolSpeed;
+        break;
+    default:
+        return;
     }
+
+    GetCharacterMovement()->MaxWalkSpeed = SpeedToApply;
 }
 
 void AEnemyAIBase::SpawnParticle()
@@ -286,20 +323,7 @@ void AEnemyAIBase::Growling()
 
 void AEnemyAIBase::SetMovementSpeed_Implementation(EEnemyState State)
 {
-    switch (State)
-    {
-        case EEnemyState::Passive:
-            GetCharacterMovement()->MaxWalkSpeed = PassiveSpeed;
-            break;
-        case EEnemyState::Combat:
-            GetCharacterMovement()->MaxWalkSpeed = AttackingSpeed;
-            break;
-        case EEnemyState::Dead:
-            GetCharacterMovement()->MaxWalkSpeed = DeadSpeed;
-            break;
-        default:
-            break;
-    }
+    ApplySpeedByState(State);
 }
 
 void AEnemyAIBase::ThrowObject_Implementation()
@@ -340,21 +364,29 @@ void AEnemyAIBase::Die_Implementation()
 
 void AEnemyAIBase::NormalAttack_Implementation()
 {
-    if (UAnimInstance* AnimInstance = WolfMesh->GetAnimInstance())
+    if (HasAuthority())
     {
-        if (AttackMontage)
-        {
-            AnimInstance->Montage_Play(AttackMontage);
-        }
+		Multicast_PlayNormalAttackMontage();
+    }
+}
 
-        if (AttackSound)
-        {
-            UGameplayStatics::PlaySoundAtLocation(this, AttackSound, GetActorLocation());
-        }
+void AEnemyAIBase::Howling_Implementation()
+{
+    if (HasAuthority())
+    {
+        Multicast_PlayHowlingMontage();
 
-        FOnMontageEnded EndDelegate;
-        EndDelegate.BindUObject(this, &AEnemyAIBase::OnAttackMontageEnded);
-        AnimInstance->Montage_SetEndDelegate(EndDelegate, AttackMontage);
+        if (AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController()))
+        {
+            UAISense_Hearing::ReportNoiseEvent(
+                GetWorld(),
+                GetActorLocation(),
+                1.0f, // Loudness
+                this,
+                0.0f, // MaxRange
+                TEXT("WolfHowl") // Tag
+			);
+        }
     }
 }
 
@@ -426,6 +458,14 @@ void AEnemyAIBase::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted
    
 }
 
+void AEnemyAIBase::OnHowlingMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+    if (!bInterrupted)
+    {
+        OnHowlingEnd.Broadcast();
+    }
+}
+
 void AEnemyAIBase::OnAttackHit(const FHitResult& HitResult)
 {
     AActor* HitActor = HitResult.GetActor();
@@ -470,40 +510,6 @@ float AEnemyAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
     return ActualDamage;
 }
 
-void AEnemyAIBase::OnRep_IsDead()
-{
-    if (bIsDead)
-    {
-        ApplyDeadState();
-    }
-}
-
-void AEnemyAIBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-    DOREPLIFETIME(AEnemyAIBase, bIsDead);
-}
-
-void AEnemyAIBase::ApplyDeadState()
-{
-    GetCharacterMovement()->StopMovementImmediately();
-    StopAllMontages();
-
-    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    if (WolfMesh)
-    {
-        WolfMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    }
-
-    if (DieSound)
-    {
-        UGameplayStatics::PlaySoundAtLocation(this, DieSound, GetActorLocation());
-    }
-}
-
-
 void AEnemyAIBase::Multicast_PlayThrowMontage_Implementation()
 {
     UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
@@ -530,6 +536,105 @@ void AEnemyAIBase::Multicast_PlayThrowMontage_Implementation()
         AnimInstance->Montage_SetEndDelegate(EndDelegate, ThrowMontage);
     }
 }
+
+void AEnemyAIBase::Multicast_PlayNormalAttackMontage_Implementation()
+{
+    UAnimInstance* AnimInstance = WolfMesh->GetAnimInstance();
+
+    if (!AnimInstance || !AttackMontage)
+    {
+        if (HasAuthority())
+        {
+            OnAttackEnd.Broadcast();
+        }
+        return;
+    }
+
+    AnimInstance->Montage_Play(AttackMontage);
+
+    if (AttackSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, AttackSound, GetActorLocation());
+    }
+
+    if (HasAuthority())
+    {
+        FOnMontageEnded EndDelegate;
+        EndDelegate.BindUObject(this, &AEnemyAIBase::OnAttackMontageEnded);
+        AnimInstance->Montage_SetEndDelegate(EndDelegate, AttackMontage);
+    }
+}
+
+void AEnemyAIBase::Multicast_PlayHowlingMontage_Implementation()
+{
+    UAnimInstance* AnimInstance = WolfMesh->GetAnimInstance();
+
+    if (!AnimInstance || !HowlingMontage)
+    {
+        if (HasAuthority())
+        {
+            OnHowlingEnd.Broadcast();
+        }
+        return;
+    }
+
+    AnimInstance->Montage_Play(HowlingMontage);
+
+    if (HowlingSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, HowlingSound, GetActorLocation());
+    }
+
+    if (HasAuthority())
+    {
+        FOnMontageEnded EndDelegate;
+        EndDelegate.BindUObject(this, &AEnemyAIBase::OnHowlingMontageEnded);
+        AnimInstance->Montage_SetEndDelegate(EndDelegate, HowlingMontage);
+    }
+}
+
+void AEnemyAIBase::OnRep_IsDead()
+{
+    if (bIsDead)
+    {
+        ApplyDeadState();
+    }
+}
+
+void AEnemyAIBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(AEnemyAIBase, bIsDead);
+	DOREPLIFETIME(AEnemyAIBase, EnemyForm);
+}
+
+void AEnemyAIBase::ApplyDeadState()
+{
+    GetCharacterMovement()->StopMovementImmediately();
+    GetCharacterMovement()->DisableMovement();
+    GetCharacterMovement()->GravityScale = 0.f;
+
+    StopAllMontages();
+
+    // 캡슐: 바닥만 Block, 나머지 Ignore
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
+    GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+
+    GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    if (WolfMesh)
+    {
+        WolfMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    }
+
+    if (DieSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, DieSound, GetActorLocation());
+    }
+}
+
+
 
 
 

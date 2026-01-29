@@ -22,6 +22,7 @@ void UAISense_Scent::RegisterEvent(const FAIScentEvent& Event)
         *Event.Location.ToString(),
         Event.Instigator.IsValid() ? *Event.Instigator->GetName() : TEXT("None"));
 
+    // 기존 이벤트(Instigator 동일) 갱신
     for (int32 i = 0; i < RegisteredEvents.Num(); i++)
     {
         if (RegisteredEvents[i].Instigator == Event.Instigator)
@@ -29,15 +30,25 @@ void UAISense_Scent::RegisterEvent(const FAIScentEvent& Event)
             RegisteredEvents[i].Location = Event.Location;
             RegisteredEvents[i].Intensity = Event.Intensity;
             RegisteredEvents[i].MaxRange = Event.MaxRange;
-            RegisteredEvents[i].Age = 0.f;  
+            RegisteredEvents[i].Age = 0.f;
+
+            // A안 핵심: 갱신될 때마다 새 시퀀스 부여
+            RegisteredEvents[i].Sequence = ++GlobalScentSequence;
+
             RequestImmediateUpdate();
             return;
         }
     }
 
-    RegisteredEvents.Add(Event);
+    // 신규 이벤트 추가
+    FAIScentEvent NewEvent = Event;
+    NewEvent.Age = 0.f;
+    NewEvent.Sequence = ++GlobalScentSequence;
+
+    RegisteredEvents.Add(NewEvent);
     RequestImmediateUpdate();
 }
+
 
 void UAISense_Scent::ReportScentEvent(UObject* WorldContextObject, const FVector& Location, float Intensity, float MaxRange, AActor* Instigator)
 {
@@ -63,14 +74,17 @@ float UAISense_Scent::Update()
 {
     AIPerception::FListenerMap& ListenersMap = *GetListeners();
     UWorld* World = GetWorld();
-    if (!World || ListenersMap.Num() == 0) return 0.1f; 
+    if (!World) return 0.5f;
 
-    float DeltaTime = World->GetDeltaSeconds();
+    const float Now = World->GetTimeSeconds();
+    const float SenseDelta = (LastSenseUpdateTime < 0.f) ? 0.f : (Now - LastSenseUpdateTime);
+    LastSenseUpdateTime = Now;
 
+    // Age 누적은 DeltaSeconds 말고 SenseDelta로
     for (int32 i = RegisteredEvents.Num() - 1; i >= 0; --i)
     {
-        RegisteredEvents[i].Age += DeltaTime;
-        if (RegisteredEvents[i].Age > ScentEventMaxAge)
+        RegisteredEvents[i].Age += SenseDelta;
+        if (!RegisteredEvents[i].Instigator.IsValid() || RegisteredEvents[i].Age > ScentEventMaxAge)
         {
             RegisteredEvents.RemoveAt(i);
         }
@@ -98,18 +112,37 @@ float UAISense_Scent::Update()
 
             if (DistSq <= MaxRangeSq && DistSq <= DetectionRadiusSq)
             {
-                float Distance = FMath::Sqrt(DistSq);
+                // A안: (Listener, Instigator)별 마지막 처리 시퀀스 확인
+                TMap<TWeakObjectPtr<AActor>, int32>& LastMap =
+                    LastProcessedSequenceByListener.FindOrAdd(Listener.GetListenerID());
 
+                int32* LastSeq = LastMap.Find(Event.Instigator);
+
+                const bool bIsNewReport = (!LastSeq || *LastSeq < Event.Sequence);
+                if (!bIsNewReport)
+                {
+                    continue; // 새 report가 아니면 stimulus 푸시 안 함
+                }
+
+                // 새 report일 때만 stimulus 1회 푸시
+                float Distance = FMath::Sqrt(DistSq);
                 float StrengthMultiplier = 1.0f - (Distance / Event.MaxRange);
                 float FinalStrength = Event.Intensity * StrengthMultiplier;
 
                 Listener.RegisterStimulus(Event.Instigator.Get(),
                     FAIStimulus(*this, FinalStrength, Event.Location, ListenerLoc));
+
+                // 처리 시퀀스 갱신
+                LastMap.Add(Event.Instigator, Event.Sequence);
             }
         }
     }
 
-    return 0.1f;
+    if (RegisteredEvents.Num() == 0 || ListenersMap.Num() == 0)
+    {
+        return 1.0f;
+    }
+    return 0.5f;
 }
 
 void UAISense_Scent::OnNewListenerImpl(const FPerceptionListener& NewListener)
@@ -134,6 +167,8 @@ void UAISense_Scent::OnListenerRemovedImpl(const FPerceptionListener& UpdatedLis
 {
     UE_LOG(LogTemp, Warning, TEXT("Scent: Listener removed!"));
     DigestedProperties.Remove(UpdatedListener.GetListenerID());
+
+    LastProcessedSequenceByListener.Remove(UpdatedListener.GetListenerID());
 }
 UAISense_Scent::FDigestedScentProperties::FDigestedScentProperties()
 {

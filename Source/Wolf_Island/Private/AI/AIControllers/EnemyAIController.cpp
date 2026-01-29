@@ -118,21 +118,37 @@ void AEnemyAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus St
 
 void AEnemyAIController::HandleSight(AActor* Actor, const FAIStimulus& Stimulus)
 {
-	// 1. 시야 소실 (Lost)
+	// 1. 시야 소실
 	if (!Stimulus.WasSuccessfullySensed())
 	{
-		// 즉시 반응하기보다 CheckIfForgottenSeenActor 타이머에게 맡김 (깜빡임 방지)
+		// 플레이어를 놓쳤다고 바로 포기하지 않고, 
+		// "3초 뒤에도 안 보이면 포기해라"라고 예약을 겁니다.
+		if (EnemyState == EEnemyState::Combat && Actor == AttackTarget)
+		{
+			GetWorld()->GetTimerManager().SetTimer(LineOfSightTimer, [this]()
+				{
+					// 3초 뒤 실행될 코드:
+					// 여전히 타겟이 안 보인다면(혹은 거리가 멀다면) 포기
+					SetEnemyState(EEnemyState::Passive);
+				}, 3.0f, false); // 3.0f는 '기억 지속 시간'
+		}
 		return;
 	}
 
-	// 2. 시야 감지 (Seen) & 플레이어 확인
-	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
-	if (Actor == PlayerPawn)
+	// 2. 시야 감지 & 플레이어 확인
+	APawn* SensedPawn = Cast<APawn>(Actor);
+	if (!SensedPawn || !SensedPawn->IsPlayerControlled()) return;
+
+	GetWorld()->GetTimerManager().ClearTimer(LineOfSightTimer);
+
+	// 3. 타겟 전환이 필요할 때만 업데이트
+	if (ShouldSwitchTarget(Actor))
 	{
-		// [Target Locking] 타겟을 바꿀지 말지 결정
-		if (ShouldSwitchTarget(Actor))
+		AttackTarget = Actor;
+
+		// 이미 Combat이면 State 재설정 안 함
+		if (EnemyState != EEnemyState::Combat)
 		{
-			AttackTarget = Actor;
 			SetEnemyState(EEnemyState::Combat);
 		}
 	}
@@ -215,8 +231,15 @@ bool AEnemyAIController::IsTargetValid(AActor* Target) const
 // [3] State Management (Switch-Case Centralized)
 // ============================================================================
 
+void AEnemyAIController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AEnemyAIController, EnemyState);
+}
+
 void AEnemyAIController::SetEnemyState(EEnemyState NewState)
 {
+	if (!HasAuthority()) return;
 	if (EnemyState == NewState) return;
 
 	OnExitState(EnemyState); // 이전 상태 정리
@@ -229,6 +252,15 @@ void AEnemyAIController::SetEnemyState(EEnemyState NewState)
 	}
 
 	OnEnterState(NewState);  // 새 상태 진입
+}
+
+void AEnemyAIController::OnRep_State()
+{
+	AEnemyAIBase* Enemy = Cast<AEnemyAIBase>(GetPawn());
+	
+	if (!Enemy) return;
+
+	Enemy->ApplySpeedByState(EnemyState);
 }
 
 void AEnemyAIController::OnEnterState(EEnemyState NewState)

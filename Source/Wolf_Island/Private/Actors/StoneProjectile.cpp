@@ -1,7 +1,5 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "Actors/StoneProjectile.h"
+﻿#include "Actors/StoneProjectile.h"
+#include "Components/StaticMeshComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Engine/DamageEvents.h"
 
@@ -10,42 +8,51 @@ AStoneProjectile::AStoneProjectile()
     Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
     RootComponent = Mesh;
 
-    Mesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);     // 물리 반응 없이 "조회"만
-    Mesh->SetGenerateOverlapEvents(true);
-    Mesh->SetNotifyRigidBodyCollision(false);
+    Mesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     Mesh->SetCollisionObjectType(ECC_WorldDynamic);
+    Mesh->SetCollisionResponseToAllChannels(ECR_Overlap);
+    Mesh->SetGenerateOverlapEvents(true);
 
     ProjectileComp = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileComp"));
-    ProjectileComp->InitialSpeed = 2500.f;
-    ProjectileComp->MaxSpeed = 2500.f;
-    ProjectileComp->bRotationFollowsVelocity = true;
-    ProjectileComp->ProjectileGravityScale = 0.4f; // 직선 원하면 0
-    ProjectileComp->bAutoActivate = false;
-    InitialLifeSpan = 1.f;
     ProjectileComp->SetUpdatedComponent(Mesh);
+    ProjectileComp->InitialSpeed = 2000.f;
+    ProjectileComp->MaxSpeed = 3000.f;
+    ProjectileComp->bRotationFollowsVelocity = true;
+    ProjectileComp->ProjectileGravityScale = 0.4f;
 
     bReplicates = true;
     SetReplicateMovement(true);
-
-}
-
-void AStoneProjectile::LaunchProjectile(const FVector& Direction, float Speed)
-{
-    if (ProjectileComp)
-    {
-        ProjectileComp->Velocity = Direction * Speed;
-        ProjectileComp->Activate(true);
-    }
+    bAlwaysRelevant = false;
+    bNetLoadOnClient = false;
+    NetUpdateFrequency = 30.f;
+    MinNetUpdateFrequency = 15.f;
 }
 
 void AStoneProjectile::BeginPlay()
 {
     Super::BeginPlay();
 
-    Mesh->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnProjectileOverlap);
+    Mesh->OnComponentBeginOverlap.AddDynamic(this, &AStoneProjectile::OnOverlap);
+
+    SetLifeSpan(LifeSpan);
+
+    if (AActor* OwnerActor = GetOwner())
+    {
+        Mesh->IgnoreActorWhenMoving(OwnerActor, true);
+    }
 }
 
-void AStoneProjectile::OnProjectileOverlap(
+void AStoneProjectile::Launch(const FVector& Direction, float Speed)
+{
+    if (!HasAuthority()) return;
+
+    if (ProjectileComp)
+    {
+        ProjectileComp->Velocity = Direction.GetSafeNormal() * Speed;
+    }
+}
+
+void AStoneProjectile::OnOverlap(
     UPrimitiveComponent* OverlappedComp,
     AActor* OtherActor,
     UPrimitiveComponent* OtherComp,
@@ -58,24 +65,9 @@ void AStoneProjectile::OnProjectileOverlap(
 
     if (OtherActor->ActorHasTag("Player"))
     {
-        /*if (GEngine)
-        {
-            const int32 bHasTag = (OtherActor ? (OtherActor->ActorHasTag(TEXT("Player")) ? 1 : 0) : -1);
-            const int32 bAuth = (HasAuthority() ? 1 : 0);
-
-            const FString Msg = FString::Printf(
-                TEXT("Overlap %s Tag=%d HasAuth=%d"),
-                *GetNameSafe(OtherActor),
-                bHasTag,
-                bAuth
-            );
-
-            GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Emerald, Msg);
-        }*/
         FDamageEvent DamageEvent;
         OtherActor->TakeDamage(Damage, DamageEvent, nullptr, this);
     }
 
     Destroy();
 }
-

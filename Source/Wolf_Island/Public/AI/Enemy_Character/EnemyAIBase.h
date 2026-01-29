@@ -25,6 +25,7 @@ class UAttackCollisionComponent;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHitResponse); // 맞을 때 피격 모션 바인딩용
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnThrowEnd); // 투척 공격 끝났음을 알리는 용도
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAttackEnd); // 기본 공격 끝났음을 알리는 용도
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHowlingEnd); // 하울링 끝났음을 알리는 용도
 
 UENUM(BlueprintType) // 상태 구분
 enum class EEnemyForm : uint8
@@ -49,6 +50,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Delegate")
 	FOnAttackEnd OnAttackEnd;
+
+	UPROPERTY(BlueprintAssignable, Category = "Delegate")
+	FOnHowlingEnd OnHowlingEnd;
 
 protected:
 	virtual void BeginPlay() override;
@@ -83,18 +87,25 @@ public:
 	TObjectPtr<AActor> CachedSkyManager = nullptr;
 
 	// 컴포넌트
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Stats")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Comp")
 	class UStatusComponent* StatusComponent; 
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Attack")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Comp")
 	UAttackCollisionComponent* AttackCollisionComponent;
 
 	//상태 변환 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Stats")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, ReplicatedUsing = OnRep_EnemyForm, Category = "Stats")
 	EEnemyForm EnemyForm;
 
-	UFUNCTION(BlueprintCallable)
-	void ChangeForm(EEnemyForm Form);
+	UFUNCTION()
+	void OnRep_EnemyForm();
+
+	UFUNCTION(BlueprintCallable, Server, Reliable)
+	void ServerChangeForm(EEnemyForm Form);
+
+	void ApplyFormVisuals();
+
+	void ApplySpeedByState(EEnemyState State);
 
 	UPROPERTY(EditAnywhere, Category = "Animation")
 	UAnimMontage* ChangeFormMontage;
@@ -158,6 +169,8 @@ public:
 	virtual void Die_Implementation() override;
 
 	virtual void NormalAttack_Implementation() override;
+
+	virtual void Howling_Implementation() override;
 	// 몽타주 제어
 	UFUNCTION(BlueprintCallable, Category = "Animation")
 	void StopAllMontages();
@@ -170,6 +183,9 @@ public:
 
 	UFUNCTION()
 	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	UFUNCTION()
+	void OnHowlingMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 	// 타격
 	UFUNCTION()
@@ -229,18 +245,26 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Attack")
 	TObjectPtr<USoundBase> AttackSound;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Howling")
+	TObjectPtr<UAnimMontage> HowlingMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Howling")
+	TObjectPtr<USoundBase> HowlingSound;
+
+
 	UFUNCTION()
 	void OnAttackHit(const FHitResult& HitResult);
 
-	virtual float TakeDamage(
-		float DamageAmount,
-		FDamageEvent const& DamageEvent,
-		AController* EventInstigator,
-		AActor* DamageCauser
-	) override;
+	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_PlayThrowMontage();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayNormalAttackMontage();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayHowlingMontage();
 
 	UFUNCTION()
 	void OnRep_IsDead();

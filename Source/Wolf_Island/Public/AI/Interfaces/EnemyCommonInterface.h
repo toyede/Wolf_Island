@@ -31,4 +31,7 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void NormalAttack();
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void Howling();
 };

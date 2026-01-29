@@ -26,7 +26,11 @@ struct WOLF_ISLAND_API FAIScentEvent
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TWeakObjectPtr<AActor> Instigator;
 
+    UPROPERTY()
     float Age;
+
+    UPROPERTY()
+    int32 Sequence = 0;
 
     FAIScentEvent()
         : Location(FVector::ZeroVector)
@@ -74,4 +78,12 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, Category = "Sense")
     float ScentEventMaxAge;
+    
+    float LastSenseUpdateTime = -1.f;
+
+protected:
+    int32 GlobalScentSequence = 0;
+
+    // ListenerID -> (Instigator -> LastProcessedSequence)
+    TMap<FPerceptionListenerID, TMap<TWeakObjectPtr<AActor>, int32>> LastProcessedSequenceByListener;
 };

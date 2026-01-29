@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "AI/AIControllers/EnemyAIcontrollerbase.h"
 #include "Perception/AIPerceptionTypes.h"
+#include "Net/UnrealNetwork.h"
 #include "EnemyAIController.generated.h"
 
 class UAISenseConfig_Sight;
@@ -39,12 +40,17 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "AI|Blackboard")
 	FName PointOfInterestKey = TEXT("PointOfInterest");
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	// Current State
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|State")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_State, Category = "AI|State")
 	EEnemyState EnemyState;
 
 	UFUNCTION(BlueprintCallable, Category = "AI|State")
 	void SetEnemyState(EEnemyState NewState);
+
+	UFUNCTION()
+	void OnRep_State();
 
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
@@ -91,4 +97,7 @@ public:
 	// Patrol
 	UFUNCTION(BlueprintCallable, Category = "AI|Patrol")
 	void MoveToNextRoute();
+
+private:
+	FTimerHandle LineOfSightTimer;
 };

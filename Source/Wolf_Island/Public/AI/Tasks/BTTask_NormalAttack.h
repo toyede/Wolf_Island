@@ -22,6 +22,7 @@ class WOLF_ISLAND_API UBTTask_NormalAttack : public UBTTaskNode
 
 	virtual EBTNodeResult::Type AbortTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 
+	UFUNCTION()
 	void OnAttackFinished();
 
 private:

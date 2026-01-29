@@ -8,7 +8,6 @@
 UBTTask_NormalAttack::UBTTask_NormalAttack()
 {
 	NodeName = TEXT("Normal Attack");
-	
 	bCreateNodeInstance = true;
 }
 
