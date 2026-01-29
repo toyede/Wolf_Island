@@ -15,23 +15,21 @@ void UInventoryToolTip::NativeConstruct()
 
 	if (InventorySlotBeingHovered)
 	{
-		UItemBase* Item = InventorySlotBeingHovered->GetItemReference();
-		
-		if (Item)
+		if (ItemData)
 		{
-			ItemName->SetText(Item->TextData.Name);
+			ItemName->SetText(ItemData->TextData.Name);
 
-			ItemDescription->SetText(Item->TextData.Description);
+			ItemDescription->SetText(ItemData->TextData.Description);
 
-			ItemWeight->SetText(FText::AsNumber(Item->NumericData.Weight));
+			ItemWeight->SetText(FText::AsNumber(ItemData->NumericData.Weight));
 		}
 	} 
 	else
 	{
-		ItemName->SetText(ItemData.TextData.Name);
+		ItemName->SetText(ItemData->TextData.Name);
 
-		ItemDescription->SetText(ItemData.TextData.Description);
+		ItemDescription->SetText(ItemData->TextData.Description);
 
-		ItemWeight->SetText(FText::AsNumber(ItemData.NumericData.Weight));
+		ItemWeight->SetText(FText::AsNumber(ItemData->NumericData.Weight));
 	}
 }

@@ -8,18 +8,20 @@
 #include "MaterialHLSLTree.h"
 #include "Engine/DamageEvents.h"
 #include "Blueprint/UserWidget.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Components/StatusComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/InstancedStaticMeshComponent.h"
+#include "Components/WeaponComponent.h"
 #include "Item/Tree.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InventoryComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Games/MainHUD.h"
 #include "Interaction/InteractionInterface.h"
-#include "Item/ItemBase.h"
 #include "Item/Pickup.h"
+#include "Net/UnrealNetwork.h"
 #include "Widgets/PlayerHUD.h"
 
 
@@ -31,107 +33,44 @@ AMainPlayer::AMainPlayer()
 
 	StatusComponent = CreateDefaultSubobject<UStatusComponent>("StatusComponent");
 
-	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>("FirstPersonCamera");
-
 	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>("InventoryComponent");
+
+	WeaponComponent = CreateDefaultSubobject<UWeaponComponent>("WeaponComponent");
 
 	//손에 든 아이템 메쉬
 	ItemMesh = CreateDefaultSubobject<UStaticMeshComponent>("Item");
 	//손 소켓에 부-착!
 	ItemMesh->SetupAttachment(GetMesh(), "hand_r");
+	ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	
 	GetMesh()->SetRelativeTransform(
 		FTransform(
 			FRotator(0, -90, 0),
 			FVector(0,0,-90)
 			));
+	/**/
+	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>("FirstPersonCamera");
 	
 	//메시에 카메라 붙이기
 	//FirstPersonCamera->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, "headSocket");
+	FirstPersonCamera->SetupAttachment(GetMesh(), "headSocket");
 	//컨트롤러 마우스 위치 입력을 카메라 입력에 반영
-	FirstPersonCamera->SetupAttachment(GetMesh());
 	FirstPersonCamera->bUsePawnControlRotation = true;
 	
 	FirstPersonCamera->SetRelativeTransform(
 		FTransform(
-			FRotator(-90, 90, 90),
+			FRotator(0, 90, -90),
 			FVector(0,10,0)
 			));
-
+	
+	
 	//인벤토리 초기화
 	InventoryComponent->SetSlotsCapacity(30);
 	InventoryComponent->SetWeightCapacity(StatusComponent->MaxWeight);
-}
 
-void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float DamageAmount)
-{
-	// 1. 맞은 컴포넌트가 유효한지 먼저 확인
-	UPrimitiveComponent* HitComponent = HitResult.GetComponent();
-	if (!HitComponent) return;
+	GetCharacterMovement()->SetIsReplicated(true);
+	GetCharacterMovement()->MaxWalkSpeed = 300.0f;
 
-	// 2. 폴리지(InstancedStaticMeshComponent)인지 변환 시도
-	UInstancedStaticMeshComponent* ISMC = Cast<UInstancedStaticMeshComponent>(HitComponent);
-
-	// [중요] 폴리지가 아니면(nullptr이면) 여기서 즉시 함수 종료! (땅바닥 등을 쳤을 때 크래시 방지)
-	if (!ISMC) 
-	{
-		// 디버깅용 메시지 (필요 없으면 주석 처리)
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("맞은 건 폴리지가 아님"));
-		return; 
-	}
-
-	// 3. 어떤 나무(StaticMesh)인지 확인
-	UStaticMesh* HitMesh = ISMC->GetStaticMesh();
-
-	// 4. 맵(목록)에 등록된 나무인지 확인
-	// HitMesh가 없거나, 맵에 등록되지 않은 풀/돌멩이라면 무시
-	if (!HitMesh || !FoliageToActorMap.Contains(HitMesh)) 
-	{
-		return;
-	}
-
-	// 5. 인덱스 확인 (가끔 -1이 들어오는 경우 방지)
-	int32 InstanceIndex = HitResult.Item;
-	if (InstanceIndex == INDEX_NONE) return;
-
-	// --- 검증 끝, 변환 시작 ---
-
-	TSubclassOf<ATree> TargetActorClass = FoliageToActorMap[HitMesh];
-	if (!TargetActorClass) return;
-
-	FTransform InstanceTransform;
-	// 월드 좌표 기준으로 트랜스폼 가져오기
-	ISMC->GetInstanceTransform(InstanceIndex, InstanceTransform, true);
-
-	// 폴리지 삭제
-	ISMC->RemoveInstance(InstanceIndex);
-
-	// 진짜 액터 소환
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-	ATree* NewTree = GetWorld()->SpawnActor<ATree>(TargetActorClass, InstanceTransform, SpawnParams);
-
-	// 데미지 전달
-	if (NewTree)
-	{
-		FDamageEvent DamageEvent;
-		NewTree->TakeDamage(DamageAmount, DamageEvent, GetController(), this);
-        
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, TEXT("나무 변환 성공!"));
-	}
-}
-
-void AMainPlayer::ProcessAttackHit(const FHitResult& HitResult, float DamageAmount)
-{
-	AActor* HitActor = HitResult.GetActor();
-
-	if (HitActor)
-	{
-		UGameplayStatics::ApplyDamage(HitActor, DamageAmount, GetController(), this, UDamageType::StaticClass());
-	}
-
-	TryConvertFoliageToActor(HitResult, DamageAmount);
 }
 
 // Called when the game starts or when spawned
@@ -142,15 +81,18 @@ void AMainPlayer::BeginPlay()
 	InteractableData.InteractionDuration = InteractionDuration;
 	
 	if(StatusComponent){
-		//상태 델리게이트 바인딩
-		StatusComponent->OnStaminaZero.AddDynamic(this, &AMainPlayer::StopRun);
+		if (HasAuthority())
+		{
+			//상태 델리게이트 바인딩
+			StatusComponent->OnStaminaZero.AddDynamic(this, &AMainPlayer::Request_StopRun);
 
-		//죽음 바인딩
-		StatusComponent->OnHPZero.AddDynamic(this, &AMainPlayer::OnDeath);
+			//죽음 바인딩
+			StatusComponent->OnHPZero.AddDynamic(this, &AMainPlayer::OnDeath);
 
-		//배고픔, 수분 감소 시작
-		StatusComponent->StartHunger();
-		StatusComponent->StartHydration();
+			//배고픔, 수분 감소 시작
+			StatusComponent->StartHunger();
+			StatusComponent->StartHydration();
+		}
 	}
 
 	if (InventoryComponent)
@@ -159,10 +101,19 @@ void AMainPlayer::BeginPlay()
 		InventoryComponent->OnInventoryUpdated.AddUObject(this, &AMainPlayer::RefreshHand);
 	}
 
+	if (WeaponComponent)
+	{
+		RefreshHand();
+	}
+
 	//HUD = Cast<AMainHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
 
-	HUD = CreateWidget<UPlayerHUD>(GetWorld(), HUDClass);
-	HUD->AddToViewport();
+	//플레이어 본인만 HUD 생성.
+	if (IsLocallyControlled())
+	{
+		HUD = CreateWidget<UPlayerHUD>(GetWorld(), HUDClass);
+		HUD->AddToViewport();
+	}
 }
 
 // Called every frame
@@ -174,7 +125,6 @@ void AMainPlayer::Tick(float DeltaTime)
 	{
 		CheckInteraction();
 	}
-
 }
 
 // Called to bind functionality to input
@@ -187,43 +137,63 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		// 점프
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &AMainPlayer::StartJump);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &AMainPlayer::StopJumping);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started,
+			this, &AMainPlayer::StartJump);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed,
+			this, &AMainPlayer::StopJumping);
 
 		// 이동
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AMainPlayer::Move);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered,
+			this, &AMainPlayer::Move);
 		
 		// 시야
-		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AMainPlayer::Look);
+		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered,
+			this, &AMainPlayer::Look);
 
 		//달리기
-		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Triggered, this, &AMainPlayer::Run);
-		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Completed, this, &AMainPlayer::StopRun);
+		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Triggered,
+			this, &AMainPlayer::Request_Run);
+		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Completed,
+			this, &AMainPlayer::Request_StopRun);
 
 		//웅크리기
-		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &AMainPlayer::ToggleCrouch);
+		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started,
+			this, &AMainPlayer::Request_ToggleCrouch);
 
 		//슬라이딩
-		EnhancedInputComponent->BindAction(SlideAction, ETriggerEvent::Started, this, &AMainPlayer::Sliding);
+		EnhancedInputComponent->BindAction(SlideAction, ETriggerEvent::Started,
+			this, &AMainPlayer::Sliding);
 		
 		//인터랙션
-		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AMainPlayer::BeginInteract);
-		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Completed, this, &AMainPlayer::EndInteract);
+		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started,
+			this, &AMainPlayer::BeginInteract);
+		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Completed,
+			this, &AMainPlayer::EndInteract);
 
 		//인벤토리
-		EnhancedInputComponent->BindAction(InventoryAction, ETriggerEvent::Started, this, &AMainPlayer::ToggleInventory);
+		EnhancedInputComponent->BindAction(InventoryAction, ETriggerEvent::Started,
+			this, &AMainPlayer::ToggleInventory);
 
 		//아이템 사용 - 좌클릭 꾹 누르기
-		EnhancedInputComponent->BindAction(UseItemAction, ETriggerEvent::Started, this, &AMainPlayer::StartUseItem);
-		EnhancedInputComponent->BindAction(UseItemAction, ETriggerEvent::Completed, this, &AMainPlayer::StopUseItem);
+		EnhancedInputComponent->BindAction(UseItemAction, ETriggerEvent::Started,
+			this, &AMainPlayer::Request_StartUseItem);
+		EnhancedInputComponent->BindAction(UseItemAction, ETriggerEvent::Completed,
+			this, &AMainPlayer::Request_StopUseItem);
 
 		//핫바 숫자키
-		EnhancedInputComponent->BindAction(HotBarAction, ETriggerEvent::Started, this, &AMainPlayer::HandleHotBar);
+		EnhancedInputComponent->BindAction(HotBarAction, ETriggerEvent::Triggered,
+			this, &AMainPlayer::HandleHotBar); 
 		//핫바 마우스 휠
-		EnhancedInputComponent->BindAction(HotBarWheelAction, ETriggerEvent::Triggered, this, &AMainPlayer::HandleHotBarWithWheel);
+		EnhancedInputComponent->BindAction(HotBarWheelAction, ETriggerEvent::Triggered,
+			this, &AMainPlayer::HandleHotBarWithWheel);
 
 		//공격
-		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &AMainPlayer::Attack);
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started,
+			this, &AMainPlayer::Request_Attack);
+		
+		//아이템 버리기
+		EnhancedInputComponent->BindAction(DropItemAction, ETriggerEvent::Started,
+			this, &AMainPlayer::DropItemOnHotBar);
 	}
 }
 
@@ -262,6 +232,11 @@ void AMainPlayer::StartJump()
 	StatusComponent->StopRecoverStamina();
 	//점프 스태미나 소모
 	StatusComponent->DecreaseStamina(JumpConsumeAmount);
+
+	if (JumpSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), JumpSound, GetActorLocation());
+	}
 	
 	Jump();
 }
@@ -347,7 +322,7 @@ void AMainPlayer::Run()
 			//스태미나 0이거나 웅크리는 중이면
 			if (StatusComponent->CurrentStamina <= 0 || IsCrouching) return;
 	
-			GetCharacterMovement()->MaxWalkSpeed = 600.0f;
+			GetCharacterMovement()->MaxWalkSpeed = 750.0f;
 			StatusComponent->StopStamina();
 
 			//이동 속도가 0 초과일 때만 스태미나 감소
@@ -389,23 +364,6 @@ void AMainPlayer::StopRun()
 	}
 }
 
-void AMainPlayer::ToggleCrouch_Implementation()
-{
-	//웅크리는 중이면
-	if (IsCrouching)
-	{
-		UnCrouch();
-		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
-		IsCrouching = false;
-	} else
-	{
-		Crouch();
-		GetCharacterMovement()->MaxWalkSpeed = 150.0f;
-		IsCrouching = true;
-	}
-}
-
-/*
 void AMainPlayer::ToggleCrouch()
 {
 	//웅크리는 중이면
@@ -420,7 +378,7 @@ void AMainPlayer::ToggleCrouch()
 		GetCharacterMovement()->MaxWalkSpeed = 150.0f;
 		IsCrouching = true;
 	}
-}*/
+}
 
 void AMainPlayer::ToggleInventory()
 {
@@ -449,20 +407,9 @@ void AMainPlayer::Sliding()
 		AnimInst->Montage_Play(SlideMontage);
 		AnimInst->OnMontageEnded.AddDynamic(this, &AMainPlayer::EndSliding);
 	}
-	
-	//달리기 중이고 슬라이딩을 하지 않는 경우에만 가능
-	/*if (IsRunning&&!IsSliding)
-	{
-		StatusComponent->DecreaseStamina(SlideConsumeAmount);
-		IsSliding = true;
-		GetCapsuleComponent()->SetCapsuleHalfHeight(30);
-		PlayAnimMontage(SlideMontage);
-		GetCapsuleComponent()->SetCapsuleHalfHeight(88);
-		IsSliding = false;
-	}*/
 }
 
-//-31
+// -31 <-무슨 값이더라
 void AMainPlayer::EndSliding(UAnimMontage* Montage, bool bInterrupted)
 {
 	GetMesh()->SetRelativeLocation(FVector(0, 0, -90.0f));
@@ -470,23 +417,32 @@ void AMainPlayer::EndSliding(UAnimMontage* Montage, bool bInterrupted)
 	IsSliding = false;
 }
 
-void AMainPlayer::UseItem(UItemBase* Item)
+//TODO: 아이템 사용 로직 멀티로 전환하기
+void AMainPlayer::UseItem(int32 SlotIndex)
 {
-	UE_LOG(LogTemp, Warning, TEXT("USE ITEM EXECUTED"))
+	UE_LOG(LogTemp, Warning, TEXT("USE ITEM EXECUTED"));
+	
 	if (InventoryComponent)
 	{
-		if (Item)
+		FItemData* ItemData = InventoryComponent->GetItemDataAtIndex(SlotIndex);
+		
+		if (ItemData->IsNotEmpty())
 		{
-			UE_LOG(LogTemp, Warning, TEXT("TRY TO USE THIS : [ %s ]"), *Item->TextData.Name.ToString());
+			UE_LOG(LogTemp, Warning, TEXT("TRY TO USE THIS : [ %s ]"), *ItemData->TextData.Name.ToString());
 			
-			if (StatusComponent && Item->Type == EItemType::FOOD)
+			if (StatusComponent && ItemData->Type == EItemType::FOOD)
 			{
-				StatusComponent->ApplyItem(Item);
-				InventoryComponent->RemoveAmountOfItem(Item, 1);
+				if (ItemData->Type == EItemType::FOOD && EatingSound)
+				{
+					Multi_PlaySound(EatingSound, GetActorLocation());
+				}
+				StatusComponent->ApplyItem(*ItemData);
+				//TODO: 서버 호출 함수로 변경
+				InventoryComponent->Request_RemoveItemAmountAtSlot(SlotIndex, 1);
 			}
 		} else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("NO ITEM IN HOTBAR SLOT"))
+			UE_LOG(LogTemp, Warning, TEXT("NO ITEM IN HOTBAR SLOT"));
 		}
 	}
 }
@@ -494,36 +450,43 @@ void AMainPlayer::UseItem(UItemBase* Item)
 //타이머 시간을 0으로 하면 실행이 안되는 사실 발견...
 void AMainPlayer::StartUseItem()
 {
-	if (UItemBase* TargetItem = InventoryComponent->GetItemAtIndex(HotBarIndex))
+	if (!IsUsingItem)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ITEM IS VALID AND START USE ITEM"))
+		IsUsingItem = true;
+		
+		FItemBaseData TargetItem = InventoryComponent->GetItemAtIndex(HotBarIndex);
+		int32 TargetIndex = HotBarIndex;
+		if (!TargetItem.IsValid()) return;
+	
+		//사용 가능한 아이템이 아니면 암것두 안하긔.
+		if (!InventoryComponent->IsUsableItem(TargetItem)) return;
+	
 		if (!GetWorld()->GetTimerManager().IsTimerActive(ItemUseTimer))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("TIMER EXECUTED"))
-			UE_LOG(LogTemp, Warning, TEXT("TARGET ITEM : [ %s ] : DURATION : [ %f ]"), *TargetItem->TextData.Name.ToString(), TargetItem->NumericData.InteractionDuration);
+			FItemData* ItemData = InventoryComponent->GetItemData(TargetItem);
+			//사용까지 꾹 눌러야 하는 시간
+			float UseDuration = ItemData->NumericData.UseDuration;
+		
 			GetWorld()->GetTimerManager().SetTimer(
 			ItemUseTimer,
-			[this, TargetItem]()
+			[this, TargetIndex]()
 			{
-				UseItem(TargetItem);
+				UseItem(HotBarIndex);
 			},
-			1,
+			UseDuration,
 			false
 			);
-		}else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("TIMER NOT EXECUTED"))
 		}
-	} else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("NO ITEM IN HOTBAR SLOT [%d]"), HotBarIndex+1);
 	}
 }
 
 void AMainPlayer::StopUseItem()
 {
-	UE_LOG(LogTemp, Warning, TEXT("USE ITEM TIMER CANCELED"))
-	GetWorld()->GetTimerManager().ClearTimer(ItemUseTimer);
+	if (IsUsingItem)
+	{
+		GetWorld()->GetTimerManager().ClearTimer(ItemUseTimer);
+		IsUsingItem = false;
+	}
 }
 
 void AMainPlayer::HandleHotBar(const FInputActionValue& Value)
@@ -539,15 +502,12 @@ void AMainPlayer::HandleHotBar(const FInputActionValue& Value)
 			{
 				if (PlayerController->IsInputKeyDown(Key))
 				{
-					if (Key == EKeys::One)      HotBarIndex = 0;
-					else if (Key == EKeys::Two) HotBarIndex = 1;
-					else if (Key == EKeys::Three) HotBarIndex = 2;
-					else if (Key == EKeys::Four) HotBarIndex = 3;
-					else if (Key == EKeys::Five) HotBarIndex = 4;
-					else if (Key == EKeys::Six)  HotBarIndex = 5;
-
-					HUD->RefreshHotBar();
-					RefreshHand();
+					if (Key == EKeys::One)      Request_SetHotbarIndex(0);
+					else if (Key == EKeys::Two) Request_SetHotbarIndex(1);
+					else if (Key == EKeys::Three) Request_SetHotbarIndex(2);
+					else if (Key == EKeys::Four) Request_SetHotbarIndex(3);
+					else if (Key == EKeys::Five) Request_SetHotbarIndex(4);
+					else if (Key == EKeys::Six)  Request_SetHotbarIndex(5);
 				}
 			}
 		}
@@ -556,17 +516,20 @@ void AMainPlayer::HandleHotBar(const FInputActionValue& Value)
 
 void AMainPlayer::HandleHotBarWithWheel(const FInputActionValue& Value)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Wheel Value : %f"), Value.Get<float>());
 	if (Value.Get<float>() > 0)
 	{
-		HotBarIndex = (HotBarIndex + 1) % 6;
+		Request_SetHotbarIndex((HotBarIndex + 1) % 6);
 	} else
 	{
-		HotBarIndex = (HotBarIndex - 1 + 6) % 6;
+		Request_SetHotbarIndex((HotBarIndex - 1 + 6) % 6);
 	}
+}
 
-	HUD->RefreshHotBar();
-	RefreshHand();
+void AMainPlayer::SetHotbarIndex(int32 Index)
+{
+	HotBarIndex = Index;
+	FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
+	WeaponComponent->CheckWeapon(Item);
 }
 
 void AMainPlayer::OnDeath_Implementation()
@@ -577,31 +540,39 @@ void AMainPlayer::OnDeath_Implementation()
 //손에 든 아이템 업데이트 함수
 void AMainPlayer::RefreshHand()
 {
+	//핫바 인덱스의 아이템 정보 가져오기.
+	FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
+	
 	//해당 인덱스 인벤토리 칸에 아이템이 있으면 그 아이템 들기.
-	if (UItemBase* Item = InventoryComponent->GetItemAtIndex(HotBarIndex))
-	{
+	if (Item.IsValid())
+	{	
+		//데이터 베이스에서 아이템 데이터 가져오기
+		FItemData* ItemData = InventoryComponent->GetItemData(Item);
+		
 		IsHoldingItem = true;
-		ItemMesh->SetStaticMesh(Item->AssetData.Mesh);
+		ItemMesh->SetStaticMesh(ItemData->AssetData.Mesh);
 		ItemMesh->AttachToComponent(
 		GetMesh(),
 		FAttachmentTransformRules::KeepRelativeTransform,
 		TEXT("hand_r"));
+		ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 		
 		FTransform SocketTransform = ItemMesh->GetSocketTransform(TEXT("HandSocket"), RTS_Component);
 		ItemMesh->SetRelativeTransform(SocketTransform.Inverse());
 
 		//ItemMesh->SetRelativeScale3D(FVector(0.1f, 0.1f, 0.1f));
+		WeaponComponent->CheckWeapon(Item);
 	} else
 	{
+		WeaponComponent->CheckWeapon(Item);
 		IsHoldingItem = false;
 		ItemMesh->SetStaticMesh(nullptr);
 	}
-	
 }
 
-void AMainPlayer::Attack_Implementation()
+void AMainPlayer::Attack()
 {
-	
+	WeaponComponent->Request_UseWeapon();
 }
 
 void AMainPlayer::CheckInteraction()
@@ -647,6 +618,9 @@ void AMainPlayer::CheckInteraction()
 				}
 			}
 		}
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("NO CAMERA"));
 	}
 	NotFoundInteractable();
 }
@@ -657,28 +631,35 @@ void AMainPlayer::FoundInteractable(AActor* Interactable)
 	{
 		EndInteract();
 	}
-
+	
 	//현재 인터랙션 액터 데이터가 있으면
 	if (InteractionData.CurrentInteractable)
 	{	
 		TargetInteractionInterface = InteractionData.CurrentInteractable;
 		TargetInteractionInterface->EndFocus();
 	}
-
+	
 	//인터랙션 액터 데이터 지정
 	InteractionData.CurrentInteractable = Interactable;
 	TargetInteractionInterface = Interactable;
-
+	
 	//인터랙터블 액터의 상태가 인터랙션 가능한 상태가 아니면
 	if (!TargetInteractionInterface->InteractableData.CanInteract)
 	{
-		//여기 인터랙션 UI 해제 코드 추가 예정
+		//TODO:여기 인터랙션 UI 해제 코드 추가 예정
+		if (IsLocallyControlled())
+		{
+			HUD->DisplayDefault();
+		}
 		TargetInteractionInterface->EndFocus();
 		return;
 	}
 	
-	//여기 인터랙션 UI 업데이트 코드 추가 예정
-
+	//TODO:여기 인터랙션 UI 업데이트 코드 추가 예정
+	if (IsLocallyControlled())
+	{
+		HUD->DisplayInteractable();
+	}
 	TargetInteractionInterface->BeginFocus();
 }
 
@@ -701,8 +682,12 @@ void AMainPlayer::NotFoundInteractable()
 			TargetInteractionInterface->EndFocus();
 		}
 
-		//여기 인터랙션 UI 업데이트 코드 추가 예정
-
+		//TODO:여기 인터랙션 UI 업데이트 코드 추가 예정
+		if (IsLocallyControlled())
+		{
+			HUD->DisplayDefault();
+		}
+		
 		//인터랙션 액터 데이터 비우기
 		InteractionData.CurrentInteractable = nullptr;
 		TargetInteractionInterface = nullptr;
@@ -723,9 +708,10 @@ void AMainPlayer::BeginInteract()
 		//인터랙션 액터가 유효하면
 		if (IsValid(TargetInteractionInterface.GetObject()))
 		{
+			//인터랙션 타겟 액터
+			AActor* Target = Cast<AActor>(TargetInteractionInterface.GetObject());
 			//인터랙션 액터의 인터랙션 시작 함수 실행
 			TargetInteractionInterface->BeginInteract();
-
 			//즉시 인터랙션이 가능하면 (꾹 누르는 인터랙션이 아니면)
 			if (TargetInteractionInterface->InteractableData.InteractionDuration == 0.0f)
 			{
@@ -733,16 +719,20 @@ void AMainPlayer::BeginInteract()
 				if (TargetInteractionInterface->InteractableData.CanInteract)
 				{
 					//인터랙션 실행
-					Interaction();
+					Interaction(Target);
 				}
 			}
 			//꾹 누르는 인터랙션이면
 			else
 			{
+				HUD->DisplayInteraction();
 				//인터랙션 실행 시간 만큼 대기 후 인터랙션 실행
 				GetWorldTimerManager().SetTimer(InteractionTimer,
-					this,
-					&AMainPlayer::Interaction,
+					[this, Target]()
+					{
+						//인터랙션 실행
+						Interaction(Target);
+					},
 					TargetInteractionInterface->InteractableData.InteractionDuration,
 					false);
 			}
@@ -753,7 +743,7 @@ void AMainPlayer::BeginInteract()
 void AMainPlayer::EndInteract()
 {
 	IInteractionInterface::EndInteract();
-
+	HUD->HideInteraction();
 	//인터랙션 타이머 클리어
 	GetWorldTimerManager().ClearTimer(InteractionTimer);
 
@@ -765,14 +755,21 @@ void AMainPlayer::EndInteract()
 	}
 }
 
-void AMainPlayer::Interaction()
+
+void AMainPlayer::Interaction_Implementation(AActor* Target)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[%hs] SERVER INTERACTION EXECUTED"), HasAuthority()?"SERVER":"CLIENT")
 	//인터랙션 타이머 클리어
 	GetWorldTimerManager().ClearTimer(InteractionTimer);
+	if (IsLocallyControlled())
+	{
+		HUD->HideInteraction();
+	}
 	
 	//인터랙션 액터가 유효한 지 체크
-	if (IsValid(TargetInteractionInterface.GetObject()))
+	if (IsValid(Target))
 	{
+		TargetInteractionInterface = Target;	
 		//인터랙션 액터가 인터랙션 가능한 상태이면
 		if (TargetInteractionInterface->InteractableData.CanInteract)
 		{
@@ -782,11 +779,12 @@ void AMainPlayer::Interaction()
 	}
 }
 
-void AMainPlayer::DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool IsWhole)
+void AMainPlayer::DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop, bool IsWhole)
 {
-	UInventoryComponent* OriginInventory =  ItemToDrop->OwningInventory;
+	FItemBaseData ItemData = SourceInventory->GetInventory()[SourceIndex].ItemData;
 	
-	if (OriginInventory->FindMatchingItem(ItemToDrop))
+	//아이템 데이터가 있으면
+	if (ItemData.IsValid())
 	{
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.Owner = this;
@@ -796,18 +794,27 @@ void AMainPlayer::DropItem(UItemBase* ItemToDrop, const int32 AmountToDrop, bool
 		const FVector SpawnLocation(GetActorLocation() + (GetActorForwardVector() * 50.0f));
 		const FTransform SpawnTransform(GetActorRotation(), SpawnLocation);
 		
-		const int32 RemovedAmount = OriginInventory->RemoveAmountOfItem(ItemToDrop, AmountToDrop);
+		if (IsWhole)
+		{
+			SourceInventory->Request_RemoveItemAmountAtSlot(SourceIndex, AmountToDrop);
+			SourceInventory->InventoryChanged();
+		}
 		
 		APickup* Pickup = GetWorld()->SpawnActor<APickup>(APickup::StaticClass(), SpawnTransform, SpawnParams);
+		Pickup->InitializeDrop(ItemData, AmountToDrop);
+
+		if (ItemGettingSound)
+		{
+			Client_PlaySound2D(ItemGettingSound);
+		}
 		
-		Pickup->InitializeDrop(ItemToDrop, RemovedAmount);
 	} else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("CAN'T FIND MATCHED ITEM."))
 	}
 }
 
-UItemBase* AMainPlayer::GetHoldingItemReference()
+FItemBaseData AMainPlayer::GetHoldingItemReference()
 {
 	if (InventoryComponent)
 	{
@@ -817,10 +824,412 @@ UItemBase* AMainPlayer::GetHoldingItemReference()
 		}
 	}
 	
-	return nullptr;
+	return FItemBaseData();
 }
+
+EItemType AMainPlayer::GetHoldingItemType()
+{
+	FItemBaseData HoldingItem = GetHoldingItemReference();
+	
+	if (HoldingItem.IsValid())
+	{
+		FItemData* ItemData = InventoryComponent->GetItemData(HoldingItem);
+		
+		return ItemData->Type;
+	}
+	
+	return EItemType::MATERIAL;
+}
+
+void AMainPlayer::WeaponTrace()
+{
+	//기본적으론 주먹 위치
+	FVector3d StartPos = GetMesh()->GetSocketLocation(FName("hand_r"));
+	FVector3d EndPos = GetMesh()->GetSocketLocation(FName("hand_r"));
+
+	//무기를 장착 시 무기별 공격 범위로 설정
+	if (ItemMesh)
+	{
+		StartPos = ItemMesh->GetSocketLocation(FName("HitBoxStart"));
+		EndPos = ItemMesh->GetSocketLocation(FName("HitBoxEnd"));
+	}
+
+	//트레이스 파라미터 설정
+	ETraceTypeQuery TraceTypeQuery = ETraceTypeQuery(ECC_Pawn);
+	TArray<AActor*> IgnoreActors;
+	IgnoreActors.Add(this);
+	FHitResult Hit;
+
+	//스피어 트레이스 실행
+	if (UKismetSystemLibrary::SphereTraceSingle(
+		GetWorld(),
+		StartPos,
+		EndPos,
+		5.0f,
+		TraceTypeQuery,
+		true,
+		IgnoreActors,
+		EDrawDebugTrace::None,
+		//DrawDebugTrace::ForDuration,
+		Hit,
+		true))
+	{
+		//맞은 액터
+		AActor* HitActor = Hit.GetActor();
+		FItemBaseData HoldingItem = GetHoldingItemReference();
+
+		//기본 대미지
+		float Damage = 10.0f;
+
+		//무기 장착 시 무기 대미지로 설정
+		if (HoldingItem.IsValid())
+		{
+			FItemData* ItemData = InventoryComponent->GetItemData(HoldingItem);
+			Damage = ItemData->NumericData.Damage;
+		}
+
+		//최초로 맞고 또 맞은 액터면 무시
+		if (DamagedActors.Contains(HitActor)) return;
+
+		//최초로 맞은 액터면 맞은 액터 배열에 추가
+		DamagedActors.Add(HitActor);
+		UE_LOG(LogTemp, Warning, TEXT("Hit Actor: %s"), *HitActor->GetName());
+
+		//대미지 적용
+		UGameplayStatics::ApplyDamage(
+			HitActor,
+			Damage,
+			GetController(),
+			this,
+			UDamageType::StaticClass());
+	}
+}
+
+//공격 트레이스 시작 함수
+void AMainPlayer::StartWeaponAttack()
+{
+	//클라이언트 호출이면 유기
+	if (!HasAuthority()) return;
+	
+	//서버 실행일 때만 트레이스 시작
+	GetWorld()->GetTimerManager().SetTimer(
+		WeaponAttackTimer,
+		this,
+		&AMainPlayer::WeaponTrace,
+		GetWorld()->DeltaTimeSeconds,
+		true);
+}
+
+//공격 트레이스 종료 함수
+void AMainPlayer::EndWeaponAttack()
+{
+	//클라이언트 호출이면 유기
+	if (!HasAuthority()) return;
+	
+	//서버 실행일 때만 트레이스 종료
+	//공격 트레이스 종료
+	GetWorld()->GetTimerManager().ClearTimer(WeaponAttackTimer);
+	//맞은 액터 배열 비우기
+	DamagedActors.Empty();
+}
+
+void AMainPlayer::DropItemOnHotBar()
+{
+	FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
+	if (Item.IsValid())
+	{
+		Request_DropItem(InventoryComponent, HotBarIndex, 1, true);
+	}
+}
+
+void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float DamageAmount)
+{
+	// 1. 맞은 컴포넌트가 유효한지 먼저 확인
+	UPrimitiveComponent* HitComponent = HitResult.GetComponent();
+	if (!HitComponent) return;
+
+	// 2. 폴리지(InstancedStaticMeshComponent)인지 변환 시도
+	UInstancedStaticMeshComponent* ISMC = Cast<UInstancedStaticMeshComponent>(HitComponent);
+
+	// [중요] 폴리지가 아니면(nullptr이면) 여기서 즉시 함수 종료! (땅바닥 등을 쳤을 때 크래시 방지)
+	if (!ISMC) 
+	{
+		// 디버깅용 메시지 (필요 없으면 주석 처리)
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("맞은 건 폴리지가 아님"));
+		return; 
+	}
+
+	// 3. 어떤 나무(StaticMesh)인지 확인
+	UStaticMesh* HitMesh = ISMC->GetStaticMesh();
+
+	// 4. 맵(목록)에 등록된 나무인지 확인
+	// HitMesh가 없거나, 맵에 등록되지 않은 풀/돌멩이라면 무시
+	if (!HitMesh || !FoliageToActorMap.Contains(HitMesh)) 
+	{
+		return;
+	}
+
+	// 5. 인덱스 확인 (가끔 -1이 들어오는 경우 방지)
+	int32 InstanceIndex = HitResult.Item;
+	if (InstanceIndex == INDEX_NONE) return;
+
+	// --- 검증 끝, 변환 시작 ---
+
+	TSubclassOf<ATree> TargetActorClass = FoliageToActorMap[HitMesh];
+	if (!TargetActorClass) return;
+
+	FTransform InstanceTransform;
+	// 월드 좌표 기준으로 트랜스폼 가져오기
+	ISMC->GetInstanceTransform(InstanceIndex, InstanceTransform, true);
+
+	// 폴리지 삭제
+	ISMC->RemoveInstance(InstanceIndex);
+
+	// 진짜 액터 소환
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	ATree* NewTree = GetWorld()->SpawnActor<ATree>(TargetActorClass, InstanceTransform, SpawnParams);
+
+	// 데미지 전달
+	if (NewTree)
+	{
+		FDamageEvent DamageEvent;
+		NewTree->TakeDamage(DamageAmount, DamageEvent, GetController(), this);
+        
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, TEXT("나무 변환 성공!"));
+	}
+}
+
+void AMainPlayer::ProcessAttackHit(const FHitResult& HitResult, float DamageAmount)
+{
+	AActor* HitActor = HitResult.GetActor();
+
+	if (HitActor)
+	{
+		UGameplayStatics::ApplyDamage(HitActor, DamageAmount, GetController(), this, UDamageType::StaticClass());
+	}
+
+	TryConvertFoliageToActor(HitResult, DamageAmount);
+}
+
+//멀티플레이어 코드
 
 void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(AMainPlayer, IsRunning);
+	DOREPLIFETIME(AMainPlayer, IsCrouching);
+	DOREPLIFETIME(AMainPlayer, IsSliding);
+	DOREPLIFETIME(AMainPlayer, IsInability);
+	DOREPLIFETIME(AMainPlayer, AttackConsumeAmount);
+	DOREPLIFETIME(AMainPlayer, SlideConsumeAmount);
+	DOREPLIFETIME(AMainPlayer, IsInventoryOpen);
+	DOREPLIFETIME(AMainPlayer, IsHoldingItem);
+	DOREPLIFETIME(AMainPlayer, IsAttacking);
+	DOREPLIFETIME(AMainPlayer, HotBarIndex);
+	DOREPLIFETIME(AMainPlayer, StatusComponent);
+	DOREPLIFETIME(AMainPlayer, InventoryComponent);
+	DOREPLIFETIME(AMainPlayer, WeaponComponent);
+	DOREPLIFETIME(AMainPlayer, ItemMesh);
+}
+
+void AMainPlayer::Request_Run()
+{
+	if (HasAuthority())
+	{
+		Run();
+	} else
+	{
+		Server_Run();
+	}
+}
+
+void AMainPlayer::Request_StopRun()
+{
+	if (HasAuthority())
+	{
+		StopRun();	
+	} else
+	{
+		Server_StopRun();
+	}
+}
+
+void AMainPlayer::Request_ToggleCrouch()
+{
+	if (HasAuthority())
+	{
+		ToggleCrouch();
+	} else
+	{
+		Server_ToggleCrouch();
+	}
+}
+
+void AMainPlayer::OnRep_IsCrouching()
+{
+	if (IsCrouching)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = 150.0f;
+	} else
+	{
+		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
+	}
+}
+
+void AMainPlayer::OnRep_IsRunning()
+{
+	if (IsRunning)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = 750.0f;
+	} else
+	{
+		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
+	}
+}
+
+void AMainPlayer::Request_Attack()
+{
+	if (HasAuthority())
+	{
+		Attack();
+	} else
+	{
+		Server_Attack();
+	}
+}
+
+void AMainPlayer::Request_RefreshHand()
+{
+	if (HasAuthority())
+	{
+		RefreshHand();
+	} else
+	{
+		Server_RefreshHand();
+	}
+}
+
+void AMainPlayer::Request_SetHotbarIndex(int32 Index)
+{
+	if (HasAuthority())
+	{
+		SetHotbarIndex(Index);
+		HUD->UpdateHotBar();
+		RefreshHand();
+		FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
+		WeaponComponent->CheckWeapon(Item);
+	} else
+	{
+		Server_SetHotbarIndex(Index);
+	}
+}
+
+void AMainPlayer::Server_SetHotbarIndex_Implementation(int32 Index)
+{
+	SetHotbarIndex(Index);
+	RefreshHand();
+	FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
+	WeaponComponent->CheckWeapon(Item);
+}
+
+void AMainPlayer::OnRep_HotBarIndex()
+{
+	HUD->UpdateHotBar();
+	RefreshHand();
+}
+
+void AMainPlayer::OnRep_HandedItem()
+{
+	
+}
+
+void AMainPlayer::Request_DropItem(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop, bool IsWhole)
+{
+	if (HasAuthority())
+	{
+		DropItem(SourceInventory, SourceIndex, AmountToDrop, IsWhole);
+	} else
+	{
+		Server_DropItem(SourceInventory, SourceIndex, AmountToDrop, IsWhole);
+	}
+}
+
+void AMainPlayer::Request_StartUseItem()
+{
+	if (HasAuthority())
+	{
+		StartUseItem();
+	} else
+	{
+		Server_StartUseItem();
+	}
+}
+
+void AMainPlayer::Server_StartUseItem_Implementation()
+{
+	StartUseItem();
+}
+
+void AMainPlayer::Request_StopUseItem()
+{
+	if (HasAuthority())
+	{
+		StopUseItem();
+	} else
+	{
+		Server_StopUseItem();
+	}
+}
+
+void AMainPlayer::Multi_PlayAnimMontage_Implementation(UAnimMontage* Anim)
+{
+	PlayAnimMontage(Anim);
+}
+
+void AMainPlayer::Multi_PlaySound_Implementation(USoundBase* Sound, FVector Location)
+{
+	UGameplayStatics::PlaySoundAtLocation(GetWorld(), Sound, Location);
+}
+
+void AMainPlayer::Server_StopUseItem_Implementation()
+{
+	StopUseItem();
+}
+
+void AMainPlayer::Client_PlaySound2D_Implementation(USoundBase* Sound)
+{
+	UGameplayStatics::PlaySound2D(GetWorld(), Sound);
+}
+
+void AMainPlayer::Server_DropItem_Implementation(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop, bool IsWhole)
+{
+	DropItem(SourceInventory, SourceIndex, AmountToDrop, IsWhole);
+}
+
+void AMainPlayer::Server_ToggleCrouch_Implementation()
+{
+	ToggleCrouch();
+}
+
+void AMainPlayer::Server_Run_Implementation()
+{
+	Run();
+}
+
+void AMainPlayer::Server_StopRun_Implementation()
+{
+	StopRun();	
+}
+
+void AMainPlayer::Server_Attack_Implementation()
+{
+	Attack();
+}
+
+void AMainPlayer::Server_RefreshHand_Implementation()
+{
+	RefreshHand();
 }

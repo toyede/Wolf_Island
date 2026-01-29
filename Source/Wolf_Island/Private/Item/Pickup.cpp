@@ -2,30 +2,44 @@
 
 #include "Character/MainPlayer.h"
 #include "Components/InventoryComponent.h"
-#include "Item/ItemBase.h"
 #include "Data/ItemDataStruct.h"
-#include "Kismet/GameplayStatics.h"
-#include "Slate/SGameLayerManager.h"
-#include "Widgets/PlayerHUD.h"
+#include "Net/UnrealNetwork.h"
 
 APickup::APickup()
 {
+    bReplicates = true;
+    
     PickupMesh = CreateDefaultSubobject<UStaticMeshComponent>("PickupMesh");
     PickupMesh->SetSimulatePhysics(IsPhysics);
     PickupMesh->SetUseCCD(true);
     PickupMesh->SetCollisionProfileName("BlockAll");
     PickupMesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
     SetRootComponent(PickupMesh);
+    
+    static ConstructorHelpers::FObjectFinder<UDataTable>
+        DT_ItemData(TEXT("/Game/item/DT_ItemData.DT_ItemData"));
+
+    if (DT_ItemData.Succeeded())
+    {
+        ItemDataTable = DT_ItemData.Object;
+    }
 }
 
 void APickup::BeginPlay()
 {
     Super::BeginPlay();
     //게임 시작 시 아이템 정보 초기화
-    InitializePickUp(UItemBase::StaticClass(), ItemAmount);
+    InitializePickUp(ItemAmount);
 }
 
-void APickup::InitializePickUp(const TSubclassOf<UItemBase> BaseClass, const int32 InAmount)
+void APickup::Tick(float DeltaSeconds)
+{
+    Super::Tick(DeltaSeconds);
+    
+    //UE_LOG(LogTemp, Warning, TEXT("[PICK UP] DURATION : %f"), InteractableData.InteractionDuration);
+}
+
+void APickup::InitializePickUp(const int32 InAmount)
 {
     if (ItemHandle.DataTable && !ItemHandle.RowName.IsNone())
     {
@@ -35,31 +49,19 @@ void APickup::InitializePickUp(const TSubclassOf<UItemBase> BaseClass, const int
         {
             return;
         }
-    
-        TSubclassOf<UItemBase> ClassToUse = BaseClass;
 
-        if (ClassToUse == nullptr)
+        ItemReference = FItemBaseData();
+        
+        ItemReference.ItemID = ItemData->ID;
+        ItemReference.ItemName = ItemData->TextData.Name;
+        ItemReference.CurrentDurability = ItemData->NumericData.Durability;
+        SetInteractionDuration(ItemData->NumericData.InteractionDuration);
+
+        InAmount <= 0 ? ItemReference.SetAmount(1) : ItemReference.SetAmount(InAmount);
+
+        if (ItemData->NumericData.MaxAmount < InAmount)
         {
-            ClassToUse = UItemBase::StaticClass();
-        }
-
-        ItemReference = NewObject<UItemBase>(this, ClassToUse);
-
-        if (ItemReference)
-        {
-            ItemReference->ID = ItemData->ID;
-            ItemReference->Type = ItemData->Type;
-            ItemReference->NumericData = ItemData->NumericData;
-            ItemReference->TextData = ItemData->TextData;
-            ItemReference->AssetData = ItemData->AssetData;
-            InteractableData.InteractionDuration = ItemReference->NumericData.InteractionDuration;
-
-            InAmount <= 0 ? ItemReference->SetAmount(1) : ItemReference->SetAmount(InAmount);
-
-            if (ItemReference->NumericData.MaxAmount < InAmount)
-            {
-                ItemReference->SetAmount(ItemReference->NumericData.MaxAmount);
-            }
+            ItemReference.SetAmount(ItemData->NumericData.MaxAmount);
         }
        
         if (ItemData->AssetData.Mesh)
@@ -70,80 +72,82 @@ void APickup::InitializePickUp(const TSubclassOf<UItemBase> BaseClass, const int
     }
 }
 
-void APickup::InitializeDrop(UItemBase* ItemToDrop, const int32 InAmount)
+void APickup::InitializeDrop(FItemBaseData ItemToDrop, const int32 InAmount)
 {
-    ItemReference = ItemToDrop->CreateItemCopy();
-    ItemReference->OwningInventory = nullptr;
-    InteractableData.InteractionDuration = ItemReference->NumericData.InteractionDuration;
-    InAmount <= 0 ? ItemReference->SetAmount(1) : ItemReference->SetAmount(InAmount);
-    PickupMesh->SetStaticMesh(ItemReference->AssetData.Mesh);
+    if (ItemDataTable)
+    {
+        const FItemData* ItemData = 
+        ItemDataTable->FindRow<FItemData>(ItemToDrop.ItemID, ItemToDrop.ItemName.ToString());
+        
+        ItemReference = ItemToDrop;
+        SetInteractionDuration(ItemData->NumericData.InteractionDuration);
+        InAmount <= 0 ? ItemReference.SetAmount(1) : ItemReference.SetAmount(InAmount);
+        PickupMesh->SetStaticMesh(ItemData->AssetData.Mesh);
+    } else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Item Data Table is not valid"));
+    }
+    
 }
 
 void APickup::Interact(AActor* Interactor)
 {
     if (Interactor)
     {
-        PickUp(Interactor);
+        //인벤토리 컴포넌트 가져오기
+        if (UInventoryComponent* PickerInventory = Interactor->GetComponentByClass<UInventoryComponent>())
+        {
+            //픽업 몽타주 실행
+            if (AMainPlayer* Player = Cast<AMainPlayer>(Interactor))
+            {
+                if (Player->PickUpMontage)
+                {
+                    Player->Multi_PlayAnimMontage(Player->PickUpMontage);
+                }
+            }
+            //그 인벤토리에 줍겠다고 요청
+            PickerInventory->Request_PickUp(this);
+        }
     }    
 }
 
-void APickup::PickUp(const AActor* Picker)
+void APickup::BeginFocus()
 {
-    if (!IsPendingKillPending())
+    Super::BeginFocus();
+    
+    if (PickupMesh)
     {
-        if (ItemReference)
-        {
-            //인벤토리 컴포넌트 가져오기
-            if (UInventoryComponent* PickerInventory = Picker->GetComponentByClass<UInventoryComponent>())
-            {
-                //아이템 추가 시퀀스 실행
-                const FItemAddResult AddResult = PickerInventory->HandleAddItem(ItemReference);
+        PickupMesh->SetRenderCustomDepth(true);
+    }
+    
+}
 
-                if (const AMainPlayer* Player = Cast<AMainPlayer>(Picker))
-                {
-                    Player->HUD->AddItemMessage(AddResult);
-                }
+void APickup::EndFocus()
+{
+    Super::EndFocus();
+    
+    if (PickupMesh)
+    {
+        PickupMesh->SetRenderCustomDepth(false);
+    }
+    
+}
 
-                //결과에 따른 행동
-                switch (AddResult.OperationResult)
-                {
-                    case EItemAddedResult::NoItemAdded:
-                        //디버깅 결과 메시지
-                        UE_LOG(LogTemp, Warning, TEXT("Didn't Eat Item"));
-                        break;
-                    case EItemAddedResult::PartiallyItemAdded:
-                        //디버깅 결과 메시지
-                        UE_LOG(LogTemp, Warning, TEXT("Remain Some"));
-                        break;
-                    //싹 다 먹었으면 삭제
-                    case EItemAddedResult::AllItemAdded:
-                        //디버깅 결과 메시지
-                        UE_LOG(LogTemp, Warning, TEXT("Got All Item"));
-                        if (Destroy())
-                        {
-                            UE_LOG(LogTemp, Warning, TEXT("Item Destroyed"));   
-                        }else
-                        {
-                            UE_LOG(LogTemp, Warning, TEXT("Item Not Destroyed"));
-                        }
-                        break;
-                }
-                //디버깅 결과 메시지
-                UE_LOG(LogTemp, Warning, TEXT("%s"), *AddResult.ResultMessage.ToString());
-                if (const AMainPlayer* player = Cast<AMainPlayer>(Picker))
-                {
-                    
-                }
-            } else
-            {
-                //디버깅 결과 메시지
-                UE_LOG(LogTemp, Warning, TEXT("Inventory Component is invalid"));
-            }
-        } else
-        {
-            //디버깅 결과 메시지
-            UE_LOG(LogTemp, Warning, TEXT("Item Reference is invalid"));
-        }
+void APickup::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+    
+    DOREPLIFETIME(APickup, ItemReference);
+}
+
+void APickup::OnRep_ItemReference()
+{
+    if (ItemDataTable)
+    {
+        const FItemData* ItemData = 
+        ItemDataTable->FindRow<FItemData>(ItemReference.ItemID, ItemReference.ItemName.ToString());
+        SetInteractionDuration(ItemData->NumericData.InteractionDuration);
+        PickupMesh->SetStaticMesh(ItemData->AssetData.Mesh);
     }
 }
 

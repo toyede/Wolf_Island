@@ -85,6 +85,10 @@ void ATree::SpawnDrops()
                     NewItemData->NumericData = ItemData->NumericData;
                     NewItemData->TextData = ItemData->TextData;
                     NewItemData->AssetData = ItemData->AssetData;
+                    
+                    FItemBaseData VeryNewItemData = FItemBaseData();
+                    VeryNewItemData.ItemID = ItemData->ID;
+                    VeryNewItemData.ItemName = ItemData->TextData.Name;
 
                     // 위치 랜덤 오프셋 (겹치지 않게)
                     FVector RandomOffset = FMath::VRand(); 
@@ -99,7 +103,7 @@ void ATree::SpawnDrops()
 
                     if (SpawnedPickup)
                     {
-                        SpawnedPickup->InitializeDrop(NewItemData, DropEntry.Amount);
+                        SpawnedPickup->InitializeDrop(VeryNewItemData, DropEntry.Amount);
                         
                         // 물리 효과 적용
                         if (UPrimitiveComponent* RootPrim = Cast<UPrimitiveComponent>(SpawnedPickup->GetRootComponent()))

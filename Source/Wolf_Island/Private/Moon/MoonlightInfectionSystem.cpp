@@ -259,7 +259,7 @@ void AMoonlightInfectionSystem::ApplyInfection(AActor* Player, float Amount)
 		UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] %s"), *Message);
 	}
 
-	// 화면에 표시 (에디터/게임 플레이 중)
+	/* 화면에 표시(에디터 / 게임 플레이 중)
 	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(
@@ -271,6 +271,7 @@ void AMoonlightInfectionSystem::ApplyInfection(AActor* Player, float Amount)
 			FVector2D(1.5f, 1.5f) // 텍스트 크기
 		);
 	}
+	*/
 
 	UStatusComponent* StatusComp = Player->FindComponentByClass<UStatusComponent>();
 

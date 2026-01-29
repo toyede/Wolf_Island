@@ -17,6 +17,7 @@
 #include "OnlineSessionSettings.h"
 #include "UObject/UObjectIterator.h"
 #include "AdvancedFriendsInterface.h"
+#include "Components/InventoryComponent.h"
 
 #include "AdvancedFriendsGameInstance.generated.h"
 
@@ -103,6 +104,10 @@ public:
 	void OnPlayerLoginStatusChangedMaster(int32 PlayerNum, ELoginStatus::Type PreviousStatus, ELoginStatus::Type NewStatus, const FUniqueNetId & NewPlayerUniqueNetID);
 	FOnLoginStatusChangedDelegate PlayerLoginStatusChangedDelegate;
 	FDelegateHandle PlayerLoginStatusChangedDelegateHandle;
+
+	//성윤이꺼
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	FInventorySaveData PlayerInventory;
 
 
 	//*** Session Invite Received From Friend ***//

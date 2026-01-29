@@ -39,6 +39,8 @@ struct FItemNumericData
 	GENERATED_USTRUCT_BODY();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool IsStackable;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 MaxAmount;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Damage;
@@ -57,7 +59,9 @@ struct FItemNumericData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float InteractionDuration;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool IsStackable;
+	bool IsUsable;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float UseDuration;
 };
 
 //아이템 에셋 데이터 (아이콘, 메쉬, BP)
@@ -81,7 +85,7 @@ struct FItemData : public FTableRowBase
 	GENERATED_USTRUCT_BODY();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
-	FName ID;
+	FName ID = NAME_None;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
 	EItemType Type;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
@@ -94,6 +98,51 @@ struct FItemData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
 	TSubclassOf<class UItemBase> ItemClass;
 	
+	bool IsEmpty() const { return ID == NAME_None; }
+	bool IsNotEmpty() const { return ID != NAME_None; }
+};
+
+//아이템 인스턴스 데이터
+USTRUCT(BlueprintType)
+struct FItemBaseData
+{
+	GENERATED_USTRUCT_BODY();
+	
+	UPROPERTY(BlueprintReadWrite)
+	FName ItemID = NAME_None;
+	
+	UPROPERTY(BlueprintReadWrite)
+	FText ItemName = FText::GetEmpty();
+	
+	UPROPERTY(BlueprintReadWrite)
+	int32 Amount = 0;
+	
+	UPROPERTY(BlueprintReadWrite)
+	float CurrentDurability = 0.0f;
+	
+	void SetAmount(const int32 NewAmount) { Amount = NewAmount; };
+	
+	void SetName(const FText Name) { ItemName = Name; };
+	
+	bool operator==(const FItemBaseData& Other) const
+	{
+		return ItemID == Other.ItemID
+			&& Amount == Other.Amount
+			&& FMath::IsNearlyEqual(CurrentDurability, Other.CurrentDurability);
+	}
+	
+	bool IsValid() const
+	{
+		return ItemID != NAME_None;
+	}
+	
+	void LogData()
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ItemID : %s"), *ItemID.ToString());
+		UE_LOG(LogTemp, Warning, TEXT("ItemName : %s"), *ItemName.ToString());
+		UE_LOG(LogTemp, Warning, TEXT("ItemAmount : %d"), Amount);
+	}
+	
 };
 
 //슬롯 데이터
@@ -102,9 +151,62 @@ struct FItemSlot
 {
 	GENERATED_USTRUCT_BODY();
 
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
 	UPROPERTY()
 	TObjectPtr<class UItemBase> Item = nullptr;
+	
+	UPROPERTY()
+	FItemBaseData ItemData;
+	
+	bool IsEmpty() const { return ItemData.ItemID == NAME_None; }
+	
+	bool IsNotEmpty() const { return ItemData.ItemID != NAME_None; }
+	
+	void SetAmount(const int32 NewAmount) { ItemData.Amount = NewAmount; }
+	
+	void Clear()
+	{
+		ItemData = FItemBaseData();
+	}
+};
+
+//슬롯 구조체로 재설계
+USTRUCT(BlueprintType)
+struct FSlotData
+{
+	GENERATED_USTRUCT_BODY();
+	
+	//아이템 데이터
+	UPROPERTY()
+	FItemData ItemData;
+	//아이템 코드
+	UPROPERTY()
+	FName ItemID = NAME_None;
+	//내구도
+	UPROPERTY()
+	float CurrentDurability = 0.0f;
+	//개수
+	UPROPERTY()
+	int32 Amount = 0;
+
+	void SetAmount(const int32 NewAmount) { Amount = NewAmount; };
+	
+	bool IsEmpty() const { return ItemID == NAME_None; };
+	
+	bool IsNotEmpty() const { return ItemID != NAME_None; };
+	
+	void Clear()
+	{
+		ItemID = NAME_None;
+		Amount = 0;
+		CurrentDurability = 0.0f;
+	}
+	
+	bool operator==(const FSlotData& Other) const
+	{
+		return ItemID == Other.ItemID
+			&& Amount == Other.Amount
+			&& FMath::IsNearlyEqual(CurrentDurability, Other.CurrentDurability);
+	}
 };
 
 //조합기 타입 (인벤토리, 화로 등)
@@ -260,4 +362,20 @@ struct FSavedActorList
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
 	TArray<FSavedActorData> Actors;
+};
+
+//알 수 없는 기록 구조체
+USTRUCT(BlueprintType)
+struct FUnknownRecord : public FTableRowBase
+{
+	GENERATED_USTRUCT_BODY();
+
+	UPROPERTY(EditAnywhere)
+	FName RecordID;
+	UPROPERTY(EditAnywhere)
+	FText RecordTitle;
+	UPROPERTY(EditAnywhere)
+	FText RecordContent;
+	UPROPERTY(EditAnywhere)
+	UTexture2D* RecordImage;
 };

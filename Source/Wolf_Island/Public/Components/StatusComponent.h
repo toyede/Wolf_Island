@@ -35,44 +35,55 @@ public:
 	FOnInfectionChanged OnInfectionChanged;
 
 	//늑대인간
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection")
+	//현재 감염률
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Infection")
 	float CurrentInfectionRate = 0.0f;
+	//감염 여부
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection")
 	bool IsInfected = false;
+	//감염 속도
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection")
 	float InfectionInterval = 0.01f;
+	//감염 증가율
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection")
 	float InfectionIncrement = 0.01f;
 
 	//체력
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	//현재 체력
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status")
 	float CurrentHP = 100.0f;
+	//최대 체력
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
 	float MaxHP = 100.0f;
 
 	//스태미나
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	//현재 스태미나
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status")
 	float CurrentStamina = 100.0f;
+	//최대 스태미나
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
 	float MaxStamina = 100.0f;
+	//
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
 	float DeadLineStamina = 5.0f;
 	float TempMaxStamina = 0.0f;
 
 	//배고픔
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	//현재 배고픔
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentHunger, VisibleAnywhere, BlueprintReadWrite, Category = "Status")
 	float CurrentHunger = 100.0f;
+	//최대 배고픔
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
 	float MaxHunger = 100.0f;
 
 	//수분
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status")
 	float CurrentHydration = 100.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
 	float MaxHydration = 100.0f;
 
 	//무게
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status")
 	float CurrentWeight = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
 	float MaxWeight = 100.0f;
@@ -163,6 +174,8 @@ public:
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
+
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 public:	
 	// Called every frame
@@ -259,9 +272,13 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void DecreaseInfection(float Amount);
 
+	//모든 타이머 삭제
+	UFUNCTION(BlueprintCallable)
+	void ClearAllTimers();
+
 	//아이템 사용 스탯 적용 함수
 	UFUNCTION(BlueprintCallable)
-	void ApplyItem(UItemBase* Item);
+	void ApplyItem(FItemData Item);
 
 	//값 반환 함수
 	UFUNCTION(BlueprintCallable, BlueprintPure)
@@ -278,4 +295,10 @@ public:
 	//디버그 함수
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Debug")
 	void DebugGetStatus(float &HP, float& Stamina, float& Hunger, float& Hydration, float& Weight);
+
+	//멀티플레이
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UFUNCTION()
+	void OnRep_CurrentHunger();
 };

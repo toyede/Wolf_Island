@@ -70,10 +70,15 @@ inline void UCraftPanel::RefreshRecipeList()
 	if (!RecipeList || !RecipeTable) return;
 
 	RecipeList->ClearChildren();
-    
+
+	int32 Index = 0;
 	RecipeTable->ForeachRow<FRecipeData>(TEXT("RecipeTableContext"),
 	[&](const FName& RowName, const FRecipeData& Recipe)
 	{
+		if (Index == 0)
+		{
+			CurrentRecipeData = Recipe;
+		}
 	   // 1. 아이템 타입 필터 (기존 로직)
 	   bool bTypeMatch = RecipeTypeList.Contains(Recipe.ItemType);
        
@@ -82,9 +87,12 @@ inline void UCraftPanel::RefreshRecipeList()
 	   // 두 조건 다 맞으면 목록에 추가
 	   if (bTypeMatch && bMethodMatch)
 	   {
-		  AddRecipe(Recipe);
+	   		AddRecipe(Recipe);
+	   		Index++;
 	   }
 	});
+
+	SetRecipeInfo(CurrentRecipeData);
 }
 
 void UCraftPanel::SetRecipeInfo(FRecipeData RecipeData)
@@ -98,8 +106,8 @@ void UCraftPanel::SetRecipeInfo(FRecipeData RecipeData)
 		FItemData* ItemData = ItemDataTable->FindRow<FItemData>(Ingredient.Key, "Ingredients");
 		UCraftSlot* CraftSlot = CreateWidget<UCraftSlot>(GetWorld(), SlotClass);
 
-		UE_LOG(LogTemp, Warning, TEXT("%s : %d"), *FText::FromName(Ingredient.Key).ToString(), Ingredient.Value);
-		CraftSlot->SetCraftSlot(*ItemData, Ingredient.Value);
+		//UE_LOG(LogTemp, Warning, TEXT("%s : %d"), *FText::FromName(Ingredient.Key).ToString(), Ingredient.Value);
+		CraftSlot->SetCraftSlot(ItemData, Ingredient.Value);
 
 		IngredientList->AddChild(CraftSlot);		
 	}
@@ -108,7 +116,7 @@ void UCraftPanel::SetRecipeInfo(FRecipeData RecipeData)
 	FItemData* ResultData = ItemDataTable->FindRow<FItemData>(RecipeData.ResultID, "ResultItem");
 	
 	//결과물 정보 세팅
-	ResultSlot->SetCraftSlot(*ResultData, RecipeData.ResultAmount);
+	ResultSlot->SetCraftSlot(ResultData, RecipeData.ResultAmount);
 	ItemName->SetText(ResultData->TextData.Name);
 	ItemDescription->SetText(ResultData->TextData.Description);
 

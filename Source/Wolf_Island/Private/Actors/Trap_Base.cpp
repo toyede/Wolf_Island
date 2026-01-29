@@ -1,10 +1,10 @@
-ï»¿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Actors/Trap_Base.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
-#include "AI/Enemy_Character/EnemyAIBase.h"
+#include "AI/EnemyAIBase.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 // Sets default values
@@ -53,7 +53,7 @@ void ATrap_Base::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* Oth
 
 			Enemy->GetCharacterMovement()->DisableMovement();
 
-			// SetLifeSpan ëŒ€ì‹  íƒ€ì´ë¨¸ ì‚¬ìš©
+			// SetLifeSpan ´ë½Å Å¸ÀÌ¸Ó »ç¿ë
 			GetWorldTimerManager().SetTimer(ReleaseTimerHandle, this, &ATrap_Base::ReleaseTrap, TrapSpan, false);
 		}
 	}
