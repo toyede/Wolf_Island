@@ -31,6 +31,15 @@ struct FInteractionData
 	float LastInteractionCheckTime;
 };
 
+UENUM(BlueprintType)
+enum class ESwimMode : uint8
+{
+	TREADING UMETA(DisplayName = "TREADING"),
+	SURFACE_SWIMMING UMETA(DisplayName = "SURFACE_SWIMMING"),
+	UNDERWATER_IDLE UMETA(DisplayName = "UNDERWATER_IDLE"),
+	UNDERWATER_SWIMMING UMETA(DisplayName = "UNDERWATER_SWIMMING")
+};
+
 UCLASS()
 class WOLF_ISLAND_API AMainPlayer : public ACharacter, public IInteractionInterface
 {
@@ -56,10 +65,39 @@ public:
 
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
 	class UWeaponComponent* WeaponComponent;
+	
+	//부력 컴포넌트 - 수영을 위한 것
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
+	class UBuoyancyComponent* BuoyancyComponent;
+	
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
+	UBillboardComponent* WaterLevelCheckPoint;
+	
+	UPROPERTY(BlueprintReadWrite)
+	UAudioComponent* WaterAmbience;
 
 	//손에 들 아이템
 	UPROPERTY(ReplicatedUsing=OnRep_HandedItem, EditAnywhere, BlueprintReadWrite)
 	UStaticMeshComponent* ItemMesh;
+	
+	//이동 관련 변수====================================================================
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	float WalkSpeed = 300.0f;
+	
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	float RunSpeed = 750.0f;
+	
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	float CrouchSpeed = 150.0f;
+	
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	float SwimmingSpeed = 200.0f;
+	
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	float SwimmingSprintSpeed = 350.0f;
+	
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	float WaterDeceleration = 0.4f;
 
 	//입력 관련 변수====================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
@@ -67,6 +105,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputAction* MoveAction;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
+	UInputAction* WaterElevationAction;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputAction* LookAction;
@@ -79,10 +120,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputAction* CrouchAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
-	UInputAction* SlideAction;
-
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputAction* AttackAction;
 
@@ -112,7 +150,11 @@ public:
 	//웅크리는 중인지
 	UPROPERTY(ReplicatedUsing=OnRep_IsCrouching,EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsCrouching = false;
-
+	
+	//수영 중인지
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	bool IsSwimming = false;
+	
 	//슬라이딩 중인지
 	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsSliding = false;
@@ -205,6 +247,8 @@ public:
 	USoundBase* EatingSound;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
 	USoundBase* PunchSound;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
+	USoundBase* UnderWaterAmbience;
 
 	//공격===============================================================================
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Attack")
@@ -264,14 +308,6 @@ public:
 	//인벤토리 토글 함수
 	UFUNCTION()
 	void ToggleInventory();
-
-	//슬라이딩 함수
-	UFUNCTION()
-	void Sliding();
-
-	//슬라이딩 끝났을 시 함수
-	UFUNCTION()
-	void EndSliding(UAnimMontage* Montage, bool bInterrupted);
 
 	//아이템 사용 함수
 	UFUNCTION()
@@ -366,12 +402,27 @@ public:
 	//손에 든 아이템 한 개 버리기
 	UFUNCTION(BlueprintCallable)
 	void DropItemOnHotBar();
+	
+	//수영 함수
+	UFUNCTION()
+	void WaterElevation(const FInputActionValue& Value);
+	
+	UFUNCTION(BlueprintCallable)
+	void EnterWater(const FSphericalPontoon& Pontoon);
+	
+	UFUNCTION(BlueprintCallable)
+	void ExitWater(const FSphericalPontoon& Pontoon);
+	
+	UFUNCTION(BlueprintCallable)
+	void HideAirBar();
 
 	//멀티플레이어==================================================================================
 	//코드 리팩토링 방법 v1.0
-	//원래 싱글에서 작동해야할 코드를 멀티캐스트 실행 함수 코드에 작성.
-	//서버에서 실행하는 것은 멀티캐스트 함수.
-	//원래 함수에서는 클라이언트면 서버 함수 실행, 서버면 멀티캐스트 함수 실행.
+	//실제 작동 함수, 서버 실행 함수(Server_XXX), 서버 요청 함수(Request_XXX)로 나눔
+	//서버 요청 함수에서는 요청한 플레이어가 서버인지 클라이언트인지 확인하고
+	//서버면 실제 작동 함수 실행, 클라이언트면 서버 실행 함수 실행
+	//서버 실행 함수는 서버에 이 함수를 실행하겠다고 요청을 보냄.
+	//서버 실행 함수 안에서는 실제 작동 함수를 실행시킴.
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 	//달리기

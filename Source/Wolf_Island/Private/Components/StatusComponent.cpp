@@ -33,6 +33,8 @@ void UStatusComponent::BeginPlay()
 		OnHungerZero.AddDynamic(this, &UStatusComponent::StartHungerDeath);
 		//수분 0일 시
 		OnHydrationZero.AddDynamic(this, &UStatusComponent::StartHydrationDeath);
+		//산소 0일 시
+		OnAirZero.AddDynamic(this, &UStatusComponent::StartAirDeath);
 	}
 }
 
@@ -211,6 +213,37 @@ void UStatusComponent::DecreaseWeight(float amount)
 	}
 }
 
+void UStatusComponent::IncreaseAir(float amount)
+{
+	CurrentAir = FMath::Clamp(CurrentAir+amount, 0.0f, MaxAir);
+	
+	if (CurrentAir >= MaxAir)
+	{
+		CurrentAir = MaxAir;
+		OnAirFull.Broadcast();
+		StopRecoverAir();
+	}
+	
+	//음수 방지
+	if (CurrentAir <= 0)
+	{
+		CurrentAir = 0;
+		OnAirZero.Broadcast();
+	}
+}
+
+void UStatusComponent::DecreaseAir(float amount)
+{
+	CurrentAir = FMath::Clamp(CurrentAir-amount, 0.0f, MaxAir);
+	
+	//음수 방지
+	if (CurrentAir <= 0)
+	{
+		CurrentAir = 0;
+		OnAirZero.Broadcast();
+	}
+}
+
 //스태미나 감소 시작 함수
 //타이머를 등록하여 시작
 void UStatusComponent::StartStamina()
@@ -340,8 +373,7 @@ void UStatusComponent::StartHydrationDeath()
 			DecreaseHP(MaxHP);
 		},
 		HydrationDeathRate,
-		false
-		);
+		false);
 }
 
 void UStatusComponent::StopHydrationDeath()
@@ -456,6 +488,62 @@ void UStatusComponent::DecreaseInfection(float Amount)
 	OnInfectionChanged.Broadcast();
 }
 
+void UStatusComponent::StartAir()
+{
+	if (GetWorld()->GetTimerManager().IsTimerActive(AirTimer)) return;
+	
+	GetWorld()->GetTimerManager().SetTimer(
+		AirTimer,
+		[this]()
+		{
+			DecreaseAir(AirAmount);
+		},
+		AirRate,
+		true);
+}
+
+void UStatusComponent::StopAir()
+{
+	GetWorld()->GetTimerManager().ClearTimer(AirTimer);
+}
+
+void UStatusComponent::StartAirDeath()
+{
+	if (GetWorld()->GetTimerManager().IsTimerActive(AirDeathTimer)) return;
+	UE_LOG(LogTemp, Warning, TEXT("START AIR DEATH"));
+	GetWorld()->GetTimerManager().SetTimer(
+		AirDeathTimer,
+		[this]()
+		{
+			DecreaseHP(SuffocatedDamage);
+		},
+		SuffocatedRate,
+		true);
+}
+
+void UStatusComponent::StopAirDeath()
+{
+	GetWorld()->GetTimerManager().ClearTimer(AirDeathTimer);
+}
+
+void UStatusComponent::StartRecoverAir()
+{
+	StopAir();
+	GetWorld()->GetTimerManager().SetTimer(
+		AirRecoverTimer,
+		[this]()
+		{
+			IncreaseAir(AirRecoverAmount);
+		},
+		AirRecoverRate,
+		true);
+}
+
+void UStatusComponent::StopRecoverAir()
+{
+	GetWorld()->GetTimerManager().ClearTimer(AirRecoverTimer);
+}
+
 void UStatusComponent::ApplyItem(FItemData Item)
 {
 	if (Item.IsNotEmpty())
@@ -469,15 +557,20 @@ void UStatusComponent::ApplyItem(FItemData Item)
 
 void UStatusComponent::ClearAllTimers()
 {
-	GetWorld()->GetTimerManager().ClearTimer(StaminaTimer);
-	GetWorld()->GetTimerManager().ClearTimer(StaminaRecoverTimer);
-	GetWorld()->GetTimerManager().ClearTimer(HungerTimer);
-	GetWorld()->GetTimerManager().ClearTimer(HydrationTimer);
-	GetWorld()->GetTimerManager().ClearTimer(RunningTimer);
-	GetWorld()->GetTimerManager().ClearTimer(HungerDeathTimer);
-	GetWorld()->GetTimerManager().ClearTimer(HydrationDeathTimer);
-	GetWorld()->GetTimerManager().ClearTimer(ForcedRestTimer);
-	GetWorld()->GetTimerManager().ClearTimer(InfectionTimer);
+	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+	
+	TimerManager.ClearTimer(StaminaTimer);
+	TimerManager.ClearTimer(StaminaRecoverTimer);
+	TimerManager.ClearTimer(HungerTimer);
+	TimerManager.ClearTimer(HydrationTimer);
+	TimerManager.ClearTimer(RunningTimer);
+	TimerManager.ClearTimer(HungerDeathTimer);
+	TimerManager.ClearTimer(HydrationDeathTimer);
+	TimerManager.ClearTimer(ForcedRestTimer);
+	TimerManager.ClearTimer(InfectionTimer);
+	TimerManager.ClearTimer(AirDeathTimer);
+	TimerManager.ClearTimer(AirRecoverTimer);
+	TimerManager.ClearTimer(AirTimer);
 }
 
 void UStatusComponent::DebugGetStatus(float &HP, float& Stamina, float& Hunger, float& Hydration, float& Weight)

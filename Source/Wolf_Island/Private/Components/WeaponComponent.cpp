@@ -3,6 +3,7 @@
 
 #include "Components/WeaponComponent.h"
 
+#include "Character/MainPlayer.h"
 #include "GameFramework/Character.h"
 #include "Item/ItemBase.h"
 #include "Net/UnrealNetwork.h"
@@ -78,7 +79,7 @@ void UWeaponComponent::UnequipeWeapon()
 
 void UWeaponComponent::UseWeapon_Implementation()
 {
-	ACharacter* Owner = Cast<ACharacter>(GetOwner());
+	AMainPlayer* Owner = Cast<AMainPlayer>(GetOwner());
 	if (!Owner || IsAttacking)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("OWNER OR IsAttacking FALSE"));
@@ -95,6 +96,7 @@ void UWeaponComponent::UseWeapon_Implementation()
 	EndDelegate.BindUObject(this, &UWeaponComponent::OnAttackMontageEnded);
 	
 	Owner->PlayAnimMontage(CurrentWeapon.Montage);
+	Owner->Multi_PlaySound(Owner->PunchSound, Owner->GetActorLocation());
 	//몽타주 실행 완료 후 공격 중 상태 변수 변경하는 델리게이트
 	AnimInst->Montage_SetEndDelegate(EndDelegate, CurrentWeapon.Montage);
 

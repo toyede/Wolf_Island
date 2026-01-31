@@ -9,6 +9,7 @@
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
 #include "Components/ProgressBar.h"
+#include "Components/StatusComponent.h"
 #include "Components/TextBlock.h"
 #include "Components/WrapBox.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -21,6 +22,7 @@ void UPlayerHUD::NativeOnInitialized()
 
 	PlayerRef = Cast<AMainPlayer>(GetOwningPlayerPawn());
 	DisplayDefault();
+	HideAirBar();
 	HideInteraction();
 }
 
@@ -37,6 +39,8 @@ void UPlayerHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 
 	//인터랙션 바 업데이트
 	UpdateInteraction();
+	
+	UpdateStatusBars();
 }
 
 void UPlayerHUD::AddItemMessage(FItemAddResult Result)
@@ -131,6 +135,16 @@ void UPlayerHUD::DisplayDefault()
 	CrossHair->SetBrushFromTexture(DefaultCrossHair);
 }
 
+void UPlayerHUD::DisplayAirBar()
+{
+	AirBar->SetVisibility(ESlateVisibility::Visible);
+}
+
+void UPlayerHUD::HideAirBar()
+{
+	AirBar->SetVisibility(ESlateVisibility::Hidden);
+}
+
 void UPlayerHUD::RefreshHotBar()
 {
 	HotBar->ClearChildren();
@@ -173,6 +187,21 @@ void UPlayerHUD::UpdateHotBar()
 			}
 			
 			HotSlot->RefreshSlot();
+		}
+	}
+}
+
+void UPlayerHUD::UpdateStatusBars()
+{
+	if (PlayerRef)
+	{
+		if (UStatusComponent* Status = PlayerRef->StatusComponent)
+		{
+			HealthBar->SetPercent(Status->GetHPPercent());
+			StaminaBar->SetPercent(Status->GetStaminaPercent());
+			HungerBar->SetPercent(Status->GetHungerPercent());
+			HydrationBar->SetPercent(Status->GetHydrationPercent());
+			AirBar->SetPercent(Status->GetAirPercent());
 		}
 	}
 }
