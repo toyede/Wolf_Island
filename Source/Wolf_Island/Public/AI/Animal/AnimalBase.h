@@ -6,24 +6,25 @@
 #include "GameFramework/Character.h"
 #include "AnimalBase.generated.h"
 
+class UStatusComponent;
+
 UCLASS()
 class WOLF_ISLAND_API AAnimalBase : public ACharacter
 {
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
 	AAnimalBase();
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Comp")
+	UStatusComponent* StatusComponent;
+
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+	float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+public:	
+	virtual void Tick(float DeltaTime) override;
 
 };
