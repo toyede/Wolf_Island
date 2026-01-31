@@ -972,7 +972,7 @@ void AMainPlayer::EnterWater(const FSphericalPontoon& Pontoon)
 		if (UnderWaterAmbience)
 		{
 			WaterAmbience->SetSound(UnderWaterAmbience);
-			WaterAmbience->FadeIn(1.0f,0.5f);
+			WaterAmbience->FadeIn(1.0f,0.2f);
 		}
 	}
 }
