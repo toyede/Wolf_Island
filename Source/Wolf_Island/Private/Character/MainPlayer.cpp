@@ -1021,17 +1021,29 @@ void AMainPlayer::SwimCheck()
 		true);
 	
 	FVector OriginLocation = GetActorLocation();
+	FVector FootCheckLocation = FVector(
+		OriginLocation.X,
+		OriginLocation.Y,
+		OriginLocation.Z-90.0f);
+	TArray<AActor*> Ignores;
+	Ignores.Add(this);
+	FHitResult Hit;
 	
 	//발이 닿으면 수면 탈출 가능
-	/*if (UKismetSystemLibrary::SphereTraceSingle(
+	bool CanStand = UKismetSystemLibrary::SphereTraceSingle(
 		GetWorld(),
-		))
-	{
-		
-	}*/
+		FootCheckLocation,
+		FootCheckLocation,
+		25.0f,
+		UEngineTypes::ConvertToTraceType(ECC_WorldStatic),
+		false,
+		Ignores,
+		EDrawDebugTrace::None,
+		Hit,
+		true);
 	
 	//수면 위로 못나가게 위치 조정
-	if (GetActorLocation().Z >= SurfaceLocation.Z-WaterSurfaceOffset)
+	if (!CanStand && GetActorLocation().Z >= SurfaceLocation.Z-WaterSurfaceOffset)
 	{
 		FVector TargetLocation = FVector(
 			OriginLocation.X, 
