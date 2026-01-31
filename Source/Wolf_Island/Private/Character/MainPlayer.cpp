@@ -27,6 +27,7 @@
 #include "BuoyancyComponent.h"
 #include "Components/AudioComponent.h"
 #include "Components/BillboardComponent.h"
+#include "WaterBodyComponent.h"
 
 // Sets default values
 AMainPlayer::AMainPlayer()
@@ -83,7 +84,8 @@ AMainPlayer::AMainPlayer()
 	//수영을 위한 부력 컴포넌트 세팅
 	WaterLevelCheckPoint->SetRelativeLocation(FVector(0.0f, 0.0f, 20.0f));
 	BuoyancyComponent->AddCustomPontoon(25.0f, WaterLevelCheckPoint->GetRelativeLocation());
-
+	
+	GetCharacterMovement()->MaxFlySpeed = SwimmingSpeed;
 }
 
 // Called when the game starts or when spawned
@@ -354,6 +356,7 @@ void AMainPlayer::Run()
 			if (StatusComponent->CurrentStamina <= 0 || IsCrouching) return;
 	
 			GetCharacterMovement()->MaxWalkSpeed = RunSpeed;
+			GetCharacterMovement()->MaxFlySpeed = SwimmingSprintSpeed;
 			StatusComponent->StopStamina();
 
 			//이동 속도가 0 초과일 때만 스태미나 감소
@@ -383,6 +386,7 @@ void AMainPlayer::StopRun()
 	if (IsRunning)
 	{
 		GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+		GetCharacterMovement()->MaxFlySpeed = SwimmingSpeed;
 		//스태미나 감소 중단
 		StatusComponent->StopStamina();
 		//스태미나 회복 타이머가 실행 중이 아니면
@@ -966,15 +970,15 @@ void AMainPlayer::EnterWater(const FSphericalPontoon& Pontoon)
 	IsSwimming = true;
 	GetCharacterMovement()->SetMovementMode(MOVE_Flying);
 	StatusComponent->StartAir();
-	if (IsLocallyControlled())
-	{
-		HUD->DisplayAirBar();
-		if (UnderWaterAmbience)
-		{
-			WaterAmbience->SetSound(UnderWaterAmbience);
-			WaterAmbience->FadeIn(1.0f,0.5f);
-		}
-	}
+	EnteredWater = BuoyancyComponent->GetCurrentWaterBodyComponents()[0];
+	SetSwimMode(ESwimMode::TREADING);
+	
+	GetWorld()->GetTimerManager().SetTimer(
+		SwimCheckHandle,
+		this,
+		&AMainPlayer::SwimCheck,
+		0.01f,
+		true);
 }
 
 void AMainPlayer::ExitWater(const FSphericalPontoon& Pontoon)
@@ -982,12 +986,9 @@ void AMainPlayer::ExitWater(const FSphericalPontoon& Pontoon)
 	UE_LOG(LogTemp, Warning, TEXT("Exiting Water"));
 	IsSwimming = false;
 	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-	StatusComponent->StartRecoverAir();
-	StatusComponent->StopAirDeath();
-	if (IsLocallyControlled())
-	{
-		WaterAmbience->FadeOut(1.0f,0);
-	}
+	EnteredWater = nullptr;
+	SetSwimMode(ESwimMode::NONE);
+	GetWorld()->GetTimerManager().ClearTimer(SwimCheckHandle);
 }
 
 void AMainPlayer::HideAirBar()
@@ -995,6 +996,135 @@ void AMainPlayer::HideAirBar()
 	if (IsLocallyControlled())
 	{
 		HUD->HideAirBar();
+	}
+}
+
+void AMainPlayer::SwimCheck()
+{
+	//올라갈 때 수면 위로 너무 올라가지 않게 하고, 발에 땅이 닿는 수위면 수영 종료로 바뀌게 체크하는 함수...
+	//들어간 물을 감지할 수 없으면 탈출
+	if (!EnteredWater) return;
+	
+	//현 위치의 수면위치, 수면 노멀, 유속, 수심 데이터
+	FVector SurfaceLocation;
+	FVector SurfaceNormal;
+	FVector WaterVelocity;
+	float WaterDepth;
+	
+	//구하기
+	EnteredWater->GetWaterSurfaceInfoAtLocation(
+		GetActorLocation(), 
+		SurfaceLocation, 
+		SurfaceNormal, 
+		WaterVelocity,
+		WaterDepth,
+		true);
+	
+	FVector OriginLocation = GetActorLocation();
+	
+	//발이 닿으면 수면 탈출 가능
+	/*if (UKismetSystemLibrary::SphereTraceSingle(
+		GetWorld(),
+		))
+	{
+		
+	}*/
+	
+	//수면 위로 못나가게 위치 조정
+	if (GetActorLocation().Z >= SurfaceLocation.Z-WaterSurfaceOffset)
+	{
+		FVector TargetLocation = FVector(
+			OriginLocation.X, 
+			OriginLocation.Y, 
+			SurfaceLocation.Z-WaterSurfaceOffset);
+		
+		FVector AdjustedLocation = UKismetMathLibrary::VInterpTo(OriginLocation, TargetLocation, GetWorld()->GetDeltaSeconds(), 10.0f);
+		SetActorLocation(AdjustedLocation);
+	}
+	
+	//수심에 따른 수영 모드 변환
+	if (SwimMode!=ESwimMode::UNDERWATER_IDLE && OriginLocation.Z <= SurfaceLocation.Z-WaterSuffocatedOffest)
+	{
+		SetSwimMode(ESwimMode::UNDERWATER_IDLE);
+	}
+	
+	if (SwimMode!=ESwimMode::TREADING && OriginLocation.Z >= SurfaceLocation.Z-WaterSurfaceOffset)
+	{
+		SetSwimMode(ESwimMode::TREADING);
+	}
+}
+
+void AMainPlayer::SetSwimMode(ESwimMode NewSwimMode)
+{
+	SwimMode = NewSwimMode;
+	
+	//수영 모드에 따른 동작
+	switch (SwimMode)
+	{
+		//수영 모드 아닐 때
+	case ESwimMode::NONE:
+		{
+			StatusComponent->StopAir();
+			StatusComponent->StopAirDeath();
+			StatusComponent->StartRecoverAir();
+			if (IsLocallyControlled())
+			{
+				WaterAmbience->FadeOut(1.0f,0);
+			}
+			break;
+		}
+		//수면에 머리 빼꼼
+	case ESwimMode::TREADING:
+		{
+			StatusComponent->StopAir();
+			StatusComponent->StopAirDeath();
+			StatusComponent->StartRecoverAir();
+			if (IsLocallyControlled())
+			{
+				WaterAmbience->FadeOut(0.5f,0);
+			}
+			break;
+		}
+		//수면 수영
+	case ESwimMode::SURFACE_SWIMMING:
+		{
+			StatusComponent->StartAir();
+			if (IsLocallyControlled())
+			{
+				WaterAmbience->FadeOut(0.5f,0);
+			}
+			break;
+		}
+		//수중 대기
+	case ESwimMode::UNDERWATER_IDLE:
+		{
+			StatusComponent->StartAir();
+			if (IsLocallyControlled())
+			{
+				HUD->DisplayAirBar();
+				if (UnderWaterAmbience)
+				{
+					WaterAmbience->SetSound(UnderWaterAmbience);
+					WaterAmbience->FadeIn(1.0f,0.2f);
+				}
+			}
+			break;
+		}
+		//수중 수영
+	case ESwimMode::UNDERWATER_SWIMMING:
+		{
+			StatusComponent->StartAir();
+			if (IsLocallyControlled())
+			{
+				HUD->DisplayAirBar();
+				if (UnderWaterAmbience)
+				{
+					WaterAmbience->SetSound(UnderWaterAmbience);
+					WaterAmbience->FadeIn(1.0f,0.2f);
+				}
+			}
+			break;
+		}
 	}
 }
 

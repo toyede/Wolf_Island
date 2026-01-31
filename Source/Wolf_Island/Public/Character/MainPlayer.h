@@ -10,6 +10,7 @@
 #include "Data/ItemDataStruct.h"
 #include "MainPlayer.generated.h"
 
+class UWaterBodyComponent;
 class APickup;
 class UItemBase;
 struct FInputActionValue;
@@ -34,6 +35,7 @@ struct FInteractionData
 UENUM(BlueprintType)
 enum class ESwimMode : uint8
 {
+	NONE UMETA(DisplayName = "NONE"),
 	TREADING UMETA(DisplayName = "TREADING"),
 	SURFACE_SWIMMING UMETA(DisplayName = "SURFACE_SWIMMING"),
 	UNDERWATER_IDLE UMETA(DisplayName = "UNDERWATER_IDLE"),
@@ -75,6 +77,12 @@ public:
 	
 	UPROPERTY(BlueprintReadWrite)
 	UAudioComponent* WaterAmbience;
+	
+	UPROPERTY(BlueprintReadWrite)
+	UWaterBodyComponent* EnteredWater;
+	
+	UPROPERTY(BlueprintReadWrite)
+	FTimerHandle SwimCheckHandle;
 
 	//손에 들 아이템
 	UPROPERTY(ReplicatedUsing=OnRep_HandedItem, EditAnywhere, BlueprintReadWrite)
@@ -90,14 +98,20 @@ public:
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
 	float CrouchSpeed = 150.0f;
 	
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
 	float SwimmingSpeed = 200.0f;
 	
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
 	float SwimmingSprintSpeed = 350.0f;
 	
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
 	float WaterDeceleration = 0.4f;
+	
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
+	float WaterSurfaceOffset = 50.0f;
+	
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
+	float WaterSuffocatedOffest = 60.0f;
 
 	//입력 관련 변수====================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
@@ -154,6 +168,10 @@ public:
 	//수영 중인지
 	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsSwimming = false;
+	
+	//어떤 수영 인지-수면, 수중
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	ESwimMode SwimMode = ESwimMode::NONE;
 	
 	//슬라이딩 중인지
 	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
@@ -403,18 +421,30 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void DropItemOnHotBar();
 	
-	//수영 함수
+	//수영 관련 함수=================================================================================
+	//물 속 수직 움직임 입력
 	UFUNCTION()
 	void WaterElevation(const FInputActionValue& Value);
 	
+	//물에 진입 시 실행
 	UFUNCTION(BlueprintCallable)
 	void EnterWater(const FSphericalPontoon& Pontoon);
 	
+	//물에서 나올 시 실행
 	UFUNCTION(BlueprintCallable)
 	void ExitWater(const FSphericalPontoon& Pontoon);
 	
+	//산소바 숨기기
 	UFUNCTION(BlueprintCallable)
 	void HideAirBar();
+	
+	//수영 중 상태 체크-수면 위로 초과 이동 막기, 발이 땅에 닿는 수위면 수영 모드 종료 등등
+	UFUNCTION(BlueprintCallable)
+	void SwimCheck();
+	
+	//수영 모드 바꾸기
+	UFUNCTION(BlueprintCallable)
+	void SetSwimMode(ESwimMode NewSwimMode);
 
 	//멀티플레이어==================================================================================
 	//코드 리팩토링 방법 v1.0

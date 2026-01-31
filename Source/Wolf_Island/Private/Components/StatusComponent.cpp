@@ -529,6 +529,9 @@ void UStatusComponent::StopAirDeath()
 void UStatusComponent::StartRecoverAir()
 {
 	StopAir();
+	
+	if (GetWorld()->GetTimerManager().IsTimerActive(AirRecoverTimer)) return;
+	
 	GetWorld()->GetTimerManager().SetTimer(
 		AirRecoverTimer,
 		[this]()
