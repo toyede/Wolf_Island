@@ -26,6 +26,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHitResponse); // 맞을 때 피격 모션 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnThrowEnd); // 투척 공격 끝났음을 알리는 용도
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAttackEnd); // 기본 공격 끝났음을 알리는 용도
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHowlingEnd); // 하울링 끝났음을 알리는 용도
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHPChangeEnd); // 체력 변화 알림용
 
 UENUM(BlueprintType) // 상태 구분
 enum class EEnemyForm : uint8
@@ -53,6 +54,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Delegate")
 	FOnHowlingEnd OnHowlingEnd;
+
+	UPROPERTY(BlueprintAssignable, Category = "Delegate")
+	FOnHPChangeEnd OnHPChangeEnd;
 
 protected:
 	virtual void BeginPlay() override;

@@ -489,7 +489,13 @@ float AEnemyAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 {
     float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
+    if (DamageCauser && DamageCauser->IsA<AEnemyAIBase>())
+    {
+        return 0.f;
+    }
+
     StatusComponent->DecreaseHP(ActualDamage);
+	OnHPChangeEnd.Broadcast();
 
     UAISense_Damage::ReportDamageEvent(
         GetWorld(),
