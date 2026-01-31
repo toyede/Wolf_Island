@@ -8,6 +8,8 @@
 #include "MaterialHLSLTree.h"
 #include "Engine/DamageEvents.h"
 #include "Blueprint/UserWidget.h"
+#include "Widgets/Craft/BonFireUI.h"
+#include "Widgets/Craft/RepairUI.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Components/StatusComponent.h"
 #include "Camera/CameraComponent.h"
@@ -86,6 +88,26 @@ AMainPlayer::AMainPlayer()
 	BuoyancyComponent->AddCustomPontoon(25.0f, WaterLevelCheckPoint->GetRelativeLocation());
 	
 	GetCharacterMovement()->MaxFlySpeed = SwimmingSpeed;
+}
+
+void AMainPlayer::Client_OpenBonfireUI_Implementation()
+{
+	if (BonfireUIClass)
+	{
+		APlayerController* PC = Cast<APlayerController>(GetController());
+		if (!PC) return;
+
+		UBonFireUI* BonfireWidget = CreateWidget<UBonFireUI>(PC, BonfireUIClass);
+		if (BonfireWidget)
+		{
+			BonfireWidget->AddToViewport();
+
+			FInputModeGameAndUI InputMode;
+			InputMode.SetWidgetToFocus(BonfireWidget->TakeWidget());
+			PC->SetInputMode(InputMode);
+			PC->bShowMouseCursor = true;
+		}
+	}
 }
 
 // Called when the game starts or when spawned
@@ -1209,6 +1231,28 @@ void AMainPlayer::ProcessAttackHit(const FHitResult& HitResult, float DamageAmou
 	}
 
 	TryConvertFoliageToActor(HitResult, DamageAmount);
+}
+
+void AMainPlayer::Client_OpenRepairUI_Implementation(class ARepair_Actor* TargetActor)
+{
+	if (RepairUIClass && TargetActor)
+	{
+		APlayerController* PC = Cast<APlayerController>(GetController());
+		if (!PC) return;
+
+		// OwningObject를 PlayerController로 변경
+		URepairUI* RepairWidget = CreateWidget<URepairUI>(PC, RepairUIClass);
+		if (RepairWidget)
+		{
+			RepairWidget->InitRepairWindow(TargetActor);
+			RepairWidget->AddToViewport();
+
+			FInputModeGameAndUI InputMode;
+			InputMode.SetWidgetToFocus(RepairWidget->TakeWidget());
+			PC->SetInputMode(InputMode);
+			PC->bShowMouseCursor = true;
+		}
+	}
 }
 
 //멀티플레이어 코드

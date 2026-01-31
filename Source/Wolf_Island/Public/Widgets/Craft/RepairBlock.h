@@ -35,6 +35,12 @@ class WOLF_ISLAND_API URepairBlock : public UUserWidget
     
     	UFUNCTION()
     	void OnRepairButtonClicked();
+
+		UPROPERTY(BlueprintReadOnly, Category = "Repair")
+		class ARepair_Actor* TargetActor;
+
+		UFUNCTION(BlueprintCallable, Category = "Repair")
+		void RefreshBlockStatus();
     
     protected:
     	virtual void NativeConstruct() override;

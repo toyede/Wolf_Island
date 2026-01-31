@@ -17,6 +17,7 @@
 #include "OnlineSessionSettings.h"
 #include "UObject/UObjectIterator.h"
 #include "AdvancedFriendsInterface.h"
+#include "Data/ItemDataStruct.h"
 #include "Components/InventoryComponent.h"
 
 #include "AdvancedFriendsGameInstance.generated.h"
@@ -153,5 +154,27 @@ public:
 	// After a friend removed the player this event is triggered
 	UFUNCTION(BlueprintImplementableEvent, Category = "AdvancedFriends")
 	void OnRemovedByFriend(const FBPUniqueNetId &InvitedPlayer, const FBPUniqueNetId &FriendRemoved);*/
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveSystem")
+	TMap<FName, FSavedActorList> LevelDataMap;
+
+	UFUNCTION(BlueprintCallable, Category = "SaveSystem")
+	void AddActorToLevelSave(FName LevelName, FSavedActorData NewActorData);
+
+	UFUNCTION(BlueprintCallable, Category = "SaveSystem")
+	bool GetSavedActorsFromLevel(FName LevelName, TArray<FSavedActorData>& OutActorList);
+
+	UFUNCTION(BlueprintCallable, Category = "SaveSystem")
+	void ClearLevelData(FName LevelName);
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Repair|State")
+	TMap<FName, bool> GlobalRepairStatusMap;
+
+	UFUNCTION(BlueprintCallable, Category = "Repair|State")
+	void SaveRepairStatus(const TMap<FName, bool>& InStatusMap);
+
+	UFUNCTION(BlueprintCallable, Category = "Repair|State")
+	TMap<FName, bool> LoadRepairStatus();
+	
 };
 

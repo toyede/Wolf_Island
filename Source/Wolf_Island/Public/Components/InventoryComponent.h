@@ -6,6 +6,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Data/ItemDataStruct.h"
+#include "Interaction/Repair_Actor.h"
 #include "InventoryComponent.generated.h"
 
 class APickup;
@@ -48,19 +49,19 @@ struct FItemAddResult
 
 	//추가된 아이템 이름
 	UPROPERTY(BlueprintReadOnly, Category="Item Add Result")
-	FText ItemName;
+	FText ItemName = FText::GetEmpty(); // FText 초기화
 	//실제 인벤토리에 추가된 아이템 개수
 	UPROPERTY(BlueprintReadOnly, Category="Item Add Result")
-	int32 ActualAmountAdded;
+	int32 ActualAmountAdded = 0; // int32 초기화
 	//아이템 추가 결과 이넘
 	UPROPERTY(BlueprintReadOnly, Category = "Item Add Result")
-	EItemAddedResult OperationResult;
+	EItemAddedResult OperationResult = EItemAddedResult::NoItemAdded; // Enum 초기화
 	//실패 이유
 	UPROPERTY(BlueprintReadOnly, Category = "Item Add Result")
-	EItemFailReason OperationFailReason;
+	EItemFailReason OperationFailReason = EItemFailReason::NoReason; // Enum 초기화
 	//결과 메시지
 	UPROPERTY(BlueprintReadOnly, Category = "Item Add Result")
-	FText ResultMessage;
+	FText ResultMessage = FText::GetEmpty(); // FText 초기화
 	
 	//아무것도 추가되지 않음
 	static FItemAddResult AddedNone(const FText& ErrorText, EItemFailReason Reason)
@@ -111,7 +112,7 @@ struct FInventorySaveData
 	UPROPERTY(BlueprintReadOnly, Category="Inventory Save Data")
 	TArray<FItemSlot> Inventory;
 	UPROPERTY(BlueprintReadOnly, Category="Inventory Save Data")
-	float CurrentWeight;
+	float CurrentWeight = 0.0f; // <-- float 초기화
 };
 
 
@@ -147,6 +148,20 @@ public:
 	//인덱스 A,B 아이템 바꾸기
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void SwapItems(int32 A, int32 B);
+	
+	// 제작 요청 (서버로 전달)
+	UFUNCTION(BlueprintCallable, Category = "Craft")
+	void Request_MakeItem(FRecipeData Recipe);
+
+	UFUNCTION(Server, Reliable)
+	void Server_MakeItem(FRecipeData Recipe);
+
+	// 수리 요청 (서버로 전달)
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Repair")
+	void Request_RepairShip(FName RecipeName, FRepairRecipeData Recipe, ARepair_Actor* TargetActor);
+
+	UFUNCTION(Server, Reliable)
+	void Server_RepairShip(FName RecipeName, FRepairRecipeData Recipe, ARepair_Actor* TargetActor);
 	
 	//아이템 데이터 불러오기
 	FItemData* GetItemData(FName ItemID) const
@@ -433,7 +448,7 @@ public:
 	//레시피 아이템 제작
 	UFUNCTION(BlueprintCallable, Category = "Craft")
 	bool MakeItem(FRecipeData Recipe);
-	bool RepairShip(FRepairRecipeData Recipes);
+	bool RepairShip(FName RecipeName, FRepairRecipeData Recipe, ARepair_Actor* TargetActor);
 	
 	//아이템 다량 삭제 함수
 	UFUNCTION(BlueprintCallable, Category = "Inventory")

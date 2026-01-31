@@ -6,6 +6,8 @@
 #include "Engine/DataTable.h"
 #include "Repair_Actor.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnRepairStatusChanged);
+
 UCLASS()
 class WOLF_ISLAND_API ARepair_Actor : public AInteractableActor
 {
@@ -16,16 +18,25 @@ class WOLF_ISLAND_API ARepair_Actor : public AInteractableActor
 public:
 
 	ARepair_Actor();
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Check")
+
+	UPROPERTY(ReplicatedUsing = OnRep_CompletedRecipes, BlueprintReadOnly, Category = "Repair")
+	TArray<FName> CompletedRecipeNames;
+
+	UFUNCTION()
+	void OnRep_CompletedRecipes();
+
+	UPROPERTY(BlueprintAssignable, Category = "Repair")
+	FOnRepairStatusChanged OnRepairStatusChanged;
+
+	UPROPERTY(ReplicatedUsing = OnRep_RepairStatus, EditAnywhere, BlueprintReadWrite, Category = "Check")
 	bool bIsBody = false;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Check")
+	UPROPERTY(ReplicatedUsing = OnRep_RepairStatus, EditAnywhere, BlueprintReadWrite, Category = "Check")
 	bool bIsEngine = false;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Check")
+	UPROPERTY(ReplicatedUsing = OnRep_RepairStatus, EditAnywhere, BlueprintReadWrite, Category = "Check")
 	bool bIsSteering = false;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Check")
+	UPROPERTY(ReplicatedUsing = OnRep_RepairStatus, EditAnywhere, BlueprintReadWrite, Category = "Check")
 	bool bIsRadar = false;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Check")
+	UPROPERTY(ReplicatedUsing = OnRep_RepairStatus, EditAnywhere, BlueprintReadWrite, Category = "Check")
 	bool bIsAnchor = false;
 	
 	UFUNCTION(BlueprintCallable, Category = "Data")
@@ -38,6 +49,8 @@ public:
 	bool CheckRadarComplete();
 	UFUNCTION(BlueprintCallable, Category = "Data")
 	bool CheckAnchorComplete();
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Data")
@@ -57,4 +70,15 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Repair")
 	bool IsRecipeComplete(FName TargetRecipeName);
+
+	UFUNCTION(BlueprintCallable, Category = "Repair")
+	void RestoreStateFromGameInstance();
+
+	bool bHasLevelLoadStarted = false;
+
+	UFUNCTION()
+	void OnRep_RepairStatus();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Repair")
+	void UpdateShipVisuals();
 };

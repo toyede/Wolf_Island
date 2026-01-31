@@ -1,8 +1,12 @@
 #include "Interaction/Repair_Actor.h"
+#include "Kismet/GameplayStatics.h"
+#include "AdvancedFriendsGameInstance.h"
 #include "Data/ItemDataStruct.h"
+#include "Net/UnrealNetwork.h"
 
 ARepair_Actor::ARepair_Actor()
 {
+    bReplicates = true;
     bIsBody = false;
     bIsEngine = false;
     bIsSteering = false;
@@ -10,10 +14,16 @@ ARepair_Actor::ARepair_Actor()
     bIsAnchor = false;
 }
 
+void ARepair_Actor::OnRep_CompletedRecipes()
+{
+    if (OnRepairStatusChanged.IsBound())
+    {
+        OnRepairStatusChanged.Broadcast();
+    }
+}
+
 void ARepair_Actor::BeginPlay()
 {
-    Super::BeginPlay();
-
     if (RepairRecipesTable)
     {
         TArray<FName> RowNames = RepairRecipesTable->GetRowNames();
@@ -35,12 +45,15 @@ void ARepair_Actor::BeginPlay()
             }
         }
     }
+    RestoreStateFromGameInstance();
+
+    Super::BeginPlay();
 }
 
 bool ARepair_Actor::CheckBodyComplete()
 {
-    bool bIsBD1Complete = IsRecipeComplete(FName("BD1"));
-    bool bIsBD2Complete = IsRecipeComplete(FName("BD2"));
+    bool bIsBD1Complete = IsRecipeComplete(FName("Body"));
+    bool bIsBD2Complete = IsRecipeComplete(FName("Propeller"));
 
     if (bIsBD1Complete && bIsBD2Complete)
     {
@@ -56,8 +69,8 @@ bool ARepair_Actor::CheckBodyComplete()
 
 bool ARepair_Actor::CheckEngineComplete()
 {
-    bool bIsEG1Complete = IsRecipeComplete(FName("EG1"));
-    bool bIsEG2Complete = IsRecipeComplete(FName("EG2"));
+    bool bIsEG1Complete = IsRecipeComplete(FName("Engine"));
+    bool bIsEG2Complete = IsRecipeComplete(FName("Pump"));
 
     if (bIsEG1Complete && bIsEG2Complete)
     {
@@ -73,8 +86,8 @@ bool ARepair_Actor::CheckEngineComplete()
 
 bool ARepair_Actor::CheckSteeringComplete()
 {
-    bool bIsST1Complete = IsRecipeComplete(FName("ST1"));
-    bool bIsST2Complete = IsRecipeComplete(FName("ST2"));
+    bool bIsST1Complete = IsRecipeComplete(FName("Control_Device"));
+    bool bIsST2Complete = IsRecipeComplete(FName("Follow-Up_Device"));
 
     if (bIsST1Complete && bIsST2Complete)
     {
@@ -90,8 +103,8 @@ bool ARepair_Actor::CheckSteeringComplete()
 
 bool ARepair_Actor::CheckRadarComplete()
 {
-    bool bIsRD1Complete = IsRecipeComplete(FName("RD1"));
-    bool bIsRD2Complete = IsRecipeComplete(FName("RD2"));
+    bool bIsRD1Complete = IsRecipeComplete(FName("Rader"));
+    bool bIsRD2Complete = IsRecipeComplete(FName("Transmitter"));
 
     if (bIsRD1Complete && bIsRD2Complete)
     {
@@ -107,8 +120,8 @@ bool ARepair_Actor::CheckRadarComplete()
 
 bool ARepair_Actor::CheckAnchorComplete()
 {
-    bool bIsAC1Complete = IsRecipeComplete(FName("AC1"));
-    bool bIsAC2Complete = IsRecipeComplete(FName("AC2"));
+    bool bIsAC1Complete = IsRecipeComplete(FName("Anchor"));
+    bool bIsAC2Complete = IsRecipeComplete(FName("Lifting_Device"));
 
     if (bIsAC1Complete && bIsAC2Complete)
     {
@@ -122,6 +135,18 @@ bool ARepair_Actor::CheckAnchorComplete()
     return bIsAnchor;
 }
 
+void ARepair_Actor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(ARepair_Actor, CompletedRecipeNames);
+    DOREPLIFETIME(ARepair_Actor, bIsBody);
+    DOREPLIFETIME(ARepair_Actor, bIsEngine);
+    DOREPLIFETIME(ARepair_Actor, bIsSteering);
+    DOREPLIFETIME(ARepair_Actor, bIsRadar);
+    DOREPLIFETIME(ARepair_Actor, bIsAnchor);
+}
+
 void ARepair_Actor::CompleteRepair()
 {
     CheckBodyComplete();
@@ -129,42 +154,97 @@ void ARepair_Actor::CompleteRepair()
     CheckSteeringComplete();
     CheckRadarComplete();
     CheckAnchorComplete();
-
-    if (bIsBody && bIsEngine && bIsSteering && bIsRadar && bIsAnchor)
+    
+    FString CurrentMapName = UGameplayStatics::GetCurrentLevelName(this);
+    
+    //if (bIsBody && bIsEngine && bIsSteering && bIsRadar && bIsAnchor)
+    if (bIsBody && bIsEngine)
     {
+        if (CurrentMapName == "StartMap")
+        {
+            return;
+        }
+        else
+        {
+            UGameplayStatics::OpenLevel(this, FName("StartMap"));
+        }
+        
     }
 }
 
-void ARepair_Actor::MarkRecipeAsComplete(FName RowName)
+void ARepair_Actor::MarkRecipeAsComplete(FName RecipeName)
 {
-    if (RepairStatusMap.Contains(RowName))
-    {
-        RepairStatusMap[RowName] = true;
-        
-        UE_LOG(LogTemp, Log, TEXT("[RepairActor] 수리 기록됨: %s"), *RowName.ToString());
+    if (!HasAuthority()) return;
 
-        CompleteRepair();
-    }
-    else
+    if (!CompletedRecipeNames.Contains(RecipeName))
     {
-        UE_LOG(LogTemp, Error, TEXT("[RepairActor] MarkRecipe 실패! Map에 키가 없음: %s"), *RowName.ToString());
+        CompletedRecipeNames.Add(RecipeName);
+
+        if (RepairStatusMap.Contains(RecipeName))
+        {
+            RepairStatusMap[RecipeName] = true;
+            
+            UAdvancedFriendsGameInstance* GI = Cast<UAdvancedFriendsGameInstance>(GetGameInstance());
+            if (GI)
+            {
+                GI->SaveRepairStatus(RepairStatusMap);
+            }
+        }
+
+        if (CheckBodyComplete()) bIsBody = true;
+        if (CheckEngineComplete()) bIsEngine = true;
+        if (CheckSteeringComplete()) bIsSteering = true;
+        if (CheckRadarComplete()) bIsRadar = true;
+        if (CheckAnchorComplete()) bIsAnchor = true;
+        
+        OnRep_CompletedRecipes();
+        
+        OnRep_RepairStatus();
     }
 }
 
 bool ARepair_Actor::IsRecipeComplete(FName TargetName)
 {
-    if (bool* bComplete = RepairStatusMap.Find(TargetName))
+    if (CompletedRecipeNames.Contains(TargetName))
     {
-        return *bComplete;
+        return true;
     }
 
     if (FName* RealRowName = RecipeIDMap.Find(TargetName))
     {
-        if (bool* bComplete = RepairStatusMap.Find(*RealRowName))
-        {
-            return *bComplete;
-        }
+        return CompletedRecipeNames.Contains(*RealRowName);
     }
 
     return false;
+}
+
+void ARepair_Actor::RestoreStateFromGameInstance()
+{
+    UAdvancedFriendsGameInstance* GI = Cast<UAdvancedFriendsGameInstance>(GetGameInstance());
+    if (!GI) return;
+
+    TMap<FName, bool> SavedMap = GI->LoadRepairStatus();
+
+    if (SavedMap.Num() == 0) 
+    {
+        return;
+    }
+
+    for (const TPair<FName, bool>& Pair : SavedMap)
+    {
+        FName Key = Pair.Key;
+        bool bIsCompleted = Pair.Value;
+
+        if (RepairStatusMap.Contains(Key))
+        {
+            RepairStatusMap[Key] = bIsCompleted;
+        }
+    }
+
+    CompleteRepair();
+}
+
+void ARepair_Actor::OnRep_RepairStatus()
+{
+    UpdateShipVisuals();
 }

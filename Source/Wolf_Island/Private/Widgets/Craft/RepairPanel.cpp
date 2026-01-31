@@ -8,11 +8,18 @@
 #include "Data/ItemDataStruct.h"
 #include "Widgets/Craft/RepairBlock.h"
 #include "Widgets/Craft/CraftSlot.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 #include "Interaction/Repair_Actor.h"
 
 void URepairPanel::NativeConstruct()
 {
     Super::NativeConstruct();
+
+    if (OwnerInventory)
+    {
+        OwnerInventory->OnInventoryUpdated.AddUObject(this, &URepairPanel::RefreshRecipeList);
+    }
     
     if (GetOwningPlayerPawn())
     {
@@ -24,15 +31,18 @@ void URepairPanel::NativeConstruct()
         RepairButton->OnClicked.AddDynamic(this, &URepairPanel::OnRepairButtonClicked);
     }
 
+
     RefreshRecipeList();
 }
 
 void URepairPanel::InitRepairPanel(class ARepair_Actor* InRepairActor)
 {
     TargetRepairActor = InRepairActor;
+
     if (TargetRepairActor)
     {
-        UE_LOG(LogTemp, Warning, TEXT("RepairPanel: 수리 대상 액터 연결됨 -> %s"), *TargetRepairActor->GetName());
+        TargetRepairActor->OnRepairStatusChanged.AddUniqueDynamic(this, &URepairPanel::RefreshRecipeList);
+        
         RefreshRecipeList();
     }
 }
@@ -52,13 +62,15 @@ void URepairPanel::RefreshRecipeList()
 
 void URepairPanel::AddRecipe(FName RowName, FRepairRecipeData Recipe)
 {
-    if (!RepairBlockClass) return;
+    if (!RepairBlockClass || !RecipeList) return;
 
-    URepairBlock* Block = CreateWidget<URepairBlock>(GetWorld(), RepairBlockClass);
+    URepairBlock* Block = CreateWidget<URepairBlock>(this, RepairBlockClass);
     if (!Block) return;
     
     Block->RowName = RowName;
     Block->RepairRecipeData = Recipe; 
+    
+    Block->TargetActor = TargetRepairActor;
 
     if (!Block->OnRepairBlockClicked.IsAlreadyBound(this, &URepairPanel::SetRepairInfo))
     {
@@ -70,34 +82,9 @@ void URepairPanel::AddRecipe(FName RowName, FRepairRecipeData Recipe)
         Block->RecipeName->SetText(FText::FromName(Recipe.RecipeName));
     }
     
-    bool bIsActuallyComplete = false;
+    Block->RefreshBlockStatus();
     
-    if (TargetRepairActor)
-    {
-        bIsActuallyComplete = TargetRepairActor->IsRecipeComplete(RowName);
-    }
-    else
-    {
-        bIsActuallyComplete = Recipe.Complete; 
-    }
-
-    if (bIsActuallyComplete)
-    {
-        if (Block->RecipeButton) 
-        {
-            Block->RecipeButton->SetIsEnabled(false);
-        }
-
-        if (Block->RecipeName)
-        {
-            Block->RecipeName->SetColorAndOpacity(FSlateColor(FLinearColor::Green));
-        }
-    }
-    
-    if (RecipeList)
-    {
-        RecipeList->AddChild(Block);
-    }
+    RecipeList->AddChild(Block);
 }
 
 void URepairPanel::SetRepairInfo(FName RowName, FRepairRecipeData RecipeData)
@@ -136,21 +123,22 @@ void URepairPanel::SetRepairInfo(FName RowName, FRepairRecipeData RecipeData)
 
 void URepairPanel::SetRepairButtonState(FRepairRecipeData RecipeData)
 {
-    if (!OwnerInventory || !RepairButton) return;
+    if (!OwnerInventory || !RepairButton || !TargetRepairActor) return;
 
-    bool bIsAlreadyComplete = false;
-    if (TargetRepairActor)
-    {
-        bIsAlreadyComplete = TargetRepairActor->IsRecipeComplete(CurrentRowName);
-    }
+    bool bIsAlreadyComplete = TargetRepairActor->IsRecipeComplete(CurrentRowName);
 
     if (bIsAlreadyComplete)
     {
         RepairButton->SetIsEnabled(false);
-        return;
+        if (RecipeNameText) RecipeNameText->SetText(FText::FromString(TEXT("수리 완료됨")));
+        return; 
     }
 
-    // 재료 확인 로직
+    if (RepairCheckSound)
+    {
+        UGameplayStatics::PlaySound2D(this, RepairCheckSound);
+    }
+
     FRecipeData TempRecipe;
     TempRecipe.Ingredient1ID = RecipeData.Ingredient1ID;
     TempRecipe.Ingredient1Amount = RecipeData.Ingredient1Amount;
@@ -163,30 +151,24 @@ void URepairPanel::SetRepairButtonState(FRepairRecipeData RecipeData)
 
     bool bHasIngredients = OwnerInventory->CheckCanMakeRecipe(TempRecipe);
     RepairButton->SetIsEnabled(bHasIngredients);
+    
+    if (RecipeNameText) RecipeNameText->SetText(FText::FromName(RecipeData.RecipeName));
 }
 
 void URepairPanel::OnRepairButtonClicked()
 {
     if (!OwnerInventory) return;
 
-    FRepairRecipeData TempRecipe;
-    TempRecipe.Ingredient1ID = CurrentRepairData.Ingredient1ID;
-    TempRecipe.Ingredient1Amount = CurrentRepairData.Ingredient1Amount;
-    TempRecipe.Ingredient2ID = CurrentRepairData.Ingredient2ID;
-    TempRecipe.Ingredient2Amount = CurrentRepairData.Ingredient2Amount;
-    TempRecipe.Ingredient3ID = CurrentRepairData.Ingredient3ID;
-    TempRecipe.Ingredient3Amount = CurrentRepairData.Ingredient3Amount;
-    TempRecipe.Ingredient4ID = CurrentRepairData.Ingredient4ID;
-    TempRecipe.Ingredient4Amount = CurrentRepairData.Ingredient4Amount;
-
-    OwnerInventory->RepairShip(TempRecipe);
-    
-    if (TargetRepairActor)
+    if (OwnerInventory && TargetRepairActor && !CurrentRowName.IsNone())
     {
-        TargetRepairActor->MarkRecipeAsComplete(CurrentRowName);
-        UE_LOG(LogTemp, Log, TEXT("수리 완료 요청 보냄: %s"), *CurrentRowName.ToString());
+        OwnerInventory->Request_RepairShip(CurrentRowName, CurrentRepairData, TargetRepairActor);
+
+        if (RepairSound)
+        {
+            UGameplayStatics::PlaySound2D(this, RepairSound);
+        }
+
+        SetRepairButtonState(CurrentRepairData);
+        
     }
-    RefreshRecipeList();
-    
-    SetRepairButtonState(CurrentRepairData);
 }

@@ -101,19 +101,15 @@ FItemSlot* UInventoryComponent::FindSlotByID(FName ItemID)
 int32 UInventoryComponent::GetItemTotalAmountByID(FName ItemID)
 {
 	int32 count = 0;
-	FText ItemName = FText();
-	for (FItemSlot Slot : InventoryContents)
+    
+	for (const FItemSlot& Slot : InventoryContents)
 	{
-		if (Slot.Item)
+		if (Slot.ItemData.ItemID == ItemID)
 		{
-			if (Slot.Item->ID == ItemID)
-			{
-				ItemName = Slot.Item->TextData.Name;
-				count += Slot.Item->Amount;
-			}
+			count += Slot.ItemData.Amount;
 		}
 	}
-	//UE_LOG(LogTemp, Warning, TEXT("[ %s ] : %d in Inventory."), *ItemName.ToString() ,count);
+    
 	return count;
 }
 
@@ -543,26 +539,25 @@ int32 UInventoryComponent::GetEmptySlotCount()
 int32 UInventoryComponent::RemoveItemsByID(FName ItemID, int32 Amount)
 {
 	int32 DesiredRemoveAmount = Amount;
-	
+    
 	for (FItemSlot& Slot : InventoryContents)
 	{
-		if (Slot.Item)
+		if (Slot.ItemData.ItemID == ItemID)
 		{
-			if (Slot.Item->ID == ItemID)
+			int32 RemoveAmount = FMath::Min(DesiredRemoveAmount, Slot.ItemData.Amount);
+            
+			Slot.ItemData.Amount -= RemoveAmount;
+			DesiredRemoveAmount -= RemoveAmount;
+
+			if (Slot.ItemData.Amount <= 0) 
 			{
-				int32 RemoveAmount = FMath::Min(DesiredRemoveAmount, Slot.Item->Amount);
-				Slot.Item->Amount -= RemoveAmount;
-				DesiredRemoveAmount -= RemoveAmount;
-
-				UE_LOG(LogTemp, Log, TEXT("Removed %d of %s, Remaining remove amount: %d"), RemoveAmount, *Slot.Item->TextData.Name.ToString(), DesiredRemoveAmount);
-
-				if (Slot.Item->Amount <= 0) Slot.Item = nullptr;
-				if (DesiredRemoveAmount <= 0) break;
+				Slot.Clear(); 
 			}
+
+			if (DesiredRemoveAmount <= 0) break;
 		}
 	}
-	
-	//OnInventoryUpdated.Broadcast();
+    
 	return Amount - DesiredRemoveAmount;
 }
 
@@ -680,7 +675,7 @@ bool UInventoryComponent::MakeItem(FRecipeData Recipe)
 			{
 				AddNewItem(ResultItem, ResultItem.Amount);
 			}
-			
+			InventoryChanged();
 			return true;
 		}
 	}
@@ -689,20 +684,28 @@ bool UInventoryComponent::MakeItem(FRecipeData Recipe)
 	return false;
 }
 
-bool UInventoryComponent::RepairShip(FRepairRecipeData Recipes)
+bool UInventoryComponent::RepairShip(FName RecipeName, FRepairRecipeData Recipe, ARepair_Actor* TargetActor)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Make Item Execute."));
-	//레시피 다시한번 체크
-	if (CheckCanMakeRepair(Recipes))
+	if (!TargetActor) return false;
+
+	// 인벤토리에 재료가 충분한지 체크
+	if (CheckCanMakeRepair(Recipe))
 	{
-		//레시피 개수별로 아이템 삭제
-		RemoveItemsByID(Recipes.Ingredient1ID, Recipes.Ingredient1Amount);
-		RemoveItemsByID(Recipes.Ingredient2ID, Recipes.Ingredient2Amount);
-		RemoveItemsByID(Recipes.Ingredient3ID, Recipes.Ingredient3Amount);
-		RemoveItemsByID(Recipes.Ingredient4ID, Recipes.Ingredient4Amount);
+		// 재료 소모
+		RemoveItemsByID(Recipe.Ingredient1ID, Recipe.Ingredient1Amount);
+		RemoveItemsByID(Recipe.Ingredient2ID, Recipe.Ingredient2Amount);
+		RemoveItemsByID(Recipe.Ingredient3ID, Recipe.Ingredient3Amount);
+		RemoveItemsByID(Recipe.Ingredient4ID, Recipe.Ingredient4Amount);
+
+		TargetActor->MarkRecipeAsComplete(RecipeName);
+        
+		TargetActor->CompleteRepair();
+
+		InventoryChanged();
+		return true;
 	}
-	UE_LOG(LogTemp, Warning, TEXT("Recipe Check Failed."));
-	
+    
+	UE_LOG(LogTemp, Warning, TEXT("Repair Failed: Not enough ingredients."));
 	return false;
 }
 
@@ -748,8 +751,39 @@ void UInventoryComponent::SwapItems(int32 A, int32 B)
 	//OnInventoryUpdated.Broadcast();
 }
 
+void UInventoryComponent::Request_MakeItem(FRecipeData Recipe)
+{
+	if (GetOwner()->HasAuthority()) {
+		MakeItem(Recipe);
+	} else {
+		Server_MakeItem(Recipe);
+	}
+}
+
+void UInventoryComponent::Request_RepairShip(FName RecipeName, FRepairRecipeData Recipe, ARepair_Actor* TargetActor)
+{
+	if (GetOwner()->HasAuthority())
+	{
+		RepairShip(RecipeName, Recipe, TargetActor);
+	}
+	else
+	{
+		Server_RepairShip(RecipeName, Recipe, TargetActor);
+	}
+}
+
+void UInventoryComponent::Server_RepairShip_Implementation(FName RecipeName, FRepairRecipeData Recipe, ARepair_Actor* TargetActor)
+{
+	RepairShip(RecipeName, Recipe, TargetActor);
+}
+
+void UInventoryComponent::Server_MakeItem_Implementation(FRecipeData Recipe)
+{
+	MakeItem(Recipe);
+}
+
 void UInventoryComponent::SwapItemBetweenInventory(UInventoryComponent* TargetInventory, int32 TargetIndex,
-	UInventoryComponent* SourceInventory, int32 SourceIndex)
+                                                   UInventoryComponent* SourceInventory, int32 SourceIndex)
 {
 	//외부에서 온 슬롯
 	FItemSlot& OriginSlot = SourceInventory->InventoryContents[SourceIndex];
