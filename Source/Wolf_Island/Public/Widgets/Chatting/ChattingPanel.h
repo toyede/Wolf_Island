@@ -1,0 +1,44 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Blueprint/UserWidget.h"
+#include "Games/MainGameState.h"
+#include "ChattingPanel.generated.h"
+
+/**
+ * 
+ */
+UCLASS()
+class WOLF_ISLAND_API UChattingPanel : public UUserWidget
+{
+	GENERATED_BODY()
+	
+public:
+	
+	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
+	class UScrollBox* ChattingBox;
+	
+	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
+	class UEditableTextBox* ChattingTextBox;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TSubclassOf<class UChattingBlock> ChattingBlockClass;
+	
+	class AMainPlayerController* OwnedController;
+	
+	virtual void NativeConstruct() override;
+	
+	UFUNCTION(BlueprintCallable)
+	void FocusInput();
+	
+	UFUNCTION(BlueprintCallable)
+	void ClearFocusInput();
+	
+	UFUNCTION(BlueprintCallable)
+	void OnChattingCommited(const FText& Text, ETextCommit::Type CommitMethod);
+	
+	UFUNCTION(BlueprintCallable)
+	void AddChatting(FChattingData NewChattingData);
+};

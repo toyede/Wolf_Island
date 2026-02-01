@@ -99,10 +99,10 @@ public:
 	float CrouchSpeed = 150.0f;
 	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
-	float SwimmingSpeed = 200.0f;
+	float SwimmingSpeed = 300.0f;
 	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
-	float SwimmingSprintSpeed = 350.0f;
+	float SwimmingSprintSpeed = 500.0f;
 	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
 	float WaterDeceleration = 0.4f;
@@ -111,7 +111,7 @@ public:
 	float WaterSurfaceOffset = 50.0f;
 	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
-	float WaterSuffocatedOffest = 60.0f;
+	float WaterSuffocatedOffest = 55.0f;
 
 	//입력 관련 변수====================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")

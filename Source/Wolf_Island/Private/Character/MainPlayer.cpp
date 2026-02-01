@@ -84,7 +84,7 @@ AMainPlayer::AMainPlayer()
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	
 	//수영을 위한 부력 컴포넌트 세팅
-	WaterLevelCheckPoint->SetRelativeLocation(FVector(0.0f, 0.0f, 20.0f));
+	WaterLevelCheckPoint->SetRelativeLocation(FVector(0.0f, 0.0f, 50.0f));
 	BuoyancyComponent->AddCustomPontoon(25.0f, WaterLevelCheckPoint->GetRelativeLocation());
 	
 	GetCharacterMovement()->MaxFlySpeed = SwimmingSpeed;
@@ -606,6 +606,8 @@ void AMainPlayer::RefreshHand()
 
 void AMainPlayer::Attack()
 {
+	if (IsSwimming) return;
+	
 	WeaponComponent->Request_UseWeapon();
 }
 
@@ -1033,22 +1035,35 @@ void AMainPlayer::SwimCheck()
 	FVector WaterVelocity;
 	float WaterDepth;
 	
+	//플레이어 위치
+	FVector OriginLocation = GetActorLocation();
+	
 	//구하기
 	EnteredWater->GetWaterSurfaceInfoAtLocation(
-		GetActorLocation(), 
+		OriginLocation, 
 		SurfaceLocation, 
 		SurfaceNormal, 
 		WaterVelocity,
 		WaterDepth,
 		true);
 	
-	FVector OriginLocation = GetActorLocation();
+	FWaveInfo WaveInfo;
+	
+	EnteredWater->GetWaveInfoAtPosition(SurfaceLocation, WaterDepth, false, WaveInfo);
+	
+	//디버그 출력
+	UE_LOG(LogTemp, Warning, TEXT("Surface Z : %f"), SurfaceLocation.Z);
+	UE_LOG(LogTemp, Warning, TEXT("WAVE Z : %f"), WaveInfo.Height);
+	
+	//플레이어 발 위치
 	FVector FootCheckLocation = FVector(
 		OriginLocation.X,
 		OriginLocation.Y,
 		OriginLocation.Z-90.0f);
+	//트레이스에 무시할 액터들
 	TArray<AActor*> Ignores;
 	Ignores.Add(this);
+	//충돌 결과
 	FHitResult Hit;
 	
 	//발이 닿으면 수면 탈출 가능
