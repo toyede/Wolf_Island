@@ -15,23 +15,28 @@ void UChattingPanel::NativeConstruct()
 	
 	OwnedController = Cast<AMainPlayerController>(GetOwningPlayer());
 	
-	if (ChattingTextBox)
+	if (ChattingInputBox)
 	{
-		ChattingTextBox->OnTextCommitted.AddDynamic(this, &UChattingPanel::OnChattingCommited);
+		ChattingInputBox->OnTextCommitted.AddDynamic(this, &UChattingPanel::OnChattingCommited);
+	}
+	
+	if (ChattingList)
+	{
+		ChattingList->ClearChildren();
 	}
 }
 
 void UChattingPanel::FocusInput()
 {
-	if (!ChattingTextBox) return;
+	if (!ChattingInputBox) return;
 	
-	ChattingTextBox->SetKeyboardFocus();
+	ChattingInputBox->SetKeyboardFocus();
 }
 
 void UChattingPanel::ClearFocusInput()
 {
-	if (!ChattingTextBox) return;
-
+	if (!ChattingInputBox) return;
+	
 	//ChattingTextBox->
 	UWidgetBlueprintLibrary::SetFocusToGameViewport(); 
 }
@@ -44,7 +49,11 @@ void UChattingPanel::OnChattingCommited(const FText& Text, ETextCommit::Type Com
 	//메시지 앞 뒤 공백 트림.
 	const FString Msg = Text.ToString().TrimStartAndEnd();
 	//빈 메시지면 암것두 안함.
-	if (Msg.IsEmpty()) return;
+	if (Msg.IsEmpty())
+	{
+		OwnedController->ExitChatMode();
+		return;
+	}
 	
 	//채팅 전송 시퀀스
 	if (OwnedController)
@@ -57,7 +66,7 @@ void UChattingPanel::OnChattingCommited(const FText& Text, ETextCommit::Type Com
 	}
 	
 	//메시지 인풋 박스 비우기
-	ChattingTextBox->SetText(FText::GetEmpty());
+	ChattingInputBox->SetText(FText::GetEmpty());
 	OwnedController->ExitChatMode();
 }
 
@@ -66,9 +75,10 @@ void UChattingPanel::AddChatting(FChattingData NewChattingData)
 	if (!ChattingBlockClass) return;
 	
 	UChattingBlock* Block = CreateWidget<UChattingBlock>(this, ChattingBlockClass);
-	Block->SetName(NewChattingData.Name);
-	Block->SetMessage(NewChattingData.Message);
+	Block->SetChattingBlock(NewChattingData);
 	
-	ChattingBox->AddChild(Block);
-	ChattingBox->ScrollToEnd();
+	//ChattingBox->AddChild(Block);
+	//ChattingBox->ScrollToEnd();
+	ChattingList->InsertChildAt(0, Block);
+	ChattingList->ScrollToStart();
 }

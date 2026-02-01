@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/TextBlock.h"
+#include "Games/MainGameState.h"
 #include "ChattingBlock.generated.h"
 
 /**
@@ -22,7 +23,25 @@ class WOLF_ISLAND_API UChattingBlock : public UUserWidget
 	
 public:
 	
+	UPROPERTY(EditDefaultsOnly, Category="Color")
+	FSlateColor GeneralColor;
+
+	UPROPERTY(EditDefaultsOnly, Category="Color")
+	FSlateColor AlarmColor;
+
+	UPROPERTY(EditDefaultsOnly, Category="Color")
+	FSlateColor AlertColor;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Color")
+	FSlateColor NoticeColor;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Color")
+	FSlateColor OwnerColor;
+	
 	virtual void NativeConstruct() override;
+	
+	UFUNCTION(BlueprintCallable)
+	void SetChattingBlock(FChattingData ChattingData);
 	
 	UFUNCTION(BlueprintCallable)
 	void SetName(FString Name) { NameText->SetText(FText::FromString(Name)); };

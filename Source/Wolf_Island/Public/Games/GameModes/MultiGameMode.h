@@ -14,4 +14,5 @@ class WOLF_ISLAND_API AMultiGameMode : public AMainGameMode
 {
 	GENERATED_BODY()
 	
+	virtual void PostLogin(APlayerController* NewPlayer) override;
 };

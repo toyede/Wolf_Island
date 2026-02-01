@@ -60,9 +60,9 @@ void AMainPlayerController::EnterChatMode()
 	FInputModeGameAndUI Mode;
 	SetInputMode(Mode);
 
-	if (ChattingPanel && ChattingPanel->ChattingTextBox)
+	if (ChattingPanel && ChattingPanel->ChattingInputBox)
 	{
-		Mode.SetWidgetToFocus(ChattingPanel->ChattingTextBox->TakeWidget());
+		Mode.SetWidgetToFocus(ChattingPanel->ChattingInputBox->TakeWidget());
 	}
 
 	if (ChattingPanel)

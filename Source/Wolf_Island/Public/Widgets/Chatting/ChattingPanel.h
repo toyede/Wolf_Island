@@ -18,10 +18,10 @@ class WOLF_ISLAND_API UChattingPanel : public UUserWidget
 public:
 	
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
-	class UScrollBox* ChattingBox;
+	class UScrollBox* ChattingList;
 	
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
-	class UEditableTextBox* ChattingTextBox;
+	class UEditableTextBox* ChattingInputBox;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<class UChattingBlock> ChattingBlockClass;
