@@ -283,6 +283,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void ProcessAttackHit(const FHitResult& HitResult, float DamageAmount);
 
+	// 클라이언트에서 폴리지를 지우기 위한 멀티캐스트 함수
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_RemoveFoliageInstance(UInstancedStaticMeshComponent* ISMC, int32 InstanceIndex);
+	
 	// 요리 및 수리 UI
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	TSubclassOf<class URepairUI> RepairUIClass;

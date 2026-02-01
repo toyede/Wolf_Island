@@ -877,65 +877,55 @@ EItemType AMainPlayer::GetHoldingItemType()
 
 void AMainPlayer::WeaponTrace()
 {
-	//기본적으론 주먹 위치
-	FVector3d StartPos = GetMesh()->GetSocketLocation(FName("hand_r"));
-	FVector3d EndPos = GetMesh()->GetSocketLocation(FName("hand_r"));
+	if (!HasAuthority()) return;
 
-	//무기를 장착 시 무기별 공격 범위로 설정
-	if (ItemMesh)
+	// 1. 위치 설정
+	// 기본적으론 주먹 위치
+	FVector StartPos = GetMesh()->GetSocketLocation(FName("hand_r"));
+	FVector EndPos = StartPos;
+
+	// 무기를 장착 시 무기별 공격 범위로 설정
+	if (ItemMesh && ItemMesh->GetStaticMesh())
 	{
 		StartPos = ItemMesh->GetSocketLocation(FName("HitBoxStart"));
 		EndPos = ItemMesh->GetSocketLocation(FName("HitBoxEnd"));
 	}
 
-	//트레이스 파라미터 설정
-	ETraceTypeQuery TraceTypeQuery = ETraceTypeQuery(ECC_Pawn);
+	// 2. 트레이스 파라미터 설정
+	ETraceTypeQuery TraceTypeQuery = UEngineTypes::ConvertToTraceType(ECC_Visibility);
 	TArray<AActor*> IgnoreActors;
 	IgnoreActors.Add(this);
 	FHitResult Hit;
 
-	//스피어 트레이스 실행
+	// 3. 스피어 트레이스 실행
 	if (UKismetSystemLibrary::SphereTraceSingle(
-		GetWorld(),
-		StartPos,
-		EndPos,
-		5.0f,
-		TraceTypeQuery,
-		true,
-		IgnoreActors,
-		EDrawDebugTrace::None,
-		//DrawDebugTrace::ForDuration,
-		Hit,
-		true))
+	   GetWorld(),
+	   StartPos,
+	   EndPos,
+	   5.0f,
+	   TraceTypeQuery,
+	   true,
+	   IgnoreActors,
+	   EDrawDebugTrace::None,
+	   Hit,
+	   true))
 	{
-		//맞은 액터
-		AActor* HitActor = Hit.GetActor();
+		// 4. 대미지 계산
+		// 기본 대미지
+		float DamageAmount = 10.0f;
 		FItemBaseData HoldingItem = GetHoldingItemReference();
 
-		//기본 대미지
-		float Damage = 10.0f;
-
-		//무기 장착 시 무기 대미지로 설정
+		// 무기 장착 시 무기 대미지로 설정
 		if (HoldingItem.IsValid())
 		{
-			FItemData* ItemData = InventoryComponent->GetItemData(HoldingItem);
-			Damage = ItemData->NumericData.Damage;
+			if (FItemData* ItemData = InventoryComponent->GetItemData(HoldingItem))
+			{
+				DamageAmount = ItemData->NumericData.Damage;
+			}
 		}
 
-		//최초로 맞고 또 맞은 액터면 무시
-		if (DamagedActors.Contains(HitActor)) return;
-
-		//최초로 맞은 액터면 맞은 액터 배열에 추가
-		DamagedActors.Add(HitActor);
-		UE_LOG(LogTemp, Warning, TEXT("Hit Actor: %s"), *HitActor->GetName());
-
-		//대미지 적용
-		UGameplayStatics::ApplyDamage(
-			HitActor,
-			Damage,
-			GetController(),
-			this,
-			UDamageType::StaticClass());
+		// 5. 판정 함수 호출 (맞은 정보와 대미지를 전달)
+		ProcessAttackHit(Hit, DamageAmount);
 	}
 }
 
@@ -1164,6 +1154,8 @@ void AMainPlayer::SetSwimMode(ESwimMode NewSwimMode)
 
 void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float DamageAmount)
 {
+	if (!HasAuthority()) return;
+
 	// 1. 맞은 컴포넌트가 유효한지 먼저 확인
 	UPrimitiveComponent* HitComponent = HitResult.GetComponent();
 	if (!HitComponent) return;
@@ -1171,10 +1163,9 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 	// 2. 폴리지(InstancedStaticMeshComponent)인지 변환 시도
 	UInstancedStaticMeshComponent* ISMC = Cast<UInstancedStaticMeshComponent>(HitComponent);
 
-	// [중요] 폴리지가 아니면(nullptr이면) 여기서 즉시 함수 종료! (땅바닥 등을 쳤을 때 크래시 방지)
+	// 폴리지가 아니면 종료
 	if (!ISMC) 
 	{
-		// 디버깅용 메시지 (필요 없으면 주석 처리)
 		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("맞은 건 폴리지가 아님"));
 		return; 
 	}
@@ -1183,7 +1174,6 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 	UStaticMesh* HitMesh = ISMC->GetStaticMesh();
 
 	// 4. 맵(목록)에 등록된 나무인지 확인
-	// HitMesh가 없거나, 맵에 등록되지 않은 풀/돌멩이라면 무시
 	if (!HitMesh || !FoliageToActorMap.Contains(HitMesh)) 
 	{
 		return;
@@ -1193,8 +1183,6 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 	int32 InstanceIndex = HitResult.Item;
 	if (InstanceIndex == INDEX_NONE) return;
 
-	// --- 검증 끝, 변환 시작 ---
-
 	TSubclassOf<ATree> TargetActorClass = FoliageToActorMap[HitMesh];
 	if (!TargetActorClass) return;
 
@@ -1202,10 +1190,10 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 	// 월드 좌표 기준으로 트랜스폼 가져오기
 	ISMC->GetInstanceTransform(InstanceIndex, InstanceTransform, true);
 
-	// 폴리지 삭제
-	ISMC->RemoveInstance(InstanceIndex);
+	// 폴리지 삭제 (서버에서 삭제하면 리플리케이션 설정에 따라 클라이언트에게 전달됩니다)
+	Multi_RemoveFoliageInstance(ISMC, InstanceIndex);
 
-	// 진짜 액터 소환
+	// 진짜 액터 소환 (서버에서 스폰하면 모든 클라이언트에게 복제됩니다)
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
@@ -1214,6 +1202,11 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 	// 데미지 전달
 	if (NewTree)
 	{
+		if (!DamagedActors.Contains(NewTree))
+		{
+			DamagedActors.Add(NewTree);
+		}
+		
 		FDamageEvent DamageEvent;
 		NewTree->TakeDamage(DamageAmount, DamageEvent, GetController(), this);
         
@@ -1223,14 +1216,36 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 
 void AMainPlayer::ProcessAttackHit(const FHitResult& HitResult, float DamageAmount)
 {
-	AActor* HitActor = HitResult.GetActor();
+	if (!HasAuthority()) return;
 
+	AActor* HitActor = HitResult.GetActor();
+	// 0. 중복처리
+	if (DamagedActors.Contains(HitActor)) return;
+	DamagedActors.Add(HitActor);
+
+	// 1. 일반 액터 대미지 처리
 	if (HitActor)
 	{
-		UGameplayStatics::ApplyDamage(HitActor, DamageAmount, GetController(), this, UDamageType::StaticClass());
+		UGameplayStatics::ApplyDamage(
+			HitActor, 
+			DamageAmount, 
+			GetController(), 
+			this, 
+			UDamageType::StaticClass());
+                
+		UE_LOG(LogTemp, Warning, TEXT("Hit Actor: %s"), *HitActor->GetName());
 	}
 
+	// 2. 폴리지 변환 시도
 	TryConvertFoliageToActor(HitResult, DamageAmount);
+}
+
+void AMainPlayer::Multi_RemoveFoliageInstance_Implementation(UInstancedStaticMeshComponent* ISMC, int32 InstanceIndex)
+{
+	if (ISMC)
+	{
+		ISMC->RemoveInstance(InstanceIndex);
+	}
 }
 
 void AMainPlayer::Client_OpenRepairUI_Implementation(class ARepair_Actor* TargetActor)
