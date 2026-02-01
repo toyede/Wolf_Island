@@ -24,6 +24,20 @@ protected:
 
 	float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
+	void Die();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dead", ReplicatedUsing = OnRep_IsDead)
+	bool bIsDead = false;
+
+	UFUNCTION()
+	void OnRep_IsDead();
+
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	void ApplyDeadState();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dead")
+	TObjectPtr<USoundBase> DieSound;
 public:	
 	virtual void Tick(float DeltaTime) override;
 

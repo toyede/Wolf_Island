@@ -6,21 +6,14 @@
 #include "AI/AIControllers/EnemyAIcontrollerbase.h"
 #include "EnemyAIBossController.generated.h"
 
-class UAISenseConfig_Sight;
-
 UENUM(BlueprintType)
 enum class EBossState : uint8
 {
 	Idle UMETA(DisplayName = "Idle"),
-	Move UMETA(DisplayName = "Move"),
-	ThrowAttack UMETA(DisplayName = "ThrowAttack"),
-	Rush UMETA(DisplayName = "Rush"),
-	SummonStatue UMETA(DisplayName = "SummonStatue"),
-	SummonAltar UMETA(DisplayName = "SummonAltar"),
-	Attack UMETA(DisplayName = "Attack"),
+	Combat UMETA(DisplayName = "Combat"),
 	Groggy UMETA(DisplayName = "Groggy"),
-	Dead UMETA(DisplayName = "Dead"),
-	Stun UMETA(DisplayName = "Stun")
+	Stun UMETA(DisplayName = "Stun"),
+	Dead UMETA(DisplayName = "Dead")
 };
 
 UCLASS()
@@ -34,29 +27,19 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override;
-	virtual void OnPerceptionUpdated(const TArray<AActor*>& UpdatedActors) override;
-
-	// 퍼셉션
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|Perception")
-	TObjectPtr<UAISenseConfig_Sight> SightConfig;
 
 	// 초기 상태
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI|State")
-	EBossState BossState = EBossState::Idle;
+	EBossState BossState = EBossState::Combat;
 
 	// 공격 타겟
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI|Target")
 	TObjectPtr<ACharacter> CurrentTarget;
 
-	void InitializeAttackTarget();
-
 public:
 	// 상태 전환
 	UFUNCTION(BlueprintCallable, Category = "AI|State")
 	void SetNewState(EBossState NewState);
-
-	UFUNCTION(BlueprintCallable, Category = "AI|State")
-	void SetRandomNewState();
 
 	UFUNCTION(BlueprintCallable, Category = "AI|State")
 	EBossState SetStateAsGroggy();

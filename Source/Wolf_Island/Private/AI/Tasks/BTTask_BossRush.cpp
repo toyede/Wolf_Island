@@ -5,6 +5,7 @@
 #include "AIController.h"
 #include "AI/Enemy_Character/EnemyAIBoss.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
+#include "BehaviorTree/BlackboardComponent.h"
 
 UBTTask_BossRush::UBTTask_BossRush()
 {
@@ -40,6 +41,11 @@ void UBTTask_BossRush::OnTaskFinished(UBehaviorTreeComponent& OwnerComp, uint8* 
 	if (CachedBoss.IsValid())
 	{
 		CachedBoss->OnBossRushEnd.RemoveDynamic(this, &UBTTask_BossRush::OnBossRushEnd);
+	}
+
+	if (UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent())
+	{
+		BB->ClearValue(TEXT("AttackTarget"));
 	}
 
 	CachedOwnerComp.Reset();

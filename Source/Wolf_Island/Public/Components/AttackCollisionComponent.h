@@ -17,7 +17,6 @@ class WOLF_ISLAND_API UAttackCollisionComponent : public UActorComponent
 public:
 	FOnHitActor OnHitActor;
 
-protected:
 	UPROPERTY(EditAnywhere)
 	FName TraceStartSocketName;
 
@@ -27,6 +26,7 @@ protected:
 	UPROPERTY(EditAnywhere)
 	float TraceRadius = 20.f;
 
+protected:
 	UPROPERTY(EditAnywhere)
 	TArray<TEnumAsByte<EObjectTypeQuery>> TraceObjectTypes;
 

@@ -85,4 +85,11 @@ protected:
 	void HandleDamage(AActor* Actor, const FAIStimulus& Stimulus);
 	void HandleHearing(AActor* Actor, const FAIStimulus& Stimulus);
 	void HandleScent(const FAIStimulus& Stimulus);
+
+protected:
+	UPROPERTY(EditAnywhere, Category = "Speed")
+	float PatrolSpeed = 75.f;
+
+	UPROPERTY(EditAnywhere, Category = "Speed")
+	float EscapeSpeed = 300.f;
 };

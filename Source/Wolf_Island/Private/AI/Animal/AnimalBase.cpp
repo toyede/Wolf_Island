@@ -4,21 +4,25 @@
 #include "AI/Animal/AnimalBase.h"
 #include "Perception/AISense_Damage.h"
 #include "Components/StatusComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "AI/AIControllers/AnimalController.h"
+#include "Net/UnrealNetwork.h"
+#include "BrainComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 AAnimalBase::AAnimalBase()
 {
-	PrimaryActorTick.bCanEverTick = true;
+    PrimaryActorTick.bCanEverTick = true;
+    StatusComponent = CreateDefaultSubobject<UStatusComponent>(TEXT("StatusComponent"));
 
-	StatusComponent = CreateDefaultSubobject<UStatusComponent>(TEXT("StatusComponent"));
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+    GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Overlap);
+    GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
 
-    GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     GetMesh()->SetCollisionObjectType(ECC_Pawn);
-    GetMesh()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
-
-    GetCharacterMovement()->bUseControllerDesiredRotation = true;
-    GetCharacterMovement()->bOrientRotationToMovement = false;
-    GetCharacterMovement()->RotationRate = FRotator(0.f, 180.f, 0.f);  // 천천히 회전
+    GetMesh()->SetGenerateOverlapEvents(true);
 }
 
 void AAnimalBase::BeginPlay()
@@ -37,6 +41,10 @@ float AAnimalBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEven
 {
     float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
+    float OldHP = StatusComponent->CurrentHP;
+    StatusComponent->DecreaseHP(ActualDamage);
+    float NewHP = StatusComponent->CurrentHP;
+
     UAISense_Damage::ReportDamageEvent(
         GetWorld(),
         this,
@@ -46,5 +54,79 @@ float AAnimalBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEven
         DamageCauser ? DamageCauser->GetActorLocation() : FVector::ZeroVector
     );
 
+    float HalfHP = StatusComponent->MaxHP * 0.5f;
+
+    if (NewHP <= 0)
+    {
+        if (AAnimalController* AIC = Cast<AAnimalController>(GetController()))
+        {
+            AIC->SetAnimalState(EAnimalState::Dead);
+        }
+        Die();
+    }
+    // 반피 이상 → 반피 이하로 떨어지는 순간만 도망
+    else if (OldHP > HalfHP && NewHP <= HalfHP)
+    {
+        if (AAnimalController* AIC = Cast<AAnimalController>(GetController()))
+        {
+            AIC->SetAnimalState(EAnimalState::Escaping);
+        }
+    }
+
     return ActualDamage;
+}
+
+void AAnimalBase::Die()
+{
+    if (!HasAuthority()) return;
+
+    if (bIsDead) return;
+
+	bIsDead = true;
+
+    if (AAnimalController* AIC = Cast<AAnimalController>(GetController()))
+    {
+        if (AIC->GetBrainComponent())
+        {
+            AIC->GetBrainComponent()->StopLogic(TEXT("Animal Died"));
+		}
+    }
+
+	SetLifeSpan(3.0f);
+}
+
+void AAnimalBase::OnRep_IsDead()
+{
+    if (bIsDead)
+    {
+        ApplyDeadState();
+    }
+}
+
+void AAnimalBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(AAnimalBase, bIsDead);
+}
+
+void AAnimalBase::ApplyDeadState()
+{
+    GetCharacterMovement()->StopMovementImmediately();
+    GetCharacterMovement()->DisableMovement();
+    GetCharacterMovement()->GravityScale = 0.f;
+
+    GetMesh()->GetAnimInstance()->Montage_Stop(0.2f);
+
+    // 캡슐: 바닥만 Block, 나머지 Ignore
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
+    GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+
+    GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+    if (DieSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, DieSound, GetActorLocation());
+    }
 }

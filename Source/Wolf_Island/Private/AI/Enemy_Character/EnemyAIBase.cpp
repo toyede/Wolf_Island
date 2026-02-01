@@ -495,7 +495,7 @@ float AEnemyAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
     }
 
     StatusComponent->DecreaseHP(ActualDamage);
-	OnHPChangeEnd.Broadcast();
+	/*OnHPChangeEnd.Broadcast();*/
 
     UAISense_Damage::ReportDamageEvent(
         GetWorld(),

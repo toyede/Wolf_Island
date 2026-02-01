@@ -3,30 +3,35 @@
 
 #include "AnimNotifies/AnimNotifyState_AttackCollision.h"
 #include "Components/AttackCollisionComponent.h"
-#include "AI/Enemy_Character/EnemyAIBase.h"
+#include "AI/Interfaces/AttackMeshProvider.h"
 
 UAnimNotifyState_AttackCollision::UAnimNotifyState_AttackCollision(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
 {
 }
 
-void UAnimNotifyState_AttackCollision::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animtaion, float TotalDuration, const FAnimNotifyEventReference& EventReference)
+void UAnimNotifyState_AttackCollision::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration, const FAnimNotifyEventReference& EventReference)
 {
-	Super::NotifyBegin(MeshComp, Animtaion, TotalDuration, EventReference);
+    Super::NotifyBegin(MeshComp, Animation, TotalDuration, EventReference);
 
-	if (const AEnemyAIBase* Owner = Cast<AEnemyAIBase>(MeshComp->GetOwner()))
-	{
-		Owner->AttackCollisionComponent->TurnOnCollision();
-	}
+    if (IAttackMeshProvider* Provider = Cast<IAttackMeshProvider>(MeshComp->GetOwner()))
+    {
+        if (UAttackCollisionComponent* Collision = Provider->GetAttackCollisionComponent())
+        {
+            Collision->TurnOnCollision();
+        }
+    }
 }
 
-void UAnimNotifyState_AttackCollision::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animtaion, const FAnimNotifyEventReference& EventReference)
+void UAnimNotifyState_AttackCollision::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
-	Super::NotifyEnd(MeshComp, Animtaion,  EventReference);
+    Super::NotifyEnd(MeshComp, Animation, EventReference);
 
-	if (const AEnemyAIBase* Owner = Cast<AEnemyAIBase>(MeshComp->GetOwner()))
-	{
-		Owner->AttackCollisionComponent->TurnOffCollision();
-	}
+    if (IAttackMeshProvider* Provider = Cast<IAttackMeshProvider>(MeshComp->GetOwner()))
+    {
+        if (UAttackCollisionComponent* Collision = Provider->GetAttackCollisionComponent())
+        {
+            Collision->TurnOffCollision();
+        }
+    }
 }
-

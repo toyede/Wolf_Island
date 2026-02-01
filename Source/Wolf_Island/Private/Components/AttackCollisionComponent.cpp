@@ -60,47 +60,42 @@ bool UAttackCollisionComponent::CanHitActor(AActor* Actor) const
 
 void UAttackCollisionComponent::CollisionTrace()
 {
-	if (AEnemyAIBase* Owner = Cast<AEnemyAIBase>(GetOwner()))
-	{
-		TArray<FHitResult> OutHits;
+    IAttackMeshProvider* MeshProvider = Cast<IAttackMeshProvider>(GetOwner());
+    if (!MeshProvider) return;
 
-		const FVector Start = Owner->bIsHuman ? Owner->GetMesh()->GetSocketLocation(TraceStartSocketName) : Owner->WolfMesh->GetSocketLocation(TraceStartSocketName);
-		const FVector End = Owner->bIsHuman ? Owner->GetMesh()->GetSocketLocation(TraceEndSocketName) : Owner->WolfMesh->GetSocketLocation(TraceEndSocketName);
+    USkeletalMeshComponent* AttackMesh = MeshProvider->GetAttackMesh();
+    if (!AttackMesh) return;
 
-		bool const bHit = UKismetSystemLibrary::SphereTraceMultiForObjects(
-			GetOwner(),
-			Start,
-			End,
-			TraceRadius,
-			TraceObjectTypes,
-			false,
-			IgnoredActors,
-			DrawDebugType,
-			OutHits,
-			true);
+    const FVector Start = AttackMesh->GetSocketLocation(TraceStartSocketName);
+    const FVector End = AttackMesh->GetSocketLocation(TraceEndSocketName);
 
-		if (bHit)
-		{
-			for (const FHitResult& Hit : OutHits)
-			{
-				AActor* HitActor = Hit.GetActor();
+    TArray<FHitResult> OutHits;
+    bool const bHit = UKismetSystemLibrary::SphereTraceMultiForObjects(
+        GetOwner(),
+        Start,
+        End,
+        TraceRadius,
+        TraceObjectTypes,
+        false,
+        IgnoredActors,
+        DrawDebugType,
+        OutHits,
+        true);
 
-				if (HitActor == nullptr)
-				{
-					continue;
-				}
-
-				if (CanHitActor(HitActor))
-				{
-					AlreadyHitActors.Add(HitActor);
-
-					if (OnHitActor.IsBound())
-					{
-						OnHitActor.Broadcast(Hit);
-					}
-				}
-			}
-		}
-	}
+    if (bHit)
+    {
+        for (const FHitResult& Hit : OutHits)
+        {
+            AActor* HitActor = Hit.GetActor();
+            if (HitActor && CanHitActor(HitActor))
+            {
+                AlreadyHitActors.Add(HitActor);
+                if (OnHitActor.IsBound())
+                {
+                    OnHitActor.Broadcast(Hit);
+                }
+            }
+        }
+    }
 }
 

@@ -5,6 +5,7 @@
 #include "AIController.h"
 #include "AI/Enemy_Character/EnemyAIBoss.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
+#include "BehaviorTree/BlackboardComponent.h"
 
 UBTTaskBossGroggy::UBTTaskBossGroggy()
 {
@@ -42,6 +43,10 @@ void UBTTaskBossGroggy::OnTaskFinished(UBehaviorTreeComponent& OwnerComp, uint8*
         CachedBoss->OnBossGroggyEnd.RemoveDynamic(this, &UBTTaskBossGroggy::OnBossGroggyEnd);
     }
 
+    if (UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent())
+    {
+        BB->ClearValue(TEXT("AttackTarget"));
+    }
     CachedOwnerComp.Reset();
     CachedBoss.Reset();
 }

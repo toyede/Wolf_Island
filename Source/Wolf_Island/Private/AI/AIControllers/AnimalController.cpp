@@ -15,6 +15,8 @@
 #include "Perception/AISense_Hearing.h"
 #include "Perception/AISense_Damage.h"
 #include "AI/Senses/AISense_Scent.h"
+#include "AI/Animal/AnimalBase.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 AAnimalController::AAnimalController()
 {
@@ -69,7 +71,24 @@ void AAnimalController::SetAnimalState(EAnimalState NewState)
 	AnimalState = NewState;
 	if (UBlackboardComponent* BB = GetBlackboardComponent())
 	{
-		//BB->SetValueAsEnum(StateKey, static_cast<uint8>(AnimalState));
+		BB->SetValueAsEnum(StateKey, static_cast<uint8>(AnimalState));
+	}
+
+	if (APawn* ControlledPawn = GetPawn())
+	{
+		if (AAnimalBase* Animal = Cast<AAnimalBase>(ControlledPawn))
+		{
+			UCharacterMovementComponent* Movement = Animal->GetCharacterMovement();
+
+			if (NewState == EAnimalState::Escaping)
+			{
+				Movement->MaxWalkSpeed = EscapeSpeed;
+			}
+			else
+			{
+				Movement->MaxWalkSpeed = PatrolSpeed;
+			}
+		}
 	}
 }
 
@@ -183,12 +202,8 @@ void AAnimalController::HandleDamage(AActor* Actor, const FAIStimulus& Stimulus)
 {
 	if (!Stimulus.WasSuccessfullySensed()) return;
 
-	// 동물은 도망가기만 함
-	SetAnimalState(EAnimalState::Escaping);
-
 	if (UBlackboardComponent* BB = GetBlackboardComponent())
 	{
-		BB->SetValueAsEnum(StateKey, static_cast<uint8>(AnimalState));
 		BB->SetValueAsObject(TargetKey, Actor);
 	}
 }

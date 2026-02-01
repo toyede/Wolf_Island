@@ -4,18 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-
 #include "AI/AIControllers/EnemyAIController.h"
 #include "AI/Interfaces/EnemyCommonInterface.h"
-
+#include "AI/Interfaces/AttackMeshProvider.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
-
 #include "Animation/AnimMontage.h"
-
 #include "NiagaraSystem.h"
 #include "NiagaraFunctionLibrary.h"
-
 #include "EnemyAIBase.generated.h"
 
 class APatrolRoute;
@@ -36,7 +32,7 @@ enum class EEnemyForm : uint8
 };
 
 UCLASS()
-class WOLF_ISLAND_API AEnemyAIBase : public ACharacter, public IEnemyCommonInterface
+class WOLF_ISLAND_API AEnemyAIBase : public ACharacter, public IEnemyCommonInterface, public IAttackMeshProvider
 {
 	GENERATED_BODY()
 
@@ -280,4 +276,14 @@ public:
 
 	void ApplyDeadState();
 
+public:
+	virtual USkeletalMeshComponent* GetAttackMesh() const override
+	{
+		return bIsHuman ? GetMesh() : WolfMesh;
+	}
+
+	virtual UAttackCollisionComponent* GetAttackCollisionComponent() const override
+	{
+		return AttackCollisionComponent;
+	}
 };

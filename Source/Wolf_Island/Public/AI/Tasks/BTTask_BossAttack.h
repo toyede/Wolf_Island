@@ -24,6 +24,9 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Attack")
     int32 AttackIndex = 0;
 
+    UPROPERTY(EditAnywhere, Category = "Attack")
+	bool bClearTargetAfterAttack = false;
+
 private:
     UFUNCTION()
     void OnBossAttackEnd();
