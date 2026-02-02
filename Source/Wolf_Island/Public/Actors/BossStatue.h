@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "BossWall.h"
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 #include "BossStatue.generated.h"
 
 class AEnemyAIBoss;
@@ -37,18 +39,24 @@ public:
 	float RushDamageMultiplier = 3.0f;
 
 protected:
-	UPROPERTY(VisibleAnywhere, Category = "Statue|Healing")
+	UPROPERTY(EditAnywhere, Category = "Statue|Healing")
 	float HealAmount = 50.f;
 
-	UPROPERTY(VisibleAnywhere, Category = "Statue|Healing")
+	UPROPERTY(EditAnywhere, Category = "Statue|Healing")
 	float HealInterval = 2.0f;
 
 	// ÆÄ±« ÀÌÆåÆ® ³ªÁß¿¡
 	UPROPERTY(EditAnywhere, Category = "Statue|Effects")
-	UParticleSystem* DestroyEffect;
+	class UNiagaraSystem* DestroyEffect;
 
 	UPROPERTY(EditAnywhere, Category = "Collision")
 	UBoxComponent* BoxCollision;
+
+	UPROPERTY(EditAnywhere, Category = "Statue|Effects")
+	class UNiagaraSystem* HealEffect;
+
+	UPROPERTY(EditAnywhere, Category = "Statue|Effects")
+	FName HealEffectSocketName = TEXT("Root");
 
 private:
 	void StartHealingTimer();

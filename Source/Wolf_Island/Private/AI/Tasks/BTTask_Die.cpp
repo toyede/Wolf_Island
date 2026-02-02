@@ -16,13 +16,13 @@ UBTTask_Die::UBTTask_Die()
 EBTNodeResult::Type UBTTask_Die::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
 	AAIController* AICon = OwnerComp.GetAIOwner();
-	AEnemyAIBase* Enemy = AICon ? Cast<AEnemyAIBase>(AICon->GetPawn()) : nullptr;
+	APawn* Pawn = AICon ? AICon->GetPawn() : nullptr;
 
-	if (!Enemy) return EBTNodeResult::Failed;
+	if (!Pawn) return EBTNodeResult::Failed;
 
-	if (Enemy->Implements<UEnemyCommonInterface>())
+	if (Pawn->Implements<UEnemyCommonInterface>())
 	{
-		IEnemyCommonInterface::Execute_Die(Enemy);
+		IEnemyCommonInterface::Execute_Die(Pawn);
 	}
 
 	return EBTNodeResult::Succeeded;

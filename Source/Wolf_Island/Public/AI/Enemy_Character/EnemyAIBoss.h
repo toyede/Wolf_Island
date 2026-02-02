@@ -6,18 +6,23 @@
 #include "GameFramework/Character.h"
 #include "AI/AIControllers/EnemyAIBossController.h"
 #include "AI/Interfaces/AttackMeshProvider.h"
+#include "AI/Interfaces/EnemyCommonInterface.h"
 #include "EnemyAIBoss.generated.h"
 
 class UAnimMontage;
 class UAttackCollisionComponent;
 class UStatusComponent;
+class AStatueForewarning;
+class ABossStatue;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBossAttackEnd);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBossRushEnd);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBossGroggyEnd);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSummonStatueEnd);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPhaseChanged, int32, NewPhase);
 
 UCLASS()
-class WOLF_ISLAND_API AEnemyAIBoss : public ACharacter, public IAttackMeshProvider
+class WOLF_ISLAND_API AEnemyAIBoss : public ACharacter, public IAttackMeshProvider, public IEnemyCommonInterface
 {
 	GENERATED_BODY()
 
@@ -33,19 +38,25 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Delegate")
 	FOnBossGroggyEnd OnBossGroggyEnd;
 
+	UPROPERTY(BlueprintAssignable, Category = "Delegate")
+	FOnSummonStatueEnd OnSummonStatueEnd;
+
+	UPROPERTY(BlueprintAssignable, Category = "Delegate")
+	FOnPhaseChanged OnPhaseChanged;
+
 protected:
 	virtual void BeginPlay() override;
 
-public:	
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+public:
 	virtual void Tick(float DeltaTime) override;
-	
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Comp")
 	TObjectPtr<UStatusComponent> StatusComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Comp")
 	TObjectPtr<UAttackCollisionComponent> AttackCollisionComponent;
-
-	// 대미지
 
 	UPROPERTY(EditDefaultsOnly, Category = "Combat")
 	TArray<float> AttackDamages;
@@ -57,8 +68,6 @@ public:
 	float CurrentDamage = 0.f;
 
 	void SetCurrentDamage(float Damage) { CurrentDamage = Damage; }
-
-	// 공격 범위 소켓
 
 	UPROPERTY(EditDefaultsOnly, Category = "Collision")
 	TArray<FName> AttackStartSockets;
@@ -72,15 +81,11 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Collision")
 	FName RushEndSocket;
 
-	// 콜리전 범위
-
 	UPROPERTY(EditDefaultsOnly, Category = "Collision")
 	TArray<float> AttackRadiuses;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Collision")
 	float RushRadius = 50.f;
-
-	// 몽타주
 
 	UPROPERTY(EditDefaultsOnly, Category = "Combat")
 	TArray<UAnimMontage*> AttackMontages;
@@ -90,6 +95,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Combat")
 	UAnimMontage* GroggyMontage;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat")
+	UAnimMontage* SummonStatueMontage;
 
 	UFUNCTION()
 	void ExecuteAttack(int32 AttackIndex);
@@ -103,14 +111,48 @@ public:
 	UFUNCTION()
 	void EndGroggy();
 
-protected:
+	UFUNCTION()
+	void ExecuteSummonStatue();
 
+	virtual void Die_Implementation() override;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Phase")
+	int32 CurrentPhase = 1;
+
+	bool bPhase2Triggered = false;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|Phase2")
+	TSubclassOf<AStatueForewarning> ForewarningClass;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|Phase2")
+	TSubclassOf<ABossStatue> StatueClass;
+
+	UPROPERTY(EditInstanceOnly, Category = "Boss|Phase2")
+	AActor* StatueSpawnPoint;
+
+	void SpawnStatueSequence();
+	void OnForewarningComplete();
+
+public:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat|Dead", ReplicatedUsing = OnRep_IsDead)
+	bool bIsDead = false;
+
+protected:
+	UFUNCTION()
+	void OnRep_IsDead();
+
+	void ApplyDeadState();
+
+	USoundBase* DieSound;
+
+protected:
 	UFUNCTION()
 	void OnAttackHit(const FHitResult& HitResult);
 
 	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 	void OnRushMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 	void OnGroggyMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	void OnSummonStatueMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Groggy")
@@ -118,6 +160,27 @@ protected:
 
 private:
 	FTimerHandle GroggyTimerHandle;
+
+	UPROPERTY(Replicated)
+	bool bIsRushing = false;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayAttackMontage(int32 AttackIndex);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayRushMontage();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayGroggyMontage();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayGroggyGetUp();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlaySummonMontage();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_StopMontage(float BlendOut);
 
 public:
 	virtual USkeletalMeshComponent* GetAttackMesh() const override
@@ -134,7 +197,4 @@ protected:
 	virtual void NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit) override;
 
 	float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
-
-	UPROPERTY()
-	bool bIsRushing = false;
 };

@@ -52,6 +52,25 @@ void ABossStatue::HealBoss()
 	if (CachedBoss)
 	{
 		CachedBoss->StatusComponent->IncreaseHP(HealAmount);
+		GEngine->AddOnScreenDebugMessage(
+			-1,
+			2.f,
+			FColor::Green,
+			FString::Printf(TEXT("Boss Healed: %.2f   Current HP: %.2f"), HealAmount, CachedBoss->StatusComponent->CurrentHP)
+		);
+
+		if (HealEffect)
+		{
+			UNiagaraFunctionLibrary::SpawnSystemAttached(
+				HealEffect,
+				CachedBoss->GetMesh(), // 보스의 메쉬에 부착
+				HealEffectSocketName,
+				FVector::ZeroVector,
+				FRotator::ZeroRotator,
+				EAttachLocation::KeepRelativeOffset,
+				true
+			);
+		}
 	}
 }
 
@@ -90,11 +109,12 @@ void ABossStatue::Die()
 	// 파괴 이펙트
 	if (DestroyEffect)
 	{
-		UGameplayStatics::SpawnEmitterAtLocation(
+		/*UGameplayStatics::SpawnEmitterAtLocation(
 			GetWorld(),
 			DestroyEffect,
 			GetActorLocation()
-		);
+		);*/
+		// 나이아가라 쓸거임
 	}
 
 	OnStatueDestroyed.Broadcast();

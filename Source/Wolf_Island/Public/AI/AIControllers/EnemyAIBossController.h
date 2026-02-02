@@ -27,6 +27,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override;
+	virtual void OnUnPossess() override;
 
 	// 초기 상태
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI|State")
@@ -49,4 +50,7 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "AI|State")
 	EBossState GetCurrentState() const { return BossState; }
+
+	UFUNCTION()
+	void HandlePhaseChanged(int32 NewPhase);
 };

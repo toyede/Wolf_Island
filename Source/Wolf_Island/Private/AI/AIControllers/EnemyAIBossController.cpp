@@ -5,6 +5,7 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
+#include "AI/Enemy_Character/EnemyAIBoss.h"
 
 AEnemyAIBossController::AEnemyAIBossController()
 {
@@ -20,6 +21,21 @@ void AEnemyAIBossController::OnPossess(APawn* InPawn)
 	Super::OnPossess(InPawn);
 
 	SetNewState(EBossState::Combat);
+
+	if (AEnemyAIBoss* Boss = Cast<AEnemyAIBoss>(InPawn))
+	{
+		Boss->OnPhaseChanged.AddDynamic(this, &AEnemyAIBossController::HandlePhaseChanged);
+	}
+}
+
+void AEnemyAIBossController::OnUnPossess()
+{
+	if (AEnemyAIBoss* Boss = Cast<AEnemyAIBoss>(GetPawn()))
+	{
+		Boss->OnPhaseChanged.RemoveDynamic(this, &AEnemyAIBossController::HandlePhaseChanged);
+	}
+
+	Super::OnUnPossess();
 }
 
 void AEnemyAIBossController::SetNewState(EBossState NewState)
@@ -47,4 +63,12 @@ EBossState AEnemyAIBossController::SetStateAsStun()
 {
 	SetNewState(EBossState::Stun);
 	return EBossState::Stun;
+}
+
+void AEnemyAIBossController::HandlePhaseChanged(int32 NewPhase)
+{
+	if (UBlackboardComponent* BB = GetBlackboardComponent())
+	{
+		BB->SetValueAsInt(TEXT("CurrentPhase"), NewPhase);
+	}
 }

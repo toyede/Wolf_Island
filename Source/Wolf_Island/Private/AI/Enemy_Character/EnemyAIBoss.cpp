@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "AI/Enemy_Character/EnemyAIBoss.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -11,6 +10,8 @@
 #include "Engine/DamageEvents.h"
 #include "Net/UnrealNetwork.h"
 #include "Actors/BossStatue.h"
+#include "Actors/StatueForewarning.h"
+#include "BrainComponent.h"
 
 AEnemyAIBoss::AEnemyAIBoss()
 {
@@ -37,34 +38,77 @@ void AEnemyAIBoss::BeginPlay()
 	}
 }
 
+void AEnemyAIBoss::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AEnemyAIBoss, bIsDead);
+	DOREPLIFETIME(AEnemyAIBoss, bIsRushing);
+}
+
 void AEnemyAIBoss::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+}
 
+void AEnemyAIBoss::SpawnStatueSequence()
+{
+	FVector SpawnLocation = StatueSpawnPoint->GetActorLocation();
+
+	if (ForewarningClass)
+	{
+		AStatueForewarning* Forewarning = GetWorld()->SpawnActor<AStatueForewarning>(
+			ForewarningClass,
+			SpawnLocation,
+			FRotator::ZeroRotator
+		);
+
+		if (Forewarning)
+		{
+			Forewarning->OnForewarningComplete.AddUObject(this, &AEnemyAIBoss::OnForewarningComplete);
+		}
+	}
+}
+
+void AEnemyAIBoss::OnForewarningComplete()
+{
+	FVector SpawnLocation = StatueSpawnPoint->GetActorLocation();
+
+	if (StatueClass)
+	{
+		GetWorld()->SpawnActor<ABossStatue>(
+			StatueClass,
+			SpawnLocation,
+			FRotator::ZeroRotator
+		);
+	}
 }
 
 void AEnemyAIBoss::OnAttackHit(const FHitResult& HitResult)
 {
 	AActor* HitActor = HitResult.GetActor();
-	if (!HitActor)
-	{
-		return;
-	}
+	if (!HitActor) return;
+
 	FDamageEvent DamageEvent;
 	HitActor->TakeDamage(CurrentDamage, DamageEvent, GetController(), this);
 }
 
 void AEnemyAIBoss::ExecuteAttack(int32 AttackIndex)
 {
+	if (!HasAuthority()) return;
 	if (!AttackMontages.IsValidIndex(AttackIndex)) return;
-
-	UAnimMontage* Montage = AttackMontages[AttackIndex];
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
 	if (AttackDamages.IsValidIndex(AttackIndex))
 	{
 		CurrentDamage = AttackDamages[AttackIndex];
 	}
+
+	Multicast_PlayAttackMontage(AttackIndex);
+}
+
+void AEnemyAIBoss::Multicast_PlayAttackMontage_Implementation(int32 AttackIndex)
+{
+	if (!AttackMontages.IsValidIndex(AttackIndex)) return;
 
 	if (AttackStartSockets.IsValidIndex(AttackIndex) && AttackEndSockets.IsValidIndex(AttackIndex))
 	{
@@ -77,25 +121,34 @@ void AEnemyAIBoss::ExecuteAttack(int32 AttackIndex)
 		AttackCollisionComponent->TraceRadius = AttackRadiuses[AttackIndex];
 	}
 
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	UAnimMontage* Montage = AttackMontages[AttackIndex];
+
 	if (AnimInstance && Montage)
 	{
 		AnimInstance->Montage_Play(Montage);
 
-		FOnMontageEnded EndDelegate;
-		EndDelegate.BindUObject(this, &AEnemyAIBoss::OnAttackMontageEnded);
-		AnimInstance->Montage_SetEndDelegate(EndDelegate, Montage);
+		if (HasAuthority())
+		{
+			FOnMontageEnded EndDelegate;
+			EndDelegate.BindUObject(this, &AEnemyAIBoss::OnAttackMontageEnded);
+			AnimInstance->Montage_SetEndDelegate(EndDelegate, Montage);
+		}
 	}
 }
 
 void AEnemyAIBoss::ExecuteRush()
 {
+	if (!HasAuthority()) return;
+
 	bIsRushing = true;
-
-	UAnimMontage* Montage = RushMontage;
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-
 	CurrentDamage = RushDamage;
 
+	Multicast_PlayRushMontage();
+}
+
+void AEnemyAIBoss::Multicast_PlayRushMontage_Implementation()
+{
 	if (RushStartSocket != NAME_None)
 	{
 		AttackCollisionComponent->TraceStartSocketName = RushStartSocket;
@@ -104,47 +157,119 @@ void AEnemyAIBoss::ExecuteRush()
 	{
 		AttackCollisionComponent->TraceEndSocketName = RushEndSocket;
 	}
-	
 	AttackCollisionComponent->TraceRadius = RushRadius;
 
-	if (Montage && AnimInstance)
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+
+	if (AnimInstance && RushMontage)
 	{
-		AnimInstance->Montage_Play(Montage);
-		FOnMontageEnded EndDelegate;
-		EndDelegate.BindUObject(this, &AEnemyAIBoss::OnRushMontageEnded);
-		AnimInstance->Montage_SetEndDelegate(EndDelegate, Montage);
+		AnimInstance->Montage_Play(RushMontage);
+
+		if (HasAuthority())
+		{
+			FOnMontageEnded EndDelegate;
+			EndDelegate.BindUObject(this, &AEnemyAIBoss::OnRushMontageEnded);
+			AnimInstance->Montage_SetEndDelegate(EndDelegate, RushMontage);
+		}
 	}
 }
 
 void AEnemyAIBoss::ExecuteGroggy()
 {
+	if (!HasAuthority()) return;
+
 	bIsRushing = false;
+
+	Multicast_PlayGroggyMontage();
+
+	GetWorldTimerManager().SetTimer(
+		GroggyTimerHandle,
+		this,
+		&AEnemyAIBoss::EndGroggy,
+		GroggyDuration,
+		false
+	);
+}
+
+void AEnemyAIBoss::Multicast_PlayGroggyMontage_Implementation()
+{
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+
 	if (AnimInstance && GroggyMontage)
 	{
 		AnimInstance->Montage_Play(GroggyMontage);
-
-		GetWorldTimerManager().SetTimer(
-			GroggyTimerHandle,
-			this,
-			&AEnemyAIBoss::EndGroggy,
-			GroggyDuration,
-			false
-		);
 	}
 }
 
 void AEnemyAIBoss::EndGroggy()
 {
+	Multicast_PlayGroggyGetUp();
+}
+
+void AEnemyAIBoss::Multicast_PlayGroggyGetUp_Implementation()
+{
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+
 	if (AnimInstance && GroggyMontage)
 	{
 		AnimInstance->Montage_JumpToSection(TEXT("GetUp"), GroggyMontage);
 
-		FOnMontageEnded EndDelegate;
-		EndDelegate.BindUObject(this, &AEnemyAIBoss::OnGroggyMontageEnded);
-		AnimInstance->Montage_SetEndDelegate(EndDelegate, GroggyMontage);
+		if (HasAuthority())
+		{
+			FOnMontageEnded EndDelegate;
+			EndDelegate.BindUObject(this, &AEnemyAIBoss::OnGroggyMontageEnded);
+			AnimInstance->Montage_SetEndDelegate(EndDelegate, GroggyMontage);
+		}
 	}
+}
+
+void AEnemyAIBoss::ExecuteSummonStatue()
+{
+	if (!HasAuthority()) return;
+
+	SpawnStatueSequence();
+	Multicast_PlaySummonMontage();
+}
+
+void AEnemyAIBoss::Multicast_PlaySummonMontage_Implementation()
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+
+	if (AnimInstance && SummonStatueMontage)
+	{
+		AnimInstance->Montage_Play(SummonStatueMontage);
+
+		if (HasAuthority())
+		{
+			FOnMontageEnded EndDelegate;
+			EndDelegate.BindUObject(this, &AEnemyAIBoss::OnSummonStatueMontageEnded);
+			AnimInstance->Montage_SetEndDelegate(EndDelegate, SummonStatueMontage);
+		}
+	}
+}
+
+void AEnemyAIBoss::Multicast_StopMontage_Implementation(float BlendOut)
+{
+	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+	{
+		AnimInstance->Montage_Stop(BlendOut);
+	}
+}
+
+void AEnemyAIBoss::Die_Implementation()
+{
+	if (!HasAuthority()) return;
+	if (bIsDead) return;
+
+	bIsDead = true;
+	ApplyDeadState();
+
+	if (AEnemyAIBossController* AIC = Cast<AEnemyAIBossController>(GetController()))
+	{
+		AIC->GetBrainComponent()->StopLogic(TEXT("Boss Dead"));
+	}
+
+	SetLifeSpan(2.5f);
 }
 
 void AEnemyAIBoss::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
@@ -168,6 +293,11 @@ void AEnemyAIBoss::OnGroggyMontageEnded(UAnimMontage* Montage, bool bInterrupted
 	OnBossGroggyEnd.Broadcast();
 }
 
+void AEnemyAIBoss::OnSummonStatueMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	OnSummonStatueEnd.Broadcast();
+}
+
 void AEnemyAIBoss::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit)
 {
 	Super::NotifyHit(MyComp, Other, OtherComp, bSelfMoved, HitLocation, HitNormal, NormalImpulse, Hit);
@@ -185,14 +315,10 @@ void AEnemyAIBoss::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimit
 
 		if (ABossStatue* Statue = Cast<ABossStatue>(Other))
 		{
-			// 배율 없이 기본 데미지만 전달
 			Statue->TakeDamage(RushDamage, FDamageEvent(), GetController(), this);
 		}
 
-		if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
-		{
-			AnimInstance->Montage_Stop(0.2f);
-		}
+		Multicast_StopMontage(0.2f);
 
 		ExecuteGroggy();
 	}
@@ -209,6 +335,13 @@ float AEnemyAIBoss::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 
 	StatusComponent->DecreaseHP(ActualDamage);
 
+	if (!bPhase2Triggered && StatusComponent->CurrentHP <= StatusComponent->MaxHP * 0.5f)
+	{
+		bPhase2Triggered = true;
+		CurrentPhase = 2;
+		OnPhaseChanged.Broadcast(CurrentPhase);
+	}
+
 	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Boss HP : %.0f"), StatusComponent->CurrentHP));
 
 	if (StatusComponent->CurrentHP <= 0)
@@ -219,4 +352,32 @@ float AEnemyAIBoss::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 		}
 	}
 	return ActualDamage;
+}
+
+void AEnemyAIBoss::OnRep_IsDead()
+{
+	if (bIsDead)
+	{
+		ApplyDeadState();
+	}
+}
+
+void AEnemyAIBoss::ApplyDeadState()
+{
+	GetCharacterMovement()->StopMovementImmediately();
+	GetCharacterMovement()->DisableMovement();
+	GetCharacterMovement()->GravityScale = 0.f;
+
+	GetMesh()->GetAnimInstance()->Montage_Stop(0.2f);
+
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	if (DieSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, DieSound, GetActorLocation());
+	}
 }
