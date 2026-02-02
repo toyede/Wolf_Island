@@ -19,6 +19,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBossAttackEnd);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBossRushEnd);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBossGroggyEnd);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSummonStatueEnd);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnThrustEnd);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpecialAttackEnd);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPhaseChanged, int32, NewPhase);
 
 UCLASS()
@@ -40,6 +42,12 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Delegate")
 	FOnSummonStatueEnd OnSummonStatueEnd;
+
+	UPROPERTY(BlueprintAssignable, Category = "Delegate")
+	FOnThrustEnd OnThrustEnd;
+
+	UPROPERTY(BlueprintAssignable, Category = "Delegate")
+	FOnSpecialAttackEnd OnSpecialAttackEnd;
 
 	UPROPERTY(BlueprintAssignable, Category = "Delegate")
 	FOnPhaseChanged OnPhaseChanged;
@@ -69,6 +77,8 @@ public:
 
 	void SetCurrentDamage(float Damage) { CurrentDamage = Damage; }
 
+	// 콜리전 소켓 및 반경
+
 	UPROPERTY(EditDefaultsOnly, Category = "Collision")
 	TArray<FName> AttackStartSockets;
 
@@ -82,11 +92,21 @@ public:
 	FName RushEndSocket;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Collision")
+	TArray<FName> SpecialAttackStartSockets;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Collision")
+	TArray<FName> SpecialAttackEndSockets;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Collision")
 	TArray<float> AttackRadiuses;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Collision")
 	float RushRadius = 50.f;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Collision")
+	TArray<float> SpecialAttackRadiuses;
+
+	// 몽타주
 	UPROPERTY(EditDefaultsOnly, Category = "Combat")
 	TArray<UAnimMontage*> AttackMontages;
 
@@ -98,6 +118,14 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Combat")
 	UAnimMontage* SummonStatueMontage;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat")
+	UAnimMontage* ThrustMontage;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat")
+	UAnimMontage* SpecialAttackMontage;
+
+	// 실행 함수
 
 	UFUNCTION()
 	void ExecuteAttack(int32 AttackIndex);
@@ -113,6 +141,12 @@ public:
 
 	UFUNCTION()
 	void ExecuteSummonStatue();
+
+	UFUNCTION()
+	void ExecuteThrust();
+
+	UFUNCTION()
+	void ExecuteSpecialAttack();
 
 	virtual void Die_Implementation() override;
 
@@ -153,6 +187,8 @@ protected:
 	void OnRushMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 	void OnGroggyMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 	void OnSummonStatueMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	void OnThrustMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	void OnSpecialAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Groggy")
@@ -181,6 +217,12 @@ private:
 
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_StopMontage(float BlendOut);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayThrustMontage();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlaySpecialAttackMontage();
 
 public:
 	virtual USkeletalMeshComponent* GetAttackMesh() const override

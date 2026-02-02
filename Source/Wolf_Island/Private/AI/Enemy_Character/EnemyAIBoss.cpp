@@ -248,6 +248,53 @@ void AEnemyAIBoss::Multicast_PlaySummonMontage_Implementation()
 	}
 }
 
+void AEnemyAIBoss::ExecuteThrust()
+{
+	if (!HasAuthority()) return;
+
+	Multicast_PlayThrustMontage();
+}
+
+void AEnemyAIBoss::Multicast_PlayThrustMontage_Implementation()
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+
+	if (AnimInstance && ThrustMontage)
+	{
+		AnimInstance->Montage_Play(ThrustMontage);
+
+		if (HasAuthority())
+		{
+			FOnMontageEnded EndDelegate;
+			EndDelegate.BindUObject(this, &AEnemyAIBoss::OnThrustMontageEnded);
+			AnimInstance->Montage_SetEndDelegate(EndDelegate, ThrustMontage);
+		}
+	}
+}
+
+void AEnemyAIBoss::ExecuteSpecialAttack()
+{
+	if (!HasAuthority()) return;
+
+	Multicast_PlaySpecialAttackMontage();
+}
+
+void AEnemyAIBoss::Multicast_PlaySpecialAttackMontage_Implementation()
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && SpecialAttackMontage)
+	{
+		AnimInstance->Montage_Play(SpecialAttackMontage);
+
+		if (HasAuthority())
+		{
+			FOnMontageEnded EndDelegate;
+			EndDelegate.BindUObject(this, &AEnemyAIBoss::OnSpecialAttackMontageEnded);
+			AnimInstance->Montage_SetEndDelegate(EndDelegate, SpecialAttackMontage);
+		}
+	}
+}
+
 void AEnemyAIBoss::Multicast_StopMontage_Implementation(float BlendOut)
 {
 	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
@@ -296,6 +343,16 @@ void AEnemyAIBoss::OnGroggyMontageEnded(UAnimMontage* Montage, bool bInterrupted
 void AEnemyAIBoss::OnSummonStatueMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
 	OnSummonStatueEnd.Broadcast();
+}
+
+void AEnemyAIBoss::OnThrustMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	OnThrustEnd.Broadcast();
+}
+
+void AEnemyAIBoss::OnSpecialAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	OnSpecialAttackEnd.Broadcast();
 }
 
 void AEnemyAIBoss::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit)
