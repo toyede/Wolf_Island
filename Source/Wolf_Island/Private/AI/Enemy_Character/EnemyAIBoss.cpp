@@ -10,6 +10,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Engine/DamageEvents.h"
 #include "Net/UnrealNetwork.h"
+#include "Actors/BossStatue.h"
 
 AEnemyAIBoss::AEnemyAIBoss()
 {
@@ -49,7 +50,6 @@ void AEnemyAIBoss::OnAttackHit(const FHitResult& HitResult)
 	{
 		return;
 	}
-
 	FDamageEvent DamageEvent;
 	HitActor->TakeDamage(CurrentDamage, DamageEvent, GetController(), this);
 }
@@ -183,6 +183,12 @@ void AEnemyAIBoss::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimit
 			AIC->SetNewState(EBossState::Groggy);
 		}
 
+		if (ABossStatue* Statue = Cast<ABossStatue>(Other))
+		{
+			// 배율 없이 기본 데미지만 전달
+			Statue->TakeDamage(RushDamage, FDamageEvent(), GetController(), this);
+		}
+
 		if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
 		{
 			AnimInstance->Montage_Stop(0.2f);
@@ -190,4 +196,27 @@ void AEnemyAIBoss::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimit
 
 		ExecuteGroggy();
 	}
+}
+
+float AEnemyAIBoss::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	if (DamageCauser && DamageCauser->IsA<AEnemyAIBoss>())
+	{
+		return 0.f;
+	}
+
+	StatusComponent->DecreaseHP(ActualDamage);
+
+	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Boss HP : %.0f"), StatusComponent->CurrentHP));
+
+	if (StatusComponent->CurrentHP <= 0)
+	{
+		if (AEnemyAIBossController* AIC = Cast<AEnemyAIBossController>(GetController()))
+		{
+			AIC->SetNewState(EBossState::Dead);
+		}
+	}
+	return ActualDamage;
 }

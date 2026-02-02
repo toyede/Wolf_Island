@@ -14,6 +14,6 @@ class WOLF_ISLAND_API ABossWall : public AActor
 public:	
 	ABossWall();
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(EditAnywhere)
 	UStaticMeshComponent* Mesh;
 };
