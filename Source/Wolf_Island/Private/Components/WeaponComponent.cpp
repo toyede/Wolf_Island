@@ -6,6 +6,7 @@
 #include "Character/MainPlayer.h"
 #include "GameFramework/Character.h"
 #include "Item/ItemBase.h"
+#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 
 // Sets default values for this component's properties
@@ -77,7 +78,17 @@ void UWeaponComponent::UnequipeWeapon()
 	IsEquipped = false;
 }
 
-void UWeaponComponent::UseWeapon_Implementation()
+bool UWeaponComponent::SetRandomIndex()
+{
+	if (CurrentWeapon.AttackMontages.Num()==0) return false;
+	if (IsAttacking) return false;
+	
+	PlayIndex = FMath::RandRange(0, CurrentWeapon.AttackMontages.Num()-1);
+	
+	return true;
+}
+
+void UWeaponComponent::UseWeapon_Implementation(int32 Index)
 {
 	AMainPlayer* Owner = Cast<AMainPlayer>(GetOwner());
 	if (!Owner || IsAttacking)
@@ -87,20 +98,33 @@ void UWeaponComponent::UseWeapon_Implementation()
 	}
 
 	UAnimInstance* AnimInst = Owner->GetMesh() ? Owner->GetMesh()->GetAnimInstance() : nullptr;
-	if (!AnimInst || !CurrentWeapon.Montage) return;
+	if (!AnimInst) return;
 	
 	IsAttacking = true;
-	AttackMontage = CurrentWeapon.Montage;
+	AttackMontage = CurrentWeapon.AttackMontages[Index];
 	
 	FOnMontageEnded EndDelegate;
 	EndDelegate.BindUObject(this, &UWeaponComponent::OnAttackMontageEnded);
 	
-	Owner->PlayAnimMontage(CurrentWeapon.Montage);
-	Owner->Multi_PlaySound(Owner->PunchSound, Owner->GetActorLocation());
-	//몽타주 실행 완료 후 공격 중 상태 변수 변경하는 델리게이트
-	AnimInst->Montage_SetEndDelegate(EndDelegate, CurrentWeapon.Montage);
-
+	Owner->PlayAnimMontage(AttackMontage);
 	
+	if (CurrentWeapon.Sounds.Num()!=0)
+	{
+		USoundBase* AttackSound;
+		
+		if (Index > CurrentWeapon.Sounds.Num()-1)
+		{
+			AttackSound= CurrentWeapon.Sounds[0];
+		} else
+		{
+			AttackSound= CurrentWeapon.Sounds[Index];
+		}
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), AttackSound, Owner->GetActorLocation());
+		//Owner->Multi_PlaySound(Owner->PunchSound, Owner->GetActorLocation());
+	}
+	
+	//몽타주 실행 완료 후 공격 중 상태 변수 변경하는 델리게이트
+	AnimInst->Montage_SetEndDelegate(EndDelegate, AttackMontage);	
 }
 
 //공격 몽타주 재생 끝나면 공격 중 상태 변수 다시 false로 설정하는 함수
@@ -120,6 +144,7 @@ void UWeaponComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
 	DOREPLIFETIME(UWeaponComponent, IsEquipped);
 	DOREPLIFETIME(UWeaponComponent, IsAttacking);
 	DOREPLIFETIME(UWeaponComponent, CurrentWeapon);
+	DOREPLIFETIME(UWeaponComponent, PlayIndex);
 }
 
 void UWeaponComponent::Request_CheckWeapon(FItemBaseData HandedItem)
@@ -176,7 +201,8 @@ void UWeaponComponent::Request_UseWeapon()
 		GetOwner()->HasAuthority()?"SERVER":"CLIENT");
 	if (GetOwner()->HasAuthority())
 	{
-		UseWeapon();
+		if (!SetRandomIndex()) return;
+		UseWeapon(PlayIndex);
 	} else
 	{
 		Server_UseWeapon();
@@ -185,7 +211,8 @@ void UWeaponComponent::Request_UseWeapon()
 
 void UWeaponComponent::Server_UseWeapon_Implementation()
 {
-	UseWeapon();
+	if (!SetRandomIndex()) return;
+	UseWeapon(PlayIndex);
 }
 
 

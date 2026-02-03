@@ -28,7 +28,7 @@ void AMainPlayerController::BeginPlay()
 	MainPlayerState = GetPlayerState<AMainPlayerState>();
 	MainGameState = Cast<AMainGameState>(GetWorld()->GetGameState());
 	
-	ExitChatMode();
+	//ExitChatMode();
 }
 
 void AMainPlayerController::SetupInputComponent()

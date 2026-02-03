@@ -172,6 +172,16 @@ void AMainPlayer::Tick(float DeltaTime)
 	{
 		CheckInteraction();
 	}
+	
+	if (HasAuthority() && IsTracingAttack)
+	{
+		for (auto& TracePoint : TracePoints)
+		{
+			FVector Curr = ItemMesh->GetSocketLocation(TracePoint.Key);
+			WeaponTrace(TracePoint.Value.Prev, Curr);
+			TracePoint.Value.Prev = Curr;
+		}
+	}
 }
 
 // Called to bind functionality to input
@@ -877,21 +887,11 @@ EItemType AMainPlayer::GetHoldingItemType()
 	return EItemType::MATERIAL;
 }
 
-void AMainPlayer::WeaponTrace()
+void AMainPlayer::WeaponTrace(const FVector& StartPos, const FVector& EndPos)
 {
-	//기본적으론 주먹 위치
-	FVector3d StartPos = GetMesh()->GetSocketLocation(FName("hand_r"));
-	FVector3d EndPos = GetMesh()->GetSocketLocation(FName("hand_r"));
-
-	//무기를 장착 시 무기별 공격 범위로 설정
-	if (ItemMesh)
-	{
-		StartPos = ItemMesh->GetSocketLocation(FName("HitBoxStart"));
-		EndPos = ItemMesh->GetSocketLocation(FName("HitBoxEnd"));
-	}
-
 	//트레이스 파라미터 설정
-	ETraceTypeQuery TraceTypeQuery = ETraceTypeQuery(ECC_Pawn);
+	ETraceTypeQuery TraceTypeQuery = UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel4);
+	//ECC_GameTraceChannel4 <- Weapon 채널
 	TArray<AActor*> IgnoreActors;
 	IgnoreActors.Add(this);
 	FHitResult Hit;
@@ -901,14 +901,26 @@ void AMainPlayer::WeaponTrace()
 		GetWorld(),
 		StartPos,
 		EndPos,
-		5.0f,
+		1.0f,
 		TraceTypeQuery,
 		true,
 		IgnoreActors,
-		EDrawDebugTrace::None,
-		//DrawDebugTrace::ForDuration,
+		//EDrawDebugTrace::None,
+		EDrawDebugTrace::ForDuration,
 		Hit,
 		true))
+	//라인 트레이스 실행
+	/*if (UKismetSystemLibrary::LineTraceSingle(
+	GetWorld(),
+	StartPos,
+	EndPos,
+	TraceTypeQuery,
+	true,
+	IgnoreActors,
+	//EDrawDebugTrace::None,
+	EDrawDebugTrace::ForDuration,
+	Hit,
+	true))*/
 	{
 		//맞은 액터
 		AActor* HitActor = Hit.GetActor();
@@ -929,8 +941,7 @@ void AMainPlayer::WeaponTrace()
 
 		//최초로 맞은 액터면 맞은 액터 배열에 추가
 		DamagedActors.Add(HitActor);
-		UE_LOG(LogTemp, Warning, TEXT("Hit Actor: %s"), *HitActor->GetName());
-
+		
 		//대미지 적용
 		UGameplayStatics::ApplyDamage(
 			HitActor,
@@ -948,12 +959,36 @@ void AMainPlayer::StartWeaponAttack()
 	if (!HasAuthority()) return;
 	
 	//서버 실행일 때만 트레이스 시작
-	GetWorld()->GetTimerManager().SetTimer(
-		WeaponAttackTimer,
-		this,
-		&AMainPlayer::WeaponTrace,
-		GetWorld()->DeltaTimeSeconds,
-		true);
+	IsTracingAttack = true;
+	DamagedActors.Empty();
+	//히트 포인트 목록 비우기
+	TracePoints.Empty();
+	
+	for (FName Socket : HitSockets)
+	{
+		//무기가 있으면 무기에서 히트 포인트 찾기
+		if (WeaponComponent->IsEquipped)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Find ItemMesh Points"));
+			//있는 히트 포인트만 넣기
+			if (ItemMesh->DoesSocketExist(Socket))
+			{
+				FVector Pos = ItemMesh->GetSocketLocation(Socket);
+				TracePoints.Add(Socket, { Pos, Pos });
+			}
+		}
+		//맨손이면 손의 히트 포인트 찾기
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Find Character Points"));
+			if (GetMesh()->DoesSocketExist(Socket))
+			{
+				UE_LOG(LogTemp, Warning, TEXT("FIND POINT [ %s ] ON CHARACTER"), *Socket.ToString());
+				FVector Pos = GetMesh()->GetSocketLocation(Socket);
+				TracePoints.Add(Socket, { Pos, Pos });
+			}
+		}
+	}
 }
 
 //공격 트레이스 종료 함수
@@ -964,9 +999,11 @@ void AMainPlayer::EndWeaponAttack()
 	
 	//서버 실행일 때만 트레이스 종료
 	//공격 트레이스 종료
-	GetWorld()->GetTimerManager().ClearTimer(WeaponAttackTimer);
+	IsTracingAttack = false;
 	//맞은 액터 배열 비우기
 	DamagedActors.Empty();
+	//히트 포인트 목록 비우기
+	TracePoints.Empty();
 }
 
 void AMainPlayer::DropItemOnHotBar()

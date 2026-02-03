@@ -18,8 +18,7 @@ struct FInputActionValue;
 USTRUCT(BlueprintType)
 struct FInteractionData
 {
-	GENERATED_USTRUCT_BODY()
-	;
+	GENERATED_USTRUCT_BODY();
 
 	FInteractionData() : CurrentInteractable(nullptr), LastInteractionCheckTime(0.0f)
 	{
@@ -40,6 +39,15 @@ enum class ESwimMode : uint8
 	SURFACE_SWIMMING UMETA(DisplayName = "SURFACE_SWIMMING"),
 	UNDERWATER_IDLE UMETA(DisplayName = "UNDERWATER_IDLE"),
 	UNDERWATER_SWIMMING UMETA(DisplayName = "UNDERWATER_SWIMMING")
+};
+
+USTRUCT(BlueprintType)
+struct FAttackTracePoint
+{
+	GENERATED_USTRUCT_BODY();
+	
+	FVector Prev;
+	FVector Curr;
 };
 
 UCLASS()
@@ -209,6 +217,10 @@ public:
 	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsAttacking = false;
 	
+	//공격 트레이스 실행 상태
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	bool IsTracingAttack = false;
+	
 	//아이템 사용 중인지
 	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsUsingItem = false;
@@ -273,6 +285,19 @@ public:
 	FTimerHandle WeaponAttackTimer;
 	UPROPERTY(VisibleAnywhere)
 	TArray<AActor*> DamagedActors;
+	
+	//히트 포인트 소켓 이름 모음
+	TArray<FName> HitSockets =
+	{
+		TEXT("HitPoint1"),
+		TEXT("HitPoint2"),
+		TEXT("HitPoint3"),
+		TEXT("HitPoint4"),
+		TEXT("HitPoint5")
+	};
+	
+	//트레이스 할 히트 포인트 모음
+	TMap<FName, FAttackTracePoint> TracePoints;
 
 	//공격시 폴리지 판정
 	UPROPERTY(EditAnywhere, Category = "Interaction")
@@ -423,7 +448,7 @@ public:
 
 	//공격 무기 히트 트레이스 함수
 	UFUNCTION(BlueprintCallable)
-	void WeaponTrace();
+	void WeaponTrace(const FVector& StartPos, const FVector& EndPos);
 	//무기 공격 트레이스 시작 함수
 	UFUNCTION(BlueprintCallable)
 	void StartWeaponAttack();

@@ -20,7 +20,11 @@ struct FWeaponData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Data")
 	FName WeaponName;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Data")
-	TObjectPtr<UAnimMontage> Montage;
+	TArray<TObjectPtr<UAnimMontage>> HoldMontages;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Data")
+	TArray<TObjectPtr<UAnimMontage>> AttackMontages;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Data")
+	TArray<TObjectPtr<USoundBase>> Sounds;
 };
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -40,6 +44,8 @@ public:
 	FWeaponData CurrentWeapon;
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
 	bool IsAttacking = false;
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
+	int32 PlayIndex = 0;
 	
 	UPROPERTY()
 	TObjectPtr<UAnimMontage> AttackMontage;
@@ -50,8 +56,8 @@ public:
 	void EquipeWeapon(FWeaponData WeaponData);
 	UFUNCTION(BlueprintCallable)
 	void UnequipeWeapon();
-	UFUNCTION(NetMulticast, BlueprintCallable, Reliable)
-	void UseWeapon();
+	UFUNCTION(BlueprintCallable)
+	bool SetRandomIndex();
 	
 	UFUNCTION()
 	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
@@ -92,4 +98,6 @@ public:
 	void Request_UseWeapon();
 	UFUNCTION(Server, Reliable)
 	void Server_UseWeapon();	
+	UFUNCTION(NetMulticast, Reliable, BlueprintCallable)
+	void UseWeapon(int32 Index);
 };
