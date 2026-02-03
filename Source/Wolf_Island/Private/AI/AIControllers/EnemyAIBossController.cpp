@@ -9,6 +9,7 @@
 
 AEnemyAIBossController::AEnemyAIBossController()
 {
+	bSetControlRotationFromPawnOrientation = false;
 }
 
 void AEnemyAIBossController::BeginPlay()

@@ -23,6 +23,9 @@ AEnemyAIBoss::AEnemyAIBoss()
 	StatusComponent = CreateDefaultSubobject<UStatusComponent>(TEXT("StatusComponent"));
 	AttackCollisionComponent = CreateDefaultSubobject<UAttackCollisionComponent>(TEXT("AttackCollisionComponent"));
 
+	bUseControllerRotationYaw = true;
+	GetCharacterMovement()->bOrientRotationToMovement = false;
+
 	bReplicates = true;
 	SetReplicateMovement(true);
 }
