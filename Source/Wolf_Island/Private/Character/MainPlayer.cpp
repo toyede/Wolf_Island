@@ -177,7 +177,17 @@ void AMainPlayer::Tick(float DeltaTime)
 	{
 		for (auto& TracePoint : TracePoints)
 		{
-			FVector Curr = ItemMesh->GetSocketLocation(TracePoint.Key);
+			FVector Curr;
+
+			if (WeaponComponent->IsEquipped)
+			{
+				Curr = ItemMesh->GetSocketLocation(TracePoint.Key);
+			}
+			else
+			{
+				Curr = GetMesh()->GetSocketLocation(TracePoint.Key);
+			}
+			
 			WeaponTrace(TracePoint.Value.Prev, Curr);
 			TracePoint.Value.Prev = Curr;
 		}
