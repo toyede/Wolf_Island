@@ -19,7 +19,13 @@ class WOLF_ISLAND_API UUnknownRecordPanel : public UUserWidget
 	class UScrollBox* RecordList;
 
 	UPROPERTY(meta=(BindWidget))
-	class UImage* RecordImage;
+	class UTextBlock* RecordTitleText;
+
+	UPROPERTY(meta=(BindWidget))
+	class UTextBlock* RecordContentText;
+
+	UPROPERTY(meta=(BindWidget))
+	class UScrollBox* ContentScrollBox;
 
 	UPROPERTY(EditDefaultsOnly)
 	UDataTable* RecordTable;
@@ -34,7 +40,7 @@ class WOLF_ISLAND_API UUnknownRecordPanel : public UUserWidget
 	void SetRecordInfo(FUnknownRecord RecordData);
 	
 protected:
-
+	
 	void NativeConstruct() override;
 	
 };
