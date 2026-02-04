@@ -96,6 +96,12 @@ void AEnemyAIBase::BeginPlay()
                 break;
             }
         }
+        EnemyAIController = Cast<AEnemyAIController>(GetController());
+
+        if (EnemyAIController)
+        {
+            EnemyAIController->OnEnemyStateChanged.AddDynamic(this, &AEnemyAIBase::OnStateChanged);
+        }
     }
 
     HumanParts.Empty();
@@ -382,13 +388,18 @@ void AEnemyAIBase::Howling_Implementation()
             UAISense_Hearing::ReportNoiseEvent(
                 GetWorld(),
                 GetActorLocation(),
-                1.0f, // Loudness
+                1.0f,
                 this,
-                0.0f, // MaxRange
-                TEXT("WolfHowl") // Tag
+                0.0f,
+                TEXT("Howling")
 			);
         }
     }
+}
+
+void AEnemyAIBase::Heal()
+{
+	StatusComponent->IncreaseHP(HealAmount);
 }
 
 void AEnemyAIBase::HitResponse()
@@ -493,9 +504,10 @@ float AEnemyAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
     {
         return 0.f;
     }
-
+    float OldHP = StatusComponent->CurrentHP;
     StatusComponent->DecreaseHP(ActualDamage);
-	/*OnHPChangeEnd.Broadcast();*/
+    float NewHP = StatusComponent->CurrentHP;
+    float HalfHP = StatusComponent->MaxHP * 0.5f;
 
     UAISense_Damage::ReportDamageEvent(
         GetWorld(),
@@ -505,7 +517,15 @@ float AEnemyAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
         GetActorLocation(),
         DamageCauser ? DamageCauser->GetActorLocation() : FVector::ZeroVector
 	);
-    
+
+    if (OldHP > HalfHP && NewHP <= HalfHP)
+    {
+        if (AEnemyAIController* AIC = Cast<AEnemyAIController>(GetController()))
+        {
+			AIC->GetBlackboardComponent()->SetValueAsBool(FName("bIsHalfHP"), true);
+        }
+    }
+
     if (StatusComponent->CurrentHP <= 0)
     {
         if (EnemyAIController)
@@ -655,6 +675,25 @@ void AEnemyAIBase::ApplyDeadState()
     }
 }
 
+void AEnemyAIBase::OnStateChanged(EEnemyState NewState)
+{
+    if (NewState == EEnemyState::Passive)
+    {
+        // 힐 타이머 시작
+        GetWorld()->GetTimerManager().SetTimer(
+            HealTimer,
+            this,
+            &AEnemyAIBase::Heal,
+            HealInterval,  // 예: 2초마다
+            true           // 반복
+        );
+    }
+    else
+    {
+        // 다른 상태면 타이머 클리어
+        GetWorld()->GetTimerManager().ClearTimer(HealTimer);
+    }
+}
 
 
 

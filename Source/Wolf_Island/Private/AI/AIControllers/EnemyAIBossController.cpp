@@ -21,12 +21,18 @@ void AEnemyAIBossController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
-	SetNewState(EBossState::Combat);
+	// SetNewState(EBossState::Combat);
 
 	if (AEnemyAIBoss* Boss = Cast<AEnemyAIBoss>(InPawn))
 	{
 		Boss->OnPhaseChanged.AddDynamic(this, &AEnemyAIBossController::HandlePhaseChanged);
 	}
+}
+
+void AEnemyAIBossController::StartBehaviorTree()
+{
+	SetNewState(EBossState::Combat);
+	RunBehaviorTree(BehaviorTreeAsset);
 }
 
 void AEnemyAIBossController::OnUnPossess()

@@ -171,6 +171,23 @@ public:
 	virtual void NormalAttack_Implementation() override;
 
 	virtual void Howling_Implementation() override;
+
+	// 행동
+	
+	UFUNCTION()
+	void Heal();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	float HealAmount = 20.f;
+
+	UFUNCTION()
+	void OnStateChanged(EEnemyState NewState);
+
+	FTimerHandle HealTimer;
+
+	UPROPERTY(EditDefaultsOnly)
+	float HealInterval = 2.0f;
+
 	// 몽타주 제어
 	UFUNCTION(BlueprintCallable, Category = "Animation")
 	void StopAllMontages();

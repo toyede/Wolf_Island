@@ -25,11 +25,6 @@ void AEnemyAIControllerBase::BeginPlay()
 void AEnemyAIControllerBase::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
-
-	if (BehaviorComp)
-	{
-		RunBehaviorTree(BehaviorTreeAsset);
-	}
 }
 
 void AEnemyAIControllerBase::OnUnPossess()

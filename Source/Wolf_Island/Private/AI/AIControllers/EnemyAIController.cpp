@@ -62,6 +62,11 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
+	if (BehaviorComp)
+	{
+		RunBehaviorTree(BehaviorTreeAsset);
+	}
+
 	ControlledEnemy = Cast<AEnemyAIBase>(InPawn);
 	if (ControlledEnemy)
 	{
@@ -118,35 +123,27 @@ void AEnemyAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus St
 
 void AEnemyAIController::HandleSight(AActor* Actor, const FAIStimulus& Stimulus)
 {
-	// 1. 시야 소실
 	if (!Stimulus.WasSuccessfullySensed())
 	{
-		// 플레이어를 놓쳤다고 바로 포기하지 않고, 
-		// "3초 뒤에도 안 보이면 포기해라"라고 예약을 겁니다.
 		if (EnemyState == EEnemyState::Combat && Actor == AttackTarget)
 		{
 			GetWorld()->GetTimerManager().SetTimer(LineOfSightTimer, [this]()
 				{
-					// 3초 뒤 실행될 코드:
-					// 여전히 타겟이 안 보인다면(혹은 거리가 멀다면) 포기
 					SetEnemyState(EEnemyState::Passive);
-				}, 3.0f, false); // 3.0f는 '기억 지속 시간'
+				}, 3.0f, false);
 		}
 		return;
 	}
 
-	// 2. 시야 감지 & 플레이어 확인
 	APawn* SensedPawn = Cast<APawn>(Actor);
 	if (!SensedPawn || !SensedPawn->IsPlayerControlled()) return;
 
 	GetWorld()->GetTimerManager().ClearTimer(LineOfSightTimer);
 
-	// 3. 타겟 전환이 필요할 때만 업데이트
 	if (ShouldSwitchTarget(Actor))
 	{
 		AttackTarget = Actor;
 
-		// 이미 Combat이면 State 재설정 안 함
 		if (EnemyState != EEnemyState::Combat)
 		{
 			SetEnemyState(EEnemyState::Combat);
@@ -157,8 +154,8 @@ void AEnemyAIController::HandleSight(AActor* Actor, const FAIStimulus& Stimulus)
 void AEnemyAIController::HandleDamage(AActor* Actor, const FAIStimulus& Stimulus)
 {
 	if (!Stimulus.WasSuccessfullySensed()) return;
+	if (Actor && Actor->IsA<AEnemyAIBase>()) return;
 
-	// 피격은 최우선 순위 -> 무조건 타겟 변경 및 공격 태세
 	AttackTarget = Actor;
 	SetEnemyState(EEnemyState::Combat);
 }
@@ -168,15 +165,12 @@ void AEnemyAIController::HandleHearing(AActor* Actor, const FAIStimulus& Stimulu
 	if (!Stimulus.WasSuccessfullySensed()) return;
 	if (Stimulus.Tag != FName("Howling")) return;
 
-	// 이미 교전 중이면 소리 무시
 	if (EnemyState == EEnemyState::Combat) return;
 
-	// 반응 딜레이
 	float RandomDelay = FMath::RandRange(1.0f, 2.0f);
 	FTimerDelegate TimerDel;
 	TimerDel.BindWeakLambda(this, [this, Actor]()
 		{
-			// 딜레이 후에도 타겟이 유효하고 아직 교전 중이 아니라면 공격 시작
 			if (IsValid(Actor) && EnemyState != EEnemyState::Combat && EnemyState != EEnemyState::Dead)
 			{
 				AttackTarget = Actor;
@@ -203,28 +197,20 @@ void AEnemyAIController::HandleScent(const FAIStimulus& Stimulus)
 	}
 }
 
-// ============================================================================
-// [2] Target Locking Helper
-// ============================================================================
-
 bool AEnemyAIController::ShouldSwitchTarget(AActor* NewTarget) const
 {
-	// 1. 현재 타겟이 없으면 -> 변경 허용
 	if (!IsTargetValid(AttackTarget)) return true;
 
-	// 2. 이미 공격 중(Combat)이고 현재 타겟이 살아있음 -> 변경 불가 (Locking)
 	if (EnemyState == EEnemyState::Combat)
 	{
 		return false;
 	}
-
-	// 3. 그 외 상태(조사 중 등) -> 변경 허용
 	return true;
 }
 
 bool AEnemyAIController::IsTargetValid(AActor* Target) const
 {
-	return IsValid(Target); // 필요 시 죽음 여부 체크 추가 (Interface 등)
+	return IsValid(Target);
 }
 
 // ============================================================================
@@ -252,6 +238,8 @@ void AEnemyAIController::SetEnemyState(EEnemyState NewState)
 	}
 
 	OnEnterState(NewState);  // 새 상태 진입
+
+	OnEnemyStateChanged.Broadcast(NewState);
 }
 
 void AEnemyAIController::OnRep_State()
@@ -273,6 +261,7 @@ void AEnemyAIController::OnEnterState(EEnemyState NewState)
 	case EEnemyState::Passive:
 		AttackTarget = nullptr;
 		BB->ClearValue(AttackTargetKey);
+		BB->SetValueAsBool(TEXT("bIsHalfHP"), false);
 		break;
 
 	case EEnemyState::Combat:

@@ -22,6 +22,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSummonStatueEnd);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnThrustEnd);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpecialAttackEnd);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPhaseChanged, int32, NewPhase);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBossCombatStart, AEnemyAIBoss*, Boss);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBossCombatEnd);
 
 UCLASS()
 class WOLF_ISLAND_API AEnemyAIBoss : public ACharacter, public IAttackMeshProvider, public IEnemyCommonInterface
@@ -51,6 +53,22 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Delegate")
 	FOnPhaseChanged OnPhaseChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Delegate")
+	FOnBossCombatStart OnBossCombatStart;
+
+	UPROPERTY(BlueprintAssignable, Category = "Delegate")
+	FOnBossCombatEnd OnBossCombatEnd;
+
+public:
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsCombatActive = false;
+
+	UFUNCTION(BlueprintCallable)
+	void StartBossCombat();
+
+	UFUNCTION(BlueprintCallable)
+	void EndBossCombat();
 
 protected:
 	virtual void BeginPlay() override;

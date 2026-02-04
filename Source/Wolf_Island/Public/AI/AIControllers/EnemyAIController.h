@@ -25,6 +25,8 @@ enum class EEnemyState : uint8
 	Investigating UMETA(DisplayName = "Investigating"),
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEnemyStateChanged, EEnemyState, NewState);
+
 UCLASS()
 class WOLF_ISLAND_API AEnemyAIController : public AEnemyAIControllerBase
 {
@@ -39,6 +41,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "AI|Blackboard")
 	FName PointOfInterestKey = TEXT("PointOfInterest");
+
+	UPROPERTY(BlueprintAssignable, Category = "Delegate")
+	FOnEnemyStateChanged OnEnemyStateChanged;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 

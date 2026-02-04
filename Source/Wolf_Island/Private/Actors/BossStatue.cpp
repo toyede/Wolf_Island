@@ -16,6 +16,8 @@ ABossStatue::ABossStatue()
 
 	BoxCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxCollision"));
 	BoxCollision->SetupAttachment(RootComponent);
+
+	bReplicates = true;
 }
 
 void ABossStatue::BeginPlay()

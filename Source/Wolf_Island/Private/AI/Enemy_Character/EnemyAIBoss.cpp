@@ -30,6 +30,26 @@ AEnemyAIBoss::AEnemyAIBoss()
 	SetReplicateMovement(true);
 }
 
+void AEnemyAIBoss::StartBossCombat()
+{
+	if (bIsCombatActive) return;
+
+	bIsCombatActive = true;
+
+	if (AEnemyAIBossController* AIC = Cast<AEnemyAIBossController>(GetController()))
+	{
+		AIC->StartBehaviorTree();
+	}
+
+	OnBossCombatStart.Broadcast(this);
+}
+
+void AEnemyAIBoss::EndBossCombat()
+{
+	bIsCombatActive = false;
+	OnBossCombatEnd.Broadcast();
+}
+
 void AEnemyAIBoss::BeginPlay()
 {
 	Super::BeginPlay();
