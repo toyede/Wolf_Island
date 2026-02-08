@@ -46,6 +46,7 @@ struct FAttackTracePoint
 {
 	GENERATED_USTRUCT_BODY();
 	
+	UPrimitiveComponent* Source;
 	FVector Prev;
 	FVector Curr;
 };
@@ -293,7 +294,12 @@ public:
 		TEXT("HitPoint2"),
 		TEXT("HitPoint3"),
 		TEXT("HitPoint4"),
-		TEXT("HitPoint5")
+		TEXT("HitPoint5"),
+		TEXT("HitPoint6"),
+		TEXT("HitPoint7"),
+		TEXT("HitPoint8"),
+		TEXT("HitPoint9"),
+		TEXT("HitPoint10")
 	};
 	
 	//트레이스 할 히트 포인트 모음

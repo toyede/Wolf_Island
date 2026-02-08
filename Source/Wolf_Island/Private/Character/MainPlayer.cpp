@@ -177,17 +177,7 @@ void AMainPlayer::Tick(float DeltaTime)
 	{
 		for (auto& TracePoint : TracePoints)
 		{
-			FVector Curr;
-
-			if (WeaponComponent->IsEquipped)
-			{
-				Curr = ItemMesh->GetSocketLocation(TracePoint.Key);
-			}
-			else
-			{
-				Curr = GetMesh()->GetSocketLocation(TracePoint.Key);
-			}
-			
+			FVector Curr = TracePoint.Value.Source->GetSocketLocation(TracePoint.Key);
 			WeaponTrace(TracePoint.Value.Prev, Curr);
 			TracePoint.Value.Prev = Curr;
 		}
@@ -979,23 +969,21 @@ void AMainPlayer::StartWeaponAttack()
 		//무기가 있으면 무기에서 히트 포인트 찾기
 		if (WeaponComponent->IsEquipped)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Find ItemMesh Points"));
 			//있는 히트 포인트만 넣기
 			if (ItemMesh->DoesSocketExist(Socket))
 			{
 				FVector Pos = ItemMesh->GetSocketLocation(Socket);
-				TracePoints.Add(Socket, { Pos, Pos });
+				TracePoints.Add(Socket, { ItemMesh, Pos, Pos });
 			}
 		}
 		//맨손이면 손의 히트 포인트 찾기
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Find Character Points"));
+			//있는 히트 포인트만 넣기
 			if (GetMesh()->DoesSocketExist(Socket))
 			{
-				UE_LOG(LogTemp, Warning, TEXT("FIND POINT [ %s ] ON CHARACTER"), *Socket.ToString());
 				FVector Pos = GetMesh()->GetSocketLocation(Socket);
-				TracePoints.Add(Socket, { Pos, Pos });
+				TracePoints.Add(Socket, { GetMesh(), Pos, Pos });
 			}
 		}
 	}
