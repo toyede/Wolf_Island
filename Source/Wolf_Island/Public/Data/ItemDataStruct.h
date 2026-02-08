@@ -368,14 +368,12 @@ public:
 USTRUCT(BlueprintType)
 struct FUnknownRecord : public FTableRowBase
 {
-	GENERATED_USTRUCT_BODY();
+	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere)
-	FName RecordID;
-	UPROPERTY(EditAnywhere)
-	FText RecordTitle;
-	UPROPERTY(EditAnywhere)
-	FText RecordContent;
-	UPROPERTY(EditAnywhere)
-	UTexture2D* RecordImage;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString id;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString title;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (MultiLine = true))
+	FString content;
 };

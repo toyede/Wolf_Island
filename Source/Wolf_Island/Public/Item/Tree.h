@@ -5,8 +5,8 @@
 #include "Engine/DataTable.h"
 #include "Tree.generated.h"
 
-class APickup;
 class UStatusComponent;
+class APickup;
 class UParticleSystem;
 class USoundBase;
 
@@ -15,14 +15,14 @@ USTRUCT(BlueprintType)
 struct FTreeDropEntry
 {
 	GENERATED_BODY()
-    
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FDataTableRowHandle ItemHandle;
-    
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop", meta = (GetOptions = "GetItemIDs"))
+	FName ItemID;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop")
 	int32 Amount = 1;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float DropChance = 1.0f;
 };
 
@@ -30,45 +30,52 @@ UCLASS()
 class WOLF_ISLAND_API ATree : public AActor
 {
 	GENERATED_BODY()
-    
-public:    
+	
+public:	
 	ATree();
 
 protected:
 	virtual void BeginPlay() override;
 
 public:
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
+	// 대미지 전달 및 파괴 판정
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+
+	// 파괴 시 실행될 함수
+	UFUNCTION()
+	void OnTreeDestroyed();
+
+	// 모든 클라이언트에서 파괴 효과를 재생하는 멀티캐스트
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_PlayDestroyEffects();
+
+	// 서버에서 아이템을 스폰하는 함수
+	void SpawnDrops();
+
+	//GetOptions를 위한 함수
+	UFUNCTION()
+	TArray<FString> GetItemIDs() const;
+
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UStaticMeshComponent* TreeMesh;
 
-	// 체력 관리를 위한 컴포넌트
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UStatusComponent* StatusComponent;
+	
+	// 모든 드랍 항목이 참조할 공통 데이터 테이블
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Settings")
+	UDataTable* DropDataTable;
 
-	// ---------------------------------------------------
-	// [이펙트 설정]
-	// ---------------------------------------------------
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effects")
-	UParticleSystem* DestroyParticle; 
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effects")
-	USoundBase* DestroySound;         
-
-	// ---------------------------------------------------
-	// [아이템 드랍 설정]
-	// ---------------------------------------------------
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Settings")
 	TArray<FTreeDropEntry> DropList;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Settings")
 	TSubclassOf<APickup> PickupClass;
 
-	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+	UParticleSystem* DestroyParticle;
 
-private:
-	// HP 0일 때 실행될 델리게이트 함수
-	UFUNCTION()
-	void OnTreeDestroyed();
-
-	void SpawnDrops();
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+	USoundBase* DestroySound;
 };
