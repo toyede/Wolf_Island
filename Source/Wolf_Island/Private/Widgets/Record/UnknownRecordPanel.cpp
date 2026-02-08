@@ -6,40 +6,54 @@
 #include "Components/ScrollBox.h"
 #include "Components/TextBlock.h"
 #include "Data/ItemDataStruct.h"
+#include "Games/MainGameState.h"
 #include "Widgets/Record/RecordBlock.h"
 
 void UUnknownRecordPanel::NativeConstruct()
 {
     UUserWidget::NativeConstruct();
+    if (AMainGameState* GS = GetWorld()->GetGameState<AMainGameState>())
+    {
+        GS->OnUnlockedRecordsChanged.AddDynamic(this, &UUnknownRecordPanel::RefreshList);
+    }
+    
     RefreshList();
 }
 
 void UUnknownRecordPanel::RefreshList()
 {
-    
     if (!RecordTable || !RecordBlockClass || !RecordList) return;
 
     RecordList->ClearChildren();
+
+    AMainGameState* GS = GetWorld()->GetGameState<AMainGameState>();
+    if (!GS) return;
+
     static const FString ContextString(TEXT("Record Data Context"));
     TArray<FName> RowNames = RecordTable->GetRowNames();
+
     for (const FName& RowName : RowNames)
     {
         FUnknownRecord* Row = RecordTable->FindRow<FUnknownRecord>(RowName, ContextString);
         if (Row)
         {
-            URecordBlock* NewBlock = CreateWidget<URecordBlock>(this, RecordBlockClass);
-            if (NewBlock)
+            FString CheckID = Row->id.IsEmpty() ? RowName.ToString() : Row->id;
+
+            if (GS->UnlockedRecordIDs.Contains(CheckID))
             {
-                if (Row->id.IsEmpty())
+                URecordBlock* NewBlock = CreateWidget<URecordBlock>(this, RecordBlockClass);
+                if (NewBlock)
                 {
-                    Row->id = RowName.ToString();
+                    NewBlock->RecordData = *Row;
+                    if (NewBlock->RecordData.id.IsEmpty()) NewBlock->RecordData.id = RowName.ToString();
+
+                    NewBlock->OnRecordClicked.AddDynamic(this, &UUnknownRecordPanel::SetRecordInfo);
+                    RecordList->AddChild(NewBlock);
                 }
-                NewBlock->RecordData = *Row;
-                NewBlock->OnRecordClicked.AddDynamic(this, &UUnknownRecordPanel::SetRecordInfo);
-                RecordList->AddChild(NewBlock);
             }
         }
     }
+
     if (RecordList && RecordList->GetChildrenCount() > 0)
     {
         URecordBlock* FirstBlock = Cast<URecordBlock>(RecordList->GetChildAt(0));

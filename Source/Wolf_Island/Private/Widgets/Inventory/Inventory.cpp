@@ -7,6 +7,7 @@
 #include "Components/Button.h"
 #include "Components/InventoryComponent.h"
 #include "Components/SizeBox.h"
+#include "Widgets/Record/UnknownRecordPanel.h"
 #include "Components/WidgetSwitcher.h"
 #include "Item/ItemBase.h"
 #include "Widgets/Craft/CraftPanel.h"
@@ -119,6 +120,10 @@ void UInventory::HandleCraftRecipeClicked()
 void UInventory::HandleUnknownRecordClicked()
 {
 	PanelSwitcher->SetActiveWidget(UnknownRecordSection);
+	if (UUnknownRecordPanel* UnknownPanel = Cast<UUnknownRecordPanel>(UnknownRecordSection))
+	{
+		UnknownPanel->RefreshList();
+	}
 	OnUnknownRecordClicked.ExecuteIfBound();
 }
 

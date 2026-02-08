@@ -10,6 +10,8 @@
  * 
  */
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnUnlockedRecordsChanged);
+
 UENUM(BlueprintType)
 enum class EMessageType : uint8
 {
@@ -70,4 +72,17 @@ public:
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_AddChat(FChattingData NewChattingData);
+
+	// 해금 시스템 (알 수 없는 기록)
+	UPROPERTY(ReplicatedUsing = OnRep_UnlockedRecordIDs, BlueprintReadOnly, Category = "Records")
+	TArray<FString> UnlockedRecordIDs;
+	
+	UPROPERTY(BlueprintAssignable, Category = "Records")
+	FOnUnlockedRecordsChanged OnUnlockedRecordsChanged;
+
+	UFUNCTION(BlueprintCallable, Category = "Records")
+	void UnlockRecord(const FString& RecordID);
+
+	UFUNCTION()
+	void OnRep_UnlockedRecordIDs();
 };

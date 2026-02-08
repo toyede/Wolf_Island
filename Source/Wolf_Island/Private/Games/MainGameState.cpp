@@ -2,14 +2,13 @@
 
 
 #include "Games/MainGameState.h"
-
 #include "Character/MainPlayerController.h"
 #include "Net/UnrealNetwork.h"
 
 void AMainGameState::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	UnlockedRecordIDs.Add(TEXT("REC_DIARY_01_01"));
 }
 
 void AMainGameState::AddChattingMessage(FChattingData NewChattingData)
@@ -35,6 +34,7 @@ void AMainGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
 	DOREPLIFETIME(AMainGameState, ChattingData);
+	DOREPLIFETIME(AMainGameState, UnlockedRecordIDs);
 }
 
 void AMainGameState::Multi_AddChat_Implementation(FChattingData NewChattingData)
@@ -46,4 +46,22 @@ void AMainGameState::Multi_AddChat_Implementation(FChattingData NewChattingData)
 			PlayerController->AddChat(NewChattingData);
 		}
 	}
+}
+
+void AMainGameState::UnlockRecord(const FString& RecordID)
+{
+	if (HasAuthority())
+	{
+		if (!RecordID.IsEmpty() && !UnlockedRecordIDs.Contains(RecordID))
+		{
+			UnlockedRecordIDs.Add(RecordID);
+            
+			OnUnlockedRecordsChanged.Broadcast();
+		}
+	}
+}
+
+void AMainGameState::OnRep_UnlockedRecordIDs()
+{
+	OnUnlockedRecordsChanged.Broadcast();
 }

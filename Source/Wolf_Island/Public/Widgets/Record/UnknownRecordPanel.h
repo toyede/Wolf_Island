@@ -34,10 +34,11 @@ class WOLF_ISLAND_API UUnknownRecordPanel : public UUserWidget
 	TSubclassOf<class URecordBlock> RecordBlockClass;
 
 	UFUNCTION()
-	void RefreshList();
-
-	UFUNCTION()
 	void SetRecordInfo(FUnknownRecord RecordData);
+
+public:
+	UFUNCTION()
+	void RefreshList();
 	
 protected:
 	

@@ -897,6 +897,7 @@ void AMainPlayer::WeaponTrace(const FVector& StartPos, const FVector& EndPos)
 	TArray<AActor*> IgnoreActors;
 	IgnoreActors.Add(this);
 	FHitResult Hit;
+	AActor* HitActor = Hit.GetActor();
 
 	//스피어 트레이스 실행
 	if (UKismetSystemLibrary::SphereTraceSingle(
