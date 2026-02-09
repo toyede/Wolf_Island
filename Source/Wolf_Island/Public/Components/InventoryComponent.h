@@ -10,8 +10,8 @@
 #include "InventoryComponent.generated.h"
 
 class APickup;
-class UItemBase;
 DECLARE_MULTICAST_DELEGATE(FOnInventoryUpdated);
+DECLARE_MULTICAST_DELEGATE(FOnCurrentWeightChanged);
 
 //실패 이유
 UENUM(BlueprintType, meta=(ScriptName="ItemAddedResult"))
@@ -112,7 +112,7 @@ struct FInventorySaveData
 	UPROPERTY(BlueprintReadOnly, Category="Inventory Save Data")
 	TArray<FItemSlot> Inventory;
 	UPROPERTY(BlueprintReadOnly, Category="Inventory Save Data")
-	float CurrentWeight = 0.0f; // <-- float 초기화
+	float CurrentWeight = 0.0f;
 };
 
 
@@ -127,6 +127,9 @@ public:
 		
 	//인벤토리 업데이트 델리게이트 (아이템 개수 변화 시 호출)
 	FOnInventoryUpdated OnInventoryUpdated;
+	
+	//무게 업데이트 델리게이트 (무게 변화 시 호출)
+	FOnCurrentWeightChanged OnCurrentWeightChanged;
 	
 	//사운드
 	UPROPERTY(EditDefaultsOnly, Category="Sound")

@@ -30,6 +30,7 @@
 #include "Components/AudioComponent.h"
 #include "Components/BillboardComponent.h"
 #include "WaterBodyComponent.h"
+#include "Games/MainGameState.h"
 
 // Sets default values
 AMainPlayer::AMainPlayer()
@@ -78,7 +79,7 @@ AMainPlayer::AMainPlayer()
 	
 	//인벤토리 초기화
 	InventoryComponent->SetSlotsCapacity(30);
-	InventoryComponent->SetWeightCapacity(StatusComponent->MaxWeight);
+	InventoryComponent->SetWeightCapacity(100);
 
 	GetCharacterMovement()->SetIsReplicated(true);
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
@@ -139,6 +140,9 @@ void AMainPlayer::BeginPlay()
 	{
 		//아이템 업데이트 바인딩
 		InventoryComponent->OnInventoryUpdated.AddUObject(this, &AMainPlayer::RefreshHand);
+		
+		//무게 업데이트 바인딩
+		InventoryComponent->OnCurrentWeightChanged.AddUObject(this, &AMainPlayer::OnCurrentWeightChanged);
 	}
 
 	if (WeaponComponent)
@@ -268,6 +272,38 @@ void AMainPlayer::NotifyControllerChanged()
 	}
 }
 
+void AMainPlayer::OnCurrentWeightChanged()
+{
+	if (!InventoryComponent || !StatusComponent) return;
+	
+	float CurrentWeight = InventoryComponent->GetCurrentWeight();
+	
+	//- 100일 경우, 스테미나, 물, 배고픔의 소모량 50% 증가 및 이동속도 10% 감소
+	if (CurrentWeight >= 100.0f)
+	{
+		StatusComponent->SetMultiplier(1.5f);
+		MovementMultiplier = 0.9f;
+	} 
+	//- 75이상이면 스테미나, 물, 배고픔의 소모량 20% 증가
+	else if (CurrentWeight >= 75.0f)
+	{
+		StatusComponent->SetMultiplier(1.2f);
+		MovementMultiplier = 1.0f;
+	} 
+	//- 50이상이면 스테미나, 물, 배고픔의 소모량 10% 증가
+	else if (CurrentWeight >= 50.0f)
+	{
+		StatusComponent->SetMultiplier(1.1f);
+		MovementMultiplier = 1.0f;
+	}
+	//- 50미만이면 정상화
+	else
+	{
+		StatusComponent->SetMultiplier(1.0f);
+		MovementMultiplier = 1.0f;
+	}
+}
+
 void AMainPlayer::StartJump()
 {
 	//스태미나가 0이면 점프 불가
@@ -354,12 +390,16 @@ void AMainPlayer::Move(const FInputActionValue& Value)
 		if (IsSwimming)
 		{
 			FVector ForwardVector = UKismetMathLibrary::GetForwardVector(GetControlRotation());
-			AddMovementInput(GetActorRightVector(), MovementVector.X*WaterDeceleration);
-			AddMovementInput(ForwardVector, MovementVector.Y*WaterDeceleration);
+			AddMovementInput(GetActorRightVector(), 
+				MovementVector.X * WaterDeceleration * MovementMultiplier);
+			AddMovementInput(ForwardVector, 
+				MovementVector.Y * WaterDeceleration * MovementMultiplier);
 		} else
 		{
-			AddMovementInput(GetActorRightVector(), MovementVector.X);
-			AddMovementInput(GetActorForwardVector(), MovementVector.Y);
+			AddMovementInput(GetActorRightVector(), 
+				MovementVector.X * MovementMultiplier);
+			AddMovementInput(GetActorForwardVector(), 
+				MovementVector.Y * MovementMultiplier);
 		}
 	}
 }
@@ -1344,6 +1384,7 @@ void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 	DOREPLIFETIME(AMainPlayer, WeaponComponent);
 	DOREPLIFETIME(AMainPlayer, ItemMesh);
 	DOREPLIFETIME(AMainPlayer, IsSwimming);
+	DOREPLIFETIME(AMainPlayer, MovementMultiplier);
 }
 
 void AMainPlayer::Request_Run()

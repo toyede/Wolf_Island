@@ -21,18 +21,22 @@ void UChattingBlock::SetChattingBlock(FChattingData ChattingData)
 		case EMessageType::ALARM:
 		{
 			NameText->SetColorAndOpacity(AlarmColor);
+			break;
 		}
 		case EMessageType::ALERT:
 		{
 			NameText->SetColorAndOpacity(AlertColor);
+			break;
 		}
 		case EMessageType::NOTICE:
 		{
 			NameText->SetColorAndOpacity(NoticeColor);
+			break;
 		}
 		case EMessageType::GENERAL:
 		{
 			NameText->SetColorAndOpacity(GeneralColor);
+			break;
 		}
 	}
 	

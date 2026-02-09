@@ -12,7 +12,6 @@
 
 class UWaterBodyComponent;
 class APickup;
-class UItemBase;
 struct FInputActionValue;
 
 USTRUCT(BlueprintType)
@@ -99,6 +98,9 @@ public:
 	
 	//이동 관련 변수====================================================================
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	float MovementMultiplier = 1.0f;
+	
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
 	float WalkSpeed = 300.0f;
 	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
@@ -121,7 +123,7 @@ public:
 	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
 	float WaterSuffocatedOffest = 55.0f;
-
+	
 	//입력 관련 변수====================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputMappingContext* InputMappingContext;
@@ -344,6 +346,10 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	virtual void NotifyControllerChanged() override;
+	
+	//무게 업데이트 시 능력치 영향
+	UFUNCTION()
+	void OnCurrentWeightChanged();
 
 	//점프 시작 함수
 	UFUNCTION()

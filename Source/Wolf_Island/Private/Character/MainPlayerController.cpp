@@ -109,5 +109,7 @@ void AMainPlayerController::SendChat(FChattingData NewChattingData)
 
 void AMainPlayerController::AddChat(FChattingData NewChattingData)
 {
+	if (!ChattingPanel) return;
+	
 	ChattingPanel->AddChatting(NewChattingData);
 }

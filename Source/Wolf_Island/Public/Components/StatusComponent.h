@@ -88,12 +88,6 @@ public:
 	float CurrentHydration = 100.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
 	float MaxHydration = 100.0f;
-
-	//무게
-	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status")
-	float CurrentWeight = 0.0f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
-	float MaxWeight = 100.0f;
 	
 	//무게에 따른 감소율 증가분
 	float AmountMultiplier = 1.0f;
@@ -222,7 +216,7 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	//------------------------------------//
-	//체력, 스태미나, 배고픔, 수분, 무게 증감 함수
+	//체력, 스태미나, 배고픔, 수분 증감 함수
 	UFUNCTION(BlueprintCallable)
 	void IncreaseHP(float amount);
 
@@ -246,12 +240,6 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void DecreaseHydration(float amount);
-
-	UFUNCTION(BlueprintCallable)
-	void IncreaseWeight(float amount);
-
-	UFUNCTION(BlueprintCallable)
-	void DecreaseWeight(float amount);
 	
 	UFUNCTION(BlueprintCallable)
 	void IncreaseAir(float amount);
@@ -350,13 +338,15 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	float GetHydrationPercent() { return CurrentHydration / MaxHydration; };
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	float GetWeightPercent() { return CurrentWeight / MaxWeight; };
-	UFUNCTION(BlueprintCallable, BlueprintPure)
 	float GetAirPercent() { return CurrentAir / MaxAir; };
+	
+	//증가 비율 설정 함수
+	UFUNCTION(BlueprintCallable)
+	void SetMultiplier(float NewValue) { AmountMultiplier = NewValue; };
 
 	//디버그 함수
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Debug")
-	void DebugGetStatus(float &HP, float& Stamina, float& Hunger, float& Hydration, float& Weight);
+	void DebugGetStatus(float &HP, float& Stamina, float& Hunger, float& Hydration);
 
 	//멀티플레이
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;

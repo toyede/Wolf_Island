@@ -927,6 +927,8 @@ void UInventoryComponent::RefreshCurrentWeight()
 			CurrentWeight += ItemSlot.ItemData.Amount * GetItemSingleWeight(ItemSlot.ItemData);
 		}
 	}
+	
+	OnCurrentWeightChanged.Broadcast();
 }
 
 bool UInventoryComponent::CheckSameItemAtIndex(int32 Index, FName ItemID)

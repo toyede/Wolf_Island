@@ -4,6 +4,7 @@
 #include "Wolf_Island/Public/Components/StatusComponent.h"
 
 #include "Components/InventoryComponent.h"
+#include "Games/MainGameState.h"
 #include "Item/ItemBase.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Net/UnrealNetwork.h"
@@ -166,50 +167,6 @@ void UStatusComponent::DecreaseHydration(float amount)
 	{
 		CurrentHydration = 0;
 		OnHydrationZero.Broadcast();
-	}
-}
-
-void UStatusComponent::IncreaseWeight(float amount)
-{
-	CurrentWeight = FMath::Clamp(CurrentWeight+amount, 0.0f, MaxWeight);
-	
-	//무게에 따른 감소율 증가분 설정
-	if (CurrentWeight == 100.0f)
-	{
-		AmountMultiplier = 1.5f;
-	}
-	else if (CurrentWeight >= 75.0f)
-	{
-		AmountMultiplier = 1.2f;
-	}
-	else if (CurrentWeight >= 50.0f)
-	{
-		AmountMultiplier = 1.1f;
-	} else
-	{
-		AmountMultiplier = 1.0f;
-	}
-}
-
-void UStatusComponent::DecreaseWeight(float amount)
-{
-	CurrentWeight = FMath::Clamp(CurrentWeight-amount, 0.0f, MaxWeight);
-	
-	//무게에 따른 감소율 증가분 설정
-	if (CurrentWeight == 100.0f)
-	{
-		AmountMultiplier = 1.5f;
-	}
-	else if (CurrentWeight >= 75.0f)
-	{
-		AmountMultiplier = 1.2f;
-	}
-	else if (CurrentWeight >= 50.0f)
-	{
-		AmountMultiplier = 1.1f;
-	} else
-	{
-		AmountMultiplier = 1.0f;
 	}
 }
 
@@ -555,6 +512,11 @@ void UStatusComponent::ApplyItem(FItemData Item)
 		IncreaseStamina(Item.NumericData.Stamina);
 		IncreaseHunger(Item.NumericData.Hunger);
 		IncreaseHydration(Item.NumericData.Hydration);
+		
+		AMainGameState* GS = Cast<AMainGameState>(GetWorld()->GetGameState());
+		FChattingData Data = FChattingData(
+			"SYSTEM",Item.TextData.Name.ToString()+" USED", EMessageType::NOTICE);
+		GS->AddChattingMessage(Data);
 	}
 }
 
@@ -576,17 +538,12 @@ void UStatusComponent::ClearAllTimers()
 	TimerManager.ClearTimer(AirTimer);
 }
 
-void UStatusComponent::DebugGetStatus(float &HP, float& Stamina, float& Hunger, float& Hydration, float& Weight)
+void UStatusComponent::DebugGetStatus(float &HP, float& Stamina, float& Hunger, float& Hydration)
 {
 	HP = CurrentHP;
 	Stamina = CurrentStamina;
 	Hunger = CurrentHunger;
 	Hydration = CurrentHydration;
-	Weight = CurrentWeight;
-	if (UInventoryComponent* Inven = Cast<UInventoryComponent>(GetOwner()->GetComponentByClass(UInventoryComponent::StaticClass())))
-	{
-		Weight = Inven->GetCurrentWeight();
-	}
 }
 
 void UStatusComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const

@@ -28,4 +28,3 @@ void AInteractableActor::SetInteractionDuration(float NewInteractionDuration)
 {
 	InteractableData.InteractionDuration = NewInteractionDuration;
 }
-
