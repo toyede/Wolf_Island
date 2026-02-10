@@ -9,6 +9,20 @@
 /**
  * 
  */
+
+USTRUCT(BlueprintType)
+struct FSlotItem
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (GetOptions = "GetItemRowNames"))
+	FName ItemID;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 Amount;
+};
+
 UCLASS()
 class WOLF_ISLAND_API AChest : public AInteractableActor
 {
@@ -17,6 +31,12 @@ class WOLF_ISLAND_API AChest : public AInteractableActor
 public:
 
 	AChest();
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Item")
+	UDataTable* ItemDataTable;
+	
+	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Init Setting")
+	TArray<FSlotItem> InitItems;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Chest")
 	USkeletalMeshComponent* ChestSkeletalMesh;
@@ -50,6 +70,21 @@ public:
 	void OpenChest(AActor* Interactor);
 	UFUNCTION(BlueprintCallable)
 	void CloseChest();
+	
+	UFUNCTION()
+	TArray<FName> GetItemRowNames() const
+	{
+		TArray<FName> Result;
+
+		if (ItemDataTable)
+		{
+			Result = ItemDataTable->GetRowNames();
+		}
+
+		return Result;
+	}
+	
+	virtual void BeginPlay() override;
 
 	virtual void Interact(AActor* Interactor) override;
 	

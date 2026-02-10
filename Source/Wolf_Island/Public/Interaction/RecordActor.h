@@ -3,12 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "InteractableActor.h"
 #include "GameFramework/Actor.h"
 #include "Interaction/InteractionInterface.h"
 #include "RecordActor.generated.h"
 
 UCLASS()
-class WOLF_ISLAND_API ARecordActor : public AActor, public IInteractionInterface
+class WOLF_ISLAND_API ARecordActor : public AInteractableActor
 {
 	GENERATED_BODY()
 	

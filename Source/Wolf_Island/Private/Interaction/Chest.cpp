@@ -23,6 +23,27 @@ AChest::AChest()
 	InteractableData.InteractionDuration = InteractionDuration;
 }
 
+void AChest::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	//초기 세팅 아이템이 있고 서버면 그걸로 채우기, 클라는 알아서 리플리케이션
+	if (InitItems.Num()!=0)
+	{
+		for (FSlotItem Item : InitItems)
+		{
+			FItemBaseData ItemData = FItemBaseData();
+			ItemData.ItemID = Item.ItemID;
+			ItemData.Amount = Item.Amount;
+			UE_LOG(LogTemp, Warning, TEXT("Item ID: %s"), *ItemData.ItemID.ToString());
+			InventoryComponent->Request_HandleAddItem(ItemData);
+		}
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("No inventory components available"));
+	}
+}
+
 void AChest::OpenChest(AActor* Interactor)
 {
 	//누가 사용 중이면 아무것도 안함

@@ -15,7 +15,7 @@ struct FInteractableData
 	FInteractableData() :
 	Name(FText::GetEmpty()),
 	Amount(0),
-	InteractionDuration(0.2f),
+	InteractionDuration(0.0f),
 	CanInteract(true)
 	{
 

@@ -4,6 +4,7 @@
 #include "Games/GameModes/MultiGameMode.h"
 
 #include "GameFramework/PlayerState.h"
+#include "Games/MainGameState.h"
 
 void AMultiGameMode::PostLogin(APlayerController* NewPlayer)
 {
@@ -33,4 +34,10 @@ void AMultiGameMode::PostLogin(APlayerController* NewPlayer)
 	int32 N = FMath::RandRange(0, Nouns.Num()-1);
 
 	PS->SetPlayerName(FString::Printf(TEXT("%s %s%d"), *Adjs[A], *Nouns[N], Counter++));
+	
+	AMainGameState* GS = GetGameState<AMainGameState>();
+	FChattingData Chat = FChattingData(
+		TEXT("알림"),PS->GetPlayerName()+TEXT(" 님이 접속했습니다."), EMessageType::NOTICE);
+	
+	GS->AddChattingMessage(Chat);
 }

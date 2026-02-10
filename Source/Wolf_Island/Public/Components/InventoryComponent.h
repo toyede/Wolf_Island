@@ -672,6 +672,7 @@ public:
 	//인벤토리(InventoryContents) 변경 시
 	UFUNCTION()
 	void OnRep_InventoryContents();
+	
 	//인벤토리 무게 변경 시
 	UFUNCTION()
 	void OnRep_CurrentWeight();

@@ -33,6 +33,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void FocusInput();
 	
+	
 	UFUNCTION(BlueprintCallable)
 	void ClearFocusInput();
 	

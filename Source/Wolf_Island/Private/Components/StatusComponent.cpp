@@ -3,6 +3,8 @@
 
 #include "Wolf_Island/Public/Components/StatusComponent.h"
 
+#include "Character/MainPlayer.h"
+#include "Character/MainPlayerController.h"
 #include "Components/InventoryComponent.h"
 #include "Games/MainGameState.h"
 #include "Item/ItemBase.h"
@@ -514,9 +516,11 @@ void UStatusComponent::ApplyItem(FItemData Item)
 		IncreaseHydration(Item.NumericData.Hydration);
 		
 		AMainGameState* GS = Cast<AMainGameState>(GetWorld()->GetGameState());
+		AMainPlayerController* PC = Cast<AMainPlayerController>(Cast<APawn>(GetOwner())->GetController());
 		FChattingData Data = FChattingData(
 			"SYSTEM",Item.TextData.Name.ToString()+" USED", EMessageType::NOTICE);
-		GS->AddChattingMessage(Data);
+		if (!PC) UE_LOG(LogTemp, Warning, TEXT("UStatusComponent::ApplyItem: PC is NULL"));
+		PC->AddChat(Data);
 	}
 }
 
