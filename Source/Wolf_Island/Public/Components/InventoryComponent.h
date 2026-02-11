@@ -145,6 +145,9 @@ public:
 	//아이템 추가 함수 - 아이템 먹을 때 Pickup 클래스에서 실행되는 함수
 	FItemAddResult HandleAddItem(FItemBaseData AddedItem);
 	
+	//인벤토리 설정 함수
+	void SetInventoryContents(TArray<FItemSlot> Inventory) { InventoryContents = Inventory; };
+	
 	//특정 인덱스에 아이템 넣기
 	void InsertItemToIndex(int32 Index, FItemBaseData Item);
 	
@@ -479,7 +482,7 @@ protected:
 	float CurrentWeight;
 
 	//인벤토리 슬롯
-	UPROPERTY(ReplicatedUsing = OnRep_InventoryContents, EditAnywhere, Category = "Inventory")
+	UPROPERTY(ReplicatedUsing = OnRep_InventoryContents, EditAnywhere, Category = "Inventory", SaveGame)
 	TArray<FItemSlot> InventoryContents;
 
 	//단일 아이템 추가 함수

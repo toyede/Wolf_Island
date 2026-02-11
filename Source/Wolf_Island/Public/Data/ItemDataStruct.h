@@ -108,16 +108,16 @@ struct FItemBaseData
 {
 	GENERATED_USTRUCT_BODY();
 	
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(BlueprintReadWrite, SaveGame)
 	FName ItemID = NAME_None;
 	
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(BlueprintReadWrite, SaveGame)
 	FText ItemName = FText::GetEmpty();
 	
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(BlueprintReadWrite, SaveGame)
 	int32 Amount = 0;
 	
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(BlueprintReadWrite, SaveGame)
 	float CurrentDurability = 0.0f;
 	
 	void SetAmount(const int32 NewAmount) { Amount = NewAmount; };
@@ -150,11 +150,8 @@ USTRUCT(BlueprintType)
 struct FItemSlot
 {
 	GENERATED_USTRUCT_BODY();
-
-	UPROPERTY()
-	TObjectPtr<class UItemBase> Item = nullptr;
 	
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	FItemBaseData ItemData;
 	
 	bool IsEmpty() const { return ItemData.ItemID == NAME_None; }

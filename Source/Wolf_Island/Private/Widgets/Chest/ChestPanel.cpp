@@ -52,6 +52,7 @@ void UChestPanel::RefreshChest()
 	UE_LOG(LogTemp, Warning, TEXT("RefreshChest"));
 	if (ChestInventoryRef && SlotClass)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("%s 's Chest | Comp : %s | HasAuth? : %hs"), *ChestInventoryRef->GetOwner()->GetName(), *ChestInventoryRef->GetName(), ChestInventoryRef->GetOwner()->HasAuthority()?"SERVER":"CLIENT");
 		ChestPanel->ClearChildren();
 
 		int32 Index = 0;
@@ -66,5 +67,10 @@ void UChestPanel::RefreshChest()
 			
 			ItemSlot->RefreshSlot();
 		}
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("RefreshChest isn't work"));
+		if (!ChestInventoryRef) UE_LOG(LogTemp, Warning, TEXT("ChestInventoryRef isn't valid"));
+		if (!SlotClass) UE_LOG(LogTemp, Warning, TEXT("SlotClass isn't valid"));
 	}
 }

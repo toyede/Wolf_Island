@@ -4,8 +4,10 @@
 #include "Interaction/Chest.h"
 
 #include "Components/InventoryComponent.h"
+#include "Engine/ActorChannel.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
+#include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 #include "Widgets/Chest/ChestScreen.h"
 
 AChest::AChest()
@@ -28,7 +30,7 @@ void AChest::BeginPlay()
 	Super::BeginPlay();
 	
 	//초기 세팅 아이템이 있고 서버면 그걸로 채우기, 클라는 알아서 리플리케이션
-	if (InitItems.Num()!=0)
+	if (HasAuthority() && InitItems.Num()!=0)
 	{
 		for (FSlotItem Item : InitItems)
 		{
@@ -38,9 +40,6 @@ void AChest::BeginPlay()
 			UE_LOG(LogTemp, Warning, TEXT("Item ID: %s"), *ItemData.ItemID.ToString());
 			InventoryComponent->Request_HandleAddItem(ItemData);
 		}
-	} else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("No inventory components available"));
 	}
 }
 
@@ -107,7 +106,7 @@ void AChest::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLife
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
-	DOREPLIFETIME(AChest, InventoryComponent);
+	//DOREPLIFETIME(AChest, InventoryComponent);
 	DOREPLIFETIME(AChest, IsOccupied);
 }
 
@@ -130,9 +129,40 @@ void AChest::Client_OpenChest_Implementation(AActor* Interactor)
 	if (!IsValid(Interactor)) return;
 	if (!ChestWidgetClass) return;
 	
+	UE_LOG(LogTemp, Warning, TEXT("Client_OpenChest | Name: %s | HasAuth: %d | NetMode: %d"),
+	*GetName(),
+	HasAuthority(),
+	(int32)GetNetMode());
+	
 	//상자 위젯 생성
 	UChestScreen* ChestScreen = CreateWidget<UChestScreen>(GetWorld(), ChestWidgetClass);
 	ChestScreen->InitializeChest(this, Interactor);
 	ChestScreen->SetIsFocusable(true);
 	ChestScreen->AddToViewport();
+}
+
+void AChest::SaveData(FActorSaveData& OutData)
+{
+	OutData.Transform = GetActorTransform();
+	OutData.ActorClass = GetClass();
+	
+	FMemoryWriter Writer(OutData.BinaryData, true);
+	FObjectAndNameAsStringProxyArchive Ar(Writer, true);
+	Ar.ArIsSaveGame = true;
+
+	InventoryComponent->Serialize(Ar);
+}
+
+void AChest::LoadData(const FActorSaveData& InData)
+{
+	SetActorTransform(InData.Transform);
+	
+	FMemoryReader Reader(InData.BinaryData, true);
+	FObjectAndNameAsStringProxyArchive Ar(Reader, true);
+	Ar.ArIsSaveGame = true;
+	
+	InventoryComponent->Serialize(Ar);
+	InventoryComponent->SetInventoryContents(InventoryComponent->GetInventory());
+	
+	ForceNetUpdate();
 }

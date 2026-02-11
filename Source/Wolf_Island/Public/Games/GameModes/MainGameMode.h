@@ -14,4 +14,11 @@ class WOLF_ISLAND_API AMainGameMode : public AGameMode
 {
 	GENERATED_BODY()
 	
+public:
+	
+	UFUNCTION(BlueprintCallable)
+	void TestSave();
+	
+	UFUNCTION(BlueprintCallable)
+	void TestLoad();
 };

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Games/SaveInterface.h"
 #include "Interaction/InteractableActor.h"
 #include "Chest.generated.h"
 
@@ -24,7 +25,7 @@ struct FSlotItem
 };
 
 UCLASS()
-class WOLF_ISLAND_API AChest : public AInteractableActor
+class WOLF_ISLAND_API AChest : public AInteractableActor, public ISaveInterface
 {
 	GENERATED_BODY()
 
@@ -32,7 +33,7 @@ public:
 
 	AChest();
 	
-	UPROPERTY(EditDefaultsOnly, Category = "Item")
+	UPROPERTY(EditDefaultsOnly, Category = "Item", SaveGame)
 	UDataTable* ItemDataTable;
 	
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Init Setting")
@@ -41,7 +42,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Chest")
 	USkeletalMeshComponent* ChestSkeletalMesh;
 
-	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Chest", Replicated)
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Chest")
 	class UInventoryComponent* InventoryComponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chest")
@@ -102,5 +103,9 @@ public:
 	
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multi_PlayAnimAndSound(UAnimationAsset* Anim, USoundBase* Sound);
+	
+	//저장 관련 코드=================================================================================================
+	virtual void SaveData(FActorSaveData& OutData) override;
+	virtual void LoadData(const FActorSaveData& InData) override;
 	
 };

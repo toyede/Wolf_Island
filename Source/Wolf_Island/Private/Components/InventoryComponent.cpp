@@ -86,9 +86,9 @@ FItemSlot* UInventoryComponent::FindSlotByID(FName ItemID)
 {
 	for (FItemSlot& Slot : InventoryContents)
 	{
-		if (Slot.Item)
+		if (Slot.IsNotEmpty())
 		{
-			if (Slot.Item->ID == ItemID)
+			if (Slot.ItemData.ItemID == ItemID)
 			{
 				return &Slot;
 			}
@@ -142,9 +142,9 @@ FItemBaseData* UInventoryComponent::FindMatchingItem(FItemBaseData& Item) const
 		//if(InventoryContents.Contains(Item)) return Item;
 		for (FItemSlot Slot : InventoryContents)
 		{
-			if (Slot.Item)
+			if (Slot.IsNotEmpty())
 			{
-				if (Slot.Item->ID == Item.ItemID)
+				if (Slot.ItemData.ItemID == Item.ItemID)
 				{
 					return &Item;
 				}
@@ -502,9 +502,11 @@ void UInventoryComponent::BeginPlay()
 	//나중에 저장 데이터에서 인벤토리 가져오는 코드 구현 예정
 	
 
-	InventoryContents.Init(FItemSlot(), SlotsCapacity);
+	if (GetOwner()->HasAuthority())
+	{
+		InventoryContents.Init(FItemSlot(), SlotsCapacity);
+	}
 	// ...
-	
 }
 
 
@@ -527,7 +529,7 @@ int32 UInventoryComponent::GetEmptySlotCount()
 	
 	for (FItemSlot& Slot : InventoryContents)
 	{
-		if (!Slot.Item)
+		if (Slot.IsEmpty())
 		{
 			count++;
 		}
@@ -599,9 +601,7 @@ void UInventoryComponent::PrintInventory(float DeltaTime)
 	{
 		FString Item = "[ "+ Slot.ItemData.ItemName.ToString() + " | " + FString::FromInt(Slot.ItemData.Amount) + "EA ]";
 		UKismetSystemLibrary::PrintString(GetWorld(), Item, true, true, FLinearColor::Green, DeltaTime);
-	}
-	
-	
+	}	
 }
 
 bool UInventoryComponent::CheckCanMakeRecipe(FRecipeData Recipe)
