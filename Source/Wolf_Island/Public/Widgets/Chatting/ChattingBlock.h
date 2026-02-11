@@ -17,7 +17,9 @@ class WOLF_ISLAND_API UChattingBlock : public UUserWidget
 	GENERATED_BODY()
 	
 	UPROPERTY(meta=(BindWidget))
-	class UTextBlock* NameText;
+	UTextBlock* TimeText;
+	UPROPERTY(meta=(BindWidget))
+	UTextBlock* NameText;
 	UPROPERTY(meta=(BindWidget))
 	UTextBlock* MessageText;
 	
@@ -43,6 +45,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetChattingBlock(FChattingData ChattingData);
 	
+	UFUNCTION(BlueprintCallable)
+	void SetTime(int32 UnixTime) { TimeText->SetText(FText::FromString(FDateTime::FromUnixTimestamp(UnixTime).ToString(TEXT("[%H:%M]")))); };
 	UFUNCTION(BlueprintCallable)
 	void SetName(FString Name) { NameText->SetText(FText::FromString(Name)); };
 	UFUNCTION(BlueprintCallable)

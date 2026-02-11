@@ -13,6 +13,7 @@ void UChattingBlock::NativeConstruct()
 
 void UChattingBlock::SetChattingBlock(FChattingData ChattingData)
 {
+	SetTime(ChattingData.UnixTime);
 	SetName(ChattingData.Name);
 	SetMessage(ChattingData.Message);
 

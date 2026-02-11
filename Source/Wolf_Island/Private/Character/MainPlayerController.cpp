@@ -59,6 +59,7 @@ void AMainPlayerController::EnterChatMode()
 	
 	FInputModeGameAndUI Mode;
 	SetInputMode(Mode);
+	SetShowMouseCursor(true);
 
 	if (ChattingPanel && ChattingPanel->ChattingInputBox)
 	{
@@ -77,6 +78,7 @@ void AMainPlayerController::ExitChatMode()
 	
 	FInputModeGameOnly Mode;
 	SetInputMode(Mode);
+	SetShowMouseCursor(false);
 
 	if (ChattingPanel)
 	{

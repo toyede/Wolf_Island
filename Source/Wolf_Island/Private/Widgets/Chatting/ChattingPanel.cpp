@@ -43,6 +43,13 @@ void UChattingPanel::ClearFocusInput()
 
 void UChattingPanel::OnChattingCommited(const FText& Text, ETextCommit::Type CommitMethod)
 {
+	//마우스로 아무데나 클릭하면 채팅모드 나가기
+	if (CommitMethod == ETextCommit::OnCleared || CommitMethod == ETextCommit::OnUserMovedFocus)
+	{
+		OwnedController->ExitChatMode();
+		return;
+	}
+	
 	//엔터로 친 거 아니면 암것두 안함.
 	if (CommitMethod != ETextCommit::OnEnter) return;
 	
@@ -80,5 +87,5 @@ void UChattingPanel::AddChatting(FChattingData NewChattingData)
 	//ChattingBox->AddChild(Block);
 	//ChattingBox->ScrollToEnd();
 	ChattingList->InsertChildAt(0, Block);
-	ChattingList->ScrollToStart();
+	ChattingList->ScrollToEnd();
 }

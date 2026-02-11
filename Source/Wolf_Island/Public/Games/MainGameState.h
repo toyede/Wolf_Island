@@ -35,10 +35,19 @@ struct FChattingData
 	UPROPERTY(BlueprintReadWrite)
 	FString Message;
 	
-	FChattingData() = default;
+	UPROPERTY(BlueprintReadWrite)
+	int64 UnixTime;
+	
+	FChattingData()
+	{
+		UnixTime = FDateTime::UtcNow().ToUnixTimestamp();
+	};
 
 	FChattingData(const FString& InName, const FString& InMessage, EMessageType InMessageType = EMessageType::GENERAL)
-		: MessageType(InMessageType), Name(InName), Message(InMessage){}
+		: MessageType(InMessageType), Name(InName), Message(InMessage)
+	{
+		UnixTime = FDateTime::UtcNow().ToUnixTimestamp();
+	}
 	
 	bool IsEmpty()
 	{
