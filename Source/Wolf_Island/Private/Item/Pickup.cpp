@@ -4,6 +4,7 @@
 #include "Components/InventoryComponent.h"
 #include "Data/ItemDataStruct.h"
 #include "Net/UnrealNetwork.h"
+#include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
 APickup::APickup()
 {
@@ -149,6 +150,41 @@ void APickup::OnRep_ItemReference()
         SetInteractionDuration(ItemData->NumericData.InteractionDuration);
         PickupMesh->SetStaticMesh(ItemData->AssetData.Mesh);
     }
+}
+
+void APickup::SaveData(FActorSaveData& OutData)
+{
+    OutData.Transform = GetActorTransform();
+    OutData.ActorClass = GetClass();
+    OutData.Velocity = GetVelocity();
+	
+    FMemoryWriter Writer(OutData.BinaryData, true);
+    FObjectAndNameAsStringProxyArchive Ar(Writer, true);
+    Ar.ArIsSaveGame = true;
+
+    Serialize(Ar);
+}
+
+void APickup::LoadData(const FActorSaveData& InData)
+{
+    SetActorTransform(InData.Transform);
+	
+    FMemoryReader Reader(InData.BinaryData, true);
+    FObjectAndNameAsStringProxyArchive Ar(Reader, true);
+    Ar.ArIsSaveGame = true;
+	
+    Serialize(Ar);
+    
+    InitializeDrop(ItemReference, ItemReference.Amount);
+    
+    if (IsPhysics)
+    {
+        PickupMesh->SetSimulatePhysics(true);
+        FVector Force = PickupMesh->GetMass() * InData.Velocity;
+        PickupMesh->AddImpulse(Force);
+    }
+	
+    ForceNetUpdate();
 }
 
 //에디터에서만 실행

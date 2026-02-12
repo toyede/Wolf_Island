@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Data/ItemDataStruct.h"
+#include "Games/SaveInterface.h"
 #include "Interaction/InteractableActor.h"
 #include "Pickup.generated.h"
 
@@ -11,7 +12,7 @@
  * 
  */
 UCLASS()
-class WOLF_ISLAND_API APickup : public AInteractableActor
+class WOLF_ISLAND_API APickup : public AInteractableActor, public ISaveInterface
 {
 	GENERATED_BODY()
 public:
@@ -29,9 +30,9 @@ public:
 	FDataTableRowHandle ItemHandle;
 	
 	//실제 아이템 정보
-	UPROPERTY(ReplicatedUsing = OnRep_ItemReference, EditAnywhere, BlueprintReadWrite, Category = "Item Data")
+	UPROPERTY(ReplicatedUsing = OnRep_ItemReference, EditAnywhere, BlueprintReadWrite, Category = "Item Data", SaveGame)
 	FItemBaseData ItemReference;
-	UPROPERTY(EditAnywhere, Category = "Item Data")
+	UPROPERTY(EditAnywhere, Category = "Item Data", SaveGame)
 	bool IsPhysics = true;
 	
 	UFUNCTION(BlueprintCallable, Category = "Item Data")
@@ -46,12 +47,6 @@ public:
 	virtual void BeginFocus() override;
 	
 	virtual void EndFocus() override;
-	
-//에디터에서만 실행
-#if WITH_EDITOR
-	//에디터에서 월드에 배치된 인스턴스 아이템 코드 바꿀 때마다 업데이트 되게 하는 함수
-	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-#endif
 
 public:
 
@@ -65,4 +60,14 @@ public:
 	//아이템 데이터 설정 시 액터 비주얼 세팅
 	UFUNCTION()
 	void OnRep_ItemReference();
+	
+	//저장 관련 코드
+	virtual void SaveData(FActorSaveData& OutData) override;
+	virtual void LoadData(const FActorSaveData& InData) override;
+	
+	//에디터에서만 실행
+#if WITH_EDITOR
+	//에디터에서 월드에 배치된 인스턴스 아이템 코드 바꿀 때마다 업데이트 되게 하는 함수
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
 };
