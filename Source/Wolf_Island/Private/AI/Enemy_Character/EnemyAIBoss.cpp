@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "AI/Enemy_Character/EnemyAIBoss.h"
 #include "Components/CapsuleComponent.h"
@@ -12,6 +12,11 @@
 #include "Actors/BossStatue.h"
 #include "Actors/StatueForewarning.h"
 #include "BrainComponent.h"
+#include "Engine/World.h"
+#include "Engine/Engine.h"
+#include "Engine/OverlapResult.h"
+#include "CollisionQueryParams.h"
+#include "CollisionShape.h"
 
 AEnemyAIBoss::AEnemyAIBoss()
 {
@@ -76,8 +81,29 @@ void AEnemyAIBoss::Tick(float DeltaTime)
 
 void AEnemyAIBoss::SpawnStatueSequence()
 {
-	FVector SpawnLocation = StatueSpawnPoint->GetActorLocation();
+	AActor* SelectedPoint = SelectSpawnPoint();
+	if (!SelectedPoint)
+	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("[Boss] No valid statue spawn point."));
+		}
+		return;
+	}
 
+	PendingSpawnPoint = SelectedPoint;
+	SpawnRetryCount = 0;
+
+	const FVector SpawnLocation = SelectedPoint->GetActorLocation();
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			-1,
+			2.0f,
+			FColor::Yellow,
+			FString::Printf(TEXT("[Boss] Selected SpawnPoint: %s (X=%.1f Y=%.1f Z=%.1f)"),
+				*SelectedPoint->GetName(), SpawnLocation.X, SpawnLocation.Y, SpawnLocation.Z));
+	}
 	if (ForewarningClass)
 	{
 		AStatueForewarning* Forewarning = GetWorld()->SpawnActor<AStatueForewarning>(
@@ -89,22 +115,196 @@ void AEnemyAIBoss::SpawnStatueSequence()
 		if (Forewarning)
 		{
 			Forewarning->OnForewarningComplete.AddUObject(this, &AEnemyAIBoss::OnForewarningComplete);
+			Forewarning->OnForewarningResolved.AddUObject(this, &AEnemyAIBoss::OnForewarningResolved);
+			return;
 		}
 	}
+
+	TrySpawnStatueWithRetry();
 }
 
 void AEnemyAIBoss::OnForewarningComplete()
 {
-	FVector SpawnLocation = StatueSpawnPoint->GetActorLocation();
+	// Legacy callback kept for compatibility.
+}
 
-	if (StatueClass)
+void AEnemyAIBoss::OnForewarningResolved(bool bAreaClear)
+{
+	if (!HasAuthority())
 	{
-		GetWorld()->SpawnActor<ABossStatue>(
-			StatueClass,
-			SpawnLocation,
-			FRotator::ZeroRotator
-		);
+		return;
 	}
+
+	TrySpawnStatueWithRetry();
+}
+
+void AEnemyAIBoss::TrySpawnStatueWithRetry()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (!PendingSpawnPoint.IsValid())
+	{
+		ClearSpawnState();
+		return;
+	}
+
+	if (!StatueClass)
+	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("[Boss] StatueClass is null."));
+		}
+		ClearSpawnState();
+		return;
+	}
+
+	const FVector SpawnLocation = PendingSpawnPoint->GetActorLocation();
+
+	if (IsSpawnAreaOccupied(SpawnLocation))
+	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(
+				-1,
+				1.5f,
+				FColor::Orange,
+				FString::Printf(TEXT("[Boss] Spawn area occupied. Retry %d/%d"),
+					SpawnRetryCount + 1, MaxSpawnRetries));
+		}
+		if (SpawnRetryCount >= MaxSpawnRetries)
+		{
+			if (GEngine)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("[Boss] Statue spawn aborted (occupied area)."));
+			}
+			ClearSpawnState();
+			return;
+		}
+
+		SpawnRetryCount++;
+		GetWorldTimerManager().SetTimer(
+			SpawnRetryTimerHandle,
+			this,
+			&AEnemyAIBoss::TrySpawnStatueWithRetry,
+			SpawnRetryDelay,
+			false
+		);
+		return;
+	}
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	ABossStatue* Spawned = GetWorld()->SpawnActor<ABossStatue>(
+		StatueClass,
+		SpawnLocation,
+		FRotator::ZeroRotator,
+		SpawnParams
+	);
+
+	if (Spawned)
+	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(
+				-1,
+				2.0f,
+				FColor::Green,
+				FString::Printf(TEXT("[Boss] Statue spawned at X=%.1f Y=%.1f Z=%.1f"),
+					SpawnLocation.X, SpawnLocation.Y, SpawnLocation.Z));
+		}
+		ClearSpawnState();
+		return;
+	}
+
+	if (SpawnRetryCount >= MaxSpawnRetries)
+	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("[Boss] Statue spawn failed after retries."));
+		}
+		ClearSpawnState();
+		return;
+	}
+
+	SpawnRetryCount++;
+	GetWorldTimerManager().SetTimer(
+		SpawnRetryTimerHandle,
+		this,
+		&AEnemyAIBoss::TrySpawnStatueWithRetry,
+		SpawnRetryDelay,
+		false
+	);
+}
+
+bool AEnemyAIBoss::IsSpawnAreaOccupied(const FVector& Location) const
+{
+	if (!GetWorld())
+	{
+		return false;
+	}
+
+	TArray<FOverlapResult> Overlaps;
+	FCollisionObjectQueryParams ObjQuery;
+	ObjQuery.AddObjectTypesToQuery(ECC_Pawn);
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(StatueSpawnCheck), false, this);
+	const bool bHit = GetWorld()->OverlapMultiByObjectType(
+		Overlaps,
+		Location,
+		FQuat::Identity,
+		ObjQuery,
+		FCollisionShape::MakeSphere(SpawnSafetyRadius),
+		QueryParams
+	);
+
+	if (!bHit)
+	{
+		return false;
+	}
+
+	for (const FOverlapResult& OverlapResult : Overlaps)
+	{
+		const APawn* Pawn = Cast<APawn>(OverlapResult.GetActor());
+		if (Pawn && Pawn->IsPlayerControlled())
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+AActor* AEnemyAIBoss::SelectSpawnPoint()
+{
+	TArray<AActor*> ValidPoints;
+	for (AActor* Point : StatueSpawnPoints)
+	{
+		if (IsValid(Point))
+		{
+			ValidPoints.Add(Point);
+		}
+	}
+
+	if (ValidPoints.Num() > 0)
+	{
+		const int32 Index = SpawnPointCursor % ValidPoints.Num();
+		SpawnPointCursor++;
+		return ValidPoints[Index];
+	}
+
+	return IsValid(StatueSpawnPoint) ? StatueSpawnPoint : nullptr;
+}
+
+void AEnemyAIBoss::ClearSpawnState()
+{
+	GetWorldTimerManager().ClearTimer(SpawnRetryTimerHandle);
+	PendingSpawnPoint.Reset();
+	SpawnRetryCount = 0;
 }
 
 void AEnemyAIBoss::OnAttackHit(const FHitResult& HitResult)

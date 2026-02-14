@@ -1,26 +1,22 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-#include "Actors/StatueForewarning.h"
+癤�#include "Actors/StatueForewarning.h"
 #include "Components/SphereComponent.h"
 #include "NiagaraComponent.h"
-#include "NiagaraFunctionLibrary.h"
-#include "Character/MainPlayer.h"  // 경로 맞게 수정
+#include "Character/MainPlayer.h"
 #include "TimerManager.h"
-#include "Kismet/GameplayStatics.h"
 #include "Engine/DamageEvents.h"
+#include "DrawDebugHelpers.h"
 
 AStatueForewarning::AStatueForewarning()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	bReplicates = true;
 
-	// 즉사 판정 영역
 	KillZone = CreateDefaultSubobject<USphereComponent>(TEXT("KillZone"));
 	RootComponent = KillZone;
 	KillZone->SetSphereRadius(150.f);
 	KillZone->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	KillZone->SetCollisionResponseToAllChannels(ECR_Overlap);
 
-	// 이펙트 컴포넌트
 	ForewarningEffectComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ForewarningEffect"));
 	ForewarningEffectComponent->SetupAttachment(RootComponent);
 	ForewarningEffectComponent->bAutoActivate = false;
@@ -30,43 +26,79 @@ void AStatueForewarning::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 전조 이펙트 시작
+	if (bDebugDrawWarning)
+	{
+		DrawDebugSphere(
+			GetWorld(),
+			GetActorLocation(),
+			KillZone->GetScaledSphereRadius(),
+			24,
+			DebugSphereColor,
+			false,
+			ForewarningDuration,
+			0,
+			3.0f);
+	}
+
 	if (ForewarningEffect && ForewarningEffectComponent)
 	{
 		ForewarningEffectComponent->SetAsset(ForewarningEffect);
 		ForewarningEffectComponent->Activate();
 	}
 
-	// 타이머 시작
-	GetWorldTimerManager().SetTimer(
-		ForewarningTimerHandle,
-		this,
-		&AStatueForewarning::OnForewarningEnd,
-		ForewarningDuration,
-		false
-	);
+	OnTelegraphStarted.Broadcast();
+	BP_OnTelegraphStarted();
+
+	if (HasAuthority())
+	{
+		GetWorldTimerManager().SetTimer(
+			ForewarningTimerHandle,
+			this,
+			&AStatueForewarning::OnForewarningEnd,
+			ForewarningDuration,
+			false);
+	}
 }
 
 void AStatueForewarning::OnForewarningEnd()
 {
-	KillOverlappingPlayers();
+	if (!HasAuthority())
+	{
+		return;
+	}
 
+	const int32 EliminatedPlayers = KillOverlappingPlayers();
+	const bool bAreaClear = !HasOverlappingPlayers();
+
+	OnTelegraphResolved.Broadcast(bAreaClear, EliminatedPlayers);
+	BP_OnTelegraphResolved(bAreaClear, EliminatedPlayers);
+	OnForewarningResolved.Broadcast(bAreaClear);
 	OnForewarningComplete.Broadcast();
 
 	Destroy();
 }
 
-void AStatueForewarning::KillOverlappingPlayers()
+int32 AStatueForewarning::KillOverlappingPlayers()
 {
 	TArray<AActor*> OverlappingActors;
 	KillZone->GetOverlappingActors(OverlappingActors, AMainPlayer::StaticClass());
 
+	int32 EliminatedCount = 0;
 	for (AActor* Actor : OverlappingActors)
 	{
 		if (AMainPlayer* Player = Cast<AMainPlayer>(Actor))
 		{
-			// 즉사 데미지 (매우 큰 값)
-			Player->TakeDamage(99999.f, FDamageEvent(), nullptr, this);
+			Player->TakeDamage(LethalDamage, FDamageEvent(), nullptr, this);
+			++EliminatedCount;
 		}
 	}
+
+	return EliminatedCount;
+}
+
+bool AStatueForewarning::HasOverlappingPlayers() const
+{
+	TArray<AActor*> OverlappingActors;
+	KillZone->GetOverlappingActors(OverlappingActors, AMainPlayer::StaticClass());
+	return OverlappingActors.Num() > 0;
 }

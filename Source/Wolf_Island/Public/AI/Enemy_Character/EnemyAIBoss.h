@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+Ôªø// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -95,7 +95,7 @@ public:
 
 	void SetCurrentDamage(float Damage) { CurrentDamage = Damage; }
 
-	// ƒ›∏Æ¿¸ º“ƒœ π◊ π›∞Ê
+	// ÏΩúÎ¶¨Ï†Ñ ÏÜåÏºì Î∞è Î∞òÍ≤Ω
 
 	UPROPERTY(EditDefaultsOnly, Category = "Collision")
 	TArray<FName> AttackStartSockets;
@@ -124,7 +124,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Collision")
 	TArray<float> SpecialAttackRadiuses;
 
-	// ∏˘≈∏¡÷
+	// Î™ΩÌÉÄÏ£º
 	UPROPERTY(EditDefaultsOnly, Category = "Combat")
 	TArray<UAnimMontage*> AttackMontages;
 
@@ -143,7 +143,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Combat")
 	UAnimMontage* SpecialAttackMontage;
 
-	// Ω««‡ «‘ºˆ
+	// Ïã§Ìñâ Ìï®Ïàò
 
 	UFUNCTION()
 	void ExecuteAttack(int32 AttackIndex);
@@ -176,14 +176,38 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Boss|Phase2")
 	TSubclassOf<AStatueForewarning> ForewarningClass;
 
-	UPROPERTY(EditAnywhere, Category = "Boss|Phase2")
+		UPROPERTY(EditAnywhere, Category = "Boss|Phase2")
 	TSubclassOf<ABossStatue> StatueClass;
 
+	// Preferred fixed spawn points configured in editor.
+	UPROPERTY(EditInstanceOnly, Category = "Boss|Phase2")
+	TArray<TObjectPtr<AActor>> StatueSpawnPoints;
+
+	// Backward compatibility fallback.
 	UPROPERTY(EditInstanceOnly, Category = "Boss|Phase2")
 	AActor* StatueSpawnPoint;
 
+	UPROPERTY(EditAnywhere, Category = "Boss|Phase2|Spawn")
+	int32 MaxSpawnRetries = 3;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|Phase2|Spawn")
+	float SpawnRetryDelay = 0.25f;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|Phase2|Spawn")
+	float SpawnSafetyRadius = 150.0f;
+
 	void SpawnStatueSequence();
 	void OnForewarningComplete();
+	void OnForewarningResolved(bool bAreaClear);
+	void TrySpawnStatueWithRetry();
+	bool IsSpawnAreaOccupied(const FVector& Location) const;
+	AActor* SelectSpawnPoint();
+	void ClearSpawnState();
+
+	TWeakObjectPtr<AActor> PendingSpawnPoint;
+	FTimerHandle SpawnRetryTimerHandle;
+	int32 SpawnRetryCount = 0;
+	int32 SpawnPointCursor = 0;
 
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat|Dead", ReplicatedUsing = OnRep_IsDead)

@@ -1,6 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-#pragma once
+癤�#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -11,6 +9,9 @@ class UNiagaraComponent;
 class UNiagaraSystem;
 
 DECLARE_MULTICAST_DELEGATE(FOnForewarningComplete);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnForewarningResolved, bool /*bAreaClear*/);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTelegraphStarted);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTelegraphResolved, bool, bAreaClear, int32, EliminatedPlayers);
 
 UCLASS()
 class WOLF_ISLAND_API AStatueForewarning : public AActor
@@ -24,28 +25,49 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
-	// 전조 완료 델리게이트
+	// Legacy completion signal
 	FOnForewarningComplete OnForewarningComplete;
+	// New completion signal with area state
+	FOnForewarningResolved OnForewarningResolved;
+
+	UPROPERTY(BlueprintAssignable, Category = "Forewarning")
+	FOnTelegraphStarted OnTelegraphStarted;
+
+	UPROPERTY(BlueprintAssignable, Category = "Forewarning")
+	FOnTelegraphResolved OnTelegraphResolved;
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Forewarning")
+	void BP_OnTelegraphStarted();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Forewarning")
+	void BP_OnTelegraphResolved(bool bAreaClear, int32 EliminatedPlayers);
 
 protected:
-	// 전조 지속 시간
 	UPROPERTY(EditAnywhere, Category = "Forewarning")
 	float ForewarningDuration = 3.0f;
 
-	// 즉사 판정 범위
+	UPROPERTY(EditAnywhere, Category = "Forewarning")
+	float LethalDamage = 99999.0f;
+
 	UPROPERTY(VisibleAnywhere, Category = "Forewarning")
 	USphereComponent* KillZone;
 
-	// 전조 이펙트 (나중에 설정)
 	UPROPERTY(EditAnywhere, Category = "Forewarning|Effects")
 	UNiagaraSystem* ForewarningEffect;
 
 	UPROPERTY(VisibleAnywhere, Category = "Forewarning|Effects")
 	UNiagaraComponent* ForewarningEffectComponent;
 
+	UPROPERTY(EditAnywhere, Category = "Forewarning|Debug")
+	bool bDebugDrawWarning = true;
+
+	UPROPERTY(EditAnywhere, Category = "Forewarning|Debug")
+	FColor DebugSphereColor = FColor::Yellow;
+
 private:
 	void OnForewarningEnd();
-	void KillOverlappingPlayers();
+	int32 KillOverlappingPlayers();
+	bool HasOverlappingPlayers() const;
 
 	FTimerHandle ForewarningTimerHandle;
 };
