@@ -570,6 +570,8 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_StopUseItem();
 	
+	//아이템 정보 저장
+	
 	//클라이언트 실행 함수 (UI 사운드 등 클라이언트 혼자만 보면 되는 것)
 	UFUNCTION(Client, Reliable)
 	void Client_PlaySound2D(USoundBase* Sound);

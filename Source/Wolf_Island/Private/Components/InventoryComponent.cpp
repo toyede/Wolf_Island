@@ -11,6 +11,7 @@
 
 #include "AdvancedFriendsGameInstance.h"
 #include "Character/MainPlayer.h"
+#include "Games/MainPlayerState.h"
 #include "Item/ItemBase.h"
 #include "Item/Pickup.h"
 #include "Kismet/GameplayStatics.h"
@@ -1119,6 +1120,18 @@ void UInventoryComponent::InventoryChanged()
 	//UE_LOG(LogTemp, Warning, TEXT("%hs INVENTORY CHANGED"), GetOwner()->HasAuthority() ? "SERVER" : "CLIENT");
 	RefreshCurrentWeight();
 	OnInventoryUpdated.Broadcast();
+	
+	//인벤토리 업데이트 시 플레이어 스테이트에 인벤토리 정보 저장
+	APawn* OwnerPawn = Cast<APawn>(GetOwner());
+	if (!OwnerPawn) return;
+	
+	AController* Controller = OwnerPawn->GetController();
+	if (!Controller) return;
+	
+	AMainPlayerState* PS = Cast<AMainPlayerState>(OwnerPawn->GetController()->PlayerState);
+	if (!PS) return;
+	
+	PS->SetItemsData(GetInventory());
 }
 
 void UInventoryComponent::Server_HandleAddItem_Implementation(FItemBaseData AddedItem)

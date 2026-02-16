@@ -5,6 +5,7 @@
 
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Character/MainPlayerController.h"
+#include "Components/Border.h"
 #include "Components/EditableTextBox.h"
 #include "Components/ScrollBox.h"
 #include "Widgets/Chatting/ChattingBlock.h"
@@ -30,6 +31,16 @@ void UChattingPanel::FocusInput()
 {
 	if (!ChattingInputBox) return;
 	
+	FWidgetAnimationDynamicEvent EndEvent;
+	EndEvent.BindDynamic(this, &UChattingPanel::OnOpenAnimationFinished);
+
+	BindToAnimationFinished(OpenAnim, EndEvent);
+	
+	PlayAnimation(OpenAnim);
+}
+
+void UChattingPanel::OnOpenAnimationFinished()
+{
 	ChattingInputBox->SetKeyboardFocus();
 }
 
@@ -37,7 +48,7 @@ void UChattingPanel::ClearFocusInput()
 {
 	if (!ChattingInputBox) return;
 	
-	//ChattingTextBox->
+	PlayAnimation(CloseAnim);
 	UWidgetBlueprintLibrary::SetFocusToGameViewport(); 
 }
 

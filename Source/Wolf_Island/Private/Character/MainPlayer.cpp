@@ -91,26 +91,6 @@ AMainPlayer::AMainPlayer()
 	GetCharacterMovement()->MaxFlySpeed = SwimmingSpeed;
 }
 
-void AMainPlayer::Client_OpenBonfireUI_Implementation()
-{
-	if (BonfireUIClass)
-	{
-		APlayerController* PC = Cast<APlayerController>(GetController());
-		if (!PC) return;
-
-		UBonFireUI* BonfireWidget = CreateWidget<UBonFireUI>(PC, BonfireUIClass);
-		if (BonfireWidget)
-		{
-			BonfireWidget->AddToViewport();
-
-			FInputModeGameAndUI InputMode;
-			InputMode.SetWidgetToFocus(BonfireWidget->TakeWidget());
-			PC->SetInputMode(InputMode);
-			PC->bShowMouseCursor = true;
-		}
-	}
-}
-
 // Called when the game starts or when spawned
 void AMainPlayer::BeginPlay()
 {
@@ -158,7 +138,7 @@ void AMainPlayer::BeginPlay()
 
 	//HUD = Cast<AMainHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
 
-	//플레이어 본인만 HUD 생성.
+	//플레이어 본인(클라이언트)만 HUD 생성.
 	if (IsLocallyControlled())
 	{
 		HUD = CreateWidget<UPlayerHUD>(GetWorld(), HUDClass);
@@ -1554,6 +1534,26 @@ void AMainPlayer::Server_StopUseItem_Implementation()
 void AMainPlayer::Client_PlaySound2D_Implementation(USoundBase* Sound)
 {
 	UGameplayStatics::PlaySound2D(GetWorld(), Sound);
+}
+
+void AMainPlayer::Client_OpenBonfireUI_Implementation()
+{
+	if (BonfireUIClass)
+	{
+		APlayerController* PC = Cast<APlayerController>(GetController());
+		if (!PC) return;
+
+		UBonFireUI* BonfireWidget = CreateWidget<UBonFireUI>(PC, BonfireUIClass);
+		if (BonfireWidget)
+		{
+			BonfireWidget->AddToViewport();
+
+			FInputModeGameAndUI InputMode;
+			InputMode.SetWidgetToFocus(BonfireWidget->TakeWidget());
+			PC->SetInputMode(InputMode);
+			PC->bShowMouseCursor = true;
+		}
+	}
 }
 
 void AMainPlayer::Server_DropItem_Implementation(UInventoryComponent* SourceInventory, int32 SourceIndex, int32 AmountToDrop, bool IsWhole)

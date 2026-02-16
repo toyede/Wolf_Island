@@ -1,8 +1,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Actors/SavableActor.h"
 #include "GameFramework/Actor.h"
 #include "Engine/DataTable.h"
+#include "Games/SaveInterface.h"
 #include "Tree.generated.h"
 
 class UStatusComponent;
@@ -16,18 +18,18 @@ struct FTreeDropEntry
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop", meta = (GetOptions = "GetItemIDs"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop", meta = (GetOptions = "GetItemIDs"), SaveGame)
 	FName ItemID;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop", SaveGame)
 	int32 Amount = 1;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop", meta = (ClampMin = "0.0", ClampMax = "1.0"), SaveGame)
 	float DropChance = 1.0f;
 };
 
 UCLASS()
-class WOLF_ISLAND_API ATree : public AActor
+class WOLF_ISLAND_API ATree : public ASavableActor
 {
 	GENERATED_BODY()
 	
@@ -67,7 +69,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Settings")
 	UDataTable* DropDataTable;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Settings")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Settings", SaveGame)
 	TArray<FTreeDropEntry> DropList;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Settings")
@@ -78,4 +80,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 	USoundBase* DestroySound;
+	
+public:
+	//저장 관련 코드
+	virtual void SaveData(FActorSaveData& OutData0) override;
+	virtual void LoadData(const FActorSaveData& InData) override;
 };

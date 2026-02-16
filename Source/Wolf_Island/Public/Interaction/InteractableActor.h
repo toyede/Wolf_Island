@@ -4,11 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "InteractionInterface.h"
+#include "Actors/SavableActor.h"
 #include "GameFramework/Actor.h"
 #include "InteractableActor.generated.h"
 
 UCLASS()
-class WOLF_ISLAND_API AInteractableActor : public AActor , public IInteractionInterface
+class WOLF_ISLAND_API AInteractableActor : public ASavableActor, public IInteractionInterface
 {
 	GENERATED_BODY()
 	

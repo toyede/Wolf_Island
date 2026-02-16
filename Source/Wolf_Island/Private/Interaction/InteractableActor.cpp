@@ -3,6 +3,8 @@
 
 #include "Interaction/InteractableActor.h"
 
+#include "Net/UnrealNetwork.h"
+
 // Sets default values
 AInteractableActor::AInteractableActor()
 {

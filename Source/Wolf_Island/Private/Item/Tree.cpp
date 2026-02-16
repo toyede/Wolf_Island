@@ -5,6 +5,7 @@
 #include "Components/StatusComponent.h" 
 #include "Kismet/GameplayStatics.h"
 #include "Particles/ParticleSystem.h"
+#include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 #include "Sound/SoundBase.h"
 
 ATree::ATree()
@@ -125,4 +126,35 @@ TArray<FString> ATree::GetItemIDs() const
 	}
 
 	return Options;
+}
+
+void ATree::SaveData(FActorSaveData& OutData)
+{
+	ISaveInterface::SaveData(OutData);
+	
+	OutData.ActorID = GUID;
+	OutData.Transform = GetActorTransform();
+	OutData.ActorClass = GetClass();
+	
+	FMemoryWriter Writer(OutData.BinaryData, true);
+	FObjectAndNameAsStringProxyArchive Ar(Writer, true);
+	Ar.ArIsSaveGame = false;
+
+	Serialize(Ar);
+}
+
+void ATree::LoadData(const FActorSaveData& InData)
+{
+	ISaveInterface::LoadData(InData);
+	
+	GUID = InData.ActorID;
+	SetActorTransform(InData.Transform);
+	
+	FMemoryReader Reader(InData.BinaryData, true);
+	FObjectAndNameAsStringProxyArchive Ar(Reader, true);
+	Ar.ArIsSaveGame = false;
+	
+	Serialize(Ar);
+	
+	ForceNetUpdate();
 }

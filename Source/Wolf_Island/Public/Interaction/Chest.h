@@ -25,7 +25,7 @@ struct FSlotItem
 };
 
 UCLASS()
-class WOLF_ISLAND_API AChest : public AInteractableActor, public ISaveInterface
+class WOLF_ISLAND_API AChest : public AInteractableActor
 {
 	GENERATED_BODY()
 

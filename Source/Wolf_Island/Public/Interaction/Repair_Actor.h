@@ -19,7 +19,7 @@ public:
 
 	ARepair_Actor();
 
-	UPROPERTY(ReplicatedUsing = OnRep_CompletedRecipes, BlueprintReadOnly, Category = "Repair")
+	UPROPERTY(ReplicatedUsing = OnRep_CompletedRecipes, BlueprintReadOnly, Category = "Repair", SaveGame)
 	TArray<FName> CompletedRecipeNames;
 
 	UFUNCTION()
@@ -28,15 +28,15 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Repair")
 	FOnRepairStatusChanged OnRepairStatusChanged;
 
-	UPROPERTY(ReplicatedUsing = OnRep_RepairStatus, EditAnywhere, BlueprintReadWrite, Category = "Check")
+	UPROPERTY(ReplicatedUsing = OnRep_RepairStatus, EditAnywhere, BlueprintReadWrite, Category = "Check", SaveGame)
 	bool bIsBody = false;
-	UPROPERTY(ReplicatedUsing = OnRep_RepairStatus, EditAnywhere, BlueprintReadWrite, Category = "Check")
+	UPROPERTY(ReplicatedUsing = OnRep_RepairStatus, EditAnywhere, BlueprintReadWrite, Category = "Check", SaveGame)
 	bool bIsEngine = false;
-	UPROPERTY(ReplicatedUsing = OnRep_RepairStatus, EditAnywhere, BlueprintReadWrite, Category = "Check")
+	UPROPERTY(ReplicatedUsing = OnRep_RepairStatus, EditAnywhere, BlueprintReadWrite, Category = "Check", SaveGame)
 	bool bIsSteering = false;
-	UPROPERTY(ReplicatedUsing = OnRep_RepairStatus, EditAnywhere, BlueprintReadWrite, Category = "Check")
+	UPROPERTY(ReplicatedUsing = OnRep_RepairStatus, EditAnywhere, BlueprintReadWrite, Category = "Check", SaveGame)
 	bool bIsRadar = false;
-	UPROPERTY(ReplicatedUsing = OnRep_RepairStatus, EditAnywhere, BlueprintReadWrite, Category = "Check")
+	UPROPERTY(ReplicatedUsing = OnRep_RepairStatus, EditAnywhere, BlueprintReadWrite, Category = "Check", SaveGame)
 	bool bIsAnchor = false;
 	
 	UFUNCTION(BlueprintCallable, Category = "Data")
@@ -81,4 +81,8 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Repair")
 	void UpdateShipVisuals();
+	
+	//저장 관련 코드
+	virtual void SaveData(FActorSaveData& OutData) override;
+	virtual void LoadData(const FActorSaveData& InData) override;
 };

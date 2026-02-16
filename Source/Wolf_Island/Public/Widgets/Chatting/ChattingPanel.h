@@ -18,6 +18,9 @@ class WOLF_ISLAND_API UChattingPanel : public UUserWidget
 public:
 	
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
+	class UBorder* BackGround;
+	
+	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
 	class UScrollBox* ChattingList;
 	
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
@@ -28,11 +31,19 @@ public:
 	
 	class AMainPlayerController* OwnedController;
 	
+	UPROPERTY(meta=(BindWidgetAnim), Transient)
+	UWidgetAnimation* OpenAnim;
+	
+	UPROPERTY(meta=(BindWidgetAnim), Transient)
+	UWidgetAnimation* CloseAnim;
+	
 	virtual void NativeConstruct() override;
 	
 	UFUNCTION(BlueprintCallable)
 	void FocusInput();
 	
+	UFUNCTION()
+	void OnOpenAnimationFinished();
 	
 	UFUNCTION(BlueprintCallable)
 	void ClearFocusInput();

@@ -3,6 +3,7 @@
 #include "AdvancedFriendsGameInstance.h"
 #include "Data/ItemDataStruct.h"
 #include "Net/UnrealNetwork.h"
+#include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
 ARepair_Actor::ARepair_Actor()
 {
@@ -247,4 +248,31 @@ void ARepair_Actor::RestoreStateFromGameInstance()
 void ARepair_Actor::OnRep_RepairStatus()
 {
     UpdateShipVisuals();
+}
+
+void ARepair_Actor::SaveData(FActorSaveData& OutData)
+{
+    OutData.ActorID = GUID;
+    OutData.Transform = GetActorTransform();
+    OutData.ActorClass = GetClass();
+	
+    FMemoryWriter Writer(OutData.BinaryData, true);
+    FObjectAndNameAsStringProxyArchive Ar(Writer, true);
+    Ar.ArIsSaveGame = false;
+
+    Serialize(Ar);
+}
+
+void ARepair_Actor::LoadData(const FActorSaveData& InData)
+{
+    GUID = InData.ActorID;
+    SetActorTransform(InData.Transform);
+	
+    FMemoryReader Reader(InData.BinaryData, true);
+    FObjectAndNameAsStringProxyArchive Ar(Reader, true);
+    Ar.ArIsSaveGame = false;
+	
+    Serialize(Ar);
+	
+    ForceNetUpdate();
 }

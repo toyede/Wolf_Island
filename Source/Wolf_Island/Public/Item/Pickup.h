@@ -12,7 +12,7 @@
  * 
  */
 UCLASS()
-class WOLF_ISLAND_API APickup : public AInteractableActor, public ISaveInterface
+class WOLF_ISLAND_API APickup : public AInteractableActor
 {
 	GENERATED_BODY()
 public:

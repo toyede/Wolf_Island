@@ -154,6 +154,7 @@ void APickup::OnRep_ItemReference()
 
 void APickup::SaveData(FActorSaveData& OutData)
 {
+    OutData.ActorID = GUID;
     OutData.Transform = GetActorTransform();
     OutData.ActorClass = GetClass();
     OutData.Velocity = GetVelocity();
@@ -167,6 +168,7 @@ void APickup::SaveData(FActorSaveData& OutData)
 
 void APickup::LoadData(const FActorSaveData& InData)
 {
+    GUID = InData.ActorID;
     SetActorTransform(InData.Transform);
 	
     FMemoryReader Reader(InData.BinaryData, true);

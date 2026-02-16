@@ -17,7 +17,7 @@ public:
 	// Sets default values for this actor's properties
 	ARecordActor();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Record", meta = (GetOptions = "GetRecordID"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Record", meta = (GetOptions = "GetRecordID"), SaveGame)
 	FString RecordID;
 
 	UFUNCTION()
@@ -32,5 +32,8 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
+	
+	//저장 관련 코드
+	virtual void SaveData(FActorSaveData& OutData) override;
+	virtual void LoadData(const FActorSaveData& InData) override;
 };

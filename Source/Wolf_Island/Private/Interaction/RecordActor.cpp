@@ -3,6 +3,8 @@
 #include "Games/MainGameState.h"
 #include "Interaction/RecordActor.h"
 
+#include "Serialization/ObjectAndNameAsStringProxyArchive.h"
+
 // Sets default values
 ARecordActor::ARecordActor()
 {
@@ -62,3 +64,29 @@ void ARecordActor::Interact(AActor* Interactor)
 	}
 }
 
+void ARecordActor::SaveData(FActorSaveData& OutData)
+{
+	OutData.ActorID = GUID;
+	OutData.Transform = GetActorTransform();
+	OutData.ActorClass = GetClass();
+	
+	FMemoryWriter Writer(OutData.BinaryData, true);
+	FObjectAndNameAsStringProxyArchive Ar(Writer, true);
+	Ar.ArIsSaveGame = false;
+
+	Serialize(Ar);
+}
+
+void ARecordActor::LoadData(const FActorSaveData& InData)
+{
+	GUID = InData.ActorID;
+	SetActorTransform(InData.Transform);
+	
+	FMemoryReader Reader(InData.BinaryData, true);
+	FObjectAndNameAsStringProxyArchive Ar(Reader, true);
+	Ar.ArIsSaveGame = false;
+	
+	Serialize(Ar);
+	
+	ForceNetUpdate();
+}

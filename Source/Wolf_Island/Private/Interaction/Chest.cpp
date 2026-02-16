@@ -143,6 +143,7 @@ void AChest::Client_OpenChest_Implementation(AActor* Interactor)
 
 void AChest::SaveData(FActorSaveData& OutData)
 {
+	OutData.ActorID = GUID;
 	OutData.Transform = GetActorTransform();
 	OutData.ActorClass = GetClass();
 	
@@ -155,6 +156,7 @@ void AChest::SaveData(FActorSaveData& OutData)
 
 void AChest::LoadData(const FActorSaveData& InData)
 {
+	GUID = InData.ActorID;
 	SetActorTransform(InData.Transform);
 	
 	FMemoryReader Reader(InData.BinaryData, true);
