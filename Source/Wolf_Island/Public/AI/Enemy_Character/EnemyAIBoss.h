@@ -14,11 +14,13 @@ class UAttackCollisionComponent;
 class UStatusComponent;
 class AStatueForewarning;
 class ABossStatue;
+class ASummonedWolf;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBossAttackEnd);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBossRushEnd);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBossGroggyEnd);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSummonStatueEnd);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSummonWolvesEnd);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnThrustEnd);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpecialAttackEnd);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPhaseChanged, int32, NewPhase);
@@ -44,6 +46,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Delegate")
 	FOnSummonStatueEnd OnSummonStatueEnd;
+
+	UPROPERTY(BlueprintAssignable, Category = "Delegate")
+	FOnSummonWolvesEnd OnSummonWolvesEnd;
 
 	UPROPERTY(BlueprintAssignable, Category = "Delegate")
 	FOnThrustEnd OnThrustEnd;
@@ -143,6 +148,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Combat")
 	UAnimMontage* SpecialAttackMontage;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Combat")
+	UAnimMontage* SummonWolvesMontage;
+
 	// 실행 함수
 
 	UFUNCTION()
@@ -165,6 +173,9 @@ public:
 
 	UFUNCTION()
 	void ExecuteSpecialAttack();
+
+	UFUNCTION()
+	void ExecuteSummonWolves();
 
 	virtual void Die_Implementation() override;
 
@@ -209,6 +220,47 @@ public:
 	int32 SpawnRetryCount = 0;
 	int32 SpawnPointCursor = 0;
 
+	UPROPERTY(EditAnywhere, Category = "Boss|SummonWolves")
+	TSubclassOf<ASummonedWolf> SummonedWolfClass;
+
+	UPROPERTY(EditInstanceOnly, Category = "Boss|SummonWolves")
+	TArray<TObjectPtr<AActor>> SummonedWolfSpawnPoints;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|SummonWolves")
+	bool bUseFixedWolfSpawnPoints = false;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|SummonWolves")
+	int32 MinSummonWolfCount = 1;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|SummonWolves")
+	int32 MaxSummonWolfCount = 4;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|SummonWolves")
+	int32 BaseSummonWolfCount = 2;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|SummonWolves")
+	int32 MaxAliveSummonedWolves = 8;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|SummonWolves")
+	float WolfSpawnMinRadius = 250.f;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|SummonWolves")
+	float WolfSpawnMaxRadius = 900.f;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|SummonWolves")
+	float WolfSpawnBlockRadius = 80.f;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|SummonWolves")
+	int32 WolfSpawnSearchAttempts = 12;
+
+	void SpawnWolvesSequence();
+	int32 ComputeDesiredWolfSpawnCount() const;
+	void CleanupSummonedWolves();
+	bool IsWolfSpawnBlocked(const FVector& Location) const;
+	bool FindWolfSpawnLocation(FVector& OutLocation) const;
+
+	TArray<TWeakObjectPtr<ASummonedWolf>> AliveSummonedWolves;
+
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat|Dead", ReplicatedUsing = OnRep_IsDead)
 	bool bIsDead = false;
@@ -229,6 +281,7 @@ protected:
 	void OnRushMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 	void OnGroggyMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 	void OnSummonStatueMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	void OnSummonWolvesMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 	void OnThrustMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 	void OnSpecialAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
@@ -256,6 +309,9 @@ private:
 
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_PlaySummonMontage();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlaySummonWolvesMontage();
 
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_StopMontage(float BlendOut);

@@ -17,6 +17,9 @@
 #include "Engine/OverlapResult.h"
 #include "CollisionQueryParams.h"
 #include "CollisionShape.h"
+#include "AI/Enemy_Character/SummonedWolf.h"
+#include "Character/MainPlayer.h"
+#include "NavigationSystem.h"
 
 AEnemyAIBoss::AEnemyAIBoss()
 {
@@ -307,6 +310,168 @@ void AEnemyAIBoss::ClearSpawnState()
 	SpawnRetryCount = 0;
 }
 
+void AEnemyAIBoss::CleanupSummonedWolves()
+{
+	AliveSummonedWolves.RemoveAll([](const TWeakObjectPtr<ASummonedWolf>& Wolf)
+	{
+		return !Wolf.IsValid() || Wolf->bIsDead;
+	});
+}
+
+int32 AEnemyAIBoss::ComputeDesiredWolfSpawnCount() const
+{
+	int32 AlivePlayers = 0;
+	TArray<AActor*> Players;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMainPlayer::StaticClass(), Players);
+	for (AActor* Actor : Players)
+	{
+		const AMainPlayer* Player = Cast<AMainPlayer>(Actor);
+		if (!Player || !Player->StatusComponent)
+		{
+			continue;
+		}
+
+		if (Player->StatusComponent->CurrentHP > 0.f)
+		{
+			AlivePlayers++;
+		}
+	}
+
+	const int32 PhaseBonus = FMath::Max(CurrentPhase - 1, 0);
+	const int32 PlayerBonus = FMath::Clamp(AlivePlayers - 1, 0, 3);
+	const int32 Desired = BaseSummonWolfCount + PhaseBonus + PlayerBonus;
+	return FMath::Clamp(Desired, MinSummonWolfCount, MaxSummonWolfCount);
+}
+
+bool AEnemyAIBoss::IsWolfSpawnBlocked(const FVector& Location) const
+{
+	if (!GetWorld())
+	{
+		return true;
+	}
+
+	TArray<FOverlapResult> Overlaps;
+	FCollisionObjectQueryParams ObjQuery;
+	ObjQuery.AddObjectTypesToQuery(ECC_Pawn);
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(WolfSpawnCheck), false, this);
+	const bool bHit = GetWorld()->OverlapMultiByObjectType(
+		Overlaps,
+		Location,
+		FQuat::Identity,
+		ObjQuery,
+		FCollisionShape::MakeSphere(WolfSpawnBlockRadius),
+		QueryParams
+	);
+
+	return bHit;
+}
+
+bool AEnemyAIBoss::FindWolfSpawnLocation(FVector& OutLocation) const
+{
+	if (!GetWorld())
+	{
+		return false;
+	}
+
+	if (bUseFixedWolfSpawnPoints)
+	{
+		TArray<AActor*> ValidPoints;
+		for (AActor* Point : SummonedWolfSpawnPoints)
+		{
+			if (IsValid(Point))
+			{
+				ValidPoints.Add(Point);
+			}
+		}
+
+		if (ValidPoints.Num() > 0)
+		{
+			const int32 Index = FMath::RandRange(0, ValidPoints.Num() - 1);
+			const FVector Candidate = ValidPoints[Index]->GetActorLocation();
+			if (!IsWolfSpawnBlocked(Candidate))
+			{
+				OutLocation = Candidate;
+				return true;
+			}
+		}
+	}
+
+	const UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
+	if (!NavSys)
+	{
+		return false;
+	}
+
+	for (int32 i = 0; i < WolfSpawnSearchAttempts; ++i)
+	{
+		FNavLocation NavLoc;
+		if (!NavSys->GetRandomReachablePointInRadius(GetActorLocation(), WolfSpawnMaxRadius, NavLoc))
+		{
+			continue;
+		}
+
+		const float Dist = FVector::Dist2D(GetActorLocation(), NavLoc.Location);
+		if (Dist < WolfSpawnMinRadius)
+		{
+			continue;
+		}
+
+		if (IsWolfSpawnBlocked(NavLoc.Location))
+		{
+			continue;
+		}
+
+		OutLocation = NavLoc.Location;
+		return true;
+	}
+
+	return false;
+}
+
+void AEnemyAIBoss::SpawnWolvesSequence()
+{
+	if (!HasAuthority() || !SummonedWolfClass)
+	{
+		return;
+	}
+
+	CleanupSummonedWolves();
+
+	const int32 AliveCount = AliveSummonedWolves.Num();
+	const int32 Slots = FMath::Max(0, MaxAliveSummonedWolves - AliveCount);
+	if (Slots <= 0)
+	{
+		return;
+	}
+
+	const int32 SpawnCount = FMath::Min(ComputeDesiredWolfSpawnCount(), Slots);
+	for (int32 i = 0; i < SpawnCount; ++i)
+	{
+		FVector SpawnLocation = FVector::ZeroVector;
+		if (!FindWolfSpawnLocation(SpawnLocation))
+		{
+			break;
+		}
+
+		FActorSpawnParameters Params;
+		Params.Owner = this;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+		ASummonedWolf* Spawned = GetWorld()->SpawnActor<ASummonedWolf>(
+			SummonedWolfClass,
+			SpawnLocation,
+			FRotator::ZeroRotator,
+			Params
+		);
+
+		if (Spawned)
+		{
+			AliveSummonedWolves.Add(Spawned);
+		}
+	}
+}
+
 void AEnemyAIBoss::OnAttackHit(const FHitResult& HitResult)
 {
 	AActor* HitActor = HitResult.GetActor();
@@ -454,6 +619,14 @@ void AEnemyAIBoss::ExecuteSummonStatue()
 	Multicast_PlaySummonMontage();
 }
 
+void AEnemyAIBoss::ExecuteSummonWolves()
+{
+	if (!HasAuthority()) return;
+
+	SpawnWolvesSequence();
+	Multicast_PlaySummonWolvesMontage();
+}
+
 void AEnemyAIBoss::Multicast_PlaySummonMontage_Implementation()
 {
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
@@ -468,6 +641,28 @@ void AEnemyAIBoss::Multicast_PlaySummonMontage_Implementation()
 			EndDelegate.BindUObject(this, &AEnemyAIBoss::OnSummonStatueMontageEnded);
 			AnimInstance->Montage_SetEndDelegate(EndDelegate, SummonStatueMontage);
 		}
+	}
+}
+
+void AEnemyAIBoss::Multicast_PlaySummonWolvesMontage_Implementation()
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	UAnimMontage* MontageToPlay = SummonWolvesMontage ? SummonWolvesMontage : SummonStatueMontage;
+
+	if (AnimInstance && MontageToPlay)
+	{
+		AnimInstance->Montage_Play(MontageToPlay);
+
+		if (HasAuthority())
+		{
+			FOnMontageEnded EndDelegate;
+			EndDelegate.BindUObject(this, &AEnemyAIBoss::OnSummonWolvesMontageEnded);
+			AnimInstance->Montage_SetEndDelegate(EndDelegate, MontageToPlay);
+		}
+	}
+	else if (HasAuthority())
+	{
+		OnSummonWolvesEnd.Broadcast();
 	}
 }
 
@@ -566,6 +761,11 @@ void AEnemyAIBoss::OnGroggyMontageEnded(UAnimMontage* Montage, bool bInterrupted
 void AEnemyAIBoss::OnSummonStatueMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
 	OnSummonStatueEnd.Broadcast();
+}
+
+void AEnemyAIBoss::OnSummonWolvesMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	OnSummonWolvesEnd.Broadcast();
 }
 
 void AEnemyAIBoss::OnThrustMontageEnded(UAnimMontage* Montage, bool bInterrupted)
