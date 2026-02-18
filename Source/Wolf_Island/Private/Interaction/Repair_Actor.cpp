@@ -250,7 +250,7 @@ void ARepair_Actor::OnRep_RepairStatus()
     UpdateShipVisuals();
 }
 
-void ARepair_Actor::SaveData(FActorSaveData& OutData)
+void ARepair_Actor::SaveData_Implementation(FActorSaveData& OutData)
 {
     OutData.ActorID = GUID;
     OutData.Transform = GetActorTransform();
@@ -263,7 +263,7 @@ void ARepair_Actor::SaveData(FActorSaveData& OutData)
     Serialize(Ar);
 }
 
-void ARepair_Actor::LoadData(const FActorSaveData& InData)
+void ARepair_Actor::LoadData_Implementation(const FActorSaveData& InData)
 {
     GUID = InData.ActorID;
     SetActorTransform(InData.Transform);

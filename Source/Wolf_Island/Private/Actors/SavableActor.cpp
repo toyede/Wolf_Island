@@ -4,6 +4,7 @@
 #include "Actors/SavableActor.h"
 
 #include "Net/UnrealNetwork.h"
+#include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
 // Sets default values
 ASavableActor::ASavableActor()
@@ -78,19 +79,31 @@ void ASavableActor::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& 
 	DOREPLIFETIME(ASavableActor, GUID);
 }
 
-void ASavableActor::SaveData(FActorSaveData& OutData)
+void ASavableActor::SaveData_Implementation(FActorSaveData& OutData)
 {
-	ISaveInterface::SaveData(OutData);
+	ISaveInterface::SaveData_Implementation(OutData);
 	OutData.ActorID = GUID;
 	OutData.ActorClass = GetClass();
 	OutData.Transform = GetTransform();
 	OutData.Velocity = GetVelocity();
+	
+	FMemoryWriter Writer(OutData.BinaryData, true);
+	FObjectAndNameAsStringProxyArchive Ar(Writer, true);
+	Ar.ArIsSaveGame = true;
+
+	Serialize(Ar);
 }
 
-void ASavableActor::LoadData(const FActorSaveData& InData)
+void ASavableActor::LoadData_Implementation(const FActorSaveData& InData)
 {
-	ISaveInterface::LoadData(InData);
+	ISaveInterface::LoadData_Implementation(InData);
 	GUID = InData.ActorID;
 	SetActorTransform(InData.Transform);
+	
+	FMemoryReader Reader(InData.BinaryData, true);
+	FObjectAndNameAsStringProxyArchive Ar(Reader, true);
+	Ar.ArIsSaveGame = true;
+	
+	Serialize(Ar);
 }
 

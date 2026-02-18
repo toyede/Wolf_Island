@@ -83,6 +83,6 @@ protected:
 	
 public:
 	//저장 관련 코드
-	virtual void SaveData(FActorSaveData& OutData0) override;
-	virtual void LoadData(const FActorSaveData& InData) override;
+	virtual void SaveData_Implementation(FActorSaveData& OutData0) override;
+	virtual void LoadData_Implementation(const FActorSaveData& InData) override;
 };

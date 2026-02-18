@@ -11,25 +11,29 @@ struct FActorSaveData
 {
 	GENERATED_BODY()
 	
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite)
 	FGuid ActorID;
 	
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite)
 	TSubclassOf<AActor> ActorClass;
 
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite)
 	FTransform Transform;
 	
-	UPROPERTY()
-	FVector3d Velocity;
+	UPROPERTY(BlueprintReadWrite)
+	FVector Velocity;
 
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite)
 	TArray<uint8> BinaryData;
 	
+	FString GetGUID()
+	{
+		return ActorID.ToString();
+	}
 };
 
 // This class does not need to be modified.
-UINTERFACE(MinimalAPI)
+UINTERFACE(MinimalAPI, BlueprintType)
 class USaveInterface : public UInterface
 {
 	GENERATED_BODY()
@@ -45,8 +49,10 @@ class WOLF_ISLAND_API ISaveInterface
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
 	
-	virtual void SaveData(FActorSaveData& OutData);
-	virtual void LoadData(const FActorSaveData& InData);
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void SaveData(FActorSaveData& OutData);
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void LoadData(const FActorSaveData& InData);
 	
 	virtual FGuid GetGUID() const = 0;
 };

@@ -141,7 +141,7 @@ void AChest::Client_OpenChest_Implementation(AActor* Interactor)
 	ChestScreen->AddToViewport();
 }
 
-void AChest::SaveData(FActorSaveData& OutData)
+void AChest::SaveData_Implementation(FActorSaveData& OutData)
 {
 	OutData.ActorID = GUID;
 	OutData.Transform = GetActorTransform();
@@ -154,7 +154,7 @@ void AChest::SaveData(FActorSaveData& OutData)
 	InventoryComponent->Serialize(Ar);
 }
 
-void AChest::LoadData(const FActorSaveData& InData)
+void AChest::LoadData_Implementation(const FActorSaveData& InData)
 {
 	GUID = InData.ActorID;
 	SetActorTransform(InData.Transform);

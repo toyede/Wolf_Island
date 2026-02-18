@@ -105,7 +105,7 @@ public:
 	void Multi_PlayAnimAndSound(UAnimationAsset* Anim, USoundBase* Sound);
 	
 	//저장 관련 코드=================================================================================================
-	virtual void SaveData(FActorSaveData& OutData) override;
-	virtual void LoadData(const FActorSaveData& InData) override;
+	virtual void SaveData_Implementation(FActorSaveData& OutData) override;
+	virtual void LoadData_Implementation(const FActorSaveData& InData) override;
 	
 };

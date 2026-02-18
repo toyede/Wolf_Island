@@ -64,7 +64,7 @@ void ARecordActor::Interact(AActor* Interactor)
 	}
 }
 
-void ARecordActor::SaveData(FActorSaveData& OutData)
+void ARecordActor::SaveData_Implementation(FActorSaveData& OutData)
 {
 	OutData.ActorID = GUID;
 	OutData.Transform = GetActorTransform();
@@ -77,7 +77,7 @@ void ARecordActor::SaveData(FActorSaveData& OutData)
 	Serialize(Ar);
 }
 
-void ARecordActor::LoadData(const FActorSaveData& InData)
+void ARecordActor::LoadData_Implementation(const FActorSaveData& InData)
 {
 	GUID = InData.ActorID;
 	SetActorTransform(InData.Transform);

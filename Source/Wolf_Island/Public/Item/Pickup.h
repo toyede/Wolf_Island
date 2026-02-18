@@ -62,8 +62,8 @@ public:
 	void OnRep_ItemReference();
 	
 	//저장 관련 코드
-	virtual void SaveData(FActorSaveData& OutData) override;
-	virtual void LoadData(const FActorSaveData& InData) override;
+	virtual void SaveData_Implementation(FActorSaveData& OutData) override;
+	virtual void LoadData_Implementation(const FActorSaveData& InData) override;
 	
 	//에디터에서만 실행
 #if WITH_EDITOR

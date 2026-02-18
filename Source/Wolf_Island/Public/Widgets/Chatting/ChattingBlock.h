@@ -46,7 +46,11 @@ public:
 	void SetChattingBlock(FChattingData ChattingData);
 	
 	UFUNCTION(BlueprintCallable)
-	void SetTime(int32 UnixTime) { TimeText->SetText(FText::FromString(FDateTime::FromUnixTimestamp(UnixTime).ToString(TEXT("[%H:%M]")))); };
+	void SetTime(int32 UnixTime) 
+	{ 
+		FDateTime LocalTime = FDateTime::FromUnixTimestamp(UnixTime) + (FDateTime::Now() - FDateTime::UtcNow());
+		TimeText->SetText(FText::FromString(LocalTime.ToString(TEXT("[%H:%M]")))); 
+	};
 	UFUNCTION(BlueprintCallable)
 	void SetName(FString Name) { NameText->SetText(FText::FromString(Name)); };
 	UFUNCTION(BlueprintCallable)

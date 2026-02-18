@@ -16,8 +16,6 @@
 #include "Kismet/GameplayStatics.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
-class AMainGameState;
-
 void AMainGameMode::StartPlay()
 {
 	Super::StartPlay();
@@ -51,6 +49,16 @@ void AMainGameMode::StartPlay()
 	}
 	
 	LoadWorld();
+	
+	UE_LOG(LogTemp, Warning, TEXT("AUTO SAVE INTERVAL : %f"), AutoSaveInterval*60.0f);
+	
+	//자동 저장 타이머
+	GetWorld()->GetTimerManager().SetTimer(
+		AutoSaveTimer,
+		this,
+		&AMainGameMode::SaveWorld,
+		AutoSaveInterval * 60.0f,
+		true);
 }
 
 void AMainGameMode::PostLogin(APlayerController* NewPlayer)
@@ -154,7 +162,7 @@ void AMainGameMode::SaveWorld()
 		if (ISaveInterface* Savable = Cast<ISaveInterface>(Actor))
 		{
 			FActorSaveData Data;
-			Savable->SaveData(Data);
+			Savable->Execute_SaveData(Actor, Data);
 			UE_LOG(LogTemp, Warning, TEXT("[%s] Save Actor [%s]"), *Actor->GetName(), *Data.ActorID.ToString())
 			Save->SavedActors.FindOrAdd(Data.ActorID) = Data;
 		}
@@ -172,6 +180,11 @@ void AMainGameMode::SaveWorld()
 	
 	UGameplayStatics::SaveGameToSlot(SaveGameData, SaveGameData->SlotName, 0);
 	UE_LOG(LogTemp, Warning, TEXT("Test Save at %s"), *SaveGameData->SlotName);
+	
+	
+	FChattingData Chat = FChattingData(
+		TEXT("알림"),TEXT("자동 저장 완료."), EMessageType::NOTICE);
+	GS->AddChattingMessage(Chat);
 }
 
 void AMainGameMode::LoadWorld()
@@ -210,7 +223,7 @@ void AMainGameMode::LoadWorld()
 			//데이터 로드
 			if (ISaveInterface* Savable = Cast<ISaveInterface>(ActorCache[GUID]))
 			{
-				Savable->LoadData(Data);
+				Savable->Execute_LoadData(ActorCache[GUID], Data);
 			}
 		}
 		//저장된 액터가 삭제됐으면
@@ -224,7 +237,7 @@ void AMainGameMode::LoadWorld()
 			//데이터 로드
 			if (ISaveInterface* Savable = Cast<ISaveInterface>(NewActor))
 			{
-				Savable->LoadData(Data);
+				Savable->Execute_LoadData(NewActor, Data);
 			}
 		}
 	}

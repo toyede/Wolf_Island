@@ -128,9 +128,9 @@ TArray<FString> ATree::GetItemIDs() const
 	return Options;
 }
 
-void ATree::SaveData(FActorSaveData& OutData)
+void ATree::SaveData_Implementation(FActorSaveData& OutData)
 {
-	ISaveInterface::SaveData(OutData);
+	ISaveInterface::SaveData_Implementation(OutData);
 	
 	OutData.ActorID = GUID;
 	OutData.Transform = GetActorTransform();
@@ -143,9 +143,9 @@ void ATree::SaveData(FActorSaveData& OutData)
 	Serialize(Ar);
 }
 
-void ATree::LoadData(const FActorSaveData& InData)
+void ATree::LoadData_Implementation(const FActorSaveData& InData)
 {
-	ISaveInterface::LoadData(InData);
+	ISaveInterface::LoadData_Implementation(InData);
 	
 	GUID = InData.ActorID;
 	SetActorTransform(InData.Transform);

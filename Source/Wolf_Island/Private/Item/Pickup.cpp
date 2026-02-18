@@ -152,7 +152,7 @@ void APickup::OnRep_ItemReference()
     }
 }
 
-void APickup::SaveData(FActorSaveData& OutData)
+void APickup::SaveData_Implementation(FActorSaveData& OutData)
 {
     OutData.ActorID = GUID;
     OutData.Transform = GetActorTransform();
@@ -166,7 +166,7 @@ void APickup::SaveData(FActorSaveData& OutData)
     Serialize(Ar);
 }
 
-void APickup::LoadData(const FActorSaveData& InData)
+void APickup::LoadData_Implementation(const FActorSaveData& InData)
 {
     GUID = InData.ActorID;
     SetActorTransform(InData.Transform);

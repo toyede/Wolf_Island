@@ -18,17 +18,24 @@ class WOLF_ISLAND_API AMainGameMode : public AGameMode
 	
 public:
 	
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
+	FTimerHandle AutoSaveTimer;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
 	TMap<FGuid, AActor*> ActorCache;
 	
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
 	TMap<FString, FPlayerSaveData> PlayersSaveData;
 	
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
 	UMainSaveGame* SaveGameData;
 	
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
 	UMainGameInstance* MainGameInstance;
+	
+	//자동 저장 간격 (분 단위)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	float AutoSaveInterval = 5.0f;
 	
 	virtual void StartPlay() override;
 	
