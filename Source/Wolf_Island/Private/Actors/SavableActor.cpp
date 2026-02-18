@@ -3,6 +3,8 @@
 
 #include "Actors/SavableActor.h"
 
+#include "Components/InventoryComponent.h"
+#include "Components/StatusComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
@@ -92,6 +94,26 @@ void ASavableActor::SaveData_Implementation(FActorSaveData& OutData)
 	Ar.ArIsSaveGame = true;
 
 	Serialize(Ar);
+	
+	//인벤토리 컴포넌트가 있으면 따로 직렬화
+	if (UInventoryComponent* InvenComp = Cast<UInventoryComponent>(GetComponentByClass(UInventoryComponent::StaticClass())))
+	{
+		FMemoryWriter InvenWriter(OutData.SubBinaryData1, true);
+		FObjectAndNameAsStringProxyArchive InvenAr(InvenWriter, true);
+		InvenAr.ArIsSaveGame = true;
+		
+		InvenComp->Serialize(InvenAr);
+	}
+	
+	//스테이터스 컴포넌트가 있으면 따로 직렬화
+	if (UStatusComponent* StatusComp = Cast<UStatusComponent>(GetComponentByClass(UStatusComponent::StaticClass())))
+	{
+		FMemoryWriter StatusWriter(OutData.SubBinaryData2, true);
+		FObjectAndNameAsStringProxyArchive StatusAr(StatusWriter, true);
+		StatusAr.ArIsSaveGame = false;
+		
+		StatusComp->Serialize(StatusAr);
+	}
 }
 
 void ASavableActor::LoadData_Implementation(const FActorSaveData& InData)
@@ -105,5 +127,25 @@ void ASavableActor::LoadData_Implementation(const FActorSaveData& InData)
 	Ar.ArIsSaveGame = true;
 	
 	Serialize(Ar);
+	
+	//인벤토리 컴포넌트가 있으면 따로 복원
+	if (UInventoryComponent* InvenComp = Cast<UInventoryComponent>(GetComponentByClass(UInventoryComponent::StaticClass())))
+	{
+		FMemoryReader InvenReader(InData.SubBinaryData1, true);
+		FObjectAndNameAsStringProxyArchive InvenAr(InvenReader, true);
+		InvenAr.ArIsSaveGame = true;
+		
+		InvenComp->Serialize(InvenAr);
+	}
+	
+	//스테이터스 컴포넌트가 있으면 따로 복원
+	if (UStatusComponent* StatusComp = Cast<UStatusComponent>(GetComponentByClass(UStatusComponent::StaticClass())))
+	{
+		FMemoryReader StatusReader(InData.SubBinaryData2, true);
+		FObjectAndNameAsStringProxyArchive StatusAr(StatusReader, true);
+		StatusAr.ArIsSaveGame = false;
+		
+		StatusComp->Serialize(StatusAr);
+	}
 }
 

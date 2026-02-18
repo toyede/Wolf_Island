@@ -33,7 +33,7 @@ public:
 	TSoftObjectPtr<UWorld> MultiLobbyWorld;
 	
 	UFUNCTION(BlueprintCallable)
-	void CreateSaveSlot(FString WorldName, int32 SlotIndex, bool IsMulti = false);
+	UMainSaveGame* CreateSaveSlot(FString WorldName, int32 SlotIndex, bool IsMulti = false);
 	
 	//남는 슬롯 없으면 -1 반환
 	UFUNCTION(BlueprintCallable)

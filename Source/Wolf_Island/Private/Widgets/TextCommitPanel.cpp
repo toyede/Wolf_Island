@@ -13,6 +13,8 @@ void UTextCommitPanel::NativeConstruct()
 	CommitButton->OnClicked.AddDynamic(this, &UTextCommitPanel::OnCommitClickedEvent);
 	
 	CancelButton->OnClicked.AddDynamic(this, &UTextCommitPanel::OnCancelClickedEvent);
+	
+	TextEditBox->OnTextCommitted.AddDynamic(this, &UTextCommitPanel::OnTextCommited);
 }
 
 void UTextCommitPanel::OnCommitClickedEvent()
@@ -23,4 +25,12 @@ void UTextCommitPanel::OnCommitClickedEvent()
 void UTextCommitPanel::OnCancelClickedEvent()
 {
 	OnCancelClicked.Broadcast();
+}
+
+void UTextCommitPanel::OnTextCommited(const FText& Text, ETextCommit::Type CommitMethod)
+{
+	//엔터로 친 거 아니면 암것두 안함.
+	if (CommitMethod != ETextCommit::OnEnter) return;
+	
+	OnCommitClicked.Broadcast(TextEditBox->GetText().ToString());
 }

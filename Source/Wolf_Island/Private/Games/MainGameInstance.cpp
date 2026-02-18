@@ -6,7 +6,7 @@
 #include "Games/MainSaveGame.h"
 #include "Kismet/GameplayStatics.h"
 
-void UMainGameInstance::CreateSaveSlot(FString WorldName, int32 SlotIndex, bool IsMulti)
+UMainSaveGame* UMainGameInstance::CreateSaveSlot(FString WorldName, int32 SlotIndex, bool IsMulti)
 {
 	//멀티 슬롯 생성
 	if (IsMulti)
@@ -21,6 +21,7 @@ void UMainGameInstance::CreateSaveSlot(FString WorldName, int32 SlotIndex, bool 
 		Save->IsMulti = IsMulti;
 		UGameplayStatics::SaveGameToSlot(Save, SlotName, 0);
 		UE_LOG(LogTemp, Warning, TEXT("SAVE SLOT AT [%s]"), *SlotName);
+		return Save;
 	} 
 	//싱글 슬롯 생성
 	else
@@ -35,6 +36,7 @@ void UMainGameInstance::CreateSaveSlot(FString WorldName, int32 SlotIndex, bool 
 		Save->IsMulti = IsMulti;
 		UGameplayStatics::SaveGameToSlot(Save, SlotName, 0);
 		UE_LOG(LogTemp, Warning, TEXT("SAVE SLOT AT [%s]"), *SlotName);
+		return Save;
 	}
 }
 

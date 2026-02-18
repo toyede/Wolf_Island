@@ -44,4 +44,7 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void OnCancelClickedEvent();
+	
+	UFUNCTION(BlueprintCallable)
+	void OnTextCommited(const FText& Text, ETextCommit::Type CommitMethod);
 };

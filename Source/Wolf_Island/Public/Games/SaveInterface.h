@@ -26,10 +26,14 @@ struct FActorSaveData
 	UPROPERTY(BlueprintReadWrite)
 	TArray<uint8> BinaryData;
 	
-	FString GetGUID()
-	{
-		return ActorID.ToString();
-	}
+	UPROPERTY(BlueprintReadWrite)
+	TArray<uint8> SubBinaryData1;
+	
+	UPROPERTY(BlueprintReadWrite)
+	TArray<uint8> SubBinaryData2;
+	
+	UPROPERTY(BlueprintReadWrite)
+	TArray<uint8> SubBinaryData3;
 };
 
 // This class does not need to be modified.
