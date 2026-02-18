@@ -14,6 +14,9 @@
  * 
  */
 
+class UMainGameInstance;
+class UPauseMenu;
+
 UCLASS()
 class WOLF_ISLAND_API AMainPlayerController : public APlayerController
 {
@@ -26,14 +29,26 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UInputAction* ChatAction;
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UInputAction* ESCAction;
+	
 	UPROPERTY(EditAnywhere)
 	class AMainHUD* HUD;
 	
 	UPROPERTY(EditAnywhere)
 	UChattingPanel* ChattingPanel;
 	
+	UPROPERTY(EditAnywhere)
+	UPauseMenu* PauseMenu;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	TSubclassOf<UChattingPanel> ChattingPanelClass;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
+	TSubclassOf<UPauseMenu> PauseWidgetClass;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UMainGameInstance* MainGameInstance;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	AMainPlayerState* MainPlayerState;
@@ -41,8 +56,14 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	AMainGameState* MainGameState;
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	TSoftObjectPtr<UWorld> MainMenuLevel;
+	
 	UPROPERTY(BlueprintReadOnly)
 	bool IsChat = false;
+	
+	UPROPERTY(BlueprintReadOnly)
+	bool IsPause = false;
 	
 	virtual void BeginPlay() override;
 	
@@ -51,13 +72,28 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ToggleChatMode();
 	
+	UFUNCTION(BlueprintCallable)
+	void TogglePause();
+	
 	UFUNCTION()
 	void EnterChatMode();
 	UFUNCTION()
 	void ExitChatMode();
 	
+	UFUNCTION()
+	void DisplayPauseMenu();
+	UFUNCTION()
+	void HidePuaseMenu();
+	
 	UFUNCTION(BlueprintCallable)
 	void AddChat(FChattingData NewChattingData);
+	
+	UFUNCTION(BlueprintCallable)
+	void OnResume();
+	UFUNCTION(BlueprintCallable)
+	void OnSetting();
+	UFUNCTION(BlueprintCallable)
+	void OnQuit();
 	
 	//멀티 플레이 코드
 	

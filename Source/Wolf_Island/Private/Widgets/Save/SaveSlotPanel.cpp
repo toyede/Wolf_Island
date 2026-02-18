@@ -18,56 +18,120 @@ void USaveSlotPanel::NativeConstruct()
 	Super::NativeConstruct();
 	
 	AddSlotButton->OnClicked.AddDynamic(this, &USaveSlotPanel::OnAddButtonClicked);
+	
+	MainGameInstance = Cast<UMainGameInstance>(GetGameInstance());
 }
 
 void USaveSlotPanel::LoadSingleSlots()
 {
 	IsMultiPanel = false;
 	SlotBox->ClearChildren();
-	
+
 	FString Prefix = "S";
-	
-	for (int SlotIndex=0; SlotIndex<MaxSlotIndex; SlotIndex++)
+
+	//Save 데이터 모으기
+	TArray<TPair<FString, UMainSaveGame*>> LoadedSaves;
+	int32 MaxSlotIndex = MainGameInstance->GetMaxSlotIndex();
+	UE_LOG(LogTemp, Warning, TEXT("MAX INDEX %d"), MaxSlotIndex);
+
+	for (int SlotIndex = 0; SlotIndex < MaxSlotIndex; SlotIndex++)
 	{
-		FString SlotName = Prefix+FString::Printf(TEXT("%03d"), SlotIndex);
-		UMainSaveGame* Save =  Cast<UMainSaveGame>(UGameplayStatics::LoadGameFromSlot(SlotName, 0));
-		
-		if (Save && SlotClass)
+		FString SlotName = Prefix + FString::Printf(TEXT("%03d"), SlotIndex);
+		UMainSaveGame* Save = Cast<UMainSaveGame>(
+			UGameplayStatics::LoadGameFromSlot(SlotName, 0)
+		);
+
+		if (Save)
+		{
+			LoadedSaves.Add(TPair<FString, UMainSaveGame*>(SlotName, Save));
+		}
+	}
+
+	//최신순 정렬 (내림차순)
+	LoadedSaves.Sort([](const TPair<FString, UMainSaveGame*>& A,
+						const TPair<FString, UMainSaveGame*>& B)
+	{
+		return A.Value->SaveUnixTime > B.Value->SaveUnixTime;
+	});
+
+	//정렬된 순서대로 위젯 생성
+	for (const TPair<FString, UMainSaveGame*>& Pair : LoadedSaves)
+	{
+		if (SlotClass)
 		{
 			USaveSlot* SaveSlot = CreateWidget<USaveSlot>(GetWorld(), SlotClass);
-			SaveSlot->SetSlotInfo(Save);
+			SaveSlot->SetSlotInfo(Pair.Value);
 			SaveSlot->SetSlotPanelRef(this);
+			SaveSlot->SetPadding(FMargin(0.0, 0.0, 16.0, 0.0));
+
 			SlotBox->AddChild(SaveSlot);
 		}
 	}
-	if (SlotBox->GetChildrenCount() >= MaxSlotIndex) return;
-	SlotBox->AddChild(AddSlotButton);	
+
+	//빈 슬롯이 남아있으면 Add 버튼 추가
+	if (SlotBox->GetChildrenCount() < MaxSlotIndex)
+	{
+		if (AddSlotButton)
+		{
+			SlotBox->AddChild(AddSlotButton);
+		}
+	}
 }
 
 void USaveSlotPanel::LoadMultiSlots()
 {
 	IsMultiPanel = true;
 	SlotBox->ClearChildren();
-	
+
 	FString Prefix = "M";
-	
-	for (int SlotIndex=0; SlotIndex<MaxSlotIndex; SlotIndex++)
+
+	//Save 데이터 모으기
+	TArray<TPair<FString, UMainSaveGame*>> LoadedSaves;
+	int32 MaxSlotIndex = MainGameInstance->GetMaxSlotIndex();
+	UE_LOG(LogTemp, Warning, TEXT("MAX INDEX %d"), MaxSlotIndex);
+
+	for (int SlotIndex = 0; SlotIndex < MaxSlotIndex; SlotIndex++)
 	{
-		FString SlotName = Prefix+FString::Printf(TEXT("%03d"), SlotIndex);
-		UMainSaveGame* Save =  Cast<UMainSaveGame>(UGameplayStatics::LoadGameFromSlot(SlotName, 0));
-		
-		if (Save && SlotClass)
+		FString SlotName = Prefix + FString::Printf(TEXT("%03d"), SlotIndex);
+		UMainSaveGame* Save = Cast<UMainSaveGame>(
+			UGameplayStatics::LoadGameFromSlot(SlotName, 0)
+		);
+
+		if (Save)
+		{
+			LoadedSaves.Add(TPair<FString, UMainSaveGame*>(SlotName, Save));
+		}
+	}
+
+	//최신순 정렬 (내림차순)
+	LoadedSaves.Sort([](const TPair<FString, UMainSaveGame*>& A,
+						const TPair<FString, UMainSaveGame*>& B)
+	{
+		return A.Value->SaveUnixTime > B.Value->SaveUnixTime;
+	});
+
+	//정렬된 순서대로 위젯 생성
+	for (const TPair<FString, UMainSaveGame*>& Pair : LoadedSaves)
+	{
+		if (SlotClass)
 		{
 			USaveSlot* SaveSlot = CreateWidget<USaveSlot>(GetWorld(), SlotClass);
-			SaveSlot->SetSlotInfo(Save);
+			SaveSlot->SetSlotInfo(Pair.Value);
 			SaveSlot->SetSlotPanelRef(this);
+			SaveSlot->SetPadding(FMargin(0.0, 0.0, 16.0, 0.0));
+
 			SlotBox->AddChild(SaveSlot);
 		}
 	}
-	
-	UE_LOG(LogTemp, Warning, TEXT("Loading MultiSlots : %d"), SlotBox->GetChildrenCount());
-	if (SlotBox->GetChildrenCount() >= MaxSlotIndex) return;
-	SlotBox->AddChild(AddSlotButton);
+
+	//빈 슬롯이 남아있으면 Add 버튼 추가
+	if (SlotBox->GetChildrenCount() < MaxSlotIndex)
+	{
+		if (AddSlotButton)
+		{
+			SlotBox->AddChild(AddSlotButton);
+		}
+	}
 }
 
 void USaveSlotPanel::OnAddButtonClicked()
@@ -80,8 +144,11 @@ void USaveSlotPanel::OnAddButtonClicked()
 
 void USaveSlotPanel::OnCreateCommited(const FString& Text)
 {
-	UMainGameInstance* GS = Cast<UMainGameInstance>(GetGameInstance());
-	GS->CreateSaveSlot(Text, SlotBox->GetChildrenCount()-1, IsMultiPanel);
-	TCP->RemoveFromParent();
-	RemoveFromParent();
+	if (MainGameInstance)
+	{
+		MainGameInstance->CreateSaveSlot(Text, MainGameInstance->FindEmptySaveSlotIndex(IsMultiPanel), IsMultiPanel);
+		IsMultiPanel ? LoadMultiSlots() : LoadSingleSlots();
+		TCP->RemoveFromParent();
+		//RemoveFromParent();
+	}
 }

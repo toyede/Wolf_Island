@@ -53,10 +53,16 @@ public:
 	FString SlotName;
 	
 	UPROPERTY()
+	bool IsMulti;
+	
+	UPROPERTY()
+	float CurrentTime;
+	
+	UPROPERTY()
 	TMap<FString, FPlayerSaveData> Players;
 	
 	UPROPERTY()
-	TArray<FActorSaveData> SavedActors;
+	TMap<FGuid, FActorSaveData> SavedActors;
 	
 	UPROPERTY()
 	int64 SaveUnixTime;

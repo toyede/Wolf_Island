@@ -36,6 +36,8 @@ public:
 	
 	USaveSlotPanel* SlotPanelRef;
 	
+	UMainGameInstance* MainGameInstance;
+	
 	UFUNCTION(BlueprintCallable)
 	void SetSlotInfo(UMainSaveGame* SaveData);
 	

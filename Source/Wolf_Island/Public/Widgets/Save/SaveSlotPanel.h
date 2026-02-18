@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "SaveSlotPanel.generated.h"
 
+class UMainGameInstance;
 class UScrollBox;
 class UButton;
 /**
@@ -34,9 +35,9 @@ public:
 	UTextCommitPanel* TCP;
 	
 	UPROPERTY(EditDefaultsOnly)
-	int32 MaxSlotIndex = 5;
+	UMainGameInstance* MainGameInstance;
 	
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite)
 	bool IsMultiPanel = false;
 	
 	virtual void NativeConstruct() override;

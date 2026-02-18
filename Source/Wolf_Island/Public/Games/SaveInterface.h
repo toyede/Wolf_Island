@@ -45,7 +45,7 @@ class WOLF_ISLAND_API ISaveInterface
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
 	
-	virtual void SaveData(FActorSaveData& OutData0);
+	virtual void SaveData(FActorSaveData& OutData);
 	virtual void LoadData(const FActorSaveData& InData);
 	
 	virtual FGuid GetGUID() const = 0;

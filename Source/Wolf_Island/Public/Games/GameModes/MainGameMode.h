@@ -7,6 +7,7 @@
 #include "Games/MainSaveGame.h"
 #include "MainGameMode.generated.h"
 
+class UMainGameInstance;
 /**
  * 
  */
@@ -17,11 +18,17 @@ class WOLF_ISLAND_API AMainGameMode : public AGameMode
 	
 public:
 	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	TMap<FGuid, AActor*> ActorCache;
 	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	TMap<FString, FPlayerSaveData> PlayersSaveData;
 	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	UMainSaveGame* SaveGameData;
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UMainGameInstance* MainGameInstance;
 	
 	virtual void StartPlay() override;
 	
@@ -32,10 +39,13 @@ public:
 	virtual void Logout(AController* Exiting) override;
 	
 	UFUNCTION(BlueprintCallable)
-	void Save();
+	void SetActorCache();
 	
 	UFUNCTION(BlueprintCallable)
-	void Load();
+	void SaveWorld();
+	
+	UFUNCTION(BlueprintCallable)
+	void LoadWorld();
 	
 	UFUNCTION(BlueprintCallable)
 	void SavePlayer(class AMainPlayer* TargetPlayer);

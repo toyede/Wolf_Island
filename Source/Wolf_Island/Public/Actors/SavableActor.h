@@ -24,11 +24,19 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	
-	virtual FGuid GetGUID() const override;
+	virtual void OnConstruction(const FTransform& Transform) override;
+	
+	virtual void PostDuplicate(EDuplicateMode::Type DuplicateMode) override;
 
 public:	
 	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+	virtual auto Tick(float DeltaTime) -> void override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+	
+	UFUNCTION(BlueprintCallable)
+	virtual FGuid GetGUID() const override;
+	
+	virtual void SaveData(FActorSaveData& OutData) override;
+	virtual void LoadData(const FActorSaveData& InData) override;
 };

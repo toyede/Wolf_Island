@@ -5,6 +5,7 @@
 
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
+#include "Games/MainGameInstance.h"
 #include "Games/MainSaveGame.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -21,6 +22,8 @@ void USaveSlot::NativeConstruct()
 	{
 		DeleteButton->OnClicked.AddDynamic(this, &USaveSlot::OnDeleteButtonClicked);
 	}
+	
+	MainGameInstance = Cast<UMainGameInstance>(GetGameInstance());
 }
 
 void USaveSlot::SetSlotInfo(UMainSaveGame* SaveData)
@@ -36,7 +39,18 @@ void USaveSlot::SetSlotInfo(UMainSaveGame* SaveData)
 
 void USaveSlot::OnButtonClicked()
 {
+	MainGameInstance->SetCurrentSave(SlotSave);
 	
+	//멀티 게임 시작
+	if (SlotSave->IsMulti)
+	{
+		
+	}
+	//싱글 게임 시작
+	else
+	{
+		UGameplayStatics::OpenLevelBySoftObjectPtr(GetWorld(), MainGameInstance->SinglePlayWorld);
+	}
 }
 
 void USaveSlot::OnDeleteButtonClicked()
@@ -49,6 +63,5 @@ void USaveSlot::OnDeleteButtonClicked()
 	{
 		SlotPanelRef->LoadSingleSlots();
 	}
-	//RemoveFromParent();
 }
 
