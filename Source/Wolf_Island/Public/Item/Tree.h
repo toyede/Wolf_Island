@@ -69,7 +69,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Settings")
 	UDataTable* DropDataTable;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Settings", SaveGame)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Settings")
 	TArray<FTreeDropEntry> DropList;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Settings")

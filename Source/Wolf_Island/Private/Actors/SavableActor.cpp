@@ -34,7 +34,19 @@ void ASavableActor::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 	
-	if (!GUID.IsValid())
+	/*if (!GUID.IsValid())
+	{
+		GUID = FGuid::NewGuid();
+	}*/
+}
+
+void ASavableActor::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	
+	if (HasAuthority() &&
+		!HasAnyFlags(RF_ClassDefaultObject) &&
+		!GUID.IsValid())
 	{
 		GUID = FGuid::NewGuid();
 	}
@@ -56,12 +68,25 @@ FGuid ASavableActor::GetGUID() const
 	return GUID;
 }
 
+void ASavableActor::EnsureGUID()
+{
+	if (!GUID.IsValid())
+	{
+		GUID = FGuid::NewGuid();
+	}
+}
+
+void ASavableActor::ResetGUID()
+{
+	GUID = FGuid::NewGuid();
+}
+
 // Called every frame
 void ASavableActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
-	FString value = GUID.ToString();
+	//FString value = GUID.ToString();
 	
 	/*if (GEngine)
 	{

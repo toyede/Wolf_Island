@@ -26,16 +26,24 @@ protected:
 	
 	virtual void OnConstruction(const FTransform& Transform) override;
 	
+	virtual void PostInitializeComponents() override;
+	
 	virtual void PostDuplicate(EDuplicateMode::Type DuplicateMode) override;
 
 public:	
 	// Called every frame
-	virtual auto Tick(float DeltaTime) -> void override;
+	virtual void Tick(float DeltaTime) override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	
 	UFUNCTION(BlueprintCallable)
 	virtual FGuid GetGUID() const override;
+	
+	UFUNCTION(BlueprintCallable)
+	void EnsureGUID();
+	
+	UFUNCTION(BlueprintCallable)
+	void ResetGUID();
 	
 	virtual void SaveData_Implementation(FActorSaveData& OutData) override;
 	virtual void LoadData_Implementation(const FActorSaveData& InData) override;

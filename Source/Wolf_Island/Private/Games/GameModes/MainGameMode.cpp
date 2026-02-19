@@ -3,7 +3,9 @@
 
 #include "Games/GameModes/MainGameMode.h"
 
+#include "EngineUtils.h"
 #include "Character/MainPlayer.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/InventoryComponent.h"
 #include "Components/StatusComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -31,26 +33,25 @@ void AMainGameMode::StartPlay()
 	//에디터에서 월드로 바로 입장 시 테스트 세이브 게임 데이터 생성 및 로드
 	else
 	{
+		FString WorldName = GetWorld()->GetName();
 		//테스트 세이브 게임 데이터가 있으면 불러오기
-		if (UGameplayStatics::DoesSaveGameExist(TEXT("TEST001"),0))
+		if (UGameplayStatics::DoesSaveGameExist(TEXT("TEST001_")+WorldName,0))
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Load TEST SAVE GAME"));
-			SaveGameData = Cast<UMainSaveGame>(UGameplayStatics::LoadGameFromSlot(TEXT("TEST001"), 0));
+			SaveGameData = Cast<UMainSaveGame>(UGameplayStatics::LoadGameFromSlot(TEXT("TEST001_")+WorldName, 0));
 		}
 		//테스트 세이브 게임 데이터가 없으면 생성
 		else
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Create TEST SAVE GAME"));
 			SaveGameData = Cast<UMainSaveGame>(UGameplayStatics::CreateSaveGameObject(UMainSaveGame::StaticClass()));
-			SaveGameData->SlotName = TEXT("TEST001");
-			SaveGameData->WorldName = TEXT("TEST_WORLD");
+			SaveGameData->SlotName = TEXT("TEST001_")+WorldName;
+			SaveGameData->WorldName = WorldName;
 			UGameplayStatics::SaveGameToSlot(SaveGameData, SaveGameData->SlotName, 0);
 		}
 	}
 	
 	LoadWorld();
-	
-	UE_LOG(LogTemp, Warning, TEXT("AUTO SAVE INTERVAL : %f"), AutoSaveInterval*60.0f);
 	
 	//자동 저장 타이머
 	GetWorld()->GetTimerManager().SetTimer(
@@ -152,11 +153,14 @@ void AMainGameMode::SaveWorld()
 		return;
 	}
 	
+	//저장 가능 액터 데이터 저장
+	//저장 인터페이스를 가진 모든 액터 가져오기
 	TArray<AActor*> SaveActors;
 	UGameplayStatics::GetAllActorsWithInterface(GetWorld(), USaveInterface::StaticClass(), SaveActors);
 	
 	Save->SavedActors.Empty();
 	
+	//각 액터의 저장 코드 실행
 	for (AActor* Actor : SaveActors)
 	{
 		if (ISaveInterface* Savable = Cast<ISaveInterface>(Actor))
@@ -164,20 +168,28 @@ void AMainGameMode::SaveWorld()
 			FActorSaveData Data;
 			Savable->Execute_SaveData(Actor, Data);
 			UE_LOG(LogTemp, Warning, TEXT("[%s] Save Actor [%s]"), *Actor->GetName(), *Data.ActorID.ToString())
+			//세이브 파일에 액터 저장 데이터 추가
 			Save->SavedActors.FindOrAdd(Data.ActorID) = Data;
 		}
-		
 	}	
 	
+	//폴리지 데이터 저장
+	Save->RemovedFoliages.Append(RemovedFoliageData);
+	RemovedFoliageData.Empty();
+	
+	//플레이어 데이터 저장
 	AMainGameState* GS = GetGameState<AMainGameState>();
+	//월드에 있는 플레이어 순회
 	for (APlayerState* PS : GS->PlayerArray)
 	{
+		//각 플레이어의 저장 코드 실행
 		AMainPlayer* Player = Cast<AMainPlayer>(PS->GetPawn());
 		SavePlayer(Player);
 	}
-	
+	//세이브 파일에 플레이어 저장 데이터 추가
 	Save->Players = PlayersSaveData;
 	
+	//세이브 파일 슬롯에 저장
 	UGameplayStatics::SaveGameToSlot(SaveGameData, SaveGameData->SlotName, 0);
 	UE_LOG(LogTemp, Warning, TEXT("Test Save at %s"), *SaveGameData->SlotName);
 	
@@ -185,6 +197,8 @@ void AMainGameMode::SaveWorld()
 	FChattingData Chat = FChattingData(
 		TEXT("알림"),TEXT("자동 저장 완료."), EMessageType::NOTICE);
 	GS->AddChattingMessage(Chat);
+	
+	//월드 시간 저장
 }
 
 void AMainGameMode::LoadWorld()
@@ -200,6 +214,7 @@ void AMainGameMode::LoadWorld()
 	//처음 들어와서 저장된 액터가 없으면 월드의 초기 상태로 시작
 	if (Save->SavedActors.Num() == 0) return; 
 	
+	//초기 상태 액터 캐시 생성
 	SetActorCache();
 	
 	//삭제된 기존 액터는 삭제
@@ -211,7 +226,7 @@ void AMainGameMode::LoadWorld()
 		}
 	}
 	
-	//저장된 액터 처리
+	//저장된 액터 로드
 	for (auto& Pair : Save->SavedActors)
 	{
 		FGuid GUID = Pair.Key;
@@ -242,6 +257,48 @@ void AMainGameMode::LoadWorld()
 		}
 	}
 	
+	//폴리지 데이터 로드
+	for (const FRemovedFoliageData& FoliageData : Save->RemovedFoliages)
+	{
+		//월드 액터 스캔
+		for (TActorIterator<AActor> TargetActor(GetWorld()); TargetActor; ++TargetActor)
+		{
+			//해당 액터의 컴포넌트 확인
+			TArray<UInstancedStaticMeshComponent*> Comps;
+			TargetActor->GetComponents<UInstancedStaticMeshComponent>(Comps);
+			
+			//인스턴스 스태틱 메시 컴포넌트가 없으면 건너뛰기
+			if (Comps.Num() == 0) continue;
+			
+			//컴포넌트가 있으면 체크
+			for (UInstancedStaticMeshComponent* ISMC : Comps)
+			{
+				//저장된 데이터의 메쉬와 같지 않으면 건너뛰기
+				if (ISMC->GetStaticMesh() != FoliageData.Mesh) continue;
+				
+				//컴포넌트의 폴리지 인스턴스 개수 가져오기
+				int32 Count = ISMC->GetInstanceCount();
+				
+				//폴리지 인스턴스 하나씩 확인
+				for (int32 i = Count - 1; i >= 0; --i)
+				{
+					//폴리지 인스턴스 트랜스폼 가져오기
+					FTransform Transform;
+					ISMC->GetInstanceTransform(i, Transform, true);
+					
+					//폴리지 위치가이 삭제된 폴리지 데이터와 같으면 삭제 후 다음으로
+					if (FVector::DistSquared(
+							Transform.GetLocation(),
+							FoliageData.Location) < 4.0f)
+					{
+						ISMC->RemoveInstance(i);
+						break;
+					}
+				}
+			}
+		}
+	}
+	
 	//플레이어 데이터 로드
 	PlayersSaveData = Save->Players;
 	
@@ -251,6 +308,8 @@ void AMainGameMode::LoadWorld()
 		AMainPlayer* Player = Cast<AMainPlayer>(PS->GetPawn());
 		LoadPlayer(Player);
 	}
+	
+	UE_LOG(LogTemp, Warning, TEXT("Load at %s COMPLETE"), *SaveGameData->SlotName);
 }
 
 void AMainGameMode::SavePlayer(AMainPlayer* TargetPlayer)

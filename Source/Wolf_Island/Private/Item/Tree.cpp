@@ -95,7 +95,8 @@ void ATree::SpawnDrops()
 				SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
 				APickup* SpawnedPickup = GetWorld()->SpawnActor<APickup>(PickupClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
-
+				SpawnedPickup->ResetGUID();
+				
 				if (SpawnedPickup)
 				{
 					SpawnedPickup->InitializeDrop(PickupData, DropEntry.Amount);
@@ -130,31 +131,13 @@ TArray<FString> ATree::GetItemIDs() const
 
 void ATree::SaveData_Implementation(FActorSaveData& OutData)
 {
-	ISaveInterface::SaveData_Implementation(OutData);
+	Super::SaveData_Implementation(OutData);
 	
-	OutData.ActorID = GUID;
-	OutData.Transform = GetActorTransform();
-	OutData.ActorClass = GetClass();
-	
-	FMemoryWriter Writer(OutData.BinaryData, true);
-	FObjectAndNameAsStringProxyArchive Ar(Writer, true);
-	Ar.ArIsSaveGame = false;
-
-	Serialize(Ar);
 }
 
 void ATree::LoadData_Implementation(const FActorSaveData& InData)
 {
-	ISaveInterface::LoadData_Implementation(InData);
-	
-	GUID = InData.ActorID;
-	SetActorTransform(InData.Transform);
-	
-	FMemoryReader Reader(InData.BinaryData, true);
-	FObjectAndNameAsStringProxyArchive Ar(Reader, true);
-	Ar.ArIsSaveGame = false;
-	
-	Serialize(Ar);
+	Super::LoadData_Implementation(InData);
 	
 	ForceNetUpdate();
 }

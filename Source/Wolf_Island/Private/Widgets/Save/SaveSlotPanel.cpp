@@ -155,7 +155,7 @@ void USaveSlotPanel::OnCreateCommited(const FString& Text)
 		//멀티 게임 시작
 		if (NewSave->IsMulti)
 		{
-		
+			UGameplayStatics::OpenLevelBySoftObjectPtr(GetWorld(), MainGameInstance->MultiPlayWorld);
 		}
 		//싱글 게임 시작
 		else

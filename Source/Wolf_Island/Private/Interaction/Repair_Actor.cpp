@@ -258,7 +258,7 @@ void ARepair_Actor::SaveData_Implementation(FActorSaveData& OutData)
 	
     FMemoryWriter Writer(OutData.BinaryData, true);
     FObjectAndNameAsStringProxyArchive Ar(Writer, true);
-    Ar.ArIsSaveGame = false;
+    Ar.ArIsSaveGame = true;
 
     Serialize(Ar);
 }
@@ -266,13 +266,15 @@ void ARepair_Actor::SaveData_Implementation(FActorSaveData& OutData)
 void ARepair_Actor::LoadData_Implementation(const FActorSaveData& InData)
 {
     GUID = InData.ActorID;
-    SetActorTransform(InData.Transform);
+    //SetActorTransform(InData.Transform);
 	
     FMemoryReader Reader(InData.BinaryData, true);
     FObjectAndNameAsStringProxyArchive Ar(Reader, true);
-    Ar.ArIsSaveGame = false;
+    Ar.ArIsSaveGame = true;
 	
     Serialize(Ar);
 	
+    UpdateShipVisuals();
+    
     ForceNetUpdate();
 }

@@ -11,6 +11,7 @@ class UMainGameInstance;
 /**
  * 
  */
+
 UCLASS()
 class WOLF_ISLAND_API AMainGameMode : public AGameMode
 {
@@ -25,10 +26,13 @@ public:
 	TMap<FGuid, AActor*> ActorCache;
 	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
+	TArray<FRemovedFoliageData> RemovedFoliageData;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
 	TMap<FString, FPlayerSaveData> PlayersSaveData;
 	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
-	UMainSaveGame* SaveGameData;
+	class UMainSaveGame* SaveGameData;
 	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
 	UMainGameInstance* MainGameInstance;

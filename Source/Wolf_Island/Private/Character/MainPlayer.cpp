@@ -31,6 +31,8 @@
 #include "Components/BillboardComponent.h"
 #include "WaterBodyComponent.h"
 #include "Games/MainGameState.h"
+#include "Games/MainSaveGame.h"
+#include "Games/GameModes/MainGameMode.h"
 
 // Sets default values
 AMainPlayer::AMainPlayer()
@@ -1262,7 +1264,20 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 	FTransform InstanceTransform;
 	// 월드 좌표 기준으로 트랜스폼 가져오기
 	ISMC->GetInstanceTransform(InstanceIndex, InstanceTransform, true);
-
+	
+	//====>> 2.19 조성윤 추가 <<====
+	//삭제될 폴리지 정보 저장
+	AMainGameMode* GM = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode());
+	
+	FRemovedFoliageData RemovedData;
+	RemovedData.Location = InstanceTransform.GetLocation();
+	RemovedData.Rotation = InstanceTransform.GetRotation().Rotator();
+	RemovedData.Scale = InstanceTransform.GetScale3D();
+	RemovedData.Mesh = ISMC->GetStaticMesh();
+	
+	GM->RemovedFoliageData.Add(RemovedData);
+	//====>> 2.19 조성윤 추가 <<====
+	
 	// 폴리지 삭제 (서버에서 삭제하면 리플리케이션 설정에 따라 클라이언트에게 전달됩니다)
 	Multi_RemoveFoliageInstance(ISMC, InstanceIndex);
 
@@ -1271,7 +1286,8 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 	ATree* NewTree = GetWorld()->SpawnActor<ATree>(TargetActorClass, InstanceTransform, SpawnParams);
-
+	NewTree->EnsureGUID();
+	UE_LOG(LogTemp, Warning, TEXT("Spawn Tree class : %s"), *NewTree->GetClass()->GetName());
 	// 데미지 전달
 	if (NewTree)
 	{
@@ -1311,36 +1327,6 @@ void AMainPlayer::ProcessAttackHit(const FHitResult& HitResult, float DamageAmou
 
 	// 2. 폴리지 변환 시도
 	TryConvertFoliageToActor(HitResult, DamageAmount);
-}
-
-void AMainPlayer::Multi_RemoveFoliageInstance_Implementation(UInstancedStaticMeshComponent* ISMC, int32 InstanceIndex)
-{
-	if (ISMC)
-	{
-		ISMC->RemoveInstance(InstanceIndex);
-	}
-}
-
-void AMainPlayer::Client_OpenRepairUI_Implementation(class ARepair_Actor* TargetActor)
-{
-	if (RepairUIClass && TargetActor)
-	{
-		APlayerController* PC = Cast<APlayerController>(GetController());
-		if (!PC) return;
-
-		// OwningObject를 PlayerController로 변경
-		URepairUI* RepairWidget = CreateWidget<URepairUI>(PC, RepairUIClass);
-		if (RepairWidget)
-		{
-			RepairWidget->InitRepairWindow(TargetActor);
-			RepairWidget->AddToViewport();
-
-			FInputModeGameAndUI InputMode;
-			InputMode.SetWidgetToFocus(RepairWidget->TakeWidget());
-			PC->SetInputMode(InputMode);
-			PC->bShowMouseCursor = true;
-		}
-	}
 }
 
 //멀티플레이어 코드
@@ -1584,4 +1570,34 @@ void AMainPlayer::Server_Attack_Implementation()
 void AMainPlayer::Server_RefreshHand_Implementation()
 {
 	RefreshHand();
+}
+
+void AMainPlayer::Multi_RemoveFoliageInstance_Implementation(UInstancedStaticMeshComponent* ISMC, int32 InstanceIndex)
+{
+	if (ISMC)
+	{
+		ISMC->RemoveInstance(InstanceIndex);
+	}
+}
+
+void AMainPlayer::Client_OpenRepairUI_Implementation(class ARepair_Actor* TargetActor)
+{
+	if (RepairUIClass && TargetActor)
+	{
+		APlayerController* PC = Cast<APlayerController>(GetController());
+		if (!PC) return;
+
+		// OwningObject를 PlayerController로 변경
+		URepairUI* RepairWidget = CreateWidget<URepairUI>(PC, RepairUIClass);
+		if (RepairWidget)
+		{
+			RepairWidget->InitRepairWindow(TargetActor);
+			RepairWidget->AddToViewport();
+
+			FInputModeGameAndUI InputMode;
+			InputMode.SetWidgetToFocus(RepairWidget->TakeWidget());
+			PC->SetInputMode(InputMode);
+			PC->bShowMouseCursor = true;
+		}
+	}
 }

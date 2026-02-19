@@ -3,8 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "SaveInterface.h"
-#include "Data/ItemDataStruct.h"
+#include "Games/SaveInterface.h"
 #include "GameFramework/SaveGame.h"
 #include "MainSaveGame.generated.h"
 
@@ -30,13 +29,31 @@ struct FPlayerSaveData
 	FVector3d Velocity;
 	
 	UPROPERTY(SaveGame)
-	TArray<FItemSlot> InventoryItems;
+	TArray<struct FItemSlot> InventoryItems;
 	
 	UPROPERTY(SaveGame)
 	TArray<uint8> InventoryBinaryData;
 	
 	UPROPERTY(SaveGame)
 	TArray<uint8> StatusBinaryData;
+};
+
+USTRUCT(BlueprintType)
+struct FRemovedFoliageData
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(SaveGame)
+	FVector Location;
+	
+	UPROPERTY(SaveGame)
+	FRotator Rotation;
+	
+	UPROPERTY(SaveGame)
+	FVector Scale;
+	
+	UPROPERTY(SaveGame)
+	TSoftObjectPtr<UStaticMesh> Mesh;
 };
 
 UCLASS()
@@ -63,6 +80,9 @@ public:
 	
 	UPROPERTY()
 	TMap<FGuid, FActorSaveData> SavedActors;
+	
+	UPROPERTY()
+	TArray<FRemovedFoliageData> RemovedFoliages;
 	
 	UPROPERTY()
 	int64 SaveUnixTime;

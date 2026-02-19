@@ -59,10 +59,10 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	UDataTable* RepairRecipesTable;
 
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	TMap<FName, bool> RepairStatusMap;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Repair|State")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Repair|State", SaveGame)
 	TMap<FName, FName> RecipeIDMap;
 
 	UFUNCTION(BlueprintCallable, Category = "Repair")

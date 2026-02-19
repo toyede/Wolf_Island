@@ -66,27 +66,12 @@ void ARecordActor::Interact(AActor* Interactor)
 
 void ARecordActor::SaveData_Implementation(FActorSaveData& OutData)
 {
-	OutData.ActorID = GUID;
-	OutData.Transform = GetActorTransform();
-	OutData.ActorClass = GetClass();
-	
-	FMemoryWriter Writer(OutData.BinaryData, true);
-	FObjectAndNameAsStringProxyArchive Ar(Writer, true);
-	Ar.ArIsSaveGame = false;
-
-	Serialize(Ar);
+	Super::SaveData_Implementation(OutData);
 }
 
 void ARecordActor::LoadData_Implementation(const FActorSaveData& InData)
 {
-	GUID = InData.ActorID;
-	SetActorTransform(InData.Transform);
-	
-	FMemoryReader Reader(InData.BinaryData, true);
-	FObjectAndNameAsStringProxyArchive Ar(Reader, true);
-	Ar.ArIsSaveGame = false;
-	
-	Serialize(Ar);
+	Super::LoadData_Implementation(InData);
 	
 	ForceNetUpdate();
 }
