@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "BehaviorTree/BTTaskNode.h"
 #include "Animation/AnimMontage.h"
-#include "AI/EnemyAIController.h"
+#include "AI/AIControllers/EnemyAIController.h"
 #include "BTT_ClawAttack.generated.h"
 
 /**

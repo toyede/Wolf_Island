@@ -6,7 +6,7 @@
 #include "Actors/StoneProjectile.h"
 #include "BehaviorTree/BTTaskNode.h"
 #include "Animation/AnimMontage.h"
-#include "AI/EnemyAIBossController.h"
+#include "AI/AIControllers/EnemyAIBossController.h"
 #include "AIController.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "BTT_ThrowSkeleton.generated.h"

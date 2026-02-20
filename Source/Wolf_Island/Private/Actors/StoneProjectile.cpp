@@ -1,30 +1,74 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "Actors/StoneProjectile.h"
+ï»¿#include "Actors/StoneProjectile.h"
+#include "Components/StaticMeshComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "Engine/DamageEvents.h"
+#include "Character/MainPlayer.h"
 
 AStoneProjectile::AStoneProjectile()
 {
     Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
     RootComponent = Mesh;
 
-    ProjectileComp = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileComp"));
-    ProjectileComp->InitialSpeed = 2500.f;
-    ProjectileComp->MaxSpeed = 2500.f;
-    ProjectileComp->bRotationFollowsVelocity = true;
-    ProjectileComp->ProjectileGravityScale = 0.4f; // Á÷¼± ¿øÇÏ¸é 0
-    ProjectileComp->bAutoActivate = false;
-    InitialLifeSpan = 1.f;
+    Mesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+    Mesh->SetCollisionObjectType(ECC_WorldDynamic);
+    Mesh->SetCollisionResponseToAllChannels(ECR_Overlap);
+    Mesh->SetGenerateOverlapEvents(true);
 
+    ProjectileComp = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileComp"));
+    ProjectileComp->SetUpdatedComponent(Mesh);
+    ProjectileComp->InitialSpeed = 2000.f;
+    ProjectileComp->MaxSpeed = 3000.f;
+    ProjectileComp->bRotationFollowsVelocity = true;
+    ProjectileComp->ProjectileGravityScale = 0.4f;
+
+    bReplicates = true;
+    SetReplicateMovement(true);
+    bAlwaysRelevant = false;
+    bNetLoadOnClient = false;
+    NetUpdateFrequency = 30.f;
+    MinNetUpdateFrequency = 15.f;
 }
 
-void AStoneProjectile::LaunchProjectile(const FVector& Direction, float Speed)
+void AStoneProjectile::BeginPlay()
 {
-    if (ProjectileComp)
+    Super::BeginPlay();
+
+    Mesh->OnComponentBeginOverlap.AddDynamic(this, &AStoneProjectile::OnOverlap);
+
+    SetLifeSpan(LifeSpan);
+
+    if (AActor* OwnerActor = GetOwner())
     {
-        ProjectileComp->Velocity = Direction * Speed;
-        ProjectileComp->Activate(true); // ²À ÇÊ¿ä
+        Mesh->IgnoreActorWhenMoving(OwnerActor, true);
     }
 }
 
+void AStoneProjectile::Launch(const FVector& Direction, float Speed)
+{
+    if (!HasAuthority()) return;
+
+    if (ProjectileComp)
+    {
+        ProjectileComp->Velocity = Direction.GetSafeNormal() * Speed;
+    }
+}
+
+void AStoneProjectile::OnOverlap(
+    UPrimitiveComponent* OverlappedComp,
+    AActor* OtherActor,
+    UPrimitiveComponent* OtherComp,
+    int32 OtherBodyIndex,
+    bool bFromSweep,
+    const FHitResult& SweepResult)
+{
+    if (!HasAuthority()) return;
+    if (!OtherActor || OtherActor == GetOwner()) return;
+
+    if (AMainPlayer* Player = Cast<AMainPlayer>(OtherActor))
+    {
+        FDamageEvent DamageEvent;
+        OtherActor->TakeDamage(Damage, DamageEvent, nullptr, this);
+    }
+
+    Destroy();
+}

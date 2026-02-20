@@ -20,8 +20,9 @@ public class Wolf_Island : ModuleRules
 			"GameplayTasks",
 			"UMG",
 			"Niagara",
-			"Water"
-		});
+			"Water",
+            "GameplayDebugger"
+        });
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore", "AdvancedSessions", "OnlineSubsystem", "OnlineSubsystemUtils" });
 

@@ -4,7 +4,7 @@
 #include "Actors/Trap_Base.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
-#include "AI/EnemyAIBase.h"
+#include "AI/Enemy_Character/EnemyAIBase.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 // Sets default values

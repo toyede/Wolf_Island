@@ -1,0 +1,25 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "BehaviorTree/BTTaskNode.h"
+#include "BehaviorTree/BehaviorTreeTypes.h"
+#include "AI/Interfaces/EnemyCommonInterface.h"
+#include "BTTask_SetMovementSpeed.generated.h"
+
+UCLASS()
+class WOLF_ISLAND_API UBTTask_SetMovementSpeed : public UBTTaskNode
+{
+	GENERATED_BODY()
+
+public:
+	UBTTask_SetMovementSpeed();
+
+	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
+
+protected:
+	UPROPERTY(EditAnywhere, Category = "Blackboard")
+	FBlackboardKeySelector StateKey;
+	
+};
