@@ -195,7 +195,7 @@ void AMainGameMode::SaveWorld()
 	
 	
 	FChattingData Chat = FChattingData(
-		TEXT("알림"),TEXT("자동 저장 완료."), EMessageType::NOTICE);
+		TEXT("SYSTEM"),TEXT("자동 저장 완료."), EMessageType::NOTICE);
 	GS->AddChattingMessage(Chat);
 	
 	//월드 시간 저장
@@ -211,50 +211,61 @@ void AMainGameMode::LoadWorld()
 
 	if (!Save) return;
 	
-	//처음 들어와서 저장된 액터가 없으면 월드의 초기 상태로 시작
-	if (Save->SavedActors.Num() == 0) return; 
+	//플레이어 데이터 로드
+	PlayersSaveData = Save->Players;
 	
-	//초기 상태 액터 캐시 생성
-	SetActorCache();
-	
-	//삭제된 기존 액터는 삭제
-	for (auto& Pair : ActorCache)
+	AMainGameState* GS = GetGameState<AMainGameState>();
+	for (APlayerState* PS : GS->PlayerArray)
 	{
-		if (!Save->SavedActors.Contains(Pair.Key))
-		{
-			Pair.Value->Destroy();
-		}
+		AMainPlayer* Player = Cast<AMainPlayer>(PS->GetPawn());
+		LoadPlayer(Player);
 	}
 	
-	//저장된 액터 로드
-	for (auto& Pair : Save->SavedActors)
+	//저장된 액터가 있으면 액터 로드
+	if (Save->SavedActors.Num() != 0)
 	{
-		FGuid GUID = Pair.Key;
-		FActorSaveData& Data = Pair.Value;
+		//초기 상태 액터 캐시 생성
+		SetActorCache();
+	
+		//삭제된 기존 액터는 삭제
+		for (auto& Pair : ActorCache)
+		{
+			if (!Save->SavedActors.Contains(Pair.Key))
+			{
+				Pair.Value->Destroy();
+			}
+		}
+	
+		//저장된 액터 로드
+		for (auto& Pair : Save->SavedActors)
+		{
+			FGuid GUID = Pair.Key;
+			FActorSaveData& Data = Pair.Value;
 		
-		//저장된 액터가 이미 존재하는 거면
-		if (ActorCache.Contains(GUID))
-		{
-			//데이터 로드
-			if (ISaveInterface* Savable = Cast<ISaveInterface>(ActorCache[GUID]))
+			//저장된 액터가 이미 존재하는 거면
+			if (ActorCache.Contains(GUID))
 			{
-				Savable->Execute_LoadData(ActorCache[GUID], Data);
+				//데이터 로드
+				if (ISaveInterface* Savable = Cast<ISaveInterface>(ActorCache[GUID]))
+				{
+					Savable->Execute_LoadData(ActorCache[GUID], Data);
+				}
 			}
-		}
-		//저장된 액터가 삭제됐으면
-		else
-		{
-			//새로 스폰
-			AActor* NewActor = GetWorld()->SpawnActor<AActor>(
-				Data.ActorClass,
-				Data.Transform);
+			//저장된 액터가 삭제됐으면
+			else
+			{
+				//새로 스폰
+				AActor* NewActor = GetWorld()->SpawnActor<AActor>(
+					Data.ActorClass,
+					Data.Transform);
 			
-			//데이터 로드
-			if (ISaveInterface* Savable = Cast<ISaveInterface>(NewActor))
-			{
-				Savable->Execute_LoadData(NewActor, Data);
+				//데이터 로드
+				if (ISaveInterface* Savable = Cast<ISaveInterface>(NewActor))
+				{
+					Savable->Execute_LoadData(NewActor, Data);
+				}
 			}
-		}
+		}	
 	}
 	
 	//폴리지 데이터 로드
@@ -297,16 +308,6 @@ void AMainGameMode::LoadWorld()
 				}
 			}
 		}
-	}
-	
-	//플레이어 데이터 로드
-	PlayersSaveData = Save->Players;
-	
-	AMainGameState* GS = GetGameState<AMainGameState>();
-	for (APlayerState* PS : GS->PlayerArray)
-	{
-		AMainPlayer* Player = Cast<AMainPlayer>(PS->GetPawn());
-		LoadPlayer(Player);
 	}
 	
 	UE_LOG(LogTemp, Warning, TEXT("Load at %s COMPLETE"), *SaveGameData->SlotName);
