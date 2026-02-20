@@ -29,34 +29,11 @@ bool UChestPanel::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent
 	return Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
 }
 
-void UChestPanel::RefreshChest()
-{
-	UE_LOG(LogTemp, Warning, TEXT("RefreshChest"));
-	if (ChestInventoryRef && SlotClass)
-	{
-		ChestPanel->ClearChildren();
-
-		int32 Index = 0;
-		for (FItemSlot& InventorySlot : ChestInventoryRef->GetInventory())
-		{
-			UInventorySlot* ItemSlot = CreateWidget<UInventorySlot>(this, SlotClass);
-			ItemSlot->SetIndex(Index++);
-			ItemSlot->SetOwnerRef(ChestInventoryRef);
-			
-			if (InventorySlot.Item)
-			{
-				ItemSlot->SetItemReference(InventorySlot.Item);
-			}
-			
-			ChestPanel->AddChildToWrapBox(ItemSlot);
-		}
-	}
-	RefreshInventory();
-}
-
 void UChestPanel::SetInventoryComponent(AChest* Chest, AActor* Interactor)
 {
+	//상자 인벤토리 설정
 	ChestInventoryRef = Chest->InventoryComponent;
+	//연 플레이어 설정
 	PlayerRef = Cast<AMainPlayer>(Interactor);
 	
 	if (PlayerRef)
@@ -67,23 +44,33 @@ void UChestPanel::SetInventoryComponent(AChest* Chest, AActor* Interactor)
 		UE_LOG(LogTemp, Error, TEXT("CHEST PANEL : INTERACTOR PLAYER NOT FOUND"));
 	}
 
-	if (InventoryRef)
-	{
-		FString Owner = InventoryRef->GetOwner()->GetName();
-		UE_LOG(LogTemp, Warning, TEXT("PLAYER INVENTORY OWNER : %s"), *Owner);
-	}
-	
-	if (ChestInventoryRef)
-	{
-		FString Owner = ChestInventoryRef->GetOwner()->GetName();
-		UE_LOG(LogTemp, Warning, TEXT("CHEST INVENTORY OWNER : %s"), *Owner);
-	}
-
-	if (ChestInventoryRef)
-	{
-		ChestInventoryRef->OnInventoryUpdated.AddUObject(this, &UChestPanel::RefreshChest);
-		UE_LOG(LogTemp, Warning, TEXT("CHEST UPDATE BINDING IN CHEST PANEL"));
-	}
-
 	RefreshChest();
+}
+
+void UChestPanel::RefreshChest()
+{
+	UE_LOG(LogTemp, Warning, TEXT("RefreshChest"));
+	if (ChestInventoryRef && SlotClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s 's Chest | Comp : %s | HasAuth? : %hs"), *ChestInventoryRef->GetOwner()->GetName(), *ChestInventoryRef->GetName(), ChestInventoryRef->GetOwner()->HasAuthority()?"SERVER":"CLIENT");
+		ChestPanel->ClearChildren();
+
+		int32 Index = 0;
+		for (FItemSlot& InventorySlot : ChestInventoryRef->GetInventory())
+		{
+			UInventorySlot* ItemSlot = CreateWidget<UInventorySlot>(this, SlotClass);
+			ItemSlot->SetIndex(Index++);
+			ItemSlot->SetOwner(PlayerRef);
+			ItemSlot->SetInventoryRef(ChestInventoryRef);
+			
+			ChestPanel->AddChildToWrapBox(ItemSlot);
+			
+			ItemSlot->RefreshSlot();
+		}
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("RefreshChest isn't work"));
+		if (!ChestInventoryRef) UE_LOG(LogTemp, Warning, TEXT("ChestInventoryRef isn't valid"));
+		if (!SlotClass) UE_LOG(LogTemp, Warning, TEXT("SlotClass isn't valid"));
+	}
 }

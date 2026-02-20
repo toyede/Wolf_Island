@@ -37,13 +37,13 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Patrol Route")
-	TObjectPtr<APatrolRoute> AssignedPatrolRoute; // ÀÌ°É ¹Ù·Î ÇÒ´çÇÏÁø ¾ÊÀ½
+	TObjectPtr<APatrolRoute> AssignedPatrolRoute; // ï¿½Ì°ï¿½ ï¿½Ù·ï¿½ ï¿½Ò´ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Patrol Route")
-	TObjectPtr<APatrolRoute> NativePatrolRoute; // ¿øÁÖ¹ÎÀÏ ¶§ ¾µ ÆÐÆ®·Ñ·çÆ® 
+	TObjectPtr<APatrolRoute> NativePatrolRoute; // ï¿½ï¿½ï¿½Ö¹ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½Æ®ï¿½Ñ·ï¿½Æ® 
 
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Patrol Route")
-	TObjectPtr<APatrolRoute> WolfPatrolRoute; // ´Á´ëÀÏ ¶§ ¾µ ÆÐÆ®·Ñ·çÆ® 
+	TObjectPtr<APatrolRoute> WolfPatrolRoute; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½Æ®ï¿½Ñ·ï¿½Æ® 
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	class UStatusComponent* StatusComponent;

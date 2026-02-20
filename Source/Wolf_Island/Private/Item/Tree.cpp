@@ -5,111 +5,139 @@
 #include "Components/StatusComponent.h" 
 #include "Kismet/GameplayStatics.h"
 #include "Particles/ParticleSystem.h"
+#include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 #include "Sound/SoundBase.h"
 
 ATree::ATree()
 {
-    PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = false;
 
-    TreeMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TreeMesh"));
-    SetRootComponent(TreeMesh);
-    TreeMesh->SetCollisionProfileName(TEXT("BlockAll"));
+	bReplicates = true;
 
-    // StatusComponent 생성
-    StatusComponent = CreateDefaultSubobject<UStatusComponent>(TEXT("StatusComponent"));
+	TreeMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TreeMesh"));
+	SetRootComponent(TreeMesh);
+	TreeMesh->SetCollisionProfileName(TEXT("BlockAll"));
+
+	StatusComponent = CreateDefaultSubobject<UStatusComponent>(TEXT("StatusComponent"));
 }
 
 void ATree::BeginPlay()
 {
-    Super::BeginPlay();
+	Super::BeginPlay();
 
-    // 델리게이트 연결: HP가 0이 되면 OnTreeDestroyed 실행
-    if (StatusComponent)
-    {
-        StatusComponent->OnHPZero.AddDynamic(this, &ATree::OnTreeDestroyed);
-    }
+	if (HasAuthority() && StatusComponent)
+	{
+		StatusComponent->OnHPZero.AddDynamic(this, &ATree::OnTreeDestroyed);
+	}
 }
 
 float ATree::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-    float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	if (!HasAuthority()) return 0.f;
 
-    // 데미지를 StatusComponent에 전달하여 HP 감소
-    if (StatusComponent)
-    {
-        StatusComponent->DecreaseHP(ActualDamage);
-    }
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-    return ActualDamage;
+	if (StatusComponent)
+	{
+		StatusComponent->DecreaseHP(ActualDamage);
+	}
+
+	return ActualDamage;
 }
 
 void ATree::OnTreeDestroyed()
 {
-    // 1. 파티클 이펙트 재생
-    if (DestroyParticle)
-    {
-        UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), DestroyParticle, GetActorLocation(), GetActorRotation(), true);
-    }
+	if (!HasAuthority()) return;
 
-    // 2. 사운드 재생
-    if (DestroySound)
-    {
-        UGameplayStatics::PlaySoundAtLocation(this, DestroySound, GetActorLocation());
-    }
+	Multi_PlayDestroyEffects();
+	SpawnDrops();
+	Destroy();
+}
 
-    // 3. 아이템 드랍
-    SpawnDrops();
+void ATree::Multi_PlayDestroyEffects_Implementation()
+{
+	if (DestroyParticle)
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), DestroyParticle, GetActorLocation(), GetActorRotation(), true);
+	}
 
-    // 4. 나무 액터 삭제
-    Destroy();
+	if (DestroySound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, DestroySound, GetActorLocation());
+	}
 }
 
 void ATree::SpawnDrops()
 {
-    if (!PickupClass) return;
+	if (!HasAuthority() || !DropDataTable || !PickupClass) return;
 
-    for (const FTreeDropEntry& DropEntry : DropList)
-    {
-        if (DropEntry.ItemHandle.DataTable && !DropEntry.ItemHandle.RowName.IsNone())
-        {
-            // 확률 체크
-            if (FMath::FRand() <= DropEntry.DropChance)
-            {
-                const FItemData* ItemData = DropEntry.ItemHandle.DataTable->FindRow<FItemData>(DropEntry.ItemHandle.RowName, DropEntry.ItemHandle.RowName.ToString());
+	for (const FTreeDropEntry& DropEntry : DropList)
+	{
+		if (DropEntry.ItemID.IsNone()) continue;
 
-                if (ItemData)
-                {
-                    UItemBase* NewItemData = NewObject<UItemBase>(this, UItemBase::StaticClass());
-                    NewItemData->ID = ItemData->ID;
-                    NewItemData->Type = ItemData->Type;
-                    NewItemData->NumericData = ItemData->NumericData;
-                    NewItemData->TextData = ItemData->TextData;
-                    NewItemData->AssetData = ItemData->AssetData;
+		if (FMath::FRand() <= DropEntry.DropChance)
+		{
+			const FItemData* ItemData = DropDataTable->FindRow<FItemData>(DropEntry.ItemID, DropEntry.ItemID.ToString());
 
-                    // 위치 랜덤 오프셋 (겹치지 않게)
-                    FVector RandomOffset = FMath::VRand(); 
-                    RandomOffset.Z = 0.5f; 
-                    RandomOffset.Normalize();
-                    FVector SpawnLocation = GetActorLocation() + (RandomOffset * FMath::RandRange(50.0f, 100.0f));
-                    
-                    FActorSpawnParameters SpawnParams;
-                    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+			if (ItemData)
+			{
+				FItemBaseData PickupData = FItemBaseData();
+				PickupData.ItemID = ItemData->ID;
+				PickupData.ItemName = ItemData->TextData.Name;
+				PickupData.Amount = DropEntry.Amount;
 
-                    APickup* SpawnedPickup = GetWorld()->SpawnActor<APickup>(PickupClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
+				FVector RandomOffset = FMath::VRand(); 
+				RandomOffset.Z = 0.5f; 
+				RandomOffset.Normalize();
+				FVector SpawnLocation = GetActorLocation() + (RandomOffset * FMath::RandRange(50.0f, 100.0f));
+				
+				FActorSpawnParameters SpawnParams;
+				SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
-                    if (SpawnedPickup)
-                    {
-                        SpawnedPickup->InitializeDrop(NewItemData, DropEntry.Amount);
-                        
-                        // 물리 효과 적용
-                        if (UPrimitiveComponent* RootPrim = Cast<UPrimitiveComponent>(SpawnedPickup->GetRootComponent()))
-                        {
-                            RootPrim->SetSimulatePhysics(true);
-                            RootPrim->AddImpulse(RandomOffset * 300.0f, NAME_None, true); 
-                        }
-                    }
-                }
-            }
-        }
-    }
+				APickup* SpawnedPickup = GetWorld()->SpawnActor<APickup>(PickupClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
+				SpawnedPickup->ResetGUID();
+				
+				if (SpawnedPickup)
+				{
+					SpawnedPickup->InitializeDrop(PickupData, DropEntry.Amount);
+					
+					// 물리 효과 적용
+					if (UPrimitiveComponent* RootPrim = Cast<UPrimitiveComponent>(SpawnedPickup->GetRootComponent()))
+					{
+						RootPrim->SetSimulatePhysics(true);
+						RootPrim->AddImpulse(RandomOffset * 300.0f, NAME_None, true); 
+					}
+				}
+			}
+		}
+	}
+}
+
+TArray<FString> ATree::GetItemIDs() const
+{
+	TArray<FString> Options;
+	Options.Add(TEXT("None"));
+
+	if (DropDataTable)
+	{
+		for (auto& It : DropDataTable->GetRowMap())
+		{
+			Options.Add(It.Key.ToString());
+		}
+	}
+
+	return Options;
+}
+
+void ATree::SaveData_Implementation(FActorSaveData& OutData)
+{
+	Super::SaveData_Implementation(OutData);
+	
+}
+
+void ATree::LoadData_Implementation(const FActorSaveData& InData)
+{
+	Super::LoadData_Implementation(InData);
+	
+	ForceNetUpdate();
 }

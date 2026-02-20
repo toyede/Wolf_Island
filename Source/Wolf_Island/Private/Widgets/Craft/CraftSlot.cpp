@@ -13,12 +13,12 @@ void UCraftSlot::NativeConstruct()
 	Super::NativeConstruct();
 }
 
-void UCraftSlot::SetCraftSlot(const FItemData& ItemData, int32 Amount)
+void UCraftSlot::SetCraftSlot(FItemData* ItemData, int32 Amount)
 {
-	if (ItemData.AssetData.Icon)
+	if (ItemData->AssetData.Icon)
 	{
 		ItemIcon->SetVisibility(ESlateVisibility::Visible);
-		ItemIcon->SetBrushFromTexture(ItemData.AssetData.Icon);
+		ItemIcon->SetBrushFromTexture(ItemData->AssetData.Icon);
 	} else
 	{
 		ItemIcon->SetVisibility(ESlateVisibility::Hidden);

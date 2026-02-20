@@ -19,7 +19,13 @@ class WOLF_ISLAND_API UUnknownRecordPanel : public UUserWidget
 	class UScrollBox* RecordList;
 
 	UPROPERTY(meta=(BindWidget))
-	class UImage* RecordImage;
+	class UTextBlock* RecordTitleText;
+
+	UPROPERTY(meta=(BindWidget))
+	class UTextBlock* RecordContentText;
+
+	UPROPERTY(meta=(BindWidget))
+	class UScrollBox* ContentScrollBox;
 
 	UPROPERTY(EditDefaultsOnly)
 	UDataTable* RecordTable;
@@ -28,13 +34,14 @@ class WOLF_ISLAND_API UUnknownRecordPanel : public UUserWidget
 	TSubclassOf<class URecordBlock> RecordBlockClass;
 
 	UFUNCTION()
-	void RefreshList();
-
-	UFUNCTION()
 	void SetRecordInfo(FUnknownRecord RecordData);
+
+public:
+	UFUNCTION()
+	void RefreshList();
 	
 protected:
-
+	
 	void NativeConstruct() override;
 	
 };

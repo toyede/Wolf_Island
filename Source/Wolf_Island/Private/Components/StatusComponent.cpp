@@ -4,10 +4,12 @@
 #include "Wolf_Island/Public/Components/StatusComponent.h"
 
 #include "Character/MainPlayer.h"
+#include "Character/MainPlayerController.h"
 #include "Components/InventoryComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
+#include "Games/MainGameState.h"
 #include "Item/ItemBase.h"
-#include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Net/UnrealNetwork.h"
 
 // Sets default values for this component's properties
 UStatusComponent::UStatusComponent()
@@ -15,7 +17,8 @@ UStatusComponent::UStatusComponent()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-	//SetIsReplicated(true);
+	SetIsReplicated(true);
+	SetIsReplicatedByDefault(true);
 	// ...
 }
 
@@ -24,20 +27,28 @@ UStatusComponent::UStatusComponent()
 void UStatusComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
-	//스태미나 다 쓰면 15초 이동 불가
-	OnStaminaZero.AddDynamic(this, &UStatusComponent::ForcedRest);
-	//배고픔 0일 시
-	OnHungerZero.AddDynamic(this, &UStatusComponent::StartHungerDeath);
-	//수분 0일 시
-	OnHydrationZero.AddDynamic(this, &UStatusComponent::StartHydrationDeath);
+	
+	if (GetOwner()->HasAuthority())
+	{
+		//스태미나 다 쓰면 15초 이동 불가
+		OnStaminaZero.AddDynamic(this, &UStatusComponent::ForcedRest);
+		//배고픔 0일 시
+		OnHungerZero.AddDynamic(this, &UStatusComponent::StartHungerDeath);
+		//수분 0일 시
+		OnHydrationZero.AddDynamic(this, &UStatusComponent::StartHydrationDeath);
+		//산소 0일 시
+		OnAirZero.AddDynamic(this, &UStatusComponent::StartAirDeath);
+	}
 }
 
 void UStatusComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 
-	ClearAllTimers();
+	if (GetOwner()->HasAuthority())
+	{
+		ClearAllTimers();
+	}
 }
 
 
@@ -52,13 +63,8 @@ void UStatusComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 //체력 증가 함수
 void UStatusComponent::IncreaseHP(float amount)
 {
-	CurrentHP += amount;
-
-	//초과 방지
-	if (CurrentHP > MaxHP)
-	{
-		CurrentHP = MaxHP;
-	}
+	CurrentHP = FMath::Clamp(CurrentHP+amount, 0.0f, MaxHP);
+	
 	//음수 방지
 	if (CurrentHP <= 0)
 	{
@@ -70,13 +76,8 @@ void UStatusComponent::IncreaseHP(float amount)
 //체력 감소 함수
 void UStatusComponent::DecreaseHP(float amount)
 {
-	CurrentHP -= amount;
-
-	//초과 방지
-	if (CurrentHP > MaxHP)
-	{
-		CurrentHP = MaxHP;
-	}
+	CurrentHP = FMath::Clamp(CurrentHP-amount, 0.0f, MaxHP);
+	
 	//음수 방지
 	if (CurrentHP <= 0)
 	{
@@ -88,12 +89,10 @@ void UStatusComponent::DecreaseHP(float amount)
 //스태미나 증가 함수
 void UStatusComponent::IncreaseStamina(float amount)
 {
-	UE_LOG(LogTemp, Warning, TEXT("AMOUNT : %f"), FMath::Abs(amount) * AmountMultiplier);
-	UE_LOG(LogTemp, Warning, TEXT("MAX STAMINA : %f"), MaxStamina);
-	CurrentStamina += amount * AmountMultiplier;
+	CurrentStamina = FMath::Clamp(CurrentStamina+amount*AmountMultiplier, 0.0f, MaxStamina);
 	
 	//초과 방지
-	if (CurrentStamina > MaxStamina)
+	if (CurrentStamina >= MaxStamina)
 	{
 		CurrentStamina = MaxStamina;
 		StopRecoverStamina();
@@ -109,13 +108,8 @@ void UStatusComponent::IncreaseStamina(float amount)
 //스태미나 감소 함수
 void UStatusComponent::DecreaseStamina(float amount)
 {
-	CurrentStamina -= amount * AmountMultiplier;
-
-	//초과 방지
-	if (CurrentStamina > MaxStamina)
-	{
-		CurrentStamina = MaxStamina;
-	}
+	CurrentStamina = FMath::Clamp(CurrentStamina-amount*AmountMultiplier, 0.0f, MaxStamina);
+	
 	//음수 방지
 	if (CurrentStamina <= 0)
 	{
@@ -127,14 +121,9 @@ void UStatusComponent::DecreaseStamina(float amount)
 //배고픔 증가 함수
 void UStatusComponent::IncreaseHunger(float amount)
 {
-	CurrentHunger += amount;
+	CurrentHunger = FMath::Clamp(CurrentHunger+amount, 0.0f, MaxHunger);
 	StopHungerDeath();
-
-	//초과 방지
-	if (CurrentHunger > MaxHunger)
-	{
-		CurrentHunger = MaxHunger;
-	}
+	
 	//음수 방지
 	if (CurrentHunger <= 0)
 	{
@@ -146,13 +135,8 @@ void UStatusComponent::IncreaseHunger(float amount)
 //배고픔 감소 함수
 void UStatusComponent::DecreaseHunger(float amount)
 {
-	CurrentHunger -= amount * AmountMultiplier;
-
-	//초과 방지
-	if (CurrentHunger > MaxHunger)
-	{
-		CurrentHunger = MaxHunger;
-	}
+	CurrentHunger = FMath::Clamp(CurrentHunger-amount*AmountMultiplier, 0.0f, MaxHunger);
+	
 	//음수 방지
 	if (CurrentHunger <= 0)
 	{
@@ -164,14 +148,9 @@ void UStatusComponent::DecreaseHunger(float amount)
 //수분 증가 함수
 void UStatusComponent::IncreaseHydration(float amount)
 {
-	CurrentHydration += amount;
+	CurrentHydration = FMath::Clamp(CurrentHydration+amount, 0.0f, MaxHydration);
 	StopHydrationDeath();
-
-	//초과 방지
-	if (CurrentHydration > MaxHydration)
-	{
-		CurrentHydration = MaxHydration;
-	}
+	
 	//음수 방지
 	if (CurrentHydration <= 0)
 	{
@@ -183,13 +162,8 @@ void UStatusComponent::IncreaseHydration(float amount)
 //수분 감소 함수
 void UStatusComponent::DecreaseHydration(float amount)
 {
-	CurrentHydration -= amount * AmountMultiplier;
-
-	//초과 방지
-	if (CurrentHydration > MaxHydration)
-	{
-		CurrentHydration = MaxHydration;
-	}
+	CurrentHydration = FMath::Clamp(CurrentHydration-amount*AmountMultiplier, 0.0f, MaxHydration);
+	
 	//음수 방지
 	if (CurrentHydration <= 0)
 	{
@@ -198,69 +172,34 @@ void UStatusComponent::DecreaseHydration(float amount)
 	}
 }
 
-void UStatusComponent::IncreaseWeight(float amount)
+void UStatusComponent::IncreaseAir(float amount)
 {
-	CurrentWeight += amount;
-
-	//초과 방지
-	if (CurrentWeight > MaxWeight)
+	CurrentAir = FMath::Clamp(CurrentAir+amount, 0.0f, MaxAir);
+	
+	if (CurrentAir >= MaxAir)
 	{
-		CurrentWeight = MaxWeight;
+		CurrentAir = MaxAir;
+		OnAirFull.Broadcast();
+		StopRecoverAir();
 	}
+	
 	//음수 방지
-	if (CurrentWeight <= 0)
+	if (CurrentAir <= 0)
 	{
-		CurrentWeight = 0;
-	}
-
-	//무게에 따른 감소율 증가분 설정
-	if (CurrentWeight == 100.0f)
-	{
-		AmountMultiplier = 1.5f;
-	}
-	else if (CurrentWeight >= 75.0f)
-	{
-		AmountMultiplier = 1.2f;
-	}
-	else if (CurrentWeight >= 50.0f)
-	{
-		AmountMultiplier = 1.1f;
-	} else
-	{
-		AmountMultiplier = 1.0f;
+		CurrentAir = 0;
+		OnAirZero.Broadcast();
 	}
 }
 
-void UStatusComponent::DecreaseWeight(float amount)
+void UStatusComponent::DecreaseAir(float amount)
 {
-	CurrentWeight -= amount;
-
-	//초과 방지
-	if (CurrentWeight > MaxWeight)
-	{
-		CurrentWeight = MaxWeight;
-	}
+	CurrentAir = FMath::Clamp(CurrentAir-amount, 0.0f, MaxAir);
+	
 	//음수 방지
-	if (CurrentWeight <= 0)
+	if (CurrentAir <= 0)
 	{
-		CurrentWeight = 0;
-	}
-
-	//무게에 따른 감소율 증가분 설정
-	if (CurrentWeight == 100.0f)
-	{
-		AmountMultiplier = 1.5f;
-	}
-	else if (CurrentWeight >= 75.0f)
-	{
-		AmountMultiplier = 1.2f;
-	}
-	else if (CurrentWeight >= 50.0f)
-	{
-		AmountMultiplier = 1.1f;
-	} else
-	{
-		AmountMultiplier = 1.0f;
+		CurrentAir = 0;
+		OnAirZero.Broadcast();
 	}
 }
 
@@ -274,7 +213,6 @@ void UStatusComponent::StartStamina()
 		[this]()
 		{
 			DecreaseStamina(StaminaDecreaseAmount);
-
 			DecreaseHydration(HydrationAmountWhileRunning);
 			DecreaseHunger(HungerAmountWhileRunning);
 		},
@@ -325,15 +263,17 @@ void UStatusComponent::StopRecoverStamina()
 //배고픔 감소 시작 함수
 void UStatusComponent::StartHunger()
 {
-	GetWorld()->GetTimerManager().SetTimer(
+	if (!GetWorld()->GetTimerManager().IsTimerActive(HungerTimer))
+	{
+		GetWorld()->GetTimerManager().SetTimer(
 		HungerTimer,
 		[this]()
 		{
 			DecreaseHunger(HungerAmount);
 		},
 		HungerRate,
-		true
-	);
+		true);
+	}
 }
 
 //배고픔 감소 중단 함수
@@ -392,8 +332,7 @@ void UStatusComponent::StartHydrationDeath()
 			DecreaseHP(MaxHP);
 		},
 		HydrationDeathRate,
-		false
-		);
+		false);
 }
 
 void UStatusComponent::StopHydrationDeath()
@@ -508,39 +447,120 @@ void UStatusComponent::DecreaseInfection(float Amount)
 	OnInfectionChanged.Broadcast();
 }
 
-void UStatusComponent::ApplyItem(UItemBase* Item)
+void UStatusComponent::StartAir()
 {
-	if (Item)
+	if (GetWorld()->GetTimerManager().IsTimerActive(AirTimer)) return;
+	
+	GetWorld()->GetTimerManager().SetTimer(
+		AirTimer,
+		[this]()
+		{
+			DecreaseAir(AirAmount);
+		},
+		AirRate,
+		true);
+}
+
+void UStatusComponent::StopAir()
+{
+	GetWorld()->GetTimerManager().ClearTimer(AirTimer);
+}
+
+void UStatusComponent::StartAirDeath()
+{
+	if (GetWorld()->GetTimerManager().IsTimerActive(AirDeathTimer)) return;
+	UE_LOG(LogTemp, Warning, TEXT("START AIR DEATH"));
+	GetWorld()->GetTimerManager().SetTimer(
+		AirDeathTimer,
+		[this]()
+		{
+			DecreaseHP(SuffocatedDamage);
+		},
+		SuffocatedRate,
+		true);
+}
+
+void UStatusComponent::StopAirDeath()
+{
+	GetWorld()->GetTimerManager().ClearTimer(AirDeathTimer);
+}
+
+void UStatusComponent::StartRecoverAir()
+{
+	StopAir();
+	
+	if (GetWorld()->GetTimerManager().IsTimerActive(AirRecoverTimer)) return;
+	
+	GetWorld()->GetTimerManager().SetTimer(
+		AirRecoverTimer,
+		[this]()
+		{
+			IncreaseAir(AirRecoverAmount);
+		},
+		AirRecoverRate,
+		true);
+}
+
+void UStatusComponent::StopRecoverAir()
+{
+	GetWorld()->GetTimerManager().ClearTimer(AirRecoverTimer);
+}
+
+void UStatusComponent::ApplyItem(FItemData Item)
+{
+	if (Item.IsNotEmpty())
 	{
-		IncreaseHP(Item->NumericData.Health);
-		IncreaseStamina(Item->NumericData.Stamina);
-		IncreaseHunger(Item->NumericData.Hunger);
-		IncreaseHydration(Item->NumericData.Hydration);
+		IncreaseHP(Item.NumericData.Health);
+		IncreaseStamina(Item.NumericData.Stamina);
+		IncreaseHunger(Item.NumericData.Hunger);
+		IncreaseHydration(Item.NumericData.Hydration);
+		
+		AMainGameState* GS = Cast<AMainGameState>(GetWorld()->GetGameState());
+		AMainPlayerController* PC = Cast<AMainPlayerController>(Cast<APawn>(GetOwner())->GetController());
+		FChattingData Data = FChattingData(
+			"SYSTEM",Item.TextData.Name.ToString()+" USED", EMessageType::NOTICE);
+		if (!PC) UE_LOG(LogTemp, Warning, TEXT("UStatusComponent::ApplyItem: PC is NULL"));
+		PC->AddChat(Data);
 	}
 }
 
 void UStatusComponent::ClearAllTimers()
 {
-	GetWorld()->GetTimerManager().ClearTimer(StaminaTimer);
-	GetWorld()->GetTimerManager().ClearTimer(StaminaRecoverTimer);
-	GetWorld()->GetTimerManager().ClearTimer(HungerTimer);
-	GetWorld()->GetTimerManager().ClearTimer(HydrationTimer);
-	GetWorld()->GetTimerManager().ClearTimer(RunningTimer);
-	GetWorld()->GetTimerManager().ClearTimer(HungerDeathTimer);
-	GetWorld()->GetTimerManager().ClearTimer(HydrationDeathTimer);
-	GetWorld()->GetTimerManager().ClearTimer(ForcedRestTimer);
-	GetWorld()->GetTimerManager().ClearTimer(InfectionTimer);
+	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+	
+	TimerManager.ClearTimer(StaminaTimer);
+	TimerManager.ClearTimer(StaminaRecoverTimer);
+	TimerManager.ClearTimer(HungerTimer);
+	TimerManager.ClearTimer(HydrationTimer);
+	TimerManager.ClearTimer(RunningTimer);
+	TimerManager.ClearTimer(HungerDeathTimer);
+	TimerManager.ClearTimer(HydrationDeathTimer);
+	TimerManager.ClearTimer(ForcedRestTimer);
+	TimerManager.ClearTimer(InfectionTimer);
+	TimerManager.ClearTimer(AirDeathTimer);
+	TimerManager.ClearTimer(AirRecoverTimer);
+	TimerManager.ClearTimer(AirTimer);
 }
 
-void UStatusComponent::DebugGetStatus(float &HP, float& Stamina, float& Hunger, float& Hydration, float& Weight)
+void UStatusComponent::DebugGetStatus(float &HP, float& Stamina, float& Hunger, float& Hydration)
 {
 	HP = CurrentHP;
 	Stamina = CurrentStamina;
 	Hunger = CurrentHunger;
 	Hydration = CurrentHydration;
-	Weight = CurrentWeight;
-	if (UInventoryComponent* Inven = Cast<UInventoryComponent>(GetOwner()->GetComponentByClass(UInventoryComponent::StaticClass())))
-	{
-		Weight = Inven->GetCurrentWeight();
-	}
+}
+
+void UStatusComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UStatusComponent, CurrentHP);
+	DOREPLIFETIME(UStatusComponent, CurrentStamina);
+	DOREPLIFETIME(UStatusComponent, CurrentHunger);
+	DOREPLIFETIME(UStatusComponent, CurrentHydration);
+}
+
+void UStatusComponent::OnRep_CurrentHunger()
+{
+	//UE_LOG(LogTemp, Warning, TEXT("OnRep_CurrentHunger : %f"), CurrentHunger);
 }

@@ -13,8 +13,8 @@ void AMainHUD::BeginPlay()
 
 	if (PlayerHUDClass)
 	{
-		PlayerHUDWidget = CreateWidget<UPlayerHUD>(GetWorld(), PlayerHUDClass);
-		PlayerHUDWidget->AddToViewport(-1);
+		//PlayerHUDWidget = CreateWidget<UPlayerHUD>(GetWorld(), PlayerHUDClass);
+		//PlayerHUDWidget->AddToViewport(-1);
 	}
 
 	if (InventoryWidgetClass)

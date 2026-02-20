@@ -3,16 +3,40 @@
 
 #include "Widgets/Craft/RepairBlock.h"
 #include "Components/Button.h"
+#include "Components/TextBlock.h"
+#include "Styling/SlateColor.h"
+#include "Interaction/Repair_Actor.h"
 
 void URepairBlock::OnRepairButtonClicked()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Block: 데이터 전송 시도 - Row: %s, Recipe: %s"), 
-		*RowName.ToString(), 
-		*RepairRecipeData.RecipeName.ToString());
-
 	if (OnRepairBlockClicked.IsBound())
 	{
 		OnRepairBlockClicked.Broadcast(RowName, RepairRecipeData);
+	}
+}
+
+void URepairBlock::RefreshBlockStatus()
+{
+	if (!TargetActor) return;
+
+	bool bIsDone = TargetActor->IsRecipeComplete(RowName);
+
+	if (bIsDone)
+	{
+		if (RecipeButton) 
+		{
+			RecipeButton->SetIsEnabled(false);
+		}
+
+		if (RecipeName)
+		{
+			RecipeName->SetColorAndOpacity(FSlateColor(FLinearColor::Green));
+		}
+	}
+	else
+	{
+		if (RecipeButton) RecipeButton->SetIsEnabled(true);
+		if (RecipeName) RecipeName->SetColorAndOpacity(FSlateColor(FLinearColor::White));
 	}
 }
 

@@ -22,8 +22,8 @@ public:
 	UPROPERTY(VisibleAnywhere)
 	UInventorySlot* InventorySlotBeingHovered;
 
-	UPROPERTY(VisibleAnywhere)
-	FItemData ItemData;
+	//UPROPERTY(VisibleAnywhere)
+	FItemData* ItemData;
 
 	UPROPERTY(meta=(BindWidget))
 	UTextBlock* ItemName;

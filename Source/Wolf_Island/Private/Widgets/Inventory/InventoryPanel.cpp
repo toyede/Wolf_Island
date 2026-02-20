@@ -20,10 +20,12 @@ void UInventoryPanel::NativeOnInitialized()
 		
 		if (InventoryRef)
 		{
-			InventoryRef->OnInventoryUpdated.AddUObject(this, &UInventoryPanel::RefreshInventory);
+			InventoryRef->OnInventoryUpdated.AddUObject(this, &UInventoryPanel::SetInfoText);
 			SetInfoText();
-			UE_LOG(LogTemp, Warning, TEXT("RefreshInventory Registered"));
+			//UE_LOG(LogTemp, Warning, TEXT("RefreshInventory Registered"));
 		}
+		
+		RefreshInventory();
 	}
 }
 
@@ -59,15 +61,8 @@ void UInventoryPanel::RefreshInventory()
 		{
 			UInventorySlot* ItemSlot = CreateWidget<UInventorySlot>(this, SlotClass);
 			ItemSlot->SetIndex(Index++);
-			ItemSlot->SetOwnerRef(InventoryRef);
-			
-			if (InventorySlot.Item)
-			{
-				ItemSlot->SetItemReference(InventorySlot.Item);
-			} else
-			{
-				//UE_LOG(LogTemp, Warning, TEXT("NO ITEM IN SLOT [%d]"), Index);
-			}
+			ItemSlot->SetOwner(PlayerRef);
+			ItemSlot->SetInventoryRef(InventoryRef);
 			
 			//핫바 슬롯( 첫번째부터 6칸 ( 0 ~ 5 ) )
 			if (Index >= 1 && Index <= 6)
@@ -79,6 +74,8 @@ void UInventoryPanel::RefreshInventory()
 			{
 				InventoryPanel->AddChildToWrapBox(ItemSlot);
 			}
+			
+			ItemSlot->RefreshSlot();
 		} 
 
 		SetInfoText();

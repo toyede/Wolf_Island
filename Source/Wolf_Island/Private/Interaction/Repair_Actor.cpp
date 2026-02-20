@@ -2,9 +2,12 @@
 #include "Kismet/GameplayStatics.h"
 #include "AdvancedFriendsGameInstance.h"
 #include "Data/ItemDataStruct.h"
+#include "Net/UnrealNetwork.h"
+#include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
 ARepair_Actor::ARepair_Actor()
 {
+    bReplicates = true;
     bIsBody = false;
     bIsEngine = false;
     bIsSteering = false;
@@ -12,10 +15,16 @@ ARepair_Actor::ARepair_Actor()
     bIsAnchor = false;
 }
 
+void ARepair_Actor::OnRep_CompletedRecipes()
+{
+    if (OnRepairStatusChanged.IsBound())
+    {
+        OnRepairStatusChanged.Broadcast();
+    }
+}
+
 void ARepair_Actor::BeginPlay()
 {
-    
-
     if (RepairRecipesTable)
     {
         TArray<FName> RowNames = RepairRecipesTable->GetRowNames();
@@ -127,6 +136,18 @@ bool ARepair_Actor::CheckAnchorComplete()
     return bIsAnchor;
 }
 
+void ARepair_Actor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(ARepair_Actor, CompletedRecipeNames);
+    DOREPLIFETIME(ARepair_Actor, bIsBody);
+    DOREPLIFETIME(ARepair_Actor, bIsEngine);
+    DOREPLIFETIME(ARepair_Actor, bIsSteering);
+    DOREPLIFETIME(ARepair_Actor, bIsRadar);
+    DOREPLIFETIME(ARepair_Actor, bIsAnchor);
+}
+
 void ARepair_Actor::CompleteRepair()
 {
     CheckBodyComplete();
@@ -152,41 +173,47 @@ void ARepair_Actor::CompleteRepair()
     }
 }
 
-void ARepair_Actor::MarkRecipeAsComplete(FName RowName)
+void ARepair_Actor::MarkRecipeAsComplete(FName RecipeName)
 {
-    if (RepairStatusMap.Contains(RowName))
+    if (!HasAuthority()) return;
+
+    if (!CompletedRecipeNames.Contains(RecipeName))
     {
-        RepairStatusMap[RowName] = true;
-        
-        UE_LOG(LogTemp, Log, TEXT("[RepairActor] 수리 완료: %s"), *RowName.ToString());
+        CompletedRecipeNames.Add(RecipeName);
 
-        CompleteRepair();
-
-        UAdvancedFriendsGameInstance* GI = Cast<UAdvancedFriendsGameInstance>(GetGameInstance());
-        if (GI)
+        if (RepairStatusMap.Contains(RecipeName))
         {
-            GI->SaveRepairStatus(RepairStatusMap);
+            RepairStatusMap[RecipeName] = true;
+            
+            UAdvancedFriendsGameInstance* GI = Cast<UAdvancedFriendsGameInstance>(GetGameInstance());
+            if (GI)
+            {
+                GI->SaveRepairStatus(RepairStatusMap);
+            }
         }
-    }
-    else
-    {
-        UE_LOG(LogTemp, Error, TEXT("[RepairActor] MarkRecipe 실패: %s"), *RowName.ToString());
+
+        if (CheckBodyComplete()) bIsBody = true;
+        if (CheckEngineComplete()) bIsEngine = true;
+        if (CheckSteeringComplete()) bIsSteering = true;
+        if (CheckRadarComplete()) bIsRadar = true;
+        if (CheckAnchorComplete()) bIsAnchor = true;
+        
+        OnRep_CompletedRecipes();
+        
+        OnRep_RepairStatus();
     }
 }
 
 bool ARepair_Actor::IsRecipeComplete(FName TargetName)
 {
-    if (bool* bComplete = RepairStatusMap.Find(TargetName))
+    if (CompletedRecipeNames.Contains(TargetName))
     {
-        return *bComplete;
+        return true;
     }
 
     if (FName* RealRowName = RecipeIDMap.Find(TargetName))
     {
-        if (bool* bComplete = RepairStatusMap.Find(*RealRowName))
-        {
-            return *bComplete;
-        }
+        return CompletedRecipeNames.Contains(*RealRowName);
     }
 
     return false;
@@ -201,11 +228,8 @@ void ARepair_Actor::RestoreStateFromGameInstance()
 
     if (SavedMap.Num() == 0) 
     {
-        UE_LOG(LogTemp, Log, TEXT("[RepairActor] 저장된 데이터가 없습니다."));
         return;
     }
-
-    UE_LOG(LogTemp, Log, TEXT("[RepairActor] 게임 인스턴스에서 데이터 로드 중... (%d개)"), SavedMap.Num());
 
     for (const TPair<FName, bool>& Pair : SavedMap)
     {
@@ -219,4 +243,38 @@ void ARepair_Actor::RestoreStateFromGameInstance()
     }
 
     CompleteRepair();
+}
+
+void ARepair_Actor::OnRep_RepairStatus()
+{
+    UpdateShipVisuals();
+}
+
+void ARepair_Actor::SaveData_Implementation(FActorSaveData& OutData)
+{
+    OutData.ActorID = GUID;
+    OutData.Transform = GetActorTransform();
+    OutData.ActorClass = GetClass();
+	
+    FMemoryWriter Writer(OutData.BinaryData, true);
+    FObjectAndNameAsStringProxyArchive Ar(Writer, true);
+    Ar.ArIsSaveGame = true;
+
+    Serialize(Ar);
+}
+
+void ARepair_Actor::LoadData_Implementation(const FActorSaveData& InData)
+{
+    GUID = InData.ActorID;
+    //SetActorTransform(InData.Transform);
+	
+    FMemoryReader Reader(InData.BinaryData, true);
+    FObjectAndNameAsStringProxyArchive Ar(Reader, true);
+    Ar.ArIsSaveGame = true;
+	
+    Serialize(Ar);
+	
+    UpdateShipVisuals();
+    
+    ForceNetUpdate();
 }

@@ -39,25 +39,29 @@ struct FItemNumericData
 	GENERATED_USTRUCT_BODY();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 MaxAmount = 0;
+	bool IsStackable;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Damage = 0.0f;
+	int32 MaxAmount;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Health = 0.0f;
+	float Damage;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Stamina = 0.0f;
+	float Health;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Hydration = 0.0f;
+	float Stamina;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Hunger = 0.0f;
+	float Hydration;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Weight = 0.0f;
+	float Hunger;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Durability = 0.0f;
+	float Weight;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float InteractionDuration = 0.0f;
+	float Durability;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool IsStackable = false;
+	float InteractionDuration;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool IsUsable;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float UseDuration;
 };
 
 //아이템 에셋 데이터 (아이콘, 메쉬, BP)
@@ -67,11 +71,11 @@ struct FItemAssetData
 	GENERATED_USTRUCT_BODY();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UTexture2D* Icon = nullptr;
+	UTexture2D* Icon;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UStaticMesh* Mesh = nullptr;
+	UStaticMesh* Mesh;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UBlueprint* BPMesh = nullptr;
+	UBlueprint* BPMesh;
 };
 
 //아이템 데이터 (최종)
@@ -83,7 +87,7 @@ struct FItemData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
 	FName ID = NAME_None;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
-	EItemType Type = EItemType::MATERIAL;
+	EItemType Type;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
 	FItemTextData TextData;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
@@ -92,7 +96,52 @@ struct FItemData : public FTableRowBase
 	FItemAssetData AssetData;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
-	TSubclassOf<class UItemBase> ItemClass = nullptr;
+	TSubclassOf<class UItemBase> ItemClass;
+	
+	bool IsEmpty() const { return ID == NAME_None; }
+	bool IsNotEmpty() const { return ID != NAME_None; }
+};
+
+//아이템 인스턴스 데이터
+USTRUCT(BlueprintType)
+struct FItemBaseData
+{
+	GENERATED_USTRUCT_BODY();
+	
+	UPROPERTY(BlueprintReadWrite, SaveGame)
+	FName ItemID = NAME_None;
+	
+	UPROPERTY(BlueprintReadWrite, SaveGame)
+	FText ItemName = FText::GetEmpty();
+	
+	UPROPERTY(BlueprintReadWrite, SaveGame)
+	int32 Amount = 0;
+	
+	UPROPERTY(BlueprintReadWrite, SaveGame)
+	float CurrentDurability = 0.0f;
+	
+	void SetAmount(const int32 NewAmount) { Amount = NewAmount; };
+	
+	void SetName(const FText Name) { ItemName = Name; };
+	
+	bool operator==(const FItemBaseData& Other) const
+	{
+		return ItemID == Other.ItemID
+			&& Amount == Other.Amount
+			&& FMath::IsNearlyEqual(CurrentDurability, Other.CurrentDurability);
+	}
+	
+	bool IsValid() const
+	{
+		return ItemID != NAME_None;
+	}
+	
+	void LogData()
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ItemID : %s"), *ItemID.ToString());
+		UE_LOG(LogTemp, Warning, TEXT("ItemName : %s"), *ItemName.ToString());
+		UE_LOG(LogTemp, Warning, TEXT("ItemAmount : %d"), Amount);
+	}
 	
 };
 
@@ -101,10 +150,60 @@ USTRUCT(BlueprintType)
 struct FItemSlot
 {
 	GENERATED_USTRUCT_BODY();
+	
+	UPROPERTY(SaveGame)
+	FItemBaseData ItemData;
+	
+	bool IsEmpty() const { return ItemData.ItemID == NAME_None; }
+	
+	bool IsNotEmpty() const { return ItemData.ItemID != NAME_None; }
+	
+	void SetAmount(const int32 NewAmount) { ItemData.Amount = NewAmount; }
+	
+	void Clear()
+	{
+		ItemData = FItemBaseData();
+	}
+};
 
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data")
+//슬롯 구조체로 재설계
+USTRUCT(BlueprintType)
+struct FSlotData
+{
+	GENERATED_USTRUCT_BODY();
+	
+	//아이템 데이터
 	UPROPERTY()
-	TObjectPtr<class UItemBase> Item = nullptr;
+	FItemData ItemData;
+	//아이템 코드
+	UPROPERTY()
+	FName ItemID = NAME_None;
+	//내구도
+	UPROPERTY()
+	float CurrentDurability = 0.0f;
+	//개수
+	UPROPERTY()
+	int32 Amount = 0;
+
+	void SetAmount(const int32 NewAmount) { Amount = NewAmount; };
+	
+	bool IsEmpty() const { return ItemID == NAME_None; };
+	
+	bool IsNotEmpty() const { return ItemID != NAME_None; };
+	
+	void Clear()
+	{
+		ItemID = NAME_None;
+		Amount = 0;
+		CurrentDurability = 0.0f;
+	}
+	
+	bool operator==(const FSlotData& Other) const
+	{
+		return ItemID == Other.ItemID
+			&& Amount == Other.Amount
+			&& FMath::IsNearlyEqual(CurrentDurability, Other.CurrentDurability);
+	}
 };
 
 //조합기 타입 (인벤토리, 화로 등)
@@ -122,27 +221,27 @@ struct FRecipeData : public FTableRowBase
 	GENERATED_USTRUCT_BODY();
 
 	UPROPERTY(EditAnywhere)
-	ECraftMethod Method = ECraftMethod::INVEN;
+	ECraftMethod Method;
 	UPROPERTY(EditAnywhere)
-	EItemType ItemType = EItemType::MATERIAL;
+	EItemType ItemType;
 	UPROPERTY(EditAnywhere)
-	FName Ingredient1ID = NAME_None;
+	FName Ingredient1ID;
 	UPROPERTY(EditAnywhere)
-	int32 Ingredient1Amount = 0;
+	int32 Ingredient1Amount;
 	UPROPERTY(EditAnywhere)
-	FName Ingredient2ID = NAME_None;
+	FName Ingredient2ID;
 	UPROPERTY(EditAnywhere)
-	int32 Ingredient2Amount = 0;
+	int32 Ingredient2Amount;
 	UPROPERTY(EditAnywhere)
-	FName Ingredient3ID = NAME_None;
+	FName Ingredient3ID;
 	UPROPERTY(EditAnywhere)
-	int32 Ingredient3Amount = 0;
+	int32 Ingredient3Amount;
 	UPROPERTY(EditAnywhere)
-	FName ResultID = NAME_None;
+	FName ResultID;
 	UPROPERTY(EditAnywhere)
-	int32 ResultAmount = 0;
+	int32 ResultAmount;
 	UPROPERTY(EditAnywhere)
-	float Duration = 0.0f;
+	float Duration;
 
 	TArray<FName> GetIngredientsID() const
 	{
@@ -174,11 +273,11 @@ struct FRepairRecipeData : public FTableRowBase
 	GENERATED_USTRUCT_BODY();
 
 	UPROPERTY(EditAnywhere)
-	FName RecipeName = NAME_None;
+	FName RecipeName;
 	UPROPERTY(EditAnywhere)
-	FName Ingredient1ID = NAME_None;
+	FName Ingredient1ID;
 	UPROPERTY(EditAnywhere)
-	int32 Ingredient1Amount = 0;
+	int32 Ingredient1Amount;
 	UPROPERTY(EditAnywhere)
 	FName Ingredient2ID;
 	UPROPERTY(EditAnywhere)
@@ -190,9 +289,9 @@ struct FRepairRecipeData : public FTableRowBase
 	UPROPERTY(EditAnywhere)
 	FName Ingredient4ID;
 	UPROPERTY(EditAnywhere)
-	int32 Ingredient4Amount = 0;
+	int32 Ingredient4Amount;
 	UPROPERTY(EditAnywhere)
-	float Duration = 0.0f;
+	float Duration;
 	UPROPERTY(EditAnywhere)
 	bool Complete = false;
 
@@ -266,14 +365,12 @@ public:
 USTRUCT(BlueprintType)
 struct FUnknownRecord : public FTableRowBase
 {
-	GENERATED_USTRUCT_BODY();
+	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere)
-	FName RecordID;
-	UPROPERTY(EditAnywhere)
-	FText RecordTitle;
-	UPROPERTY(EditAnywhere)
-	FText RecordContent;
-	UPROPERTY(EditAnywhere)
-	UTexture2D* RecordImage = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString id;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString title;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (MultiLine = true))
+	FString content;
 };

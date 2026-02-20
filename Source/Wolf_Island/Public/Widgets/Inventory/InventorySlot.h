@@ -5,8 +5,10 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/Border.h"
+#include "Data/ItemDataStruct.h"
 #include "InventorySlot.generated.h"
 
+class AMainPlayer;
 class UInventoryComponent;
 /**
  * 
@@ -24,18 +26,22 @@ class WOLF_ISLAND_API UInventorySlot : public UUserWidget
 	GENERATED_BODY()
 public:
 
-	FORCEINLINE void SetItemReference(UItemBase* ItemIn) { ItemRef = ItemIn; };
+	FORCEINLINE void SetItemReference(FItemBaseData* ItemIn) { ItemRef = ItemIn; };
 	FORCEINLINE void SetIndex(int32 InIndex) { Index = InIndex; };
-	FORCEINLINE UItemBase* GetItemReference() const { return ItemRef; };
+	FORCEINLINE FItemBaseData* GetItemReference() const { return ItemRef; };
 	FORCEINLINE void SetDragDrop(bool CanDD) { CanDragDrop = CanDD; };
-	FORCEINLINE void SetOwnerRef(UInventoryComponent* Inventory) { OwnerInventoryRef = Inventory; };
+	FORCEINLINE void SetOwner(AActor* Owner) { OwnerActor = Owner; };
+	FORCEINLINE void SetInventoryRef(UInventoryComponent* Inventory) { OwnerInventoryRef = Inventory; };
 	FORCEINLINE UInventoryComponent* GetOwnerRef() const { return OwnerInventoryRef; };
 	void SetSelectedSlot();
 	void SetUnSelectedSlot();
+	void SetEmptySlot();
+	void RefreshSlot();
 	FLinearColor GetBrushColor() const { return ItemBorder->GetBrushColor(); };
 
-	
 protected:
+
+	//데이터
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category = "InventorySlot")
 	int32 Index;
 	
@@ -51,9 +57,17 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Inventory Slot")
 	TSubclassOf<UInventoryToolTip> ToolTipClass;
 	
-	UPROPERTY(VisibleAnywhere, Category="Inventory Slot")
-	UItemBase* ItemRef;
+	//UPROPERTY(VisibleAnywhere, Category = "Inventory Slot")
+	FItemBaseData* ItemRef;
+	
+	//UPROPERTY(VisibleAnywhere, Category = "Inventory Slot")
+	FItemData* ItemData;
+	
+	UPROPERTY(VisibleAnywhere, Category = "Inventory Slot")
+	AActor* OwnerActor;
+	
 
+	//위젯
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
 	UBorder* ItemBorder;
 

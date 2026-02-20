@@ -5,31 +5,32 @@
 #include "Widgets/Inventory/ItemAcquiredBlock.h"
 
 #include "Character/MainPlayer.h"
+#include "Components/Image.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
 #include "Components/ProgressBar.h"
+#include "Components/StatusComponent.h"
 #include "Components/TextBlock.h"
 #include "Components/WrapBox.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Widgets/Inventory/HotbarSlot.h"
 #include "Widgets/Inventory/InventorySlot.h"
-
-void UPlayerHUD::NativeConstruct()
-{
-	Super::NativeConstruct();
-	
-	RefreshHotBar();
-}
 
 void UPlayerHUD::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
 	PlayerRef = Cast<AMainPlayer>(GetOwningPlayerPawn());
+	DisplayDefault();
+	HideAirBar();
+	HideInteraction();
+}
 
-	if (PlayerRef)
-	{
-		PlayerRef->InventoryComponent->OnInventoryUpdated.AddUObject(this, &UPlayerHUD::RefreshHotBar);
-	}
+void UPlayerHUD::NativeConstruct()
+{
+	Super::NativeConstruct();
+
+	RefreshHotBar();
 }
 
 void UPlayerHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -38,6 +39,8 @@ void UPlayerHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 
 	//인터랙션 바 업데이트
 	UpdateInteraction();
+	
+	UpdateStatusBars();
 }
 
 void UPlayerHUD::AddItemMessage(FItemAddResult Result)
@@ -85,12 +88,14 @@ void UPlayerHUD::DisplayInteraction()
 {
 	ShowInteraction = true;
 	InteractionBar->SetVisibility(ESlateVisibility::Visible);
+	CrossHair->SetVisibility(ESlateVisibility::Hidden);
 }
 
 void UPlayerHUD::HideInteraction()
 {
 	ShowInteraction = false;
 	InteractionBar->SetVisibility(ESlateVisibility::Hidden);
+	CrossHair->SetVisibility(ESlateVisibility::Visible);
 }
 
 void UPlayerHUD::ToggleInteraction()
@@ -120,26 +125,83 @@ void UPlayerHUD::UpdateInteraction()
 	}
 }
 
+void UPlayerHUD::DisplayInteractable()
+{
+	CrossHair->SetBrushFromTexture(InteractableCrossHair);
+}
+
+void UPlayerHUD::DisplayDefault()
+{
+	CrossHair->SetBrushFromTexture(DefaultCrossHair);
+}
+
+void UPlayerHUD::DisplayAirBar()
+{
+	AirBar->SetVisibility(ESlateVisibility::Visible);
+}
+
+void UPlayerHUD::HideAirBar()
+{
+	AirBar->SetVisibility(ESlateVisibility::Hidden);
+}
+
 void UPlayerHUD::RefreshHotBar()
 {
 	HotBar->ClearChildren();
+	//HotBar->InvalidateLayoutAndVolatility();
 	
 	for (int i=0; i<6; i++)
 	{
-		UInventorySlot* HotSlot = CreateWidget<UInventorySlot>(this, SlotClass);
+		UHotbarSlot* HotSlot = CreateWidget<UHotbarSlot>(this, SlotClass);
 		HotSlot->SetDragDrop(false);
-		HotSlot->SetOwnerRef(PlayerRef->InventoryComponent);
+		HotSlot->SetInventoryRef(PlayerRef->InventoryComponent);
+		HotSlot->SetIndex(i);
+		HotSlot->SetSlotNumber(i+1);
 
-		if (UItemBase* Item = PlayerRef->InventoryComponent->GetInventory()[i].Item)
-		{
-			HotSlot->SetItemReference(Item);
-		}
+		HotSlot->SetUnSelectedSlot();
 		
 		if (PlayerRef->HotBarIndex == i)
 		{
 			HotSlot->SetSelectedSlot();
 		}
 		
+		HotSlot->RefreshSlot();
 		HotBar->AddChildToWrapBox(HotSlot);
+	}
+}
+
+void UPlayerHUD::UpdateHotBar()
+{
+	UE_LOG(LogTemp, Warning, TEXT("UpdateHotBar EXECUTED"));
+	if (HotBar&&HotBar->HasAnyChildren())
+	{
+		int32 Count = HotBar->GetChildrenCount();
+		
+		for (int i=0; i<Count; i++){
+			UHotbarSlot* HotSlot = Cast<UHotbarSlot>(HotBar->GetChildAt(i));
+			HotSlot->SetUnSelectedSlot();
+		
+			if (PlayerRef->HotBarIndex == i)
+			{
+				HotSlot->SetSelectedSlot();
+			}
+			
+			HotSlot->RefreshSlot();
+		}
+	}
+}
+
+void UPlayerHUD::UpdateStatusBars()
+{
+	if (PlayerRef)
+	{
+		if (UStatusComponent* Status = PlayerRef->StatusComponent)
+		{
+			HealthBar->SetPercent(Status->GetHPPercent());
+			StaminaBar->SetPercent(Status->GetStaminaPercent());
+			HungerBar->SetPercent(Status->GetHungerPercent());
+			HydrationBar->SetPercent(Status->GetHydrationPercent());
+			AirBar->SetPercent(Status->GetAirPercent());
+		}
 	}
 }

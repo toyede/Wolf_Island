@@ -3,6 +3,8 @@
 
 #include "Interaction/InteractableActor.h"
 
+#include "Net/UnrealNetwork.h"
+
 // Sets default values
 AInteractableActor::AInteractableActor()
 {
@@ -15,8 +17,6 @@ AInteractableActor::AInteractableActor()
 void AInteractableActor::BeginPlay()
 {
 	Super::BeginPlay();
-
-	InteractableData.InteractionDuration = InteractionDuration;
 }
 
 // Called every frame
@@ -26,3 +26,7 @@ void AInteractableActor::Tick(float DeltaTime)
 
 }
 
+void AInteractableActor::SetInteractionDuration(float NewInteractionDuration)
+{
+	InteractableData.InteractionDuration = NewInteractionDuration;
+}

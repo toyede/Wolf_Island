@@ -28,18 +28,40 @@ public:
 		
 	UPROPERTY(meta=(BindWidget))
 	UProgressBar* InteractionBar;
+	
+	UPROPERTY(meta=(BindWidget))
+	class UImage* CrossHair;
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UItemAcquiredBlock> ItemAcquiredBlockClass;
-
+	
+	//아이템 획득 메시지 넣는 곳
 	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
 	class UVerticalBox* InfoList;
 
+	//핫바 슬롯
 	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
 	class UWrapBox* HotBar;
+	
+	//상태 프로그래스 바들
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	UProgressBar* HealthBar;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	UProgressBar* StaminaBar;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	UProgressBar* HungerBar;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	UProgressBar* HydrationBar;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	UProgressBar* AirBar;
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<class UInventorySlot> SlotClass;
+	
+	UPROPERTY(EditDefaultsOnly)
+	UTexture2D* DefaultCrossHair;
+	UPROPERTY(EditDefaultsOnly)
+	UTexture2D* InteractableCrossHair;
 
 	UPROPERTY()
 	bool ShowInteraction = true;
@@ -52,9 +74,23 @@ public:
 	void ToggleInteraction();
 	UFUNCTION(BlueprintCallable)
 	void UpdateInteraction();
+	UFUNCTION(BlueprintCallable)
+	void DisplayInteractable();
+	UFUNCTION(BlueprintCallable)
+	void DisplayDefault();
+	UFUNCTION(BlueprintCallable)
+	void DisplayAirBar();
+	UFUNCTION(BlueprintCallable)
+	void HideAirBar();
 
 	UFUNCTION(BlueprintCallable)
 	void RefreshHotBar();
+	
+	UFUNCTION(BlueprintCallable)
+	void UpdateHotBar();
+	
+	UFUNCTION(BlueprintCallable)
+	void UpdateStatusBars();
 
 protected:
 	

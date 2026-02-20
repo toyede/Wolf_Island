@@ -24,6 +24,11 @@ void UCraftPanel::NativeConstruct()
 {
 	Super::NativeConstruct();
 
+	if (OwnerInventory)
+	{
+		OwnerInventory->OnInventoryUpdated.AddUObject(this, &UCraftPanel::RefreshRecipeList);
+	}
+
 	OwnerInventory = GetOwningPlayerPawn()->GetComponentByClass<UInventoryComponent>();
 	CraftButton->OnClicked.AddDynamic(this, &UCraftPanel::OnCraftButtonClicked);
 
@@ -32,9 +37,10 @@ void UCraftPanel::NativeConstruct()
 
 void UCraftPanel::OnCraftButtonClicked()
 {
-	if (OwnerInventory)
+	if (OwnerInventory && CurrentRecipeData.ResultID != NAME_None)
 	{
-		OwnerInventory->MakeItem(CurrentRecipeData);
+		OwnerInventory->Request_MakeItem(CurrentRecipeData);
+
 		SetCraftButton(CurrentRecipeData);
 	}
 }
@@ -106,8 +112,8 @@ void UCraftPanel::SetRecipeInfo(FRecipeData RecipeData)
 		FItemData* ItemData = ItemDataTable->FindRow<FItemData>(Ingredient.Key, "Ingredients");
 		UCraftSlot* CraftSlot = CreateWidget<UCraftSlot>(GetWorld(), SlotClass);
 
-		UE_LOG(LogTemp, Warning, TEXT("%s : %d"), *FText::FromName(Ingredient.Key).ToString(), Ingredient.Value);
-		CraftSlot->SetCraftSlot(*ItemData, Ingredient.Value);
+		//UE_LOG(LogTemp, Warning, TEXT("%s : %d"), *FText::FromName(Ingredient.Key).ToString(), Ingredient.Value);
+		CraftSlot->SetCraftSlot(ItemData, Ingredient.Value);
 
 		IngredientList->AddChild(CraftSlot);		
 	}
@@ -116,7 +122,7 @@ void UCraftPanel::SetRecipeInfo(FRecipeData RecipeData)
 	FItemData* ResultData = ItemDataTable->FindRow<FItemData>(RecipeData.ResultID, "ResultItem");
 	
 	//결과물 정보 세팅
-	ResultSlot->SetCraftSlot(*ResultData, RecipeData.ResultAmount);
+	ResultSlot->SetCraftSlot(ResultData, RecipeData.ResultAmount);
 	ItemName->SetText(ResultData->TextData.Name);
 	ItemDescription->SetText(ResultData->TextData.Description);
 
