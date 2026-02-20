@@ -30,6 +30,7 @@
 #include "Components/AudioComponent.h"
 #include "Components/BillboardComponent.h"
 #include "WaterBodyComponent.h"
+#include "Components/BuildingComponent.h"
 #include "Games/MainGameState.h"
 #include "Games/MainSaveGame.h"
 #include "Games/GameModes/MainGameMode.h"
@@ -639,8 +640,22 @@ void AMainPlayer::RefreshHand()
 void AMainPlayer::Attack()
 {
 	if (IsSwimming) return;
+	if (UBuildingComponent* BuildComp = FindComponentByClass<UBuildingComponent>())
+	{
+		int32 StateInt = (int32)BuildComp->GetCurrentState();
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, 
+			FString::Printf(TEXT("클라이언트 Attack 호출됨! 현재 상태: %d"), StateInt));
+
+		if (BuildComp->GetCurrentState() == EBuildingState::Placing)
+		{
+			BuildComp->ConfirmBuild(); 
+			return; 
+		}
+	}
 	
-	WeaponComponent->Request_UseWeapon();
+	if (WeaponComponent) {
+		WeaponComponent->Request_UseWeapon();
+	}
 }
 
 void AMainPlayer::CheckInteraction()
@@ -970,6 +985,7 @@ void AMainPlayer::WeaponTrace(const FVector& StartPos, const FVector& EndPos)
 //공격 트레이스 시작 함수
 void AMainPlayer::StartWeaponAttack()
 {
+	
 	//클라이언트 호출이면 유기
 	if (!HasAuthority()) return;
 	
@@ -1410,6 +1426,14 @@ void AMainPlayer::OnRep_IsRunning()
 
 void AMainPlayer::Request_Attack()
 {
+	if (UBuildingComponent* BuildComp = FindComponentByClass<UBuildingComponent>())
+	{
+		if (BuildComp->GetCurrentState() == EBuildingState::Placing)
+		{
+			BuildComp->ConfirmBuild(); 
+			return;
+		}
+	}
 	if (HasAuthority())
 	{
 		Attack();

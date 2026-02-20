@@ -578,7 +578,11 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Debug")
 	void PrintInventory(float DeltaTime);
 
-public:	
+public:
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool ConsumeRecipeIngredients(const FRecipeData& Recipe);
+	
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 

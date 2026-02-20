@@ -374,3 +374,20 @@ struct FUnknownRecord : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (MultiLine = true))
 	FString content;
 };
+
+
+// 건축 시스템 관련(프리뷰용 메시와 실제 설치될 BP)
+USTRUCT(BlueprintType)
+struct FBuildingData : public FTableRowBase
+{
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Building")
+	TSoftObjectPtr<UStaticMesh> GhostMesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Building")
+	TSubclassOf<AActor> BuildingClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Building")
+	FName PlacementTag;
+};

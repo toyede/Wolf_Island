@@ -3,6 +3,8 @@
 
 #include "Games/MainGameState.h"
 #include "Character/MainPlayerController.h"
+#include "Games/MainGameState.h"
+#include "Character/MainPlayerController.h"
 #include "Net/UnrealNetwork.h"
 
 void AMainGameState::BeginPlay()

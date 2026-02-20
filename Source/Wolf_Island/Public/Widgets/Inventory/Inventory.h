@@ -42,6 +42,9 @@ class WOLF_ISLAND_API UInventory : public UUserWidget
 
 	UPROPERTY(meta=(BindWidget))
 	USizeBox* UnknownRecordSection;
+
+	UPROPERTY(meta=(BindWidget))
+	USizeBox* BuildingRecipeSection;
 	
 	UPROPERTY(meta=(BindWidget))
 	class UInventoryPanel* InventoryPanel;
@@ -67,6 +70,9 @@ class WOLF_ISLAND_API UInventory : public UUserWidget
 	UPROPERTY(meta=(BindWidget))
 	UButton* UnknownRecordButton;
 
+	UPROPERTY(meta=(BindWidget))
+	UButton* BuildingRecipeButton;
+
 protected:
 	virtual void NativeOnInitialized() override;
 
@@ -82,4 +88,6 @@ protected:
 	void HandleCraftRecipeClicked();
 	UFUNCTION()
 	void HandleUnknownRecordClicked();
+	UFUNCTION()
+	void HandleBuildingRecipeClicked();
 };

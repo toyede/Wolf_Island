@@ -605,6 +605,26 @@ void UInventoryComponent::PrintInventory(float DeltaTime)
 	}	
 }
 
+bool UInventoryComponent::ConsumeRecipeIngredients(const FRecipeData& Recipe)
+{
+	if (!GetOwner()->HasAuthority()) return false;
+
+	if (!CheckCanMakeRecipe(Recipe))
+	{
+		return false;
+	}
+
+	TMap<FName, int32> Ingredients = Recipe.GetIngredients();
+	for (const auto& Pair : Ingredients)
+	{
+		RemoveItemsByID(Pair.Key, Pair.Value);
+	}
+
+	InventoryChanged();
+    
+	return true;
+}
+
 bool UInventoryComponent::CheckCanMakeRecipe(FRecipeData Recipe)
 {
 	bool pass1 = false, pass2 = false, pass3 = false;
