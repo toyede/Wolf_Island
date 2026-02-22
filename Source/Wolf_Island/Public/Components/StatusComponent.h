@@ -11,6 +11,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHPZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStaminaZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHungerZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHydrationZero);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInfectionStarted);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInfectionChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAirZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAirFull);
@@ -33,6 +34,8 @@ public:
 	FOnHungerZero OnHungerZero;
 	UPROPERTY(BlueprintAssignable, Category="Status Delegate")
 	FOnHydrationZero OnHydrationZero;
+	UPROPERTY(BlueprintAssignable, Category = "Status Delegate")
+	FOnInfectionStarted OnInfectionStarted;
 	UPROPERTY(BlueprintAssignable, Category="Status Delegate")
 	FOnInfectionChanged OnInfectionChanged;
 	UPROPERTY(BlueprintAssignable, Category="Status Delegate")

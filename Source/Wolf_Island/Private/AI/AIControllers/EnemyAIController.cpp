@@ -154,7 +154,7 @@ void AEnemyAIController::HandleSight(AActor* Actor, const FAIStimulus& Stimulus)
 void AEnemyAIController::HandleDamage(AActor* Actor, const FAIStimulus& Stimulus)
 {
 	if (!Stimulus.WasSuccessfullySensed()) return;
-	if (Actor && Actor->IsA<AEnemyAIBase>()) return;
+	if (IsFriendlyAggroSource(Actor)) return;
 
 	AttackTarget = Actor;
 	SetEnemyState(EEnemyState::Combat);
@@ -167,18 +167,98 @@ void AEnemyAIController::HandleHearing(AActor* Actor, const FAIStimulus& Stimulu
 
 	if (EnemyState == EEnemyState::Combat) return;
 
+	// Howling 연계는 "플레이어 타겟 공유"만 허용한다.
+	AActor* SharedPlayerTarget = nullptr;
+
+	// 1) 소리를 직접 낸 대상이 플레이어면 그대로 사용
+	if (APawn* SensedPawn = Cast<APawn>(Actor))
+	{
+		if (SensedPawn->IsPlayerControlled())
+		{
+			SharedPlayerTarget = Actor;
+		}
+	}
+
+	// 2) 소리를 낸 대상이 Enemy면, 그 Enemy의 현재 AttackTarget(플레이어)만 공유
+	if (!SharedPlayerTarget)
+	{
+		if (AEnemyAIBase* SourceEnemy = Cast<AEnemyAIBase>(Actor))
+		{
+			if (AEnemyAIController* SourceController = Cast<AEnemyAIController>(SourceEnemy->GetController()))
+			{
+				AActor* CandidateTarget = SourceController->AttackTarget;
+				if (APawn* CandidatePawn = Cast<APawn>(CandidateTarget))
+				{
+					if (CandidatePawn->IsPlayerControlled())
+					{
+						SharedPlayerTarget = CandidateTarget;
+					}
+				}
+			}
+		}
+	}
+
+	// 플레이어 타겟이 없으면 전투 전환하지 않음 (늑대->늑대 타겟 방지)
+	if (!IsValid(SharedPlayerTarget)) return;
+
 	float RandomDelay = FMath::RandRange(1.0f, 2.0f);
 	FTimerDelegate TimerDel;
-	TimerDel.BindWeakLambda(this, [this, Actor]()
+	TimerDel.BindWeakLambda(this, [this, SharedPlayerTarget]()
 		{
-			if (IsValid(Actor) && EnemyState != EEnemyState::Combat && EnemyState != EEnemyState::Dead)
+			if (IsValid(SharedPlayerTarget) && EnemyState != EEnemyState::Combat && EnemyState != EEnemyState::Dead)
 			{
-				AttackTarget = Actor;
+				AttackTarget = SharedPlayerTarget;
 				SetEnemyState(EEnemyState::Combat);
 			}
 		});
 
 	GetWorld()->GetTimerManager().SetTimer(HearingReactTimer, TimerDel, RandomDelay, false);
+}
+
+bool AEnemyAIController::IsFriendlyAggroSource(AActor* SourceActor) const
+{
+	if (!IsValid(SourceActor))
+	{
+		return false;
+	}
+
+	// Direct enemy actor
+	if (SourceActor->IsA<AEnemyAIBase>())
+	{
+		return true;
+	}
+
+	// Projectile/child actor owned by an enemy
+	if (AActor* OwnerActor = SourceActor->GetOwner())
+	{
+		if (OwnerActor->IsA<AEnemyAIBase>())
+		{
+			return true;
+		}
+	}
+
+	// Instigator pawn is an enemy
+	if (APawn* InstigatorPawn = SourceActor->GetInstigator())
+	{
+		if (InstigatorPawn->IsA<AEnemyAIBase>())
+		{
+			return true;
+		}
+	}
+
+	// Instigator controller controls an enemy pawn
+	if (AController* InstigatorController = SourceActor->GetInstigatorController())
+	{
+		if (APawn* InstigatorPawn = InstigatorController->GetPawn())
+		{
+			if (InstigatorPawn->IsA<AEnemyAIBase>())
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
 }
 
 void AEnemyAIController::HandleScent(const FAIStimulus& Stimulus)

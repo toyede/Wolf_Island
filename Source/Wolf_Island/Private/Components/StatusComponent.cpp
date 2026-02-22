@@ -408,14 +408,10 @@ void UStatusComponent::EnableController()
 
 void UStatusComponent::StartInfection()
 {
-	/*GetWorld()->GetTimerManager().SetTimer(
-		InfectionTimer,
-		this,
-		&UStatusComponent::IncreaseInfection,
-		InfectionInterval,
-		true);*/
-	IsInfected = true;
+	if (IsInfected) return;
 
+	IsInfected = true;
+	OnInfectionStarted.Broadcast();
 }
 
 void UStatusComponent::StopInfection()

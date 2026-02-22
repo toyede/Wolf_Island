@@ -68,6 +68,9 @@ void AMoonlightInfectionSystem::BeginPlay()
 	{
 		UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] System initialized successfully"));
 	}
+
+	// 감염 체크를 위한 플레이어 바인딩 (최초 1회)
+	BindPlayers(FoundActors);
 }
 
 void AMoonlightInfectionSystem::ActivateInfectionCheck()
@@ -102,6 +105,28 @@ void AMoonlightInfectionSystem::DeactivateInfectionCheck()
 
 	// 타이머 정지
 	GetWorldTimerManager().ClearTimer(CheckTimerHandle);
+}
+
+void AMoonlightInfectionSystem::BindPlayers(const TArray<AActor*>& Players)
+{
+	for (AActor* Actor : Players)
+	{
+		if (AMainPlayer* Player = Cast<AMainPlayer>(Actor))
+		{
+			if (UStatusComponent* Status =
+				Player->FindComponentByClass<UStatusComponent>())
+			{
+				Status->OnInfectionStarted.AddDynamic(
+					this,
+					&AMoonlightInfectionSystem::HandleInfectionStarted
+				);
+			}
+		}
+	}
+}
+
+void AMoonlightInfectionSystem::HandleInfectionStarted()
+{
 }
 
 void AMoonlightInfectionSystem::CheckAllPlayers()
@@ -272,6 +297,18 @@ void AMoonlightInfectionSystem::ApplyInfection(AActor* Player, float Amount)
 		);
 	}
 	*/
+
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			-1, // Key (자동 생성)
+			CheckInterval, // 표시 시간
+			FColor::Red,
+			Message,
+			true, // 새로운 메시지 우선
+			FVector2D(1.5f, 1.5f) // 텍스트 크기
+		);
+	}
 
 	UStatusComponent* StatusComp = Player->FindComponentByClass<UStatusComponent>();
 

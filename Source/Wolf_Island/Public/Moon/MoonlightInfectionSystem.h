@@ -55,7 +55,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Moonlight System")
 	void DeactivateInfectionCheck();
 
+	// 감염 시작 관련
+	UFUNCTION()
+	void BindPlayers(const TArray<AActor*>& Players);
 
+	UFUNCTION()
+	void HandleInfectionStarted();
 private:
 	// ========== 내부 변수 ==========
 	/** BP_DynamicSky 참조 */
