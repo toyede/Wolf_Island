@@ -21,18 +21,27 @@ void UBuildingPanel::RefreshBuildingList()
 
 	RecipeList->ClearChildren();
 
+	int32 Index = 0;
 	RecipeTable->ForeachRow<FRecipeData>(TEXT("BuildingContext"),
 	[&](const FName& RowName, const FRecipeData& Recipe)
 	{
 		bool bTypeMatch = (Recipe.ItemType == EItemType::BUILDING);
         
 		bool bMethodMatch = (Recipe.Method == TargetBuildMethod);
-
+		
 		if (bTypeMatch && bMethodMatch)
 		{
+			if (Index == 0)
+			{
+				CurrentRecipeData = Recipe;
+			}
+			
 			AddBuildingRecipe(Recipe);
+			Index++;
 		}
 	});
+	
+	SetBuildingInfo(CurrentRecipeData);
 }
 
 void UBuildingPanel::SetBuildingMethod(ECraftMethod NewMethod)

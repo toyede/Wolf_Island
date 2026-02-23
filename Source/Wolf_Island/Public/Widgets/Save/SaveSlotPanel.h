@@ -53,4 +53,7 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void OnCreateCommited(const FString& Text);
+	
+	UFUNCTION(BlueprintCallable)
+	void OnCancelClicked();
 };

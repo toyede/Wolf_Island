@@ -8,10 +8,15 @@
 #include "Blueprint/UserWidget.h"
 #include "Components/Button.h"
 #include "Components/EditableTextBox.h"
+#include "Games/MainGameInstance.h"
 #include "Games/MainHUD.h"
 #include "Widgets/Chatting/ChattingPanel.h"
 #include "Games/MainGameState.h"
+#include "Games/GameModes/MainGameMode.h"
+#include "Games/GameModes/MultiGameMode.h"
 #include "Kismet/GameplayStatics.h"
+#include "Widgets/BaseButton.h"
+#include "Widgets/PlayerHUD.h"
 #include "Widgets/MainMenu/PauseMenu.h"
 
 class UEnhancedInputLocalPlayerSubsystem;
@@ -36,14 +41,14 @@ void AMainPlayerController::BeginPlay()
 		PauseMenu->SettingButton->OnClicked.AddDynamic(this, &AMainPlayerController::OnSetting);
 		PauseMenu->QuitButton->OnClicked.AddDynamic(this, &AMainPlayerController::OnQuit);
 		
-		PauseMenu->AddToViewport();
-		HidePuaseMenu();
+		PauseMenu->AddToViewport(10);
+		HidePauseMenu();
 	}
 	
+	MainGameInstance = Cast<UMainGameInstance>(GetGameInstance());
+	MainGameMode = GetWorld()->GetAuthGameMode();
 	MainPlayerState = GetPlayerState<AMainPlayerState>();
 	MainGameState = Cast<AMainGameState>(GetWorld()->GetGameState());
-	
-	//ExitChatMode();
 }
 
 void AMainPlayerController::SetupInputComponent()
@@ -63,6 +68,38 @@ void AMainPlayerController::SetupInputComponent()
 	}
 }
 
+void AMainPlayerController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+	
+	UE_LOG(LogTemp, Warning, TEXT("[%s] Possessed in %s"), *GetName(), *InPawn->GetName())
+	AMainPlayer* InPlayer = Cast<AMainPlayer>(InPawn);
+	if (InPlayer && HUDClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%hs]Set Player HUD"), HasAuthority()?"SERVER":"CLIENT")
+		PlayerHUD = CreateWidget<UPlayerHUD>(this, HUDClass);
+		PlayerHUD->SetPlayerRef(InPlayer);
+		InPlayer->SetHUDWidget(PlayerHUD);
+		PlayerHUD->AddToViewport();
+	}
+}
+
+void AMainPlayerController::OnUnPossess()
+{
+	if (IsLocalController() && PlayerHUD)
+	{
+		PlayerHUD->RemoveFromParent();
+		PlayerHUD = nullptr;
+	}
+	
+	Super::OnUnPossess();
+}
+
+void AMainPlayerController::SetPlayerHUD(AMainPlayer* OwnerPlayer)
+{
+	
+}
+
 void AMainPlayerController::ToggleChatMode()
 {
 	if (IsChat) ExitChatMode();
@@ -71,7 +108,7 @@ void AMainPlayerController::ToggleChatMode()
 
 void AMainPlayerController::TogglePause()
 {
-	if (IsPause) HidePuaseMenu();
+	if (IsPause) HidePauseMenu();
 	else DisplayPauseMenu();
 }
 
@@ -110,7 +147,8 @@ void AMainPlayerController::ExitChatMode()
 
 void AMainPlayerController::DisplayPauseMenu()
 {
-	IsPause = true;
+	IsPause = !Cast<AMultiGameMode>(GetWorld()->GetAuthGameMode());
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE MULTI?] : %d"), IsPause)
 	bShowMouseCursor = true;
 	
 	FInputModeUIOnly Mode;
@@ -121,7 +159,7 @@ void AMainPlayerController::DisplayPauseMenu()
 	PauseMenu->SetVisibility(ESlateVisibility::Visible);
 }
 
-void AMainPlayerController::HidePuaseMenu()
+void AMainPlayerController::HidePauseMenu()
 {
 	IsPause = false;
 	bShowMouseCursor = false;
@@ -157,6 +195,33 @@ void AMainPlayerController::SendChat(FChattingData NewChattingData)
 	MainGameState->AddChattingMessage(NewChattingData);
 }
 
+void AMainPlayerController::Client_SetInputModeGame_Implementation()
+{
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+	bShowMouseCursor = false;
+}
+
+void AMainPlayerController::Server_ConfirmRole_Implementation(ECharacterRole NewRole)
+{
+	AMultiGameMode* GM = Cast<AMultiGameMode>(GetWorld()->GetAuthGameMode());
+	AMainPlayerState* PS = Cast<AMainPlayerState>(PlayerState);
+	PS->SetPlayerRole(NewRole);
+	UE_LOG(LogTemp, Warning, TEXT("Sent Role %d in Server"), PS->GetPlayerRole());
+	GM->AllocatePlayer(this);
+}
+
+void AMainPlayerController::Client_OpenSelectionUI_Implementation()
+{	
+	URoleSelection* SelectionWidget = CreateWidget<URoleSelection>(this, RoleSelectionWidgetClass);
+	SelectionWidget->AddToViewport();
+	
+	FInputModeUIOnly InputMode;
+	InputMode.SetWidgetToFocus(SelectionWidget->TakeWidget());
+	SetInputMode(InputMode);
+	bShowMouseCursor = true;
+}
+
 void AMainPlayerController::AddChat(FChattingData NewChattingData)
 {
 	if (!ChattingPanel) return;
@@ -166,7 +231,7 @@ void AMainPlayerController::AddChat(FChattingData NewChattingData)
 
 void AMainPlayerController::OnResume()
 {
-	HidePuaseMenu();
+	HidePauseMenu();
 }
 
 void AMainPlayerController::OnSetting()

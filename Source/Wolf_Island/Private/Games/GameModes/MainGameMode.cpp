@@ -18,9 +18,9 @@
 #include "Kismet/GameplayStatics.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
-void AMainGameMode::StartPlay()
+void AMainGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
 {
-	Super::StartPlay();
+	Super::InitGame(MapName, Options, ErrorMessage);
 	
 	MainGameInstance = Cast<UMainGameInstance>(GetGameInstance());
 	
@@ -28,28 +28,34 @@ void AMainGameMode::StartPlay()
 	if (MainGameInstance && MainGameInstance->CurrenSaveGame)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Load Save Data From MainGameInstance"));
-		SaveGameData = MainGameInstance->CurrenSaveGame;
+		CurrentSaveData = MainGameInstance->CurrenSaveGame;
+		PlayersSaveData = CurrentSaveData->Players;
 	}
 	//에디터에서 월드로 바로 입장 시 테스트 세이브 게임 데이터 생성 및 로드
 	else
 	{
-		FString WorldName = GetWorld()->GetName();
 		//테스트 세이브 게임 데이터가 있으면 불러오기
-		if (UGameplayStatics::DoesSaveGameExist(TEXT("TEST001_")+WorldName,0))
+		if (UGameplayStatics::DoesSaveGameExist(TEXT("TEST001_")+MapName,0))
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Load TEST SAVE GAME"));
-			SaveGameData = Cast<UMainSaveGame>(UGameplayStatics::LoadGameFromSlot(TEXT("TEST001_")+WorldName, 0));
+			CurrentSaveData = Cast<UMainSaveGame>(UGameplayStatics::LoadGameFromSlot(TEXT("TEST001_")+MapName, 0));
+			PlayersSaveData = CurrentSaveData->Players;
 		}
 		//테스트 세이브 게임 데이터가 없으면 생성
 		else
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Create TEST SAVE GAME"));
-			SaveGameData = Cast<UMainSaveGame>(UGameplayStatics::CreateSaveGameObject(UMainSaveGame::StaticClass()));
-			SaveGameData->SlotName = TEXT("TEST001_")+WorldName;
-			SaveGameData->WorldName = WorldName;
-			UGameplayStatics::SaveGameToSlot(SaveGameData, SaveGameData->SlotName, 0);
+			CurrentSaveData = Cast<UMainSaveGame>(UGameplayStatics::CreateSaveGameObject(UMainSaveGame::StaticClass()));
+			CurrentSaveData->SlotName = TEXT("TEST001_")+MapName;
+			CurrentSaveData->WorldName = MapName;
+			UGameplayStatics::SaveGameToSlot(CurrentSaveData, CurrentSaveData->SlotName, 0);
 		}
 	}
+}
+
+void AMainGameMode::StartPlay()
+{
+	Super::StartPlay();
 	
 	LoadWorld();
 	
@@ -89,8 +95,8 @@ void AMainGameMode::PostLogin(APlayerController* NewPlayer)
 	int32 A = FMath::RandRange(0, Adjs.Num()-1);
 	int32 N = FMath::RandRange(0, Nouns.Num()-1);
 	
-	//FString NewID = Adjs[A]+" "+Nouns[N]+FString::FromInt(Counter++);
-	FString NewID = "TESTER"+FString::FromInt(Counter++);
+	FString NewID = Adjs[A]+" "+Nouns[N]+FString::FromInt(Counter++);
+	//FString NewID = "TESTER"+FString::FromInt(Counter++);
 	
 	PS->SetPlayerName(NewID);
 	
@@ -107,24 +113,35 @@ void AMainGameMode::HandleStartingNewPlayer_Implementation(APlayerController* Ne
 {
 	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
 	
-	//로그인 시 해당 플레이어의 저장된 정보를 불러온다.
-	AMainPlayer* Player = Cast<AMainPlayer>(NewPlayer->GetPawn());
-	if (Player)
+	GetWorld()->GetTimerManager().SetTimerForNextTick([this, NewPlayer]
 	{
-		LoadPlayer(Player);
-	}
+		StartingNewPlayer(NewPlayer);
+	});
 }
 
 void AMainGameMode::Logout(AController* Exiting)
 {
 	//로그아웃 시 플레이어 정보 저장
-	AMainPlayer* Player = Cast<AMainPlayer>(Exiting->GetPawn());
-	if (Player)
+	AMainPlayerState* PS = Cast<AMainPlayerState>(Exiting->PlayerState);
+	
+	if (PS)
 	{
-		SavePlayer(Player);
+		SavePlayer(PS);
 	}
 	
 	Super::Logout(Exiting);
+}
+
+void AMainGameMode::StartingNewPlayer(APlayerController* NewPlayer)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[SINGLEPLAY] Starting New Player"));
+	//로그인 시 해당 플레이어의 저장된 정보를 불러온다.
+	AMainPlayerState* PS = Cast<AMainPlayerState>(NewPlayer->PlayerState);
+	
+	if (PS)
+	{
+		LoadPlayer(PS);
+	}
 }
 
 void AMainGameMode::SetActorCache()
@@ -145,7 +162,7 @@ void AMainGameMode::SetActorCache()
 
 void AMainGameMode::SaveWorld()
 {
-	UMainSaveGame* Save = SaveGameData;
+	UMainSaveGame* Save = CurrentSaveData;
 	
 	if (!Save)
 	{
@@ -183,43 +200,31 @@ void AMainGameMode::SaveWorld()
 	for (APlayerState* PS : GS->PlayerArray)
 	{
 		//각 플레이어의 저장 코드 실행
-		AMainPlayer* Player = Cast<AMainPlayer>(PS->GetPawn());
-		SavePlayer(Player);
+		AMainPlayerState* MPS = Cast<AMainPlayerState>(PS);
+		SavePlayer(MPS);
 	}
 	//세이브 파일에 플레이어 저장 데이터 추가
 	Save->Players = PlayersSaveData;
 	
 	//세이브 파일 슬롯에 저장
-	UGameplayStatics::SaveGameToSlot(SaveGameData, SaveGameData->SlotName, 0);
-	UE_LOG(LogTemp, Warning, TEXT("Test Save at %s"), *SaveGameData->SlotName);
+	UGameplayStatics::SaveGameToSlot(CurrentSaveData, CurrentSaveData->SlotName, 0);
+	UE_LOG(LogTemp, Warning, TEXT("Test Save at %s"), *CurrentSaveData->SlotName);
 	
 	
 	FChattingData Chat = FChattingData(
-		TEXT("SYSTEM"),TEXT("자동 저장 완료."), EMessageType::NOTICE);
+		TEXT("SYSTEM"),TEXT("자동 저장 완료"), EMessageType::NOTICE);
 	GS->AddChattingMessage(Chat);
-	
-	//월드 시간 저장
 }
 
 void AMainGameMode::LoadWorld()
 {
 	if (!HasAuthority()) return;
-	UE_LOG(LogTemp, Warning, TEXT("Test Load at %s"), *SaveGameData->SlotName);
+	UE_LOG(LogTemp, Warning, TEXT("Test Load at %s"), *CurrentSaveData->SlotName);
 	
 	UMainSaveGame* Save =
-		Cast<UMainSaveGame>(UGameplayStatics::LoadGameFromSlot(SaveGameData->SlotName, 0));
+		Cast<UMainSaveGame>(UGameplayStatics::LoadGameFromSlot(CurrentSaveData->SlotName, 0));
 
 	if (!Save) return;
-	
-	//플레이어 데이터 로드
-	PlayersSaveData = Save->Players;
-	
-	AMainGameState* GS = GetGameState<AMainGameState>();
-	for (APlayerState* PS : GS->PlayerArray)
-	{
-		AMainPlayer* Player = Cast<AMainPlayer>(PS->GetPawn());
-		LoadPlayer(Player);
-	}
 	
 	//저장된 액터가 있으면 액터 로드
 	if (Save->SavedActors.Num() != 0)
@@ -265,7 +270,7 @@ void AMainGameMode::LoadWorld()
 					Savable->Execute_LoadData(NewActor, Data);
 				}
 			}
-		}	
+		}
 	}
 	
 	//폴리지 데이터 로드
@@ -310,63 +315,212 @@ void AMainGameMode::LoadWorld()
 		}
 	}
 	
-	UE_LOG(LogTemp, Warning, TEXT("Load at %s COMPLETE"), *SaveGameData->SlotName);
+	UE_LOG(LogTemp, Warning, TEXT("Load at %s COMPLETE"), *CurrentSaveData->SlotName);
 }
 
-void AMainGameMode::SavePlayer(AMainPlayer* TargetPlayer)
+void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 {
+	//해당 플레이어의 아이디를 키로하는 맵에 데이터를 저장.
 	//FString PlayerID = FString::FromInt(TargetPlayer->GetController()->PlayerState->GetPlayerId());
 	//FString PlayerID = TargetPlayer->GetController()->PlayerState->GetUniqueId()->ToString();
 	FString PlayerID = TEXT("TESTER");
-	
 	FPlayerSaveData& PlayerSaveData = PlayersSaveData.FindOrAdd(PlayerID);
 	
 	PlayerSaveData.PlayerID = PlayerID;
-	PlayerSaveData.Transform = TargetPlayer->GetActorTransform();
-	PlayerSaveData.Velocity = TargetPlayer->GetVelocity();
-	PlayerSaveData.ControlRotation = TargetPlayer->GetControlRotation();
 	
-	PlayerSaveData.InventoryItems = TargetPlayer->InventoryComponent->GetInventory();
+	//플레이어가 인간인 상태에서 저장, 기절인 상태, 죽은 상태에서 저장 구분.
+	//죽고 리스폰 시 Status 풀충전, 아이템 그대로. -> 아이템은 PlayerState에 유지.
 	
-	FMemoryWriter InventoryWriter(PlayerSaveData.InventoryBinaryData, true);
-	FObjectAndNameAsStringProxyArchive InventoryArchive(InventoryWriter, true);
-	InventoryArchive.ArIsSaveGame = true;
-	TargetPlayer->InventoryComponent->Serialize(InventoryArchive);
+	//인간이 아닌 상태에서도 트랜스폼이나 컨트롤 데이터는 저장
+	ACharacter* PlayerCharacter = Cast<ACharacter>(PlayerState->GetPawn());
 	
-	FMemoryWriter StatusWriter(PlayerSaveData.StatusBinaryData, true);
-	FObjectAndNameAsStringProxyArchive StatusArchive(StatusWriter, true);
-	StatusArchive.ArIsSaveGame = false;
-	TargetPlayer->StatusComponent->Serialize(StatusArchive);
+	if (PlayerCharacter)
+	{
+		PlayerSaveData.Transform = PlayerCharacter->GetActorTransform();
+		PlayerSaveData.Velocity = PlayerCharacter->GetVelocity();
+		PlayerSaveData.ControlRotation = PlayerCharacter->GetControlRotation();
+	}
 	
-	UE_LOG(LogTemp, Warning, TEXT("Save Player ID: %s"), *PlayerID);
+	//플레이어가 인간인 상태에서 MainPlayer 액터 데이터를 저장.
+	if (AMainPlayer* TargetPlayer = Cast<AMainPlayer>(PlayerCharacter))
+	{		
+		FMemoryWriter InventoryWriter(PlayerSaveData.InventoryBinaryData, true);
+		FObjectAndNameAsStringProxyArchive InventoryArchive(InventoryWriter, true);
+		InventoryArchive.ArIsSaveGame = true;
+		TargetPlayer->InventoryComponent->Serialize(InventoryArchive);
+		
+		FMemoryWriter StatusWriter(PlayerSaveData.StatusBinaryData, true);
+		FObjectAndNameAsStringProxyArchive StatusArchive(StatusWriter, true);
+		StatusArchive.ArIsSaveGame = false;
+		TargetPlayer->StatusComponent->Serialize(StatusArchive);
+	}
+	
+	//아이템 데이터는 플레이어 스테이트에 있는 것을 저장.
+	//<?>인벤토리 업데이트 할때마다 플레이어 스테이트에 아이템 데이터가 저장됨.
+	PlayerSaveData.InventoryItems = PlayerState->GetItems();
+	
+	UE_LOG(LogTemp, Warning, TEXT("Save Player ID: %s | PlayersSaveData Num : %d"), *PlayerID, PlayersSaveData.Num());
 }
 
-bool AMainGameMode::LoadPlayer(AMainPlayer* TargetPlayer)
+bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState)
 {
+	ACharacter* PlayerCharacter = Cast<ACharacter>(PlayerState->GetPawn());
+	
+	//해당 플레이어 스테이트를 가진 컨트롤러의 아이디로 조회.
 	//FString PlayerID = FString::FromInt(TargetPlayer->GetController()->PlayerState->GetPlayerId());
-	//FString PlayerID = TargetPlayer->GetController()->PlayerState->GetUniqueId()->ToString();
+	//FString PlayerID = PlayerCharacter->GetController()->PlayerState->GetUniqueId().ToString();
 	FString PlayerID = TEXT("TESTER");
 	
+	//저장된 플레이어 목록 중 해당 플레이어가 없으면 로드 False.
 	if (PlayersSaveData.Find(PlayerID) == NULL) return false;
 	
 	FPlayerSaveData& PlayerSaveData = PlayersSaveData[PlayerID];
 	
-	FMemoryReader InventoryReader(PlayerSaveData.InventoryBinaryData, true);
-	FObjectAndNameAsStringProxyArchive InventoryArchive(InventoryReader, true);
-	InventoryArchive.ArIsSaveGame = true;
-	TargetPlayer->InventoryComponent->Serialize(InventoryArchive);
-	TargetPlayer->InventoryComponent->InventoryChanged();
+	PlayerState->SetItemsData(PlayerSaveData.InventoryItems);
 	
-	FMemoryReader StatusReader(PlayerSaveData.StatusBinaryData, true);
-	FObjectAndNameAsStringProxyArchive StatusArchive(StatusReader, true);
-	StatusArchive.ArIsSaveGame = false;
-	TargetPlayer->StatusComponent->Serialize(StatusArchive);
 	
-	TargetPlayer->SetActorTransform(PlayerSaveData.Transform);
-	TargetPlayer->GetCharacterMovement()->Velocity = PlayerSaveData.Velocity;
-	TargetPlayer->GetController()->SetControlRotation(PlayerSaveData.ControlRotation);
+	if (PlayerCharacter)
+	{
+		PlayerCharacter->SetActorTransform(PlayerSaveData.Transform);
+		PlayerCharacter->GetCharacterMovement()->Velocity = PlayerSaveData.Velocity;
+		PlayerCharacter->GetController()->SetControlRotation(PlayerSaveData.ControlRotation);
+	}
+	
+	if (AMainPlayer* TargetPlayer = Cast<AMainPlayer>(PlayerCharacter))
+	{
+		FMemoryReader InventoryReader(PlayerSaveData.InventoryBinaryData, true);
+		FObjectAndNameAsStringProxyArchive InventoryArchive(InventoryReader, true);
+		InventoryArchive.ArIsSaveGame = true;
+		TargetPlayer->InventoryComponent->Serialize(InventoryArchive);
+		TargetPlayer->InventoryComponent->InventoryChanged();
+	
+		FMemoryReader StatusReader(PlayerSaveData.StatusBinaryData, true);
+		FObjectAndNameAsStringProxyArchive StatusArchive(StatusReader, true);
+		StatusArchive.ArIsSaveGame = false;
+		TargetPlayer->StatusComponent->Serialize(StatusArchive);
+	}
 	
 	UE_LOG(LogTemp, Warning, TEXT("Load Player ID: %s"), *PlayerID);
+	return true;
+}
+
+UMainSaveGame* AMainGameMode::DuplicateSaveData(UMainSaveGame* TargetSaveGame)
+{
+	if (!TargetSaveGame) return nullptr;
+
+	TArray<uint8> BinaryData;
+	
+	FMemoryWriter Writer(BinaryData, true);
+	FObjectAndNameAsStringProxyArchive WriterArchive(Writer, true);
+	WriterArchive.ArIsSaveGame = true;
+	TargetSaveGame->Serialize(WriterArchive);
+
+	UMainSaveGame* NewSave =
+		NewObject<UMainSaveGame>(GetTransientPackage(), TargetSaveGame->GetClass());
+
+	FMemoryReader Reader(BinaryData, true);
+	FObjectAndNameAsStringProxyArchive ReaderArchive(Reader, true);
+	ReaderArchive.ArIsSaveGame = true;
+	NewSave->Serialize(ReaderArchive);
+
+	return NewSave;
+}
+
+void AMainGameMode::SaveMorningSaveData()
+{
+	//월드를 저장하고, 그 저장된 걸 복제해서 아침 세이브데이터로 저장.
+	//CurrentSaveData 는 그 뒤로 자동 저장되어 계속 덮어씌워지고, MorningSaveData는 아침 때로 유지.
+	//라고 생각했었는데 생각해보니까 이러면 월드 종료하면 아침 데이터가 날아감...
+	//저장 슬롯으로 접미사에 _morning을 갖는 슬롯을 만들어 저장해놓는 게 좋겠다.
+	SaveWorld();
+	UMainSaveGame* NewSave = DuplicateSaveData(CurrentSaveData);
+	MorningSaveData = NewSave;
+	MorningSaveData->SlotName += TEXT("_morning");
+	
+	//세이브 파일 슬롯에 저장(슬롯 이름에 _morning 붙여서)
+	UGameplayStatics::SaveGameToSlot(MorningSaveData, MorningSaveData->SlotName, 0);
+	
+	AMainGameState* GS = GetGameState<AMainGameState>();
+	FChattingData Chat = FChattingData(
+		TEXT("SYSTEM"),TEXT("아침 데이터 저장"), EMessageType::NOTICE);
+	GS->AddChattingMessage(Chat);
+}
+
+//싱글에서 죽었을 때
+void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
+{
+	//사망한 당일 아침으로 부활(아침으로 월드 롤백)
+	//아침 데이터 슬롯 구하기
+	FString MorningSlotName = CurrentSaveData->SlotName+TEXT("_morning");
+	//아침 데이터 슬롯에서 데이터 가져오기
+	UMainSaveGame* Save =
+		Cast<UMainSaveGame>(UGameplayStatics::LoadGameFromSlot(MorningSlotName, 0));
+	//현재 세이브 파일을 아침 데이터로 교체
+	CurrentSaveData = Save;
+	//그 세이브 파일을 기반으로 월드 로드
+	LoadWorld();
+}
+
+bool AMainGameMode::RespawnPlayer(AController* TargetPlayerController)
+{
+	//플레이어 리스폰 시 역할에 따른 캐릭터 소환 후 데이터 동기화
+	AMainPlayerState* PlayerState = Cast<AMainPlayerState>(TargetPlayerController->PlayerState);
+	//FString PlayerID = PlayerState->GetUniqueId().ToString();
+	FString PlayerID = TEXT("TESTER");
+	
+	if (!PlayerState) return false;
+	
+	int32 Index = 0;
+	
+	switch (PlayerState->GetPlayerRole())
+	{
+	case ECharacterRole::CAPTAIN:
+		{
+			Index = 1;
+			break;
+		}
+	case ECharacterRole::CHEF:
+		{	
+			Index = 2;
+			break;
+		}
+	case ECharacterRole::MECHANIC:
+		{
+			Index = 3;
+			break;
+		}
+	case ECharacterRole::SOLDIER:
+		{
+			Index = 4;
+			break;
+		}
+	case ECharacterRole::NONE:
+		{
+			Index = 0;
+			break;
+		}
+	}
+	
+	//해당 역할의 캐릭터 스폰
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.bNoFail = true;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	int32 I = FMath::RandRange(0, SpawnPoints.Num()-1);
+	FVector SpawnLocation = SpawnPoints[I];
+	FRotator SpawnRotation = FRotator(FRotator::ZeroRotator);
+	FTransform SpawnTransform = FTransform(SpawnRotation, SpawnLocation);
+	
+	AMainPlayer* SpawnedPlayer = 
+		GetWorld()->SpawnActorDeferred<AMainPlayer>(
+		PlayerRoleClassList[Index], SpawnTransform,
+		nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn);
+	SpawnedPlayer->FinishSpawning(SpawnTransform);
+	UE_LOG(LogTemp, Warning, TEXT("Spawned Complete for new user"))
+	
+	TargetPlayerController->Possess(SpawnedPlayer);
+	
+	LoadPlayer(PlayerState);
+	
 	return true;
 }
 

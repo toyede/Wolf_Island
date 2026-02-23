@@ -3,6 +3,7 @@
 
 #include "Widgets/Chatting/ChattingBlock.h"
 
+#include "Components/RichTextBlock.h"
 #include "GameFramework/PlayerState.h"
 
 void UChattingBlock::NativeConstruct()
@@ -13,36 +14,59 @@ void UChattingBlock::NativeConstruct()
 
 void UChattingBlock::SetChattingBlock(FChattingData ChattingData)
 {
-	SetTime(ChattingData.UnixTime);
-	SetName(ChattingData.Name);
-	SetMessage(ChattingData.Message);
-
+	FDateTime LocalTime = FDateTime::FromUnixTimestamp(ChattingData.UnixTime) + (FDateTime::Now() - FDateTime::UtcNow());
+	FString Time = LocalTime.ToString(TEXT("%H:%M"));
+	
+	FString Final;
+	
 	switch (ChattingData.MessageType)
 	{
 		case EMessageType::ALARM:
 		{
-			NameText->SetColorAndOpacity(AlarmColor);
+			Final = FString::Printf(
+			TEXT("<Time>[%s] </><Alarm>%s: </><Message>%s</>"),
+			*Time,
+			*ChattingData.Name,
+			*ChattingData.Message);
 			break;
 		}
 		case EMessageType::ALERT:
 		{
-			NameText->SetColorAndOpacity(AlertColor);
+			Final = FString::Printf(
+			TEXT("<Time>[%s] </><Alert>%s: </><Message>%s</>"),
+			*Time,
+			*ChattingData.Name,
+			*ChattingData.Message);
 			break;
 		}
 		case EMessageType::NOTICE:
 		{
-			NameText->SetColorAndOpacity(NoticeColor);
+			Final = FString::Printf(
+			TEXT("<Time>[%s] </><Notice>%s: </><Message>%s</>"),
+			*Time,
+			*ChattingData.Name,
+			*ChattingData.Message);
 			break;
 		}
 		case EMessageType::GENERAL:
 		{
-			NameText->SetColorAndOpacity(GeneralColor);
+			Final = FString::Printf(
+			TEXT("<Time>[%s] </><General>%s: </><Message>%s</>"),
+			*Time,
+			*ChattingData.Name,
+			*ChattingData.Message);
 			break;
 		}
 	}
 	
 	if (ChattingData.Name == GetOwningPlayerState()->GetPlayerName())
 	{
-		NameText->SetColorAndOpacity(OwnerColor);
+		Final = FString::Printf(
+			TEXT("<Time>[%s] </><Mine>%s: </><Message>%s</>"),
+			*Time,
+			*ChattingData.Name,
+			*ChattingData.Message);
 	}
+	
+	ChattingText->SetText(FText::FromString(Final));
 }

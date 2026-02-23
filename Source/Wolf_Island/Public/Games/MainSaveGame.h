@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Character/MainPlayer.h"
 #include "Games/SaveInterface.h"
 #include "GameFramework/SaveGame.h"
 #include "MainSaveGame.generated.h"
@@ -18,6 +19,9 @@ struct FPlayerSaveData
 	
 	UPROPERTY(SaveGame)
 	FString PlayerID;
+	
+	UPROPERTY(SaveGame)
+	ECharacterRole PlayerRole;
 	
 	UPROPERTY(SaveGame)
 	FTransform Transform;
@@ -63,27 +67,24 @@ class WOLF_ISLAND_API UMainSaveGame : public USaveGame
 	
 public:
 	
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	FString WorldName;
 	
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	FString SlotName;
 	
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	bool IsMulti;
 	
-	UPROPERTY()
-	float CurrentTime;
-	
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	TMap<FString, FPlayerSaveData> Players;
 	
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	TMap<FGuid, FActorSaveData> SavedActors;
 	
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	TArray<FRemovedFoliageData> RemovedFoliages;
 	
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	int64 SaveUnixTime;
 };

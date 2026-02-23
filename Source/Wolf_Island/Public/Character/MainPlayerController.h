@@ -14,8 +14,11 @@
  * 
  */
 
+class URoleSelection;
 class UMainGameInstance;
+class AMainGameMode;
 class UPauseMenu;
+class UPlayerHUD;
 
 UCLASS()
 class WOLF_ISLAND_API AMainPlayerController : public APlayerController
@@ -23,37 +26,49 @@ class WOLF_ISLAND_API AMainPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputMappingContext* InputMappingContext;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputAction* ChatAction;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputAction* ESCAction;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	class AMainHUD* HUD;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category="Widget")
+	UPlayerHUD* PlayerHUD;
+	
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	UChattingPanel* ChattingPanel;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	UPauseMenu* PauseMenu;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
+	TSubclassOf<UPlayerHUD> HUDClass;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Widget")
 	TSubclassOf<UChattingPanel> ChattingPanelClass;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
+	UPROPERTY(EditDefaultsOnly, Category="Widget")
 	TSubclassOf<UPauseMenu> PauseWidgetClass;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(EditDefaultsOnly, Category="Widget")
+	TSubclassOf<URoleSelection> RoleSelectionWidgetClass;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	UMainGameInstance* MainGameInstance;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	AGameModeBase* MainGameMode;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	AMainPlayerState* MainPlayerState;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	AMainGameState* MainGameState;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
@@ -69,6 +84,13 @@ public:
 	
 	virtual void SetupInputComponent() override;
 	
+	virtual void OnPossess(APawn* InPawn) override;
+	
+	virtual void OnUnPossess() override;
+	
+	UFUNCTION(BlueprintCallable)
+	void SetPlayerHUD(AMainPlayer* OwnerPlayer);
+	
 	UFUNCTION(BlueprintCallable)
 	void ToggleChatMode();
 	
@@ -83,7 +105,7 @@ public:
 	UFUNCTION()
 	void DisplayPauseMenu();
 	UFUNCTION()
-	void HidePuaseMenu();
+	void HidePauseMenu();
 	
 	UFUNCTION(BlueprintCallable)
 	void AddChat(FChattingData NewChattingData);
@@ -105,4 +127,13 @@ public:
 	
 	UFUNCTION()
 	void SendChat(FChattingData NewChattingData);
+	
+	UFUNCTION(Client, Reliable)
+	void Client_OpenSelectionUI();
+	
+	UFUNCTION(Server, Reliable)
+	void Server_ConfirmRole(ECharacterRole NewRole);
+	
+	UFUNCTION(Client, Reliable)
+	void Client_SetInputModeGame();
 };

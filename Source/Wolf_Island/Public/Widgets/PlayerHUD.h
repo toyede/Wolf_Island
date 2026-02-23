@@ -65,6 +65,9 @@ public:
 
 	UPROPERTY()
 	bool ShowInteraction = true;
+	
+	UFUNCTION(BlueprintCallable)
+	void SetPlayerRef(AMainPlayer* OwnerPlayer) { PlayerRef = OwnerPlayer; };
 
 	UFUNCTION(BlueprintCallable)
 	void DisplayInteraction();

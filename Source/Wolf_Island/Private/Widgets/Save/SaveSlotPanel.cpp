@@ -139,6 +139,7 @@ void USaveSlotPanel::OnAddButtonClicked()
 	UTextCommitPanel* TextCommitPanel = CreateWidget<UTextCommitPanel>(GetWorld(), TextCommitPanelClass);
 	TCP = TextCommitPanel;
 	TCP->OnCommitClicked.AddDynamic(this, &USaveSlotPanel::OnCreateCommited);
+	TCP->OnCancelClicked.AddDynamic(this, &USaveSlotPanel::OnCancelClicked);
 	TCP->AddToViewport();
 }
 
@@ -162,5 +163,13 @@ void USaveSlotPanel::OnCreateCommited(const FString& Text)
 		{
 			UGameplayStatics::OpenLevelBySoftObjectPtr(GetWorld(), MainGameInstance->SinglePlayWorld);
 		}
+	}
+}
+
+void USaveSlotPanel::OnCancelClicked()
+{
+	if (TCP)
+	{
+		TCP->RemoveFromParent();
 	}
 }

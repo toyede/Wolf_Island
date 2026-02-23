@@ -82,7 +82,7 @@ void AChest::Interact(AActor* Interactor)
 	OpenChest(Interactor);
 }
 
-void AChest::BeginFocus()
+void AChest::BeginFocus_Implementation()
 {
 	Super::BeginFocus();
 	
@@ -92,7 +92,7 @@ void AChest::BeginFocus()
 	}
 }
 
-void AChest::EndFocus()
+void AChest::EndFocus_Implementation()
 {
 	Super::EndFocus();
 	

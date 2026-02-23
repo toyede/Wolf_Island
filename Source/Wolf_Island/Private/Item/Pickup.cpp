@@ -112,26 +112,24 @@ void APickup::Interact(AActor* Interactor)
     }    
 }
 
-void APickup::BeginFocus()
+void APickup::BeginFocus_Implementation()
 {
-    Super::BeginFocus();
+    Super::BeginFocus_Implementation();
     
     if (PickupMesh)
     {
         PickupMesh->SetRenderCustomDepth(true);
     }
-    
 }
 
-void APickup::EndFocus()
+void APickup::EndFocus_Implementation()
 {
-    Super::EndFocus();
+    Super::EndFocus_Implementation();
     
     if (PickupMesh)
     {
         PickupMesh->SetRenderCustomDepth(false);
     }
-    
 }
 
 void APickup::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -164,6 +162,8 @@ void APickup::SaveData_Implementation(FActorSaveData& OutData)
     Ar.ArIsSaveGame = true;
 
     Serialize(Ar);
+    
+    UE_LOG(LogTemp, Warning, TEXT("[%s] Item Saved"), *GUID.ToString())
 }
 
 void APickup::LoadData_Implementation(const FActorSaveData& InData)
@@ -185,7 +185,9 @@ void APickup::LoadData_Implementation(const FActorSaveData& InData)
         FVector Force = PickupMesh->GetMass() * InData.Velocity;
         PickupMesh->AddImpulse(Force);
     }
-	
+    
+    UE_LOG(LogTemp, Warning, TEXT("[%s] Item Loaded"), *GUID.ToString())
+    
     ForceNetUpdate();
 }
 

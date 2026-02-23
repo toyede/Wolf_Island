@@ -64,6 +64,11 @@ void UInventorySlot::RefreshSlot()
 		{
 			ItemAmount->SetVisibility(ESlateVisibility::Visible);
 			ItemAmount->SetText(FText::AsNumber(ItemRef->Amount));
+			
+			if (ItemRef->Amount == 1)
+			{
+				ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
+			}
 		} else
 		{
 			ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
@@ -128,6 +133,8 @@ void UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPo
 			DragVisual->ItemIcon->SetBrushFromTexture(ItemData->AssetData.Icon);
 			DragVisual->ItemBorder->SetBrush(UnSelectedSlotBrush);
 			DragVisual->ItemAmount->SetText(FText::AsNumber(ItemRef->Amount));
+			if (ItemRef->Amount == 1)
+				DragVisual->ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
 
 			UItemDragDropOperation* DragItemOperation = NewObject<UItemDragDropOperation>();
 			DragItemOperation->SourceInventory = OwnerInventoryRef;
@@ -165,6 +172,8 @@ void UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPo
 			DragVisual->ItemIcon->SetBrushFromTexture(ItemData->AssetData.Icon);
 			DragVisual->ItemBorder->SetBrush(UnSelectedSlotBrush);
 			DragVisual->ItemAmount->SetText(FText::AsNumber(MovedAmount));
+			if (ItemRef->Amount == 1)
+				DragVisual->ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
 
 			//드래그 아이템 데이터 생성
 			UItemDragDropOperation* DragItemOperation = NewObject<UItemDragDropOperation>();

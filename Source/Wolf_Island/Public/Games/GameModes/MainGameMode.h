@@ -7,6 +7,7 @@
 #include "Games/MainSaveGame.h"
 #include "MainGameMode.generated.h"
 
+class AMainPlayerState;
 class UMainGameInstance;
 /**
  * 
@@ -32,14 +33,25 @@ public:
 	TMap<FString, FPlayerSaveData> PlayersSaveData;
 	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
-	class UMainSaveGame* SaveGameData;
+	UMainSaveGame* CurrentSaveData;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
+	UMainSaveGame* MorningSaveData;
 	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
 	UMainGameInstance* MainGameInstance;
 	
+	UPROPERTY(EditDefaultsOnly)
+	TArray<TSubclassOf<AMainPlayer>> PlayerRoleClassList;
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	TArray<FVector> SpawnPoints;
+	
 	//자동 저장 간격 (분 단위)
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	float AutoSaveInterval = 5.0f;
+	
+	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 	
 	virtual void StartPlay() override;
 	
@@ -48,6 +60,9 @@ public:
 	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
 	
 	virtual void Logout(AController* Exiting) override;
+	
+	UFUNCTION(BlueprintCallable)
+	virtual void StartingNewPlayer(APlayerController* NewPlayer);
 	
 	UFUNCTION(BlueprintCallable)
 	void SetActorCache();
@@ -59,8 +74,23 @@ public:
 	void LoadWorld();
 	
 	UFUNCTION(BlueprintCallable)
-	void SavePlayer(class AMainPlayer* TargetPlayer);
+	void SavePlayer(AMainPlayerState* PlayerState);
 	
 	UFUNCTION(BlueprintCallable)
-	bool LoadPlayer(AMainPlayer* TargetPlayer);
+	bool LoadPlayer(AMainPlayerState* PlayerState);
+	
+	UFUNCTION(BlueprintCallable)
+	UMainSaveGame* DuplicateSaveData(UMainSaveGame* TargetSaveGame);
+	
+	//아침 시간에 이 함수를 작동시키면 아침 시점 데이터가 세이브 됨
+	UFUNCTION(BlueprintCallable)
+	void SaveMorningSaveData();
+	
+	//이건 플레이어가 죽었을 때 할 동작들. 여기선 싱글에서 죽었을 때를 구현하고, MultiGameMode에서 멀티에서 죽얼을 때 구현.
+	UFUNCTION(BlueprintCallable)
+	virtual void HandlePlayerDeath(AController* DeadPlayerController);
+	
+	//멀티플레이 리스폰
+	UFUNCTION(BlueprintCallable)
+	bool RespawnPlayer(AController* TargetPlayerController);
 };

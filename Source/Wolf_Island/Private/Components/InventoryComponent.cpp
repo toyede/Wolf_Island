@@ -689,6 +689,16 @@ bool UInventoryComponent::MakeItem(FRecipeData Recipe)
 			//빈 슬롯이 없으면 바닥에 떨구기
 			if (GetEmptySlotCount() <= 0)
 			{
+				FActorSpawnParameters SpawnParams;
+				SpawnParams.Owner = GetOwner();
+				SpawnParams.bNoFail = true;
+				SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+				const FVector SpawnLocation(SpawnParams.Owner->GetActorLocation() + (SpawnParams.Owner->GetActorForwardVector() * 50.0f));
+				const FTransform SpawnTransform(SpawnParams.Owner->GetActorRotation(), SpawnLocation);
+		
+				APickup* Pickup = GetWorld()->SpawnActor<APickup>(APickup::StaticClass(), SpawnTransform, SpawnParams);
+				Pickup->InitializeDrop(ResultItem, ResultItem.Amount);
 				
 			}
 			//있으면 추가
