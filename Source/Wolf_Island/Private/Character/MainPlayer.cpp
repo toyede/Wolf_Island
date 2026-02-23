@@ -1501,6 +1501,16 @@ void AMainPlayer::Request_DropItem(UInventoryComponent* SourceInventory, int32 S
 
 void AMainPlayer::Request_StartUseItem()
 {
+	if (UBuildingComponent* BuildComp = FindComponentByClass<UBuildingComponent>())
+	{
+		if (BuildComp->GetCurrentState() == EBuildingState::Placing)
+		{
+			BuildComp->CancelBuild();
+			
+			return; 
+		}
+	}
+	
 	if (HasAuthority())
 	{
 		StartUseItem();

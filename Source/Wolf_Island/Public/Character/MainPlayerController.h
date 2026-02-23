@@ -46,6 +46,9 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	TSubclassOf<UPauseMenu> PauseWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Widget")
+	TSubclassOf<class UUserWidget> FishTrapScreenClass;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UMainGameInstance* MainGameInstance;
@@ -84,6 +87,9 @@ public:
 	void DisplayPauseMenu();
 	UFUNCTION()
 	void HidePuaseMenu();
+
+	UFUNCTION(Client, Reliable)
+	void Client_OpenFishTrapUI(class AFishTrap* TargetTrap, class AActor* Interactor);
 	
 	UFUNCTION(BlueprintCallable)
 	void AddChat(FChattingData NewChattingData);
