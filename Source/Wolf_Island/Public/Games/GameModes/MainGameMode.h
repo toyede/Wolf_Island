@@ -59,6 +59,12 @@ public:
 	
 	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
 	
+	virtual void RestartPlayer(AController* NewPlayer) override;
+	
+	virtual APawn* SpawnDefaultPawnFor_Implementation(AController* NewPlayer, AActor* StartSpot) override;
+	
+	virtual APawn* SpawnDefaultPawnAtTransform_Implementation(AController* NewPlayer, const FTransform& SpawnTransform) override;
+	
 	virtual void Logout(AController* Exiting) override;
 	
 	UFUNCTION(BlueprintCallable)
@@ -89,8 +95,4 @@ public:
 	//이건 플레이어가 죽었을 때 할 동작들. 여기선 싱글에서 죽었을 때를 구현하고, MultiGameMode에서 멀티에서 죽얼을 때 구현.
 	UFUNCTION(BlueprintCallable)
 	virtual void HandlePlayerDeath(AController* DeadPlayerController);
-	
-	//멀티플레이 리스폰
-	UFUNCTION(BlueprintCallable)
-	bool RespawnPlayer(AController* TargetPlayerController);
 };

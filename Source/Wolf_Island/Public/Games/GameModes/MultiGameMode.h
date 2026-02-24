@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "Games/GameModes/MainGameMode.h"
-#include "Widgets/RoleSelection/RoleSelection.h"
 #include "MultiGameMode.generated.h"
 
 /**
@@ -15,18 +14,25 @@ class WOLF_ISLAND_API AMultiGameMode : public AMainGameMode
 {
 	GENERATED_BODY()
 	
+public:
+	
 	bool IsMulti = true;
+	
+	AMultiGameMode();
 	
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	
 	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
 	
+	virtual void RestartPlayer(AController* NewPlayer) override;
+	
+	virtual bool ShouldSpawnAtStartSpot(AController* Player) override;
+	
+	virtual APawn* SpawnDefaultPawnFor_Implementation(AController* NewPlayer, AActor* StartSpot) override;
+	
+	virtual APawn* SpawnDefaultPawnAtTransform_Implementation(AController* NewPlayer, const FTransform& SpawnTransform) override;
+	
 	virtual void StartingNewPlayer(APlayerController* NewPlayer) override;
-	
-public:
-	
-	//중간 합류 플레이어가 역할 선택을 마쳤을 때
-	void AllocatePlayer(APlayerController* NewPlayer);
 	
 	//멀티에서 플레이어 죽었을 때 동작 구현.
 	virtual void HandlePlayerDeath(AController* DeadPlayerController) override;

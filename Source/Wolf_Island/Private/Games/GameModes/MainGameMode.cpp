@@ -15,6 +15,7 @@
 #include "Games/MainPlayerState.h"
 #include "Games/MainSaveGame.h"
 #include "Games/SaveInterface.h"
+#include "Games/GameModes/MultiGameMode.h"
 #include "Kismet/GameplayStatics.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
@@ -70,8 +71,6 @@ void AMainGameMode::StartPlay()
 
 void AMainGameMode::PostLogin(APlayerController* NewPlayer)
 {
-	Super::PostLogin(NewPlayer);
-	
 	//채팅 테스트하는 데 플레이어 이름이 너무 길어서 귀염뽀짝 짧은 이름으로 재설정 해주는 개발용 코드
 	if (!NewPlayer) return;
 
@@ -107,16 +106,30 @@ void AMainGameMode::PostLogin(APlayerController* NewPlayer)
 		TEXT("알림"),PS->GetPlayerName()+TEXT(" 님이 접속했습니다."), EMessageType::NOTICE);
 	
 	GS->AddChattingMessage(Chat);
+	
+	Super::PostLogin(NewPlayer);
 }
 
 void AMainGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
 {
 	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
-	
-	GetWorld()->GetTimerManager().SetTimerForNextTick([this, NewPlayer]
-	{
-		StartingNewPlayer(NewPlayer);
-	});
+}
+
+void AMainGameMode::RestartPlayer(AController* NewPlayer)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Call RestartPlayer on MainGamemode"));
+	Super::RestartPlayer(NewPlayer);
+}
+
+APawn* AMainGameMode::SpawnDefaultPawnFor_Implementation(AController* NewPlayer, AActor* StartSpot)
+{
+	return Super::SpawnDefaultPawnFor_Implementation(NewPlayer, StartSpot);
+}
+
+APawn* AMainGameMode::SpawnDefaultPawnAtTransform_Implementation(AController* NewPlayer,
+	const FTransform& SpawnTransform)
+{
+	return Super::SpawnDefaultPawnAtTransform_Implementation(NewPlayer, SpawnTransform);
 }
 
 void AMainGameMode::Logout(AController* Exiting)
@@ -135,13 +148,6 @@ void AMainGameMode::Logout(AController* Exiting)
 void AMainGameMode::StartingNewPlayer(APlayerController* NewPlayer)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[SINGLEPLAY] Starting New Player"));
-	//로그인 시 해당 플레이어의 저장된 정보를 불러온다.
-	AMainPlayerState* PS = Cast<AMainPlayerState>(NewPlayer->PlayerState);
-	
-	if (PS)
-	{
-		LoadPlayer(PS);
-	}
 }
 
 void AMainGameMode::SetActorCache()
@@ -326,6 +332,14 @@ void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 	FString PlayerID = TEXT("TESTER");
 	FPlayerSaveData& PlayerSaveData = PlayersSaveData.FindOrAdd(PlayerID);
 	
+	if (AMultiGameMode* GM = Cast<AMultiGameMode>(this))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("This world is MultiMode"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("This world is SingleMode"));
+	}
 	PlayerSaveData.PlayerID = PlayerID;
 	
 	//플레이어가 인간인 상태에서 저장, 기절인 상태, 죽은 상태에서 저장 구분.
@@ -459,69 +473,6 @@ void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 	CurrentSaveData = Save;
 	//그 세이브 파일을 기반으로 월드 로드
 	LoadWorld();
-}
-
-bool AMainGameMode::RespawnPlayer(AController* TargetPlayerController)
-{
-	//플레이어 리스폰 시 역할에 따른 캐릭터 소환 후 데이터 동기화
-	AMainPlayerState* PlayerState = Cast<AMainPlayerState>(TargetPlayerController->PlayerState);
-	//FString PlayerID = PlayerState->GetUniqueId().ToString();
-	FString PlayerID = TEXT("TESTER");
-	
-	if (!PlayerState) return false;
-	
-	int32 Index = 0;
-	
-	switch (PlayerState->GetPlayerRole())
-	{
-	case ECharacterRole::CAPTAIN:
-		{
-			Index = 1;
-			break;
-		}
-	case ECharacterRole::CHEF:
-		{	
-			Index = 2;
-			break;
-		}
-	case ECharacterRole::MECHANIC:
-		{
-			Index = 3;
-			break;
-		}
-	case ECharacterRole::SOLDIER:
-		{
-			Index = 4;
-			break;
-		}
-	case ECharacterRole::NONE:
-		{
-			Index = 0;
-			break;
-		}
-	}
-	
-	//해당 역할의 캐릭터 스폰
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.bNoFail = true;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-	int32 I = FMath::RandRange(0, SpawnPoints.Num()-1);
-	FVector SpawnLocation = SpawnPoints[I];
-	FRotator SpawnRotation = FRotator(FRotator::ZeroRotator);
-	FTransform SpawnTransform = FTransform(SpawnRotation, SpawnLocation);
-	
-	AMainPlayer* SpawnedPlayer = 
-		GetWorld()->SpawnActorDeferred<AMainPlayer>(
-		PlayerRoleClassList[Index], SpawnTransform,
-		nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn);
-	SpawnedPlayer->FinishSpawning(SpawnTransform);
-	UE_LOG(LogTemp, Warning, TEXT("Spawned Complete for new user"))
-	
-	TargetPlayerController->Possess(SpawnedPlayer);
-	
-	LoadPlayer(PlayerState);
-	
-	return true;
 }
 
 

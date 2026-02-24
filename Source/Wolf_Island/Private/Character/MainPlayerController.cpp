@@ -6,18 +6,17 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/Button.h"
 #include "Components/EditableTextBox.h"
 #include "Games/MainGameInstance.h"
 #include "Games/MainHUD.h"
 #include "Widgets/Chatting/ChattingPanel.h"
 #include "Games/MainGameState.h"
-#include "Games/GameModes/MainGameMode.h"
 #include "Games/GameModes/MultiGameMode.h"
 #include "Kismet/GameplayStatics.h"
 #include "Widgets/BaseButton.h"
 #include "Widgets/PlayerHUD.h"
 #include "Widgets/MainMenu/PauseMenu.h"
+#include "Widgets/RoleSelection/RoleSelection.h"
 
 class UEnhancedInputLocalPlayerSubsystem;
 
@@ -72,16 +71,6 @@ void AMainPlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 	
-	UE_LOG(LogTemp, Warning, TEXT("[%s] Possessed in %s"), *GetName(), *InPawn->GetName())
-	AMainPlayer* InPlayer = Cast<AMainPlayer>(InPawn);
-	if (InPlayer && HUDClass)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[%hs]Set Player HUD"), HasAuthority()?"SERVER":"CLIENT")
-		PlayerHUD = CreateWidget<UPlayerHUD>(this, HUDClass);
-		PlayerHUD->SetPlayerRef(InPlayer);
-		InPlayer->SetHUDWidget(PlayerHUD);
-		PlayerHUD->AddToViewport();
-	}
 }
 
 void AMainPlayerController::OnUnPossess()
@@ -97,7 +86,16 @@ void AMainPlayerController::OnUnPossess()
 
 void AMainPlayerController::SetPlayerHUD(AMainPlayer* OwnerPlayer)
 {
-	
+	UE_LOG(LogTemp, Warning, TEXT("[%s] Possessed in %s"), *GetName(), *OwnerPlayer->GetName())
+	AMainPlayer* InPlayer = Cast<AMainPlayer>(OwnerPlayer);
+	if (InPlayer && HUDClass && IsLocalController())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%hs]Set Player HUD"), HasAuthority()?"SERVER":"CLIENT")
+		PlayerHUD = CreateWidget<UPlayerHUD>(this, HUDClass);
+		PlayerHUD->SetPlayerRef(InPlayer);
+		InPlayer->SetHUDWidget(PlayerHUD);
+		PlayerHUD->AddToViewport();
+	}
 }
 
 void AMainPlayerController::ToggleChatMode()
@@ -207,19 +205,25 @@ void AMainPlayerController::Server_ConfirmRole_Implementation(ECharacterRole New
 	AMultiGameMode* GM = Cast<AMultiGameMode>(GetWorld()->GetAuthGameMode());
 	AMainPlayerState* PS = Cast<AMainPlayerState>(PlayerState);
 	PS->SetPlayerRole(NewRole);
+	UE_LOG(LogTemp, Warning, TEXT("HasAuthority: %d"), HasAuthority());
+	UE_LOG(LogTemp, Warning, TEXT("GameMode Class: %s"), *GM->GetClass()->GetName());
 	UE_LOG(LogTemp, Warning, TEXT("Sent Role %d in Server"), PS->GetPlayerRole());
-	GM->AllocatePlayer(this);
+	if (!GM) UE_LOG(LogTemp, Warning, TEXT("GAMEMODE IS NULL"));
+	GM->RestartPlayer(this);
 }
 
 void AMainPlayerController::Client_OpenSelectionUI_Implementation()
 {	
 	URoleSelection* SelectionWidget = CreateWidget<URoleSelection>(this, RoleSelectionWidgetClass);
-	SelectionWidget->AddToViewport();
 	
 	FInputModeUIOnly InputMode;
 	InputMode.SetWidgetToFocus(SelectionWidget->TakeWidget());
 	SetInputMode(InputMode);
 	bShowMouseCursor = true;
+	
+	SelectionWidget->AddToViewport();
+	
+	
 }
 
 void AMainPlayerController::AddChat(FChattingData NewChattingData)

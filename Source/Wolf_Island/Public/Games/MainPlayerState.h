@@ -20,7 +20,7 @@ class WOLF_ISLAND_API AMainPlayerState : public APlayerState
 	FString PlayerTag;
 	
 	UPROPERTY(Replicated)
-	ECharacterRole PlayerRole;
+	ECharacterRole PlayerRole = ECharacterRole::NONE;
 	
 	UPROPERTY(Replicated)
 	TArray<FItemSlot> Items;

@@ -145,6 +145,18 @@ void AMainPlayer::BeginPlay()
 	}
 	
 	UE_LOG(LogTemp, Warning, TEXT("[%s] All Components Set"), *GetName());
+	
+	GameMode = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode());
+	MainPlayerController = Cast<AMainPlayerController>(GetController());
+	if (MainPlayerController)
+	{
+		MainPlayerController->SetPlayerHUD(this);
+		if (GameMode)
+		{
+			AMainPlayerState* PS = Cast<AMainPlayerState>(MainPlayerController->PlayerState);
+			GameMode->LoadPlayer(PS);
+		}
+	}	
 }
 
 // Called every frame

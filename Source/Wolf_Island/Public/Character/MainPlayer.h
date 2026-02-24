@@ -71,7 +71,11 @@ class WOLF_ISLAND_API AMainPlayer : public ACharacter, public IInteractionInterf
 public:
 	// Sets default values for this character's properties
 	AMainPlayer();
-
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
+	class AMainPlayerController* MainPlayerController;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
+	class AMainGameMode* GameMode;
 	//HUD=============================================================================
 	//UPROPERTY(EditAnywhere)
 	//class AMainHUD* HUD;
