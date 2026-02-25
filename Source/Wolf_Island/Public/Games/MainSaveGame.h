@@ -17,12 +17,15 @@ struct FPlayerSaveData
 {
 	GENERATED_BODY()
 	
+	//플레이어 스테이트 데이터
 	UPROPERTY(SaveGame)
 	FString PlayerID;
 	
 	UPROPERTY(SaveGame)
 	ECharacterRole PlayerRole;
 	
+	
+	//액터 데이터
 	UPROPERTY(SaveGame)
 	FTransform Transform;
 	

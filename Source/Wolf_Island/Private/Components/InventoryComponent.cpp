@@ -8,11 +8,9 @@
 #endif
 
 #include <string>
-
 #include "AdvancedFriendsGameInstance.h"
 #include "Character/MainPlayer.h"
 #include "Games/MainPlayerState.h"
-#include "Item/ItemBase.h"
 #include "Item/Pickup.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -500,13 +498,7 @@ void UInventoryComponent::AddNewItem(FItemBaseData& Item, const int32 Amount)
 void UInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	//나중에 저장 데이터에서 인벤토리 가져오는 코드 구현 예정
 	
-
-	if (GetOwner()->HasAuthority())
-	{
-		InventoryContents.Init(FItemSlot(), SlotsCapacity);
-	}
 	// ...
 }
 

@@ -61,10 +61,6 @@ public:
 	
 	virtual void RestartPlayer(AController* NewPlayer) override;
 	
-	virtual APawn* SpawnDefaultPawnFor_Implementation(AController* NewPlayer, AActor* StartSpot) override;
-	
-	virtual APawn* SpawnDefaultPawnAtTransform_Implementation(AController* NewPlayer, const FTransform& SpawnTransform) override;
-	
 	virtual void Logout(AController* Exiting) override;
 	
 	UFUNCTION(BlueprintCallable)
@@ -84,6 +80,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	bool LoadPlayer(AMainPlayerState* PlayerState);
+	
+	UFUNCTION(BlueprintCallable)
+	bool HasSaveData(FString PlayerId);
 	
 	UFUNCTION(BlueprintCallable)
 	UMainSaveGame* DuplicateSaveData(UMainSaveGame* TargetSaveGame);

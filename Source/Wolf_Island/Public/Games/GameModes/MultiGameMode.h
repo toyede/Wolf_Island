@@ -28,11 +28,9 @@ public:
 	
 	virtual bool ShouldSpawnAtStartSpot(AController* Player) override;
 	
+	virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
+	
 	virtual APawn* SpawnDefaultPawnFor_Implementation(AController* NewPlayer, AActor* StartSpot) override;
-	
-	virtual APawn* SpawnDefaultPawnAtTransform_Implementation(AController* NewPlayer, const FTransform& SpawnTransform) override;
-	
-	virtual void StartingNewPlayer(APlayerController* NewPlayer) override;
 	
 	//멀티에서 플레이어 죽었을 때 동작 구현.
 	virtual void HandlePlayerDeath(AController* DeadPlayerController) override;

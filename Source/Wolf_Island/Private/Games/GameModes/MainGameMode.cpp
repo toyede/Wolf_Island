@@ -71,42 +71,6 @@ void AMainGameMode::StartPlay()
 
 void AMainGameMode::PostLogin(APlayerController* NewPlayer)
 {
-	//채팅 테스트하는 데 플레이어 이름이 너무 길어서 귀염뽀짝 짧은 이름으로 재설정 해주는 개발용 코드
-	if (!NewPlayer) return;
-
-	AMainPlayerState* PS = Cast<AMainPlayerState>(NewPlayer->PlayerState);
-	if (!PS) return;
-
-	static int32 Counter = 1;
-	static const TArray<FString> Adjs = {
-		TEXT("귀여운"), TEXT("빠른"), TEXT("용감한"), TEXT("조용한"),
-		TEXT("무거운"), TEXT("느긋한"), TEXT("멍청한"), TEXT("조그만"),
-		TEXT("지루한"), TEXT("무서운"), TEXT("재밌는"), TEXT("거대한"),
-		TEXT("발정난"), TEXT("옹골진"), TEXT("섹시한"), TEXT("길쭉한"),
-	};
-	static const TArray<FString> Nouns = {
-		TEXT("여우"), TEXT("늑대"), TEXT("토끼"), TEXT("곰"),
-		TEXT("고라니"), TEXT("멧돼지"), TEXT("개"), TEXT("고양이"),
-		TEXT("닭"), TEXT("땃쥐"), TEXT("까마귀"), TEXT("사슴"),
-		TEXT("코끼리"), TEXT("다람쥐"), TEXT("매"), TEXT("살쾡이")
-	};
-
-	int32 A = FMath::RandRange(0, Adjs.Num()-1);
-	int32 N = FMath::RandRange(0, Nouns.Num()-1);
-	
-	FString NewID = Adjs[A]+" "+Nouns[N]+FString::FromInt(Counter++);
-	//FString NewID = "TESTER"+FString::FromInt(Counter++);
-	
-	PS->SetPlayerName(NewID);
-	
-	PS->SetPlayerTag(NewID);
-	
-	AMainGameState* GS = GetGameState<AMainGameState>();
-	FChattingData Chat = FChattingData(
-		TEXT("알림"),PS->GetPlayerName()+TEXT(" 님이 접속했습니다."), EMessageType::NOTICE);
-	
-	GS->AddChattingMessage(Chat);
-	
 	Super::PostLogin(NewPlayer);
 }
 
@@ -117,19 +81,7 @@ void AMainGameMode::HandleStartingNewPlayer_Implementation(APlayerController* Ne
 
 void AMainGameMode::RestartPlayer(AController* NewPlayer)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Call RestartPlayer on MainGamemode"));
 	Super::RestartPlayer(NewPlayer);
-}
-
-APawn* AMainGameMode::SpawnDefaultPawnFor_Implementation(AController* NewPlayer, AActor* StartSpot)
-{
-	return Super::SpawnDefaultPawnFor_Implementation(NewPlayer, StartSpot);
-}
-
-APawn* AMainGameMode::SpawnDefaultPawnAtTransform_Implementation(AController* NewPlayer,
-	const FTransform& SpawnTransform)
-{
-	return Super::SpawnDefaultPawnAtTransform_Implementation(NewPlayer, SpawnTransform);
 }
 
 void AMainGameMode::Logout(AController* Exiting)
@@ -327,9 +279,7 @@ void AMainGameMode::LoadWorld()
 void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 {
 	//해당 플레이어의 아이디를 키로하는 맵에 데이터를 저장.
-	//FString PlayerID = FString::FromInt(TargetPlayer->GetController()->PlayerState->GetPlayerId());
-	//FString PlayerID = TargetPlayer->GetController()->PlayerState->GetUniqueId()->ToString();
-	FString PlayerID = TEXT("TESTER");
+	FString PlayerID = PlayerState->GetPersistantId();
 	FPlayerSaveData& PlayerSaveData = PlayersSaveData.FindOrAdd(PlayerID);
 	
 	if (AMultiGameMode* GM = Cast<AMultiGameMode>(this))
@@ -341,6 +291,7 @@ void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 		UE_LOG(LogTemp, Warning, TEXT("This world is SingleMode"));
 	}
 	PlayerSaveData.PlayerID = PlayerID;
+	PlayerSaveData.PlayerRole = PlayerState->GetPlayerRole();
 	
 	//플레이어가 인간인 상태에서 저장, 기절인 상태, 죽은 상태에서 저장 구분.
 	//죽고 리스폰 시 Status 풀충전, 아이템 그대로. -> 아이템은 PlayerState에 유지.
@@ -362,11 +313,15 @@ void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 		FObjectAndNameAsStringProxyArchive InventoryArchive(InventoryWriter, true);
 		InventoryArchive.ArIsSaveGame = true;
 		TargetPlayer->InventoryComponent->Serialize(InventoryArchive);
+		UE_LOG(LogTemp, Warning, TEXT("Serialize Inventory"));
 		
 		FMemoryWriter StatusWriter(PlayerSaveData.StatusBinaryData, true);
 		FObjectAndNameAsStringProxyArchive StatusArchive(StatusWriter, true);
 		StatusArchive.ArIsSaveGame = false;
 		TargetPlayer->StatusComponent->Serialize(StatusArchive);
+		UE_LOG(LogTemp, Warning, TEXT("Serialize Status"));
+		
+		PlayerState->SetItemsData(TargetPlayer->InventoryComponent->GetInventory());
 	}
 	
 	//아이템 데이터는 플레이어 스테이트에 있는 것을 저장.
@@ -381,9 +336,7 @@ bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState)
 	ACharacter* PlayerCharacter = Cast<ACharacter>(PlayerState->GetPawn());
 	
 	//해당 플레이어 스테이트를 가진 컨트롤러의 아이디로 조회.
-	//FString PlayerID = FString::FromInt(TargetPlayer->GetController()->PlayerState->GetPlayerId());
-	//FString PlayerID = PlayerCharacter->GetController()->PlayerState->GetUniqueId().ToString();
-	FString PlayerID = TEXT("TESTER");
+	FString PlayerID = PlayerState->GetPersistantId();
 	
 	//저장된 플레이어 목록 중 해당 플레이어가 없으면 로드 False.
 	if (PlayersSaveData.Find(PlayerID) == NULL) return false;
@@ -407,15 +360,22 @@ bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState)
 		InventoryArchive.ArIsSaveGame = true;
 		TargetPlayer->InventoryComponent->Serialize(InventoryArchive);
 		TargetPlayer->InventoryComponent->InventoryChanged();
+		UE_LOG(LogTemp, Warning, TEXT("Deserialize Inventory"));
 	
 		FMemoryReader StatusReader(PlayerSaveData.StatusBinaryData, true);
 		FObjectAndNameAsStringProxyArchive StatusArchive(StatusReader, true);
 		StatusArchive.ArIsSaveGame = false;
 		TargetPlayer->StatusComponent->Serialize(StatusArchive);
+		UE_LOG(LogTemp, Warning, TEXT("Deserialize Status"));
 	}
 	
 	UE_LOG(LogTemp, Warning, TEXT("Load Player ID: %s"), *PlayerID);
 	return true;
+}
+
+bool AMainGameMode::HasSaveData(FString PlayerId)
+{
+	return PlayersSaveData.Find(PlayerId) != NULL;
 }
 
 UMainSaveGame* AMainGameMode::DuplicateSaveData(UMainSaveGame* TargetSaveGame)

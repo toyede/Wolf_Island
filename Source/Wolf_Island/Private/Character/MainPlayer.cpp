@@ -99,6 +99,41 @@ AMainPlayer::AMainPlayer()
 	GetCharacterMovement()->MaxFlySpeed = SwimmingSpeed;
 }
 
+void AMainPlayer::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	
+	if (AMainPlayerController* MainController = Cast<AMainPlayerController>(GetController()))
+	{
+		if (AMainGameMode* GM = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode()))
+		{
+			AMainPlayerState* PS = Cast<AMainPlayerState>(MainController->PlayerState);
+			GM->LoadPlayer(PS);
+			UE_LOG(LogTemp, Warning, TEXT("[%s] LOAD PLAYER DATA"), *PS->GetPersistantId());
+		}
+	} 
+}
+
+void AMainPlayer::PawnClientRestart()
+{
+	Super::PawnClientRestart();
+	
+	if (IsLocallyControlled())
+	{
+		if (AMainPlayerController* MainController = Cast<AMainPlayerController>(GetController()))
+		{
+			MainController->SetPlayerHUD(this);
+		} 
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("HAS NO CONTROLLER"))
+		}	
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("NOT LOCALLY CONTROLLED"))
+	}
+}
+
 // Called when the game starts or when spawned
 void AMainPlayer::BeginPlay()
 {
@@ -148,15 +183,6 @@ void AMainPlayer::BeginPlay()
 	
 	GameMode = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode());
 	MainPlayerController = Cast<AMainPlayerController>(GetController());
-	if (MainPlayerController)
-	{
-		MainPlayerController->SetPlayerHUD(this);
-		if (GameMode)
-		{
-			AMainPlayerState* PS = Cast<AMainPlayerState>(MainPlayerController->PlayerState);
-			GameMode->LoadPlayer(PS);
-		}
-	}	
 }
 
 // Called every frame
@@ -1515,8 +1541,11 @@ void AMainPlayer::Server_SetHotbarIndex_Implementation(int32 Index)
 
 void AMainPlayer::OnRep_HotBarIndex()
 {
-	HUD->UpdateHotBar();
-	RefreshHand();
+	if (IsLocallyControlled())
+	{
+		HUD->UpdateHotBar();
+		RefreshHand();
+	}
 }
 
 void AMainPlayer::OnRep_HandedItem()

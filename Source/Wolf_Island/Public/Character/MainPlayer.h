@@ -72,6 +72,10 @@ public:
 	// Sets default values for this character's properties
 	AMainPlayer();
 	
+	virtual void PossessedBy(AController* NewController) override;
+	
+	virtual void PawnClientRestart() override;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
 	class AMainPlayerController* MainPlayerController;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)

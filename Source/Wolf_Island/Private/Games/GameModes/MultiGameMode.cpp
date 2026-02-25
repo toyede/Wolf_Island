@@ -10,48 +10,98 @@
 AMultiGameMode::AMultiGameMode()
 {
 	bPauseable = false;
+	bStartPlayersAsSpectators = true;
 }
 
 void AMultiGameMode::PostLogin(APlayerController* NewPlayer)
 {
-	Super::PostLogin(NewPlayer);
+	//채팅 테스트하는 데 플레이어 이름이 너무 길어서 귀염뽀짝 짧은 이름으로 재설정 해주는 개발용 코드
+	if (!NewPlayer) return;
+
+	AMainPlayerState* PS = Cast<AMainPlayerState>(NewPlayer->PlayerState);
+	if (!PS) return;
+
+	static int32 Counter = 1;
+	static const TArray<FString> Adjs = {
+		TEXT("귀여운"), TEXT("빠른"), TEXT("용감한"), TEXT("조용한"),
+		TEXT("무거운"), TEXT("느긋한"), TEXT("멍청한"), TEXT("조그만"),
+		TEXT("지루한"), TEXT("무서운"), TEXT("재밌는"), TEXT("거대한"),
+		TEXT("발정난"), TEXT("옹골진"), TEXT("섹시한"), TEXT("길쭉한"),
+	};
+	static const TArray<FString> Nouns = {
+		TEXT("여우"), TEXT("늑대"), TEXT("토끼"), TEXT("곰"),
+		TEXT("고라니"), TEXT("멧돼지"), TEXT("개"), TEXT("고양이"),
+		TEXT("닭"), TEXT("땃쥐"), TEXT("까마귀"), TEXT("사슴"),
+		TEXT("코끼리"), TEXT("다람쥐"), TEXT("매"), TEXT("살쾡이")
+	};
+
+	int32 A = FMath::RandRange(0, Adjs.Num()-1);
+	int32 N = FMath::RandRange(0, Nouns.Num()-1);
 	
+	FString NewName = Adjs[A]+" "+Nouns[N]+FString::FromInt(Counter++);
+	
+	PS->SetPlayerName(NewName);
+	
+	//실제 스팀 기반 세션 온라인 환경에서 로그인 시 사용할 ID
+	//테스트 환경에서 이걸 사용할 시 스팀 연동이 안되어있기 때문에 테스트 실행할 때마다 ID가 변경되어 테스트 용은 고정.
+	//FString PlayerID = PS->GetUniqueId()->ToString();
+	//테스트용 플레이어 아이디
+	FString PlayerID = PS->GetPersistantId();
+	UE_LOG(LogTemp, Warning, TEXT("[Player Login] %s"), *PlayerID);
+	
+	if (PlayersSaveData.Contains(PlayerID))
+	{
+		FPlayerSaveData& PlayerSaveData = PlayersSaveData[PlayerID];
+		PS->SetItemsData(PlayerSaveData.InventoryItems);
+		PS->SetPlayerRole(PlayerSaveData.PlayerRole);
+	}
+	
+	AMainGameState* GS = GetGameState<AMainGameState>();
+	FChattingData Chat = FChattingData(
+		TEXT("알림"),PS->GetPlayerName()+TEXT(" 님이 접속했습니다."), EMessageType::NOTICE);
+	
+	GS->AddChattingMessage(Chat);
+	
+	Super::PostLogin(NewPlayer);
 }
 
 void AMultiGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
 {
-	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
 	
 	AMainPlayerController* NewMainPlayerController = Cast<AMainPlayerController>(NewPlayer);
 	AMainPlayerState* PlayerState = Cast<AMainPlayerState>(NewMainPlayerController->PlayerState);
+	UE_LOG(LogTemp, Warning, TEXT("Entered Players Role : %d"), PlayerState->GetPlayerRole())
 	if (PlayerState->GetPlayerRole() == ECharacterRole::NONE)
 	{
 		NewMainPlayerController->Client_OpenSelectionUI();
+		return;
 	}
+	
+	RestartPlayer(NewPlayer);
 }
 
 void AMultiGameMode::RestartPlayer(AController* NewPlayer)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Call RestartPlayer on MultiGamemode"));
-
 	Super::RestartPlayer(NewPlayer);
 }
 
 bool AMultiGameMode::ShouldSpawnAtStartSpot(AController* Player)
 {
 	AMainPlayerState* PlayerState = Cast<AMainPlayerState>(Player->PlayerState);
-	UE_LOG(LogTemp, Warning, TEXT("Check Role om ShouldSpawn : %d"), PlayerState->GetPlayerRole());
+	UE_LOG(LogTemp, Warning, TEXT("Check Role on ShouldSpawn : %d"), PlayerState->GetPlayerRole());
 	if (!PlayerState) return false;
 	
 	if (PlayerState->GetPlayerRole() == ECharacterRole::NONE) return false;
 	
 	UE_LOG(LogTemp, Warning, TEXT("Allow to Spawn"));
-	return Super::ShouldSpawnAtStartSpot(Player);
+	return true;
 }
 
 //RestartPlayer 실행 시 호출되는 함수... 플레이어 폰 생성
 APawn* AMultiGameMode::SpawnDefaultPawnFor_Implementation(AController* NewPlayer, AActor* StartSpot)
 {
+	UE_LOG(LogTemp, Warning, TEXT("SpawnFor EXECUTED"))
 	AMainPlayerState* PS = Cast<AMainPlayerState>(NewPlayer->PlayerState);
 
 	int32 RoleIndex = static_cast<int32>(PS->GetPlayerRole());
@@ -68,131 +118,17 @@ APawn* AMultiGameMode::SpawnDefaultPawnFor_Implementation(AController* NewPlayer
 		PlayerRoleClassList[RoleIndex],
 		SpawnTransform,
 		Params);
-	
-	if (!Player)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Spawned Player Actor is NULL"))
-	} else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Spawned Player Actor is NOT NULL"))
-	}
 
 	return Player;
 }
 
-APawn* AMultiGameMode::SpawnDefaultPawnAtTransform_Implementation(AController* NewPlayer,
-	const FTransform& SpawnTransform)
+UClass* AMultiGameMode::GetDefaultPawnClassForController_Implementation(AController* InController)
 {
-	AMainPlayerState* PS = Cast<AMainPlayerState>(NewPlayer->PlayerState);
-
-	int32 RoleIndex = static_cast<int32>(PS->GetPlayerRole());
-
-	FActorSpawnParameters Params;
-	Params.SpawnCollisionHandlingOverride =
-		ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-
-	int32 PointIndex = FMath::RandRange(0, SpawnPoints.Num()-1);
-	FVector SpawnLocation = SpawnPoints[PointIndex];
-	FTransform SpawnTransforms(FRotator::ZeroRotator, SpawnLocation);
-
-	AMainPlayer* Player = GetWorld()->SpawnActor<AMainPlayer>(
-		PlayerRoleClassList[RoleIndex],
-		SpawnTransforms,
-		Params);
+	AMainPlayerState* PS = Cast<AMainPlayerState>(InController->PlayerState);
 	
-	if (!Player)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Spawned Player Actor is NULL"))
-	} else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Spawned Player Actor is NOT NULL"))
-	}
-
-	return Player;
-}
-
-void AMultiGameMode::StartingNewPlayer(APlayerController* NewPlayer)
-{
-	UE_LOG(LogTemp, Warning, TEXT("[%hs][MULTIPLAY] Starting New Player"), NewPlayer->IsLocalController()?"SERVER":"CLIENT");
+	if (PS->GetPlayerRole() == ECharacterRole::NONE) return nullptr;
 	
-	AMainPlayerController* NewMainPlayerController = Cast<AMainPlayerController>(NewPlayer);
-	//플레이어 리스폰 시 역할에 따른 캐릭터 소환 후 데이터 동기화
-	AMainPlayerState* PlayerState = Cast<AMainPlayerState>(NewPlayer->PlayerState);
-	if (!PlayerState) return;
-	
-	//FString PlayerID = PlayerState->GetUniqueId().ToString();
-	FString PlayerID = TEXT("TESTER");
-	
-	UE_LOG(LogTemp, Warning, TEXT("[Role] : %d"), PlayerState->GetPlayerRole());
-	
-	//기존 입장 플레이어 라면?
-	if (PlayersSaveData.Contains(PlayerID))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[%hs][%s] is old user"), NewPlayer->IsLocalController()?"SERVER":"CLIENT", *PlayerID);
-		FPlayerSaveData& PlayerSaveData = PlayersSaveData[PlayerID];
-		
-		int32 Index = 0;
-	
-		switch (PlayerState->GetPlayerRole())
-		{
-		case ECharacterRole::CAPTAIN:
-			{
-				Index = 1;
-				break;
-			}
-		case ECharacterRole::CHEF:
-			{	
-				Index = 2;
-				break;
-			}
-		case ECharacterRole::MECHANIC:
-			{
-				Index = 3;
-				break;
-			}
-		case ECharacterRole::SOLDIER:
-			{
-				Index = 4;
-				break;
-			}
-		case ECharacterRole::NONE:
-			{
-				Index = 0;
-				break;
-			}
-		}
-		
-		//해당 역할의 캐릭터 스폰
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.bNoFail = true;
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-		
-		AMainPlayer* SpawnedPlayer = 
-			GetWorld()->SpawnActorDeferred<AMainPlayer>(
-				PlayerRoleClassList[Index], PlayerSaveData.Transform,
-				nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn);
-		SpawnedPlayer->FinishSpawning(PlayerSaveData.Transform);
-		UE_LOG(LogTemp, Warning, TEXT("Spawned Complete for old user"))
-		
-		NewPlayer->Possess(SpawnedPlayer);
-		
-		GetWorld()->GetTimerManager().SetTimerForNextTick([this, PlayerState]
-		{
-			//플레이어 데이터 로드
-			LoadPlayer(PlayerState);
-		});
-	}
-	//새로 입장한 플레이어면
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[%hs][%s] is new user"), NewPlayer->IsLocalController()?"SERVER":"CLIENT", *PlayerID);
-		
-		//역할 고르기 UI 출력 > UI에서 역할 고른 후 AllocatePlayer 호출
-		GetWorld()->GetTimerManager().SetTimerForNextTick([this, NewMainPlayerController]()
-		{
-			NewMainPlayerController->Client_OpenSelectionUI();
-		});
-	}
+	return PlayerRoleClassList[static_cast<int32>(PS->GetPlayerRole())];
 }
 
 void AMultiGameMode::HandlePlayerDeath(AController* DeadPlayerController)

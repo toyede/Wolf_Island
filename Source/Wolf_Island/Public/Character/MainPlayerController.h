@@ -63,7 +63,7 @@ public:
 	UMainGameInstance* MainGameInstance;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
-	AGameModeBase* MainGameMode;
+	AMainGameMode* MainGameMode;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	AMainPlayerState* MainPlayerState;

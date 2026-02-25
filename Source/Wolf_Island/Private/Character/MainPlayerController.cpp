@@ -18,8 +18,6 @@
 #include "Widgets/MainMenu/PauseMenu.h"
 #include "Widgets/RoleSelection/RoleSelection.h"
 
-class UEnhancedInputLocalPlayerSubsystem;
-
 void AMainPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
@@ -45,7 +43,7 @@ void AMainPlayerController::BeginPlay()
 	}
 	
 	MainGameInstance = Cast<UMainGameInstance>(GetGameInstance());
-	MainGameMode = GetWorld()->GetAuthGameMode();
+	MainGameMode = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode());
 	MainPlayerState = GetPlayerState<AMainPlayerState>();
 	MainGameState = Cast<AMainGameState>(GetWorld()->GetGameState());
 }
@@ -70,11 +68,11 @@ void AMainPlayerController::SetupInputComponent()
 void AMainPlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
-	
 }
 
 void AMainPlayerController::OnUnPossess()
 {
+	UE_LOG(LogTemp, Warning, TEXT("UNPOSSESSED"));
 	if (IsLocalController() && PlayerHUD)
 	{
 		PlayerHUD->RemoveFromParent();
@@ -205,10 +203,10 @@ void AMainPlayerController::Server_ConfirmRole_Implementation(ECharacterRole New
 	AMultiGameMode* GM = Cast<AMultiGameMode>(GetWorld()->GetAuthGameMode());
 	AMainPlayerState* PS = Cast<AMainPlayerState>(PlayerState);
 	PS->SetPlayerRole(NewRole);
-	UE_LOG(LogTemp, Warning, TEXT("HasAuthority: %d"), HasAuthority());
-	UE_LOG(LogTemp, Warning, TEXT("GameMode Class: %s"), *GM->GetClass()->GetName());
-	UE_LOG(LogTemp, Warning, TEXT("Sent Role %d in Server"), PS->GetPlayerRole());
-	if (!GM) UE_LOG(LogTemp, Warning, TEXT("GAMEMODE IS NULL"));
+	UE_LOG(LogTemp, Warning, TEXT("Check Role %d in Server"), PS->GetPlayerRole());
+	FInputModeGameOnly Mode;
+	SetInputMode(Mode);
+	SetShowMouseCursor(false);
 	GM->RestartPlayer(this);
 }
 
@@ -221,9 +219,7 @@ void AMainPlayerController::Client_OpenSelectionUI_Implementation()
 	SetInputMode(InputMode);
 	bShowMouseCursor = true;
 	
-	SelectionWidget->AddToViewport();
-	
-	
+	SelectionWidget->AddToViewport();	
 }
 
 void AMainPlayerController::AddChat(FChattingData NewChattingData)
