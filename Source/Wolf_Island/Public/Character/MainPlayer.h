@@ -553,7 +553,7 @@ public:
 	//서버 실행 함수는 서버에 이 함수를 실행하겠다고 요청을 보냄.
 	//서버 실행 함수 안에서는 실제 작동 함수를 실행시킴.
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
-
+		
 	//달리기
 	UFUNCTION()
 	void Request_Run();

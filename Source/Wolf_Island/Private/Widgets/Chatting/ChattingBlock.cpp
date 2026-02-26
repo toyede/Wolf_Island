@@ -59,13 +59,16 @@ void UChattingBlock::SetChattingBlock(FChattingData ChattingData)
 		}
 	}
 	
-	if (ChattingData.Name == GetOwningPlayerState()->GetPlayerName())
+	if (GetOwningPlayerState())
 	{
-		Final = FString::Printf(
-			TEXT("<Time>[%s] </><Mine>%s: </><Message>%s</>"),
-			*Time,
-			*ChattingData.Name,
-			*ChattingData.Message);
+		if (ChattingData.Name == GetOwningPlayerState()->GetPlayerName())
+		{
+			Final = FString::Printf(
+				TEXT("<Time>[%s] </><Mine>%s: </><Message>%s</>"),
+				*Time,
+				*ChattingData.Name,
+				*ChattingData.Message);
+		}
 	}
 	
 	ChattingText->SetText(FText::FromString(Final));

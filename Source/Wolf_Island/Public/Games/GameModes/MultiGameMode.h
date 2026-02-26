@@ -32,6 +32,8 @@ public:
 	
 	virtual APawn* SpawnDefaultPawnFor_Implementation(AController* NewPlayer, AActor* StartSpot) override;
 	
+	virtual void Logout(AController* Exiting) override;
+	
 	//멀티에서 플레이어 죽었을 때 동작 구현.
 	virtual void HandlePlayerDeath(AController* DeadPlayerController) override;
 };

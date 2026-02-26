@@ -334,23 +334,35 @@ void AMainPlayer::StartJump()
 	//슬라이딩 중이면 점프 불가
 	if (IsSliding) return;
 	
+	//앉아 있으면 일어서기
+	if (IsCrouching)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[JUMP] UNCROUCHED"));
+		Request_ToggleCrouch();
+	}
+	
 	//달리는 중 점프하면 스태미나 감소 중단
 	if (IsRunning)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[JUMP] STOP STAMINA"));
 		StatusComponent->StopStamina();
 	}
 
 	//점프 시 스태미나 회복 중단
+	UE_LOG(LogTemp, Warning, TEXT("[JUMP] STOP STAMINA"));
 	StatusComponent->StopRecoverStamina();
 	//점프 스태미나 소모
+	UE_LOG(LogTemp, Warning, TEXT("[JUMP] CONSUME STAMINA"));
 	StatusComponent->DecreaseStamina(JumpConsumeAmount);
-
+	
 	if (JumpSound)
 	{
-		UGameplayStatics::PlaySoundAtLocation(GetWorld(), JumpSound, GetActorLocation());
+		UE_LOG(LogTemp, Warning, TEXT("[JUMP] PLAY JUMPSOUND"));
+		Multi_PlaySound(JumpSound, GetActorLocation());
 	}
-	
+
 	Jump();
+	UE_LOG(LogTemp, Warning, TEXT("[JUMP] JUMP EXECUTED"))
 }
 
 //착지 시 함수
@@ -510,6 +522,7 @@ void AMainPlayer::ToggleCrouch()
 		IsCrouching = false;
 	} else
 	{
+		if (GetCharacterMovement()->IsFalling()) return;
 		Crouch();
 		GetCharacterMovement()->MaxWalkSpeed = CrouchSpeed;
 		IsCrouching = true;

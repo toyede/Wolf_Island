@@ -20,7 +20,10 @@ public:
 	UButton* SingleButton; 
 	
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
-	UButton* MultiButton;
+	UButton* HostButton;
+	
+	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
+	UButton* JoinButton;
 	
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
 	UButton* QuitButton;
