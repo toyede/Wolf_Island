@@ -57,7 +57,6 @@ void UBuildingComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAc
 	{
 		UpdatePreview();
 	}
-	// ...
 }
 
 void UBuildingComponent::ExecuteSpawn(FRecipeData Recipe, FBuildingData BuildData, FTransform SpawnTransform)
@@ -216,6 +215,7 @@ void UBuildingComponent::Server_RequestBuild_Implementation(FRecipeData Recipe, 
 		if (BuildData.BuildingClass)
 		{
 			GetWorld()->SpawnActor<AActor>(BuildData.BuildingClass, SpawnTransform, SpawnParams);
+			CleanupBuildMode();
 		}
 	}
 }
