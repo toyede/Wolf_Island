@@ -417,6 +417,9 @@ void UStatusComponent::StartInfection()
 void UStatusComponent::StopInfection()
 {
 	GetWorld()->GetTimerManager().ClearTimer(InfectionTimer);
+	IsInfected = false;
+	CurrentInfectionRate = 0.0f;
+	OnInfectionChanged.Broadcast();
 }
 
 void UStatusComponent::IncreaseInfection()
@@ -515,6 +518,12 @@ void UStatusComponent::ApplyItem(FItemData Item)
 		IncreaseStamina(Item.NumericData.Stamina);
 		IncreaseHunger(Item.NumericData.Hunger);
 		IncreaseHydration(Item.NumericData.Hydration);
+
+		if (Item.ID == FName(TEXT("FO102")))
+		{
+			StopInfection();
+			UE_LOG(LogTemp, Warning, TEXT("Infection Stopped"));
+		}
 		
 		AMainGameState* GS = Cast<AMainGameState>(GetWorld()->GetGameState());
 		AMainPlayerController* PC = Cast<AMainPlayerController>(Cast<APawn>(GetOwner())->GetController());
@@ -559,6 +568,7 @@ void UStatusComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
 	DOREPLIFETIME(UStatusComponent, CurrentStamina);
 	DOREPLIFETIME(UStatusComponent, CurrentHunger);
 	DOREPLIFETIME(UStatusComponent, CurrentHydration);
+	DOREPLIFETIME(UStatusComponent, CurrentInfectionRate);
 }
 
 void UStatusComponent::OnRep_CurrentHunger()
