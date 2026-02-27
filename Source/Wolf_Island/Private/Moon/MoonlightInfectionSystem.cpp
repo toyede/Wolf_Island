@@ -9,8 +9,9 @@
 #include "Engine/World.h"
 #include "TimerManager.h"
 #include "GameFramework/Character.h"
+#include "Actors/Interfaces/SkyInterface.h"
 
-// Å×½ºÆ®¿ë Çì´õ
+// í…ŒìŠ¤íŠ¸ìš© í—¤ë”
 #include "Character/MainPlayer.h"
 #include "Components/StatusComponent.h"
 
@@ -26,19 +27,19 @@ AMoonlightInfectionSystem::AMoonlightInfectionSystem()
 void AMoonlightInfectionSystem::BeginPlay()
 {
 	Super::BeginPlay();
-	// BP_DynamicSky Ã£±â
+	// BP_DynamicSky ì°¾ê¸°
 	TArray<AActor*> FoundActors;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AActor::StaticClass(), FoundActors);
 
 	for (AActor* Actor : FoundActors)
 	{
-		// Å¬·¡½º ÀÌ¸§À¸·Î BP_DynamicSky Ã£±â
+		// í´ë˜ìŠ¤ ì´ë¦„ìœ¼ë¡œ BP_DynamicSky ì°¾ê¸°
 		if (Actor->GetName().Contains(TEXT("BP_DynamicSky")) ||
 			Actor->GetClass()->GetName().Contains(TEXT("BP_DynamicSky")))
 		{
 			DynamicSkyActor = Actor;
 
-			// MoonDirectionalLight ÄÄÆ÷³ÍÆ® Ã£±â
+			// MoonDirectionalLight ì»´í¬ë„ŒíŠ¸ ì°¾ê¸°
 			TArray<UActorComponent*> Components;
 			Actor->GetComponents(ULightComponent::StaticClass(), Components);
 
@@ -69,8 +70,10 @@ void AMoonlightInfectionSystem::BeginPlay()
 		UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] System initialized successfully"));
 	}
 
-	// °¨¿° Ã¼Å©¸¦ À§ÇÑ ÇÃ·¹ÀÌ¾î ¹ÙÀÎµù (ÃÖÃÊ 1È¸)
-	BindPlayers(FoundActors);
+	// ê°ì—¼ ì‹œì‘ ì´ë²¤íŠ¸ ë°”ì¸ë”© (í”Œë ˆì´ì–´ë§Œ)
+	TArray<AActor*> PlayerActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMainPlayer::StaticClass(), PlayerActors);
+	BindPlayers(PlayerActors);
 }
 
 void AMoonlightInfectionSystem::ActivateInfectionCheck()
@@ -86,13 +89,13 @@ void AMoonlightInfectionSystem::ActivateInfectionCheck()
 		UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] ACTIVATED - Check Interval: %.2fs"), CheckInterval);
 	}
 
-	// Å¸ÀÌ¸Ó ½ÃÀÛ (CheckInterval °£°İÀ¸·Î CheckAllPlayers ¹İº¹ È£Ãâ)
+	// íƒ€ì´ë¨¸ ì‹œì‘ (CheckInterval ê°„ê²©ìœ¼ë¡œ CheckAllPlayers ë°˜ë³µ í˜¸ì¶œ)
 	GetWorldTimerManager().SetTimer(
 		CheckTimerHandle,
 		this,
 		&AMoonlightInfectionSystem::CheckAllPlayers,
 		CheckInterval,
-		true // ¹İº¹
+		true // ë°˜ë³µ
 	);
 }
 
@@ -103,7 +106,7 @@ void AMoonlightInfectionSystem::DeactivateInfectionCheck()
 		UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] DEACTIVATED"));
 	}
 
-	// Å¸ÀÌ¸Ó Á¤Áö
+	// íƒ€ì´ë¨¸ ì •ì§€
 	GetWorldTimerManager().ClearTimer(CheckTimerHandle);
 }
 
@@ -125,63 +128,95 @@ void AMoonlightInfectionSystem::BindPlayers(const TArray<AActor*>& Players)
 	}
 }
 
-void AMoonlightInfectionSystem::HandleInfectionStarted()
+void AMoonlightInfectionSystem::HandleInfectionStarted(UStatusComponent* StatusComp)
 {
+	if (!IsValid(StatusComp))
+	{
+		return;
+	}
+
+	if (!InfectedStatusList.Contains(StatusComp))
+	{
+		InfectedStatusList.Add(StatusComp);
+	}
+}
+
+void AMoonlightInfectionSystem::StartSingleInfectionSequence(AMainPlayer* Player)
+{
+	if (!Player || GetNetMode() != NM_Standalone) return;
+
+	// 1) ì—°ì¶œ: í™”ë©´ ì•”ì „ + í•˜ìš¸ë§ (í´ë¼ RPC/ë¸”ë£¨í”„ë¦°íŠ¸ ì´ë²¤íŠ¸)
+	// Player->Client_PlayInfectionSequenceFX(); // TODO: êµ¬í˜„/ì—°ê²°
+
+	// 2) ë‹¤ìŒë‚  ì•„ì¹¨ìœ¼ë¡œ ìŠ¤í‚µ
+	if (IsValid(DynamicSkyActor) && DynamicSkyActor->Implements<USkyInterface>())
+	{
+		ISkyInterface::Execute_SkipToMorning(DynamicSkyActor);
+	}
+	else if (bShowDebugMessages)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] SkipToMorning failed: DynamicSkyActor does not implement SkyInterface"));
+	}
+
+	// 3) ìˆ˜ë¦¬ëœ ê²ƒ ì¤‘ ëœë¤ 1ê°œ íŒŒê´´
+	// TryDestroyRandomRepairedObject(); // TODO: Repair ì‹œìŠ¤í…œ API í˜¸ì¶œ
+
+	// 4) ê°ì—¼ë„ +20%
+	if (Player->StatusComponent)
+	{
+		Player->StatusComponent->IncreaseInfectionBy(PostSequenceInfectionBonus);
+	}
+}
+
+void AMoonlightInfectionSystem::OnNightStarted()
+{
+	TriggeredThisNight.Empty();
+	NightExposureAccumulated.Empty();
 }
 
 void AMoonlightInfectionSystem::CheckAllPlayers()
 {
-	// ¼­¹ö¿¡¼­¸¸ ½ÇÇà (¸ÖÆ¼ÇÃ·¹ÀÌ ´ëºñ)
 	if (GetLocalRole() != ROLE_Authority)
 	{
 		return;
 	}
 
-	// ¸ğµç BP_MainCharacter Ã£±â
-	// ÁÖÀÇ: BP_MainCharacter Å¬·¡½º°¡ ½ÇÁ¦ ÇÁ·ÎÁ§Æ®ÀÇ Å¬·¡½º ÀÌ¸§°ú ÀÏÄ¡ÇØ¾ß ÇÔ
-	TArray<AActor*> Players;
-
-	// ¹æ¹ı 1: Æ¯Á¤ Å¬·¡½º·Î Ã£±â (ÇÁ·ÎÁ§Æ®¿¡ BP_MainCharacter C++ Å¬·¡½º°¡ ÀÖ´Â °æ¿ì)
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMainPlayer::StaticClass(), Players);
-
-	// ¹æ¹ı 2: Character Å¬·¡½º·Î Ã£±â (¸ğµç Ä³¸¯ÅÍ)
-	// UGameplayStatics::GetAllActorsOfClass(GetWorld(), ACharacter::StaticClass(), Players);
-
-	// ¹æ¹ı 3: Tag·Î Ã£±â (´õ À¯¿¬ÇÔ)
-	// UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("Player"), Players);
-
-	// ===== Ãß°¡: µğ¹ö±× ·Î±× =====
-	if (bShowDebugMessages && Players.Num() == 0)
+	for (int32 Index = InfectedStatusList.Num() - 1; Index >= 0; --Index)
 	{
-		// ÇÃ·¹ÀÌ¾î¸¦ ¸ø Ã£¾ÒÀ» ¶§¸¸ ·Î±× Ãâ·Â (½ºÆÔ ¹æÁö)
-		static bool bLoggedOnce = false;
-		if (!bLoggedOnce)
+		UStatusComponent* StatusComp = InfectedStatusList[Index];
+		if (!IsValid(StatusComp))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] No players found! GetAllActorsOfClass returned 0 characters."));
-			bLoggedOnce = true;
+			InfectedStatusList.RemoveAtSwap(Index);
+			continue;
 		}
-		return;
-	}
 
-	// Ã¹ Ã¼Å© ½Ã¿¡¸¸ ÇÃ·¹ÀÌ¾î ¼ö ·Î±×
-	static bool bFirstCheck = true;
-	if (bFirstCheck && bShowDebugMessages)
-	{
-		UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] Found %d player(s)"), Players.Num());
-		for (AActor* Player : Players)
+		if (!StatusComp->IsInfected || StatusComp->bIsIncapacitated)
 		{
-			UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem]   - Player: %s (Class: %s)"),
-				*Player->GetName(), *Player->GetClass()->GetName());
+			continue;
 		}
-		bFirstCheck = false;
-	}
 
-	// °¢ ÇÃ·¹ÀÌ¾î Ã¼Å©
-	for (AActor* Player : Players)
-	{
+		AActor* Player = StatusComp->GetOwner();
+		if (!IsValid(Player))
+		{
+			continue;
+		}
+
 		if (IsPlayerExposedToMoonlight(Player))
 		{
 			ApplyInfection(Player, InfectionPerCheck);
+
+			if (AMainPlayer* MainPlayer = Cast<AMainPlayer>(Player))
+			{
+				float& Acc = NightExposureAccumulated.FindOrAdd(MainPlayer);
+				Acc += InfectionPerCheck;
+
+				if (!TriggeredThisNight.Contains(MainPlayer) && Acc >= TransformThreshold)
+				{
+					TriggeredThisNight.Add(MainPlayer);
+					StartSingleInfectionSequence(MainPlayer);
+					Acc -= TransformThreshold; // ëˆ„ì  ìœ ì§€í•˜ê³  ì‹¶ìœ¼ë©´ ì´ë ‡ê²Œ
+				}
+			}
 		}
 	}
 }
@@ -193,39 +228,39 @@ bool AMoonlightInfectionSystem::IsPlayerExposedToMoonlight(AActor* Player)
 		return false;
 	}
 
-	// 1. ÇÃ·¹ÀÌ¾î Ã¼Å© À§Ä¡ (¸Ó¸® À§)
+	// 1. í”Œë ˆì´ì–´ ì²´í¬ ìœ„ì¹˜ (ë¨¸ë¦¬ ìœ„)
 	FVector StartLocation = GetMoonlightCheckLocation(Player);
 
-	// 2. ´Ş ¹æÇâ º¤ÅÍ (´ŞºûÀÌ ³»·Á¿À´Â ¹æÇâÀÇ ¹İ´ë = ÇÃ·¹ÀÌ¾î¿¡¼­ ´Ş·Î)
+	// 2. ë‹¬ ë°©í–¥ ë²¡í„° (ë‹¬ë¹›ì´ ë‚´ë ¤ì˜¤ëŠ” ë°©í–¥ì˜ ë°˜ëŒ€ = í”Œë ˆì´ì–´ì—ì„œ ë‹¬ë¡œ)
 	FVector MoonDirection = MoonLight->GetForwardVector() * -1.0f;
 	FVector EndLocation = StartLocation + (MoonDirection * TraceDistance);
 
-	// 3. Ä¸½¶ Æ®·¹ÀÌ½º ¼³Á¤
+	// 3. ìº¡ìŠ íŠ¸ë ˆì´ìŠ¤ ì„¤ì •
 	FCollisionShape CapsuleShape = FCollisionShape::MakeCapsule(CapsuleRadius, CapsuleHalfHeight);
 
 	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(Player); // ÀÚ±â ÀÚ½ÅÀº ¹«½Ã
-	QueryParams.bTraceComplex = false; // ´Ü¼ø Äİ¸®Àü »ç¿ë (¼º´É ÃÖÀûÈ­)
+	QueryParams.AddIgnoredActor(Player); // ìê¸° ìì‹ ì€ ë¬´ì‹œ
+	QueryParams.bTraceComplex = false; // ë‹¨ìˆœ ì½œë¦¬ì „ ì‚¬ìš© (ì„±ëŠ¥ ìµœì í™”)
 
-	// 4. Ä¸½¶ Æ®·¹ÀÌ½º ½ÇÇà
+	// 4. ìº¡ìŠ íŠ¸ë ˆì´ìŠ¤ ì‹¤í–‰
 	FHitResult HitResult;
 	bool bHit = GetWorld()->SweepSingleByChannel(
 		HitResult,
 		StartLocation,
 		EndLocation,
-		FQuat::Identity, // È¸Àü ¾øÀ½
-		ECC_Visibility,  // Visibility Ã¤³Î
+		FQuat::Identity, // íšŒì „ ì—†ìŒ
+		ECC_Visibility,  // Visibility ì±„ë„
 		CapsuleShape,
 		QueryParams
 	);
 
-	// 5. µğ¹ö±× µå·Î¿ì
+	// 5. ë””ë²„ê·¸ ë“œë¡œìš°
 	if (bDrawDebugTrace)
 	{
-		// ³ëÃâµÇ¸é »¡°­, °¡·ÁÁö¸é ÃÊ·Ï
+		// ë…¸ì¶œë˜ë©´ ë¹¨ê°•, ê°€ë ¤ì§€ë©´ ì´ˆë¡
 		FColor DebugColor = bHit ? FColor::Green : FColor::Red;
 
-		// Ä¸½¶ ±×¸®±â
+		// ìº¡ìŠ ê·¸ë¦¬ê¸°
 		DrawDebugCapsule(
 			GetWorld(),
 			StartLocation,
@@ -234,12 +269,12 @@ bool AMoonlightInfectionSystem::IsPlayerExposedToMoonlight(AActor* Player)
 			FQuat::Identity,
 			DebugColor,
 			false,
-			CheckInterval, // ´ÙÀ½ Ã¼Å©±îÁö Ç¥½Ã
+			CheckInterval, // ë‹¤ìŒ ì²´í¬ê¹Œì§€ í‘œì‹œ
 			0,
-			2.0f // ¼± µÎ²²
+			2.0f // ì„  ë‘ê»˜
 		);
 
-		// ·¹ÀÌ ¶óÀÎ ±×¸®±â
+		// ë ˆì´ ë¼ì¸ ê·¸ë¦¬ê¸°
 		DrawDebugLine(
 			GetWorld(),
 			StartLocation,
@@ -251,7 +286,7 @@ bool AMoonlightInfectionSystem::IsPlayerExposedToMoonlight(AActor* Player)
 			1.0f
 		);
 
-		// Hit ÁöÁ¡¿¡ Æ÷ÀÎÆ® ±×¸®±â
+		// Hit ì§€ì ì— í¬ì¸íŠ¸ ê·¸ë¦¬ê¸°
 		if (bHit)
 		{
 			DrawDebugPoint(
@@ -265,77 +300,42 @@ bool AMoonlightInfectionSystem::IsPlayerExposedToMoonlight(AActor* Player)
 		}
 	}
 
-	// 6. ¸·Èù °Ô ¾øÀ¸¸é ³ëÃâµÊ
+	// 6. ë§‰íŒ ê²Œ ì—†ìœ¼ë©´ ë…¸ì¶œë¨
 	return !bHit;
 }
 
 void AMoonlightInfectionSystem::ApplyInfection(AActor* Player, float Amount)
 {
-	// TODO: ³ªÁß¿¡ BP_MainCharacter¿¡ InfectionLevel º¯¼ö Ãß°¡ ÈÄ ±¸Çö
-	// Áö±İÀº ÇÁ·ÎÅäÅ¸ÀÔÀÌ¹Ç·Î Ãâ·Â¸¸
-
-	// ÀÓ½Ã: °£´ÜÇÑ ·Î±× ¹× È­¸é Ãâ·Â
-	FString PlayerName = Player->GetName();
-	FString Message = FString::Printf(TEXT("Player: %s, Infection Up: %.1f"),
-		*PlayerName, Amount);
-
-	if (bShowDebugMessages)
+	if (!IsValid(Player))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] %s"), *Message);
-	}
-
-	/* È­¸é¿¡ Ç¥½Ã(¿¡µğÅÍ / °ÔÀÓ ÇÃ·¹ÀÌ Áß)
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(
-			-1, // Key (ÀÚµ¿ »ı¼º)
-			CheckInterval, // Ç¥½Ã ½Ã°£
-			FColor::Red,
-			Message,
-			true, // »õ·Î¿î ¸Ş½ÃÁö ¿ì¼±
-			FVector2D(1.5f, 1.5f) // ÅØ½ºÆ® Å©±â
-		);
-	}
-	*/
-
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(
-			-1, // Key (ÀÚµ¿ »ı¼º)
-			CheckInterval, // Ç¥½Ã ½Ã°£
-			FColor::Red,
-			Message,
-			true, // »õ·Î¿î ¸Ş½ÃÁö ¿ì¼±
-			FVector2D(1.5f, 1.5f) // ÅØ½ºÆ® Å©±â
-		);
+		return;
 	}
 
 	UStatusComponent* StatusComp = Player->FindComponentByClass<UStatusComponent>();
-
-	if (StatusComp)
+	if (!StatusComp)
 	{
-		if (StatusComp->IsInfected && !StatusComp->bIsIncapacitated)
+		if (bShowDebugMessages)
 		{
-			StatusComp->IncreaseInfection();
-
-			if (bShowDebugMessages)
-			{
-				UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] %s infection increased by %.3f (Total: %.2f%%)"),
-					*Player->GetName(), Amount, StatusComp->CurrentInfectionRate * 100.0f);
-			}
+			UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] %s has no StatusComponent!"), *Player->GetName());
 		}
-		
+		return;
 	}
-	else
+
+	if (StatusComp->IsInfected && !StatusComp->bIsIncapacitated)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] %s has no StatusComponent!"),
-			*Player->GetName());
+		StatusComp->IncreaseInfectionBy(Amount);
+
+		if (bShowDebugMessages)
+		{
+			UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] %s infection increased by %.3f (Total: %.2f%%)"),
+				*Player->GetName(), Amount, StatusComp->CurrentInfectionRate * 100.0f);
+		}
 	}
 }
 
 FVector AMoonlightInfectionSystem::GetMoonlightCheckLocation(AActor* Player)
 {
-	// BP_MainCharacter¿¡¼­ "MoonlightCheckPoint" SceneComponent Ã£±â
+	// BP_MainCharacterì—ì„œ "MoonlightCheckPoint" SceneComponent ì°¾ê¸°
 	USceneComponent* CheckPoint = nullptr;
 
 	TArray<UActorComponent*> Components;
@@ -350,16 +350,18 @@ FVector AMoonlightInfectionSystem::GetMoonlightCheckLocation(AActor* Player)
 		}
 	}
 
-	// SceneComponent°¡ ÀÖÀ¸¸é ±× À§Ä¡, ¾øÀ¸¸é ÇÃ·¹ÀÌ¾î À§Ä¡ + ±âº» ¿ÀÇÁ¼Â
+	// SceneComponentê°€ ìˆìœ¼ë©´ ê·¸ ìœ„ì¹˜, ì—†ìœ¼ë©´ í”Œë ˆì´ì–´ ìœ„ì¹˜ + ê¸°ë³¸ ì˜¤í”„ì…‹
 	if (CheckPoint)
 	{
 		return CheckPoint->GetComponentLocation();
 	}
 	else
 	{
-		// ±âº»: ÇÃ·¹ÀÌ¾î À§Ä¡ + À§·Î 180cm (¸Ó¸® ³ôÀÌ)
+		// ê¸°ë³¸: í”Œë ˆì´ì–´ ìœ„ì¹˜ + ìœ„ë¡œ 180cm (ë¨¸ë¦¬ ë†’ì´)
 		return Player->GetActorLocation() + FVector(0, 0, 180.0f);
 	}
 }
+
+
 
 

@@ -7,11 +7,12 @@
 #include "StatusComponent.generated.h"
 
 class UItemBase;
+class UStatusComponent;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHPZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStaminaZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHungerZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHydrationZero);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInfectionStarted);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInfectionStarted, UStatusComponent*, StatusComp);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInfectionChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAirZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAirFull);
@@ -305,6 +306,8 @@ public:
 	//감염률 증가 함수
 	UFUNCTION(BlueprintCallable)
 	void IncreaseInfection();
+	UFUNCTION(BlueprintCallable)
+	void IncreaseInfectionBy(float Amount);
 	//감염률 감소 함수
 	UFUNCTION(BlueprintCallable)
 	void DecreaseInfection(float Amount);

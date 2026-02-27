@@ -17,6 +17,7 @@
 class APatrolRoute;
 class UAnimMontage;
 class UAttackCollisionComponent;
+class UDamageType;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHitResponse); // 맞을 때 피격 모션 바인딩용
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnThrowEnd); // 투척 공격 끝났음을 알리는 용도
@@ -264,6 +265,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Attack")
 	TObjectPtr<USoundBase> AttackSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Attack")
+	TSubclassOf<UDamageType> WolfAttackDamageType;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Howling")
 	TObjectPtr<UAnimMontage> HowlingMontage;
