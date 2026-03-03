@@ -681,22 +681,40 @@ void AMainPlayer::CheckInteraction()
 		//라인트레이스 실행 후 부딪혔나?
 		if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECC_Visibility, QueryParams))
 		{
-			//부딪힌 액터가 인터랙션 인터페이스를 가지고 있나?
-			if (HitResult.GetActor()->GetClass()->ImplementsInterface(UInteractionInterface::StaticClass()))
+			if (HitResult.GetActor() && HitResult.GetActor()->GetClass()->ImplementsInterface(UInteractionInterface::StaticClass()))
 			{
-				//UE_LOG(LogTemp, Warning, TEXT("It has interface."));
-				//부딪힌 액터가 현재 인터랙터블 데이터와 다르다면
-				if (HitResult.GetActor() != InteractionData.CurrentInteractable)
+				//부딪힌 액터가 인터랙션 인터페이스를 가지고 있나?
+				if (HitResult.GetActor()->GetClass()->ImplementsInterface(UInteractionInterface::StaticClass()))
 				{
-					//UE_LOG(LogTemp, Warning, TEXT("FoundInteractable"));
-					//TargetInteractable에 결과물 넣기
-					FoundInteractable(HitResult.GetActor());
-					return;
-				}
+					//UE_LOG(LogTemp, Warning, TEXT("It has interface."));
+					//부딪힌 액터가 현재 인터랙터블 데이터와 다르다면
+					if (HitResult.GetActor() != InteractionData.CurrentInteractable)
+					{
+						//UE_LOG(LogTemp, Warning, TEXT("FoundInteractable"));
+						//TargetInteractable에 결과물 넣기
+						FoundInteractable(HitResult.GetActor());
+						return;
+					}
 
-				//부딪힌 액터가 현재 인터랙터블 액터와 같다면 암것두 안하기~
-				if (HitResult.GetActor() == InteractionData.CurrentInteractable)
+					//부딪힌 액터가 현재 인터랙터블 액터와 같다면 암것두 안하기~
+					if (HitResult.GetActor() == InteractionData.CurrentInteractable)
+					{
+						return;
+					}
+				}
+			}
+			// 폴리지 체크
+			else if (UInstancedStaticMeshComponent* ISMC = Cast<UInstancedStaticMeshComponent>(HitResult.GetComponent()))
+			{
+				UStaticMesh* HitMesh = ISMC->GetStaticMesh();
+				// 통합된 Map에 등록된 폴리지인지 확인
+				if (FoliageRewardMap.Contains(HitMesh))
 				{
+					int32 InstanceIndex = HitResult.Item;
+					if (InteractionData.CurrentFoliageComponent != ISMC || InteractionData.FoliageInstanceIndex != InstanceIndex)
+					{
+						FoundInteractableFoliage(ISMC, InstanceIndex);
+					}
 					return;
 				}
 			}
@@ -775,6 +793,24 @@ void AMainPlayer::NotFoundInteractable()
 		InteractionData.CurrentInteractable = nullptr;
 		TargetInteractionInterface = nullptr;
 	}
+
+	if (InteractionData.CurrentFoliageComponent)
+	{
+		InteractionData.CurrentFoliageComponent = nullptr;
+		InteractionData.FoliageInstanceIndex = INDEX_NONE;
+	}
+
+	if (InteractionData.CurrentFoliageComponent || CurrentOutlineActor)
+	{
+		if (CurrentOutlineActor)
+		{
+			CurrentOutlineActor->Destroy();
+			CurrentOutlineActor = nullptr;
+		}
+
+		InteractionData.CurrentFoliageComponent = nullptr;
+		InteractionData.FoliageInstanceIndex = INDEX_NONE;
+	}
 }
 
 //인터랙션 시작 함수 (인터랙션 키 눌렀을 때)
@@ -785,42 +821,50 @@ void AMainPlayer::BeginInteract()
 	//인터랙션이 시작됐을 때부터 인터렉션 상태가 변하지 않는 것을 체크
 	CheckInteraction();
 
-	//인터랙션 데이터가 있으면
-	if (InteractionData.CurrentInteractable)
+	if (InteractionData.CurrentInteractable && IsValid(TargetInteractionInterface.GetObject()))
 	{
-		//인터랙션 액터가 유효하면
-		if (IsValid(TargetInteractionInterface.GetObject()))
+		//인터랙션 데이터가 있으면
+		if (InteractionData.CurrentInteractable)
 		{
-			//인터랙션 타겟 액터
-			AActor* Target = Cast<AActor>(TargetInteractionInterface.GetObject());
-			//인터랙션 액터의 인터랙션 시작 함수 실행
-			TargetInteractionInterface->BeginInteract();
-			//즉시 인터랙션이 가능하면 (꾹 누르는 인터랙션이 아니면)
-			if (TargetInteractionInterface->InteractableData.InteractionDuration == 0.0f)
+			//인터랙션 액터가 유효하면
+			if (IsValid(TargetInteractionInterface.GetObject()))
 			{
-				//인터랙션 가능 상태인지 확인
-				if (TargetInteractionInterface->InteractableData.CanInteract)
+				//인터랙션 타겟 액터
+				AActor* Target = Cast<AActor>(TargetInteractionInterface.GetObject());
+				//인터랙션 액터의 인터랙션 시작 함수 실행
+				TargetInteractionInterface->BeginInteract();
+				//즉시 인터랙션이 가능하면 (꾹 누르는 인터랙션이 아니면)
+				if (TargetInteractionInterface->InteractableData.InteractionDuration == 0.0f)
 				{
-					//인터랙션 실행
-					Interaction(Target);
-				}
-			}
-			//꾹 누르는 인터랙션이면
-			else
-			{
-				HUD->DisplayInteraction();
-				//인터랙션 실행 시간 만큼 대기 후 인터랙션 실행
-				GetWorldTimerManager().SetTimer(InteractionTimer,
-					[this, Target]()
+					//인터랙션 가능 상태인지 확인
+					if (TargetInteractionInterface->InteractableData.CanInteract)
 					{
 						//인터랙션 실행
 						Interaction(Target);
-					},
-					TargetInteractionInterface->InteractableData.InteractionDuration,
-					false);
+					}
+				}
+				//꾹 누르는 인터랙션이면
+				else
+				{
+					HUD->DisplayInteraction();
+					//인터랙션 실행 시간 만큼 대기 후 인터랙션 실행
+					GetWorldTimerManager().SetTimer(InteractionTimer,
+						[this, Target]()
+						{
+							//인터랙션 실행
+							Interaction(Target);
+						},
+						TargetInteractionInterface->InteractableData.InteractionDuration,
+						false);
+				}
 			}
 		}
 	}
+	else if (InteractionData.CurrentFoliageComponent && InteractionData.FoliageInstanceIndex != INDEX_NONE)
+	{
+		Server_InteractFoliage(InteractionData.CurrentFoliageComponent, InteractionData.FoliageInstanceIndex);
+	}
+	
 }
 
 void AMainPlayer::EndInteract()
@@ -1241,6 +1285,102 @@ void AMainPlayer::SetSwimMode(ESwimMode NewSwimMode)
 			break;
 		}
 	}
+}
+
+void AMainPlayer::Server_InteractFoliage_Implementation(UInstancedStaticMeshComponent* ISMC, int32 InstanceIndex)
+{
+	if (!ISMC || InstanceIndex == INDEX_NONE) return;
+
+	UStaticMesh* HitMesh = ISMC->GetStaticMesh();
+	if (!HitMesh || !FoliageRewardMap.Contains(HitMesh)) return;
+
+	FFoliageReward Reward = FoliageRewardMap[HitMesh];
+
+	FTransform InstanceTransform;
+	ISMC->GetInstanceTransform(InstanceIndex, InstanceTransform, true);
+
+	if (InventoryComponent && !Reward.ItemID.IsNone() && Reward.ItemAmount > 0)
+	{
+		FItemBaseData NewItem = InventoryComponent->CreateItemByID(Reward.ItemID, Reward.ItemAmount);
+		
+		if (NewItem.IsValid())
+		{
+			FItemAddResult AddResult = InventoryComponent->HandleAddItem(NewItem);
+			if (AddResult.OperationResult == EItemAddedResult::NoItemAdded)
+			{
+				InventoryComponent->Client_AddResult(AddResult);
+				
+				return; 
+			}
+			
+			InventoryComponent->InventoryChanged();
+			InventoryComponent->Client_AddResult(AddResult);
+		}
+	}
+
+	if (Reward.SpawnBP)
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		GetWorld()->SpawnActor<AActor>(Reward.SpawnBP, InstanceTransform, SpawnParams);
+	}
+
+	if (AMainGameMode* GM = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode()))
+	{
+		FRemovedFoliageData RemovedData;
+		RemovedData.Location = InstanceTransform.GetLocation();
+		RemovedData.Rotation = InstanceTransform.GetRotation().Rotator();
+		RemovedData.Scale = InstanceTransform.GetScale3D();
+		RemovedData.Mesh = HitMesh;
+		
+		GM->RemovedFoliageData.Add(RemovedData);
+	}
+
+	Multi_RemoveFoliageInstance(ISMC, InstanceIndex);
+
+	if (CurrentOutlineActor)
+	{
+		CurrentOutlineActor->Destroy();
+		CurrentOutlineActor = nullptr;
+	}
+}
+
+void AMainPlayer::FoundInteractableFoliage(UInstancedStaticMeshComponent* ISMC, int32 InstanceIndex)
+{
+	if (InteractionData.CurrentInteractable)
+	{
+		NotFoundInteractable(); 
+	}
+
+	// 폴리지 데이터 저장
+	InteractionData.CurrentFoliageComponent = ISMC;
+	InteractionData.FoliageInstanceIndex = InstanceIndex;
+
+	// 외곽선용 BP 스폰 로직
+	if (OutlineActorClass && ISMC && InstanceIndex != INDEX_NONE)
+	{
+		FTransform InstanceTransform;
+		ISMC->GetInstanceTransform(InstanceIndex, InstanceTransform, true);
+		
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		CurrentOutlineActor = GetWorld()->SpawnActor<AActor>(OutlineActorClass, InstanceTransform, SpawnParams);
+
+		if (CurrentOutlineActor)
+		{
+			UStaticMeshComponent* DummyMeshComp = CurrentOutlineActor->FindComponentByClass<UStaticMeshComponent>();
+			if (DummyMeshComp)
+			{
+				DummyMeshComp->SetStaticMesh(ISMC->GetStaticMesh());
+				
+				DummyMeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+				DummyMeshComp->SetCastShadow(false);
+			}
+		}
+	}
+	
 }
 
 void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float DamageAmount)
