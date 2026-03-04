@@ -46,6 +46,18 @@ void AMainPlayerController::BeginPlay()
 	MainGameMode = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode());
 	MainPlayerState = GetPlayerState<AMainPlayerState>();
 	MainGameState = Cast<AMainGameState>(GetWorld()->GetGameState());
+	
+	if (HasAuthority()&&MainPlayerState)
+	{
+		if (MainPlayerState->GetPlayerRole() == ECharacterRole::NONE)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Open Selection UI in Player Controller"))
+			Client_OpenSelectionUI();
+		} else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PC] Can't open Selection UI. Player role is %d"), MainPlayerState->GetPlayerRole())
+		}
+	}
 }
 
 void AMainPlayerController::SetupInputComponent()
@@ -191,6 +203,45 @@ void AMainPlayerController::SendChat(FChattingData NewChattingData)
 	MainGameState->AddChattingMessage(NewChattingData);
 }
 
+void AMainPlayerController::Client_EndSelection_Implementation()
+{
+	FInputModeGameOnly Mode;
+	SetInputMode(Mode);
+	SetShowMouseCursor(false);
+	RoleSelectionWidget->RemoveFromParent();
+}
+
+void AMainPlayerController::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+	
+	MainPlayerState = GetPlayerState<AMainPlayerState>();
+	
+	if (MainPlayerState)
+	{
+		if (MainPlayerState->GetPlayerRole() == ECharacterRole::NONE)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Open Selection UI in Player Controller"), *GetPlayerState<AMainPlayerState>()->GetPersistantId())
+			Client_OpenSelectionUI();
+		} else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Can't open Selection UI. Player role is %d"), *GetPlayerState<AMainPlayerState>()->GetPersistantId(), MainPlayerState->GetPlayerRole())
+		}
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Can't open Selection UI. Player State is INVALID"), *GetPlayerState<AMainPlayerState>()->GetPersistantId())
+	}
+}
+
+void AMainPlayerController::Client_RoleDeny_Implementation()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Role Selection Denied"))
+	if (RoleSelectionWidget)
+	{
+		RoleSelectionWidget->PlayDenyAlarm();
+	}
+}
+
 void AMainPlayerController::Client_SetInputModeGame_Implementation()
 {
 	FInputModeGameOnly InputMode;
@@ -202,17 +253,24 @@ void AMainPlayerController::Server_ConfirmRole_Implementation(ECharacterRole New
 {
 	AMultiGameMode* GM = Cast<AMultiGameMode>(GetWorld()->GetAuthGameMode());
 	AMainPlayerState* PS = Cast<AMainPlayerState>(PlayerState);
-	PS->SetPlayerRole(NewRole);
-	UE_LOG(LogTemp, Warning, TEXT("Check Role %d in Server"), PS->GetPlayerRole());
-	FInputModeGameOnly Mode;
-	SetInputMode(Mode);
-	SetShowMouseCursor(false);
-	GM->RestartPlayer(this);
+	
+	if (GM->CheckRoleAvailable(NewRole))
+	{
+		PS->SetPlayerRole(NewRole);
+		UE_LOG(LogTemp, Warning, TEXT("Check Role %d in Server"), PS->GetPlayerRole());
+		GM->RestartPlayer(this);
+		Client_EndSelection();
+		
+	} else
+	{
+		Client_RoleDeny();
+	}
 }
 
 void AMainPlayerController::Client_OpenSelectionUI_Implementation()
 {	
 	URoleSelection* SelectionWidget = CreateWidget<URoleSelection>(this, RoleSelectionWidgetClass);
+	RoleSelectionWidget = SelectionWidget;
 	
 	FInputModeUIOnly InputMode;
 	InputMode.SetWidgetToFocus(SelectionWidget->TakeWidget());

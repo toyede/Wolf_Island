@@ -10,6 +10,21 @@
 /**
  * 
  */
+USTRUCT(BlueprintType)
+struct FRoleData : public FTableRowBase
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ECharacterRole Role;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FText RoleName;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FText RoleDescription;
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnButtonClick, ECharacterRole, Role);
 
 UCLASS()
@@ -18,15 +33,23 @@ class WOLF_ISLAND_API URoleButton : public UUserWidget
 	GENERATED_BODY()
 	
 public:
-	
 	UPROPERTY(BlueprintAssignable)
 	FOnButtonClick OnClicked;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UDataTable* RoleDataTable;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ECharacterRole Role;
 	
 	UPROPERTY(meta=(BindWidget))
 	class UButton* Button;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	ECharacterRole Role;
+	UPROPERTY(meta=(BindWidget))
+	UTextBlock* RoleName;
+	
+	UPROPERTY(meta=(BindWidget))
+	UTextBlock* RoleDesc;
 	
 	virtual void NativeConstruct() override;
 	

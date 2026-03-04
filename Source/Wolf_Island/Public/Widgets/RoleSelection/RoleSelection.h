@@ -6,6 +6,8 @@
 #include "Blueprint/UserWidget.h"
 #include "RoleSelection.generated.h"
 
+class UTextBlock;
+class UBorder;
 class UBaseButton;
 class AMainPlayerController;
 enum class ECharacterRole : uint8;
@@ -30,10 +32,22 @@ public:
 	AMainGameState* MainGameState;
 	
 	UPROPERTY(meta=(BindWidget))
+	UTextBlock* RoleName;
+	
+	UPROPERTY(meta=(BindWidget))
+	UTextBlock* RoleDesc;
+	
+	UPROPERTY(meta=(BindWidget))
 	UWrapBox* RoleList;
 	
 	UPROPERTY(meta=(BindWidget))
 	UBaseButton* ConfirmButton;
+	
+	UPROPERTY(meta=(BindWidget))
+	UBorder* AlarmBar;
+	
+	UPROPERTY(meta=(BindWidgetAnim), Transient)
+	UWidgetAnimation* DenyAlarm;
 	
 	virtual void NativeConstruct() override;
 	
@@ -45,4 +59,7 @@ public:
 	
 	UFUNCTION()
 	void ConfirmSelection();
+	
+	UFUNCTION()
+	void PlayDenyAlarm();
 };

@@ -5,9 +5,9 @@
 
 #include "Character/MainPlayerController.h"
 #include "Components/Button.h"
+#include "Components/TextBlock.h"
 #include "Components/WrapBox.h"
 #include "Games/MainGameState.h"
-#include "Games/MainPlayerState.h"
 #include "Widgets/BaseButton.h"
 #include "Widgets/RoleSelection/RoleButton.h"
 
@@ -17,6 +17,15 @@ void URoleSelection::NativeConstruct()
 	
 	MainGameState = Cast<AMainGameState>(GetWorld()->GetGameState());
 	PlayerController = Cast<AMainPlayerController>(GetOwningPlayer());
+	
+	if (MainGameState)
+	{
+		MainGameState->OnSelectedRolesChanged.AddDynamic(this, &URoleSelection::CheckOccupied);
+		UE_LOG(LogTemp, Warning, TEXT("MainGameState is valid"));
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("MainGameState is invalid"));
+	}
 	
 	for (UWidget* Child : RoleList->GetAllChildren())
 	{
@@ -44,10 +53,9 @@ void URoleSelection::CheckOccupied()
 	{
 		URoleButton* Button = Cast<URoleButton>(Child);
 		
-		for (APlayerState* PS : MainGameState->PlayerArray)
+		for (const ECharacterRole& OccupiedRole : MainGameState->SelectedRoles)
 		{
-			AMainPlayerState* Player = Cast<AMainPlayerState>(PS);
-			if (Player->GetPlayerRole() == Button->Role)
+			if (OccupiedRole == Button->Role)
 			{
 				Button->SetOccupied(true);
 			} else
@@ -62,6 +70,18 @@ void URoleSelection::SetInfoSection_Implementation(ECharacterRole Role)
 {
 	SelectedRole = Role;
 	ConfirmButton->Button->SetIsEnabled(true);
+	
+	for (UWidget* Child : RoleList->GetAllChildren())
+	{
+		if (URoleButton* Button = Cast<URoleButton>(Child))
+		{
+			if (Button->Role == SelectedRole)
+			{
+				RoleName->SetText(Button->RoleName->GetText());
+				RoleDesc->SetText(Button->RoleDesc->GetText());
+			}
+		}
+	}
 }
 
 void URoleSelection::ConfirmSelection()
@@ -70,5 +90,12 @@ void URoleSelection::ConfirmSelection()
 	
 	UE_LOG(LogTemp, Warning, TEXT("Confirmed Role : %d"), SelectedRole);
 	PlayerController->Server_ConfirmRole(SelectedRole);
-	RemoveFromParent();
+}
+
+void URoleSelection::PlayDenyAlarm()
+{
+	if (DenyAlarm)
+	{
+		PlayAnimation(DenyAlarm);
+	}
 }

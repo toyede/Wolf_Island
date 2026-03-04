@@ -78,8 +78,6 @@ public:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
 	class AMainPlayerController* MainPlayerController;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
-	class AMainGameMode* GameMode;
 	//HUD=============================================================================
 	//UPROPERTY(EditAnywhere)
 	//class AMainHUD* HUD;

@@ -110,6 +110,8 @@ void AMainPlayer::PossessedBy(AController* NewController)
 			AMainPlayerState* PS = Cast<AMainPlayerState>(MainController->PlayerState);
 			GM->LoadPlayer(PS);
 			UE_LOG(LogTemp, Warning, TEXT("[%s] LOAD PLAYER DATA"), *PS->GetPersistantId());
+			GM->SavePlayer(PS);
+			UE_LOG(LogTemp, Warning, TEXT("[%s] SAVE PLAYER DATA FOR NOOB"), *PS->GetPersistantId());
 		}
 	} 
 }
@@ -181,7 +183,6 @@ void AMainPlayer::BeginPlay()
 	
 	UE_LOG(LogTemp, Warning, TEXT("[%s] All Components Set"), *GetName());
 	
-	GameMode = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode());
 	MainPlayerController = Cast<AMainPlayerController>(GetController());
 }
 
@@ -1341,6 +1342,7 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 	
 	//====>> 2.19 조성윤 추가 <<====
 	//삭제될 폴리지 정보 저장
+	//이 함수는 서버에서만 실행되니까 GetAuthGameMode이 null이 아님.
 	AMainGameMode* GM = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode());
 	
 	FRemovedFoliageData RemovedData;

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Character/MainPlayer.h"
 #include "GameFramework/GameState.h"
 #include "MainGameState.generated.h"
 
@@ -10,7 +11,9 @@
  * 
  */
 
+struct FPlayerSaveData;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnUnlockedRecordsChanged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSelectedRolesChanged);
 
 UENUM(BlueprintType)
 enum class EMessageType : uint8
@@ -64,9 +67,20 @@ class WOLF_ISLAND_API AMainGameState : public AGameState
 	GENERATED_BODY()
 	
 public:
+	//선택한 역할들이 바뀌면
+	FOnSelectedRolesChanged OnSelectedRolesChanged;
 	
+	//채팅창 채팅 리스트
 	UPROPERTY(Replicated, BlueprintReadWrite)
 	TArray<FChattingData> ChattingData;
+	
+	//현재 입장한 플레이어들이 선택한 역할들
+	UPROPERTY(ReplicatedUsing=OnRep_SelectedRoles, BlueprintReadWrite)
+	TArray<ECharacterRole> SelectedRoles;
+	
+	//선택한 역할 세팅하는 함수
+	UFUNCTION(BlueprintCallable)
+	void RefreshSelectedRoles();
 	
 	UFUNCTION(BlueprintCallable)
 	void AddChattingMessage(FChattingData NewChattingData);
@@ -94,4 +108,7 @@ public:
 
 	UFUNCTION()
 	void OnRep_UnlockedRecordIDs();
+	
+	UFUNCTION()
+	void OnRep_SelectedRoles();
 };

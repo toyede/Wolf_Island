@@ -23,16 +23,20 @@ void AMultiGameMode::PostLogin(APlayerController* NewPlayer)
 
 	static int32 Counter = 1;
 	static const TArray<FString> Adjs = {
-		TEXT("귀여운"), TEXT("빠른"), TEXT("용감한"), TEXT("조용한"),
-		TEXT("무거운"), TEXT("느긋한"), TEXT("멍청한"), TEXT("조그만"),
-		TEXT("지루한"), TEXT("무서운"), TEXT("재밌는"), TEXT("거대한"),
-		TEXT("발정난"), TEXT("옹골진"), TEXT("섹시한"), TEXT("길쭉한"),
+		TEXT("새까만"), TEXT("순백의"), TEXT("노란"), TEXT("파란"),
+		TEXT("붉은"), TEXT("보랏빛"), TEXT("청록색"), TEXT("회색"),
+		TEXT("푸른"), TEXT("흰"), TEXT("검은"), TEXT("남색"),
+		TEXT("자홍색"), TEXT("고동색"), TEXT("회적색"), TEXT("담청색"),
+		TEXT("동빛"), TEXT("녹색"), TEXT("군청색"), TEXT("하늘색"),
+		TEXT("옥색"), TEXT("주홍빛"), TEXT("자색"), TEXT("보라색"),
 	};
 	static const TArray<FString> Nouns = {
 		TEXT("여우"), TEXT("늑대"), TEXT("토끼"), TEXT("곰"),
 		TEXT("고라니"), TEXT("멧돼지"), TEXT("개"), TEXT("고양이"),
 		TEXT("닭"), TEXT("땃쥐"), TEXT("까마귀"), TEXT("사슴"),
-		TEXT("코끼리"), TEXT("다람쥐"), TEXT("매"), TEXT("살쾡이")
+		TEXT("코끼리"), TEXT("다람쥐"), TEXT("매"), TEXT("살쾡이"),
+		TEXT("거북이"), TEXT("앵무새"), TEXT("너구리"), TEXT("오소리"),
+		TEXT("기린"), TEXT("하마"), TEXT("코끼리"), TEXT("양")
 	};
 
 	int32 A = FMath::RandRange(0, Adjs.Num()-1);
@@ -71,11 +75,7 @@ void AMultiGameMode::HandleStartingNewPlayer_Implementation(APlayerController* N
 	AMainPlayerController* NewMainPlayerController = Cast<AMainPlayerController>(NewPlayer);
 	AMainPlayerState* PlayerState = Cast<AMainPlayerState>(NewMainPlayerController->PlayerState);
 	UE_LOG(LogTemp, Warning, TEXT("Entered Players Role : %d"), PlayerState->GetPlayerRole())
-	if (PlayerState->GetPlayerRole() == ECharacterRole::NONE)
-	{
-		NewMainPlayerController->Client_OpenSelectionUI();
-		return;
-	}
+	if (PlayerState->GetPlayerRole() == ECharacterRole::NONE) return;
 	
 	RestartPlayer(NewPlayer);
 }
@@ -132,6 +132,17 @@ void AMultiGameMode::Logout(AController* Exiting)
 	GS->AddChattingMessage(Chat);
 	
 	Super::Logout(Exiting);
+}
+
+bool AMultiGameMode::CheckRoleAvailable(ECharacterRole NewRole) const
+{
+	AMainGameState* GS = GetGameState<AMainGameState>();
+	for (auto Player : GS->PlayerArray)
+	{
+		AMainPlayerState* PS = Cast<AMainPlayerState>(Player);
+		if (PS->GetPlayerRole() == NewRole) return false;
+	}
+	return true;
 }
 
 UClass* AMultiGameMode::GetDefaultPawnClassForController_Implementation(AController* InController)

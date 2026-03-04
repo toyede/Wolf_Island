@@ -15,7 +15,6 @@
 #include "Games/MainPlayerState.h"
 #include "Games/MainSaveGame.h"
 #include "Games/SaveInterface.h"
-#include "Games/GameModes/MultiGameMode.h"
 #include "Kismet/GameplayStatics.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
@@ -26,6 +25,7 @@ void AMainGameMode::InitGame(const FString& MapName, const FString& Options, FSt
 	MainGameInstance = Cast<UMainGameInstance>(GetGameInstance());
 	
 	//메인 메뉴에서 입장 시 슬롯에서 불러온 세이브 게임 데이터 로드
+	//저장된 플레이어 데이터도 세팅
 	if (MainGameInstance && MainGameInstance->CurrenSaveGame)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Load Save Data From MainGameInstance"));
@@ -57,6 +57,16 @@ void AMainGameMode::InitGame(const FString& MapName, const FString& Options, FSt
 void AMainGameMode::StartPlay()
 {
 	Super::StartPlay();
+	
+	//게임 스테이트에 선택된 역할 세팅
+	if (AMainGameState* GS = GetGameState<AMainGameState>())
+	{
+		GS->RefreshSelectedRoles();
+		UE_LOG(LogTemp, Warning, TEXT("Refresh SelectedRoles"));
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("No Game State Detected"));
+	}
 	
 	LoadWorld();
 	
@@ -282,14 +292,6 @@ void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 	FString PlayerID = PlayerState->GetPersistantId();
 	FPlayerSaveData& PlayerSaveData = PlayersSaveData.FindOrAdd(PlayerID);
 	
-	if (AMultiGameMode* GM = Cast<AMultiGameMode>(this))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("This world is MultiMode"));
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("This world is SingleMode"));
-	}
 	PlayerSaveData.PlayerID = PlayerID;
 	PlayerSaveData.PlayerRole = PlayerState->GetPlayerRole();
 	
@@ -329,6 +331,13 @@ void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 	PlayerSaveData.InventoryItems = PlayerState->GetItems();
 	
 	UE_LOG(LogTemp, Warning, TEXT("Save Player ID: %s | PlayersSaveData Num : %d"), *PlayerID, PlayersSaveData.Num());
+	
+	//선택창 대기 중인 뉴비를 위한 선택한 역할 리스트 업데이트
+	if (AMainGameState* GS = GetGameState<AMainGameState>())
+	{
+		GS->RefreshSelectedRoles();
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] SELECTED ROLES UPDATE"));
+	}
 }
 
 bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState)

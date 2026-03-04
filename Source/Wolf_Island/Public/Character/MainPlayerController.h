@@ -47,6 +47,9 @@ public:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	UPauseMenu* PauseMenu;
 	
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category="Widget")
+	URoleSelection* RoleSelectionWidget;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	TSubclassOf<UPlayerHUD> HUDClass;
 	
@@ -128,6 +131,7 @@ public:
 	UFUNCTION()
 	void SendChat(FChattingData NewChattingData);
 	
+	//역할 선택 관련
 	UFUNCTION(Client, Reliable)
 	void Client_OpenSelectionUI();
 	
@@ -136,4 +140,12 @@ public:
 	
 	UFUNCTION(Client, Reliable)
 	void Client_SetInputModeGame();
+	
+	UFUNCTION(Client, Reliable)
+	void Client_RoleDeny();
+	
+	UFUNCTION(Client, Reliable)
+	void Client_EndSelection();
+	
+	virtual void OnRep_PlayerState() override;
 };
