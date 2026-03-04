@@ -58,9 +58,6 @@ void URoleSelection::CheckOccupied()
 			if (OccupiedRole == Button->Role)
 			{
 				Button->SetOccupied(true);
-			} else
-			{
-				Button->SetOccupied(false);
 			}
 		}
 	}
