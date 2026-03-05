@@ -47,7 +47,7 @@ void AMainPlayerController::BeginPlay()
 	MainPlayerState = GetPlayerState<AMainPlayerState>();
 	MainGameState = Cast<AMainGameState>(GetWorld()->GetGameState());
 	
-	if (HasAuthority()&&MainPlayerState)
+	if (HasAuthority()&&MainPlayerState&&MainGameState->IsMulti)
 	{
 		if (MainPlayerState->GetPlayerRole() == ECharacterRole::NONE)
 		{

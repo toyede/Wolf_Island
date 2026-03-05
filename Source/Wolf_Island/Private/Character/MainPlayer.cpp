@@ -661,7 +661,24 @@ void AMainPlayer::SetHotbarIndex(int32 Index)
 
 void AMainPlayer::OnDeath_Implementation()
 {
-	UE_LOG(LogTemp, Display, TEXT("Player Dead"));
+	bool IsMulti = GetWorld()->GetGameState<AMainGameState>()->IsMulti;
+	//멀티 플레이 죽음 시
+	//1. 10초간 기절 : 다른 플레이어가 붕대로 상호작용 시 회복
+	//2. 10초 뒤 사망 후 리스폰 지역에서 부활
+	if (IsMulti)
+	{
+		UE_LOG(LogTemp, Display, TEXT("[MULTI]Player Dead"));
+		
+	}
+	//싱글 플레이 죽음 시 - 사망한 당일 아침으로 부활
+	else
+	{
+		UE_LOG(LogTemp, Display, TEXT("[SINGLE]Player Dead"));
+		AMainGameMode* GM = GetWorld()->GetAuthGameMode<AMainGameMode>();
+		
+		GM->LoadWorld();
+		GM->RestartPlayer(GetController());
+	}
 }
 
 //손에 든 아이템 업데이트 함수

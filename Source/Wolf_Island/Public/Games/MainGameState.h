@@ -67,6 +67,10 @@ class WOLF_ISLAND_API AMainGameState : public AGameState
 	GENERATED_BODY()
 	
 public:
+	//현재 게임이 멀티인지 싱글인지
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	bool IsMulti = false;
+	
 	//선택한 역할들이 바뀌면
 	FOnSelectedRolesChanged OnSelectedRolesChanged;
 	

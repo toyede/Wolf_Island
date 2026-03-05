@@ -442,7 +442,7 @@ public:
 	void SetHotbarIndex(int32 Index);
 
 	//사망 시 함수
-	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	void OnDeath();
 	virtual void OnDeath_Implementation();
 
