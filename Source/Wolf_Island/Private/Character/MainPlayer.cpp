@@ -10,14 +10,12 @@
 #include "Blueprint/UserWidget.h"
 #include "Widgets/Craft/BonFireUI.h"
 #include "Widgets/Craft/RepairUI.h"
-#include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Components/StatusComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/WeaponComponent.h"
 #include "Item/Tree.h"
-#include "Components/CapsuleComponent.h"
 #include "Components/InventoryComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Games/MainHUD.h"
@@ -30,8 +28,9 @@
 #include "Components/AudioComponent.h"
 #include "Components/BillboardComponent.h"
 #include "WaterBodyComponent.h"
+#include "Character/MainPlayerController.h"
 #include "Components/BuildingComponent.h"
-#include "Games/MainGameState.h"
+#include "Components/WidgetComponent.h"
 #include "Games/MainSaveGame.h"
 #include "Games/GameModes/MainGameMode.h"
 
@@ -49,9 +48,13 @@ AMainPlayer::AMainPlayer()
 	
 	BuoyancyComponent = CreateDefaultSubobject<UBuoyancyComponent>("BuoyancyComponent");
 	
+	BuildingComponent = CreateDefaultSubobject<UBuildingComponent>("BuildingComponent");
+	
 	WaterLevelCheckPoint = CreateDefaultSubobject<UBillboardComponent>("WaterLevelCheckPoint");
 	
 	WaterAmbience = CreateDefaultSubobject<UAudioComponent>("WaterAmbience");
+	
+	NickName = CreateDefaultSubobject<UWidgetComponent>("NickNameWidget");
 
 	//손에 든 아이템 메쉬
 	ItemMesh = CreateDefaultSubobject<UStaticMeshComponent>("Item");
@@ -91,7 +94,44 @@ AMainPlayer::AMainPlayer()
 	WaterLevelCheckPoint->SetRelativeLocation(FVector(0.0f, 0.0f, 50.0f));
 	BuoyancyComponent->AddCustomPontoon(25.0f, WaterLevelCheckPoint->GetRelativeLocation());
 	
+	NickName->SetupAttachment(GetMesh());
+	
 	GetCharacterMovement()->MaxFlySpeed = SwimmingSpeed;
+}
+
+void AMainPlayer::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	
+	if (AMainPlayerController* MainController = Cast<AMainPlayerController>(GetController()))
+	{
+		if (AMainGameMode* GM = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode()))
+		{
+			AMainPlayerState* PS = Cast<AMainPlayerState>(MainController->PlayerState);
+			GM->LoadPlayer(PS);
+			UE_LOG(LogTemp, Warning, TEXT("[%s] LOAD PLAYER DATA"), *PS->GetPersistantId());
+		}
+	} 
+}
+
+void AMainPlayer::PawnClientRestart()
+{
+	Super::PawnClientRestart();
+	
+	if (IsLocallyControlled())
+	{
+		if (AMainPlayerController* MainController = Cast<AMainPlayerController>(GetController()))
+		{
+			MainController->SetPlayerHUD(this);
+		} 
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("HAS NO CONTROLLER"))
+		}	
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("NOT LOCALLY CONTROLLED"))
+	}
 }
 
 // Called when the game starts or when spawned
@@ -138,15 +178,11 @@ void AMainPlayer::BeginPlay()
 		BuoyancyComponent->OnEnteredWaterDelegate.AddDynamic(this, &AMainPlayer::EnterWater);
 		BuoyancyComponent->OnExitedWaterDelegate.AddDynamic(this, &AMainPlayer::ExitWater);
 	}
-
-	//HUD = Cast<AMainHUD>(GetWorld()->GetFirstPlayerController()->GetHUD());
-
-	//플레이어 본인(클라이언트)만 HUD 생성.
-	if (IsLocallyControlled())
-	{
-		HUD = CreateWidget<UPlayerHUD>(GetWorld(), HUDClass);
-		HUD->AddToViewport();
-	}
+	
+	UE_LOG(LogTemp, Warning, TEXT("[%s] All Components Set"), *GetName());
+	
+	GameMode = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode());
+	MainPlayerController = Cast<AMainPlayerController>(GetController());
 }
 
 // Called every frame
@@ -298,23 +334,35 @@ void AMainPlayer::StartJump()
 	//슬라이딩 중이면 점프 불가
 	if (IsSliding) return;
 	
+	//앉아 있으면 일어서기
+	if (IsCrouching)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[JUMP] UNCROUCHED"));
+		Request_ToggleCrouch();
+	}
+	
 	//달리는 중 점프하면 스태미나 감소 중단
 	if (IsRunning)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[JUMP] STOP STAMINA"));
 		StatusComponent->StopStamina();
 	}
 
 	//점프 시 스태미나 회복 중단
+	UE_LOG(LogTemp, Warning, TEXT("[JUMP] STOP STAMINA"));
 	StatusComponent->StopRecoverStamina();
 	//점프 스태미나 소모
+	UE_LOG(LogTemp, Warning, TEXT("[JUMP] CONSUME STAMINA"));
 	StatusComponent->DecreaseStamina(JumpConsumeAmount);
-
+	
 	if (JumpSound)
 	{
-		UGameplayStatics::PlaySoundAtLocation(GetWorld(), JumpSound, GetActorLocation());
+		UE_LOG(LogTemp, Warning, TEXT("[JUMP] PLAY JUMPSOUND"));
+		Multi_PlaySound(JumpSound, GetActorLocation());
 	}
-	
+
 	Jump();
+	UE_LOG(LogTemp, Warning, TEXT("[JUMP] JUMP EXECUTED"))
 }
 
 //착지 시 함수
@@ -324,15 +372,25 @@ void AMainPlayer::Landed(const FHitResult& Hit)
 
 	float FallForce = FMath::Abs(GetVelocity().Z);
 	UE_LOG(LogTemp, Warning, TEXT("%f"), FallForce);
-	
+
 	if (FallForce > 1000.0f)
 	{
 		if (FallForce > 3000.0f)
 		{
-			StatusComponent->DecreaseHP(StatusComponent->MaxHP);
+			UGameplayStatics::ApplyDamage(
+				this, 
+				FallForce*1.0f,
+				GetController(),
+				this,
+				UDamageType::StaticClass());
 		} else
 		{
-			StatusComponent->DecreaseHP(FallForce*0.03f);
+			UGameplayStatics::ApplyDamage(
+				this, 
+				FallForce*0.03f,
+				GetController(),
+				this,
+				UDamageType::StaticClass());
 		}
 	}
 
@@ -464,6 +522,7 @@ void AMainPlayer::ToggleCrouch()
 		IsCrouching = false;
 	} else
 	{
+		if (GetCharacterMovement()->IsFalling()) return;
 		Crouch();
 		GetCharacterMovement()->MaxWalkSpeed = CrouchSpeed;
 		IsCrouching = true;
@@ -737,7 +796,7 @@ void AMainPlayer::FoundInteractable(AActor* Interactable)
 	if (InteractionData.CurrentInteractable)
 	{	
 		TargetInteractionInterface = InteractionData.CurrentInteractable;
-		TargetInteractionInterface->EndFocus();
+		TargetInteractionInterface->Execute_EndFocus(InteractionData.CurrentInteractable);
 	}
 	
 	//인터랙션 액터 데이터 지정
@@ -752,7 +811,7 @@ void AMainPlayer::FoundInteractable(AActor* Interactable)
 		{
 			HUD->DisplayDefault();
 		}
-		TargetInteractionInterface->EndFocus();
+		TargetInteractionInterface->Execute_EndFocus(InteractionData.CurrentInteractable);
 		return;
 	}
 	
@@ -761,7 +820,7 @@ void AMainPlayer::FoundInteractable(AActor* Interactable)
 	{
 		HUD->DisplayInteractable();
 	}
-	TargetInteractionInterface->BeginFocus();
+	TargetInteractionInterface->Execute_BeginFocus(InteractionData.CurrentInteractable);
 }
 
 //인터랙션 가능 액터를 못찾았을 때
@@ -780,7 +839,7 @@ void AMainPlayer::NotFoundInteractable()
 		if (IsValid(TargetInteractionInterface.GetObject()))
 		{
 			//포커스 끝내기
-			TargetInteractionInterface->EndFocus();
+			TargetInteractionInterface->Execute_EndFocus(InteractionData.CurrentInteractable);
 		}
 
 		//TODO:여기 인터랙션 UI 업데이트 코드 추가 예정
@@ -881,7 +940,6 @@ void AMainPlayer::EndInteract()
 		TargetInteractionInterface->EndInteract();
 	}
 }
-
 
 void AMainPlayer::Interaction_Implementation(AActor* Target)
 {
@@ -1485,6 +1543,23 @@ void AMainPlayer::ProcessAttackHit(const FHitResult& HitResult, float DamageAmou
 	TryConvertFoliageToActor(HitResult, DamageAmount);
 }
 
+void AMainPlayer::StartCraft(FRecipeData RecipeData)
+{
+	GetWorld()->GetTimerManager().SetTimer(
+		CraftTimer,
+		[this, RecipeData]()
+		{
+			InventoryComponent->Request_MakeItem(RecipeData);
+		},
+		RecipeData.Duration,
+		false);
+}
+
+void AMainPlayer::StopCraft()
+{
+	GetWorld()->GetTimerManager().ClearTimer(CraftTimer);
+}
+
 //멀티플레이어 코드
 
 void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -1619,8 +1694,11 @@ void AMainPlayer::Server_SetHotbarIndex_Implementation(int32 Index)
 
 void AMainPlayer::OnRep_HotBarIndex()
 {
-	HUD->UpdateHotBar();
-	RefreshHand();
+	if (IsLocallyControlled())
+	{
+		HUD->UpdateHotBar();
+		RefreshHand();
+	}
 }
 
 void AMainPlayer::OnRep_HandedItem()
@@ -1674,6 +1752,38 @@ void AMainPlayer::Request_StopUseItem()
 	{
 		Server_StopUseItem();
 	}
+}
+
+void AMainPlayer::Request_StartCraft(FRecipeData RecipeData)
+{
+	if (HasAuthority())
+	{
+		StartCraft(RecipeData);
+	} else
+	{
+		Server_StartCraft(RecipeData);
+	}
+}
+
+void AMainPlayer::Server_StartCraft_Implementation(FRecipeData RecipeData)
+{
+	StartCraft(RecipeData);
+}
+
+void AMainPlayer::Request_StopCraft()
+{
+	if (HasAuthority())
+	{
+		StopCraft();
+	} else
+	{
+		Server_StopCraft();
+	}
+}
+
+void AMainPlayer::Server_StopCraft_Implementation()
+{
+	StopCraft();
 }
 
 void AMainPlayer::Multi_PlayAnimMontage_Implementation(UAnimMontage* Anim)

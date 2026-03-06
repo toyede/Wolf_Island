@@ -89,9 +89,9 @@ public:
 
 	virtual void Interact(AActor* Interactor) override;
 	
-	virtual void BeginFocus() override;
+	virtual void BeginFocus_Implementation() override;
 	
-	virtual void EndFocus() override;
+	virtual void EndFocus_Implementation() override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	

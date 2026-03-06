@@ -8,8 +8,10 @@
 #include "InputAction.h"
 #include "Interaction/InteractionInterface.h"
 #include "Data/ItemDataStruct.h"
+#include "Widgets/NickName.h"
 #include "MainPlayer.generated.h"
 
+class UWidgetComponent;
 class UWaterBodyComponent;
 class APickup;
 struct FInputActionValue;
@@ -75,6 +77,17 @@ struct FAttackTracePoint
 	FVector Curr;
 };
 
+UENUM(BlueprintType)
+enum class ECharacterRole : uint8
+{
+	NONE UMETA(DisplayName = "NONE"),
+	CAPTAIN UMETA(DisplayName = "CAPTAIN"),
+	CHEF UMETA(DisplayName = "CHEF"),
+	MECHANIC UMETA(DisplayName = "MECHANIC"),
+	SOLDIER UMETA(DisplayName = "SOLDIER"),
+	
+};
+
 UCLASS()
 class WOLF_ISLAND_API AMainPlayer : public ACharacter, public IInteractionInterface
 {
@@ -83,7 +96,15 @@ class WOLF_ISLAND_API AMainPlayer : public ACharacter, public IInteractionInterf
 public:
 	// Sets default values for this character's properties
 	AMainPlayer();
-
+	
+	virtual void PossessedBy(AController* NewController) override;
+	
+	virtual void PawnClientRestart() override;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
+	class AMainPlayerController* MainPlayerController;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
+	class AMainGameMode* GameMode;
 	//HUD=============================================================================
 	//UPROPERTY(EditAnywhere)
 	//class AMainHUD* HUD;
@@ -100,6 +121,9 @@ public:
 
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
 	class UWeaponComponent* WeaponComponent;
+	
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
+	class UBuildingComponent* BuildingComponent;
 	
 	//부력 컴포넌트 - 수영을 위한 것
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
@@ -193,6 +217,9 @@ public:
 	UInputAction* DropItemAction;
 
 	//상태 관련 변수 (뛰는 중인지, ~~하는 중인지 등등)=====================================
+	//캐릭터 역할 (선장, 요리사, 정비공, 군인)
+	ECharacterRole Role = ECharacterRole::NONE;
+	
 	//뛰는 중인지
 	UPROPERTY(ReplicatedUsing=OnRep_IsRunning, EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	bool IsRunning = false;
@@ -291,10 +318,12 @@ public:
 	UAnimMontage* PickUpMontage;
 
 	//위젯=============================================================================
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
-	TSubclassOf<class UPlayerHUD> HUDClass;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Widget")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Widget")
 	UPlayerHUD* HUD;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
+	UWidgetComponent* NickName;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
+	TSubclassOf<UNickName> NickNameWidgetClass;
 
 	//사운드============================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
@@ -354,17 +383,21 @@ public:
 	void Server_InteractFoliage(UInstancedStaticMeshComponent* ISMC, int32 InstanceIndex);
 
 	//공격시 폴리지 판정
-	UPROPERTY(EditAnywhere, Category = "Interaction")
+	UPROPERTY(EditAnywhere)
 	TMap<UStaticMesh*, TSubclassOf<class ATree>> FoliageToActorMap;
 
 	void TryConvertFoliageToActor(const FHitResult& HitResult, float DamageAmount);
 
-	UFUNCTION(BlueprintCallable, Category = "Combat")
+	UFUNCTION(BlueprintCallable, Category = "Attack")
 	void ProcessAttackHit(const FHitResult& HitResult, float DamageAmount);
 
 	// 클라이언트에서 폴리지를 지우기 위한 멀티캐스트 함수
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_RemoveFoliageInstance(UInstancedStaticMeshComponent* ISMC, int32 InstanceIndex);
+	
+	//제작===================================================================================================
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	FTimerHandle CraftTimer;
 	
 	// 요리 및 수리 UI
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
@@ -396,6 +429,10 @@ public:
 	//무게 업데이트 시 능력치 영향
 	UFUNCTION()
 	void OnCurrentWeightChanged();
+	
+	//컨트롤러에서 HUD 연결
+	UFUNCTION()
+	void SetHUDWidget(UPlayerHUD* NewHUD) { HUD = NewHUD; }
 
 	//점프 시작 함수
 	UFUNCTION()
@@ -546,6 +583,13 @@ public:
 	//수영 모드 바꾸기
 	UFUNCTION(BlueprintCallable)
 	void SetSwimMode(ESwimMode NewSwimMode);
+	
+	//제작 관련 함수================================================================================
+	UFUNCTION(BlueprintCallable)
+	void StartCraft(FRecipeData RecipeData);
+	
+	UFUNCTION(BlueprintCallable)
+	void StopCraft();
 
 	//멀티플레이어==================================================================================
 	//코드 리팩토링 방법 v1.0
@@ -555,7 +599,7 @@ public:
 	//서버 실행 함수는 서버에 이 함수를 실행하겠다고 요청을 보냄.
 	//서버 실행 함수 안에서는 실제 작동 함수를 실행시킴.
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
-
+		
 	//달리기
 	UFUNCTION()
 	void Request_Run();
@@ -615,6 +659,17 @@ public:
 	void Request_StopUseItem();
 	UFUNCTION(Server, Reliable)
 	void Server_StopUseItem();
+	
+	//제작
+	UFUNCTION()
+	void Request_StartCraft(FRecipeData RecipeData);
+	UFUNCTION(Server, Reliable)
+	void Server_StartCraft(FRecipeData RecipeData);
+	UFUNCTION()
+	void Request_StopCraft();
+	UFUNCTION(Server, Reliable)
+	void Server_StopCraft();
+	
 	
 	//아이템 정보 저장
 	

@@ -17,7 +17,7 @@ FReply UPauseMenu::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent&
 {
 	return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
 	
-	if (InKeyEvent.GetKey()==FKey("ESC"))
+	if (InKeyEvent.GetKey()==EKeys::Escape)
 	{
 		
 	}

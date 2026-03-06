@@ -59,19 +59,19 @@ class WOLF_ISLAND_API UInventory : public UUserWidget
 	class UUnknownRecordPanel* UnknownRecordPanel;
 
 	UPROPERTY(meta=(BindWidget))
-	class UButton* InventoryButton;
+	class UBaseButton* InventoryButton;
 
 	UPROPERTY(meta=(BindWidget))
-	UButton* FoodRecipeButton;
+	UBaseButton* FoodRecipeButton;
 
 	UPROPERTY(meta=(BindWidget))
-	UButton* CraftRecipeButton;
+	UBaseButton* CraftRecipeButton;
 
 	UPROPERTY(meta=(BindWidget))
-	UButton* UnknownRecordButton;
+	UBaseButton* UnknownRecordButton;
 
 	UPROPERTY(meta=(BindWidget))
-	UButton* BuildingRecipeButton;
+	UBaseButton* BuildingRecipeButton;
 
 protected:
 	virtual void NativeOnInitialized() override;

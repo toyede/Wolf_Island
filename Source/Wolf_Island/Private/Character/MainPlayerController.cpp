@@ -6,16 +6,18 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/Button.h"
 #include "Components/EditableTextBox.h"
+#include "Games/MainGameInstance.h"
 #include "Games/MainHUD.h"
 #include "Widgets/Chatting/ChattingPanel.h"
 #include "Games/MainGameState.h"
+#include "Games/GameModes/MultiGameMode.h"
 #include "Kismet/GameplayStatics.h"
 #include "Widgets/FishTrap/FishTrapScreen.h"
+#include "Widgets/BaseButton.h"
+#include "Widgets/PlayerHUD.h"
 #include "Widgets/MainMenu/PauseMenu.h"
-
-class UEnhancedInputLocalPlayerSubsystem;
+#include "Widgets/RoleSelection/RoleSelection.h"
 
 void AMainPlayerController::BeginPlay()
 {
@@ -37,14 +39,14 @@ void AMainPlayerController::BeginPlay()
 		PauseMenu->SettingButton->OnClicked.AddDynamic(this, &AMainPlayerController::OnSetting);
 		PauseMenu->QuitButton->OnClicked.AddDynamic(this, &AMainPlayerController::OnQuit);
 		
-		PauseMenu->AddToViewport();
-		HidePuaseMenu();
+		PauseMenu->AddToViewport(10);
+		HidePauseMenu();
 	}
 	
+	MainGameInstance = Cast<UMainGameInstance>(GetGameInstance());
+	MainGameMode = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode());
 	MainPlayerState = GetPlayerState<AMainPlayerState>();
 	MainGameState = Cast<AMainGameState>(GetWorld()->GetGameState());
-	
-	//ExitChatMode();
 }
 
 void AMainPlayerController::SetupInputComponent()
@@ -64,6 +66,37 @@ void AMainPlayerController::SetupInputComponent()
 	}
 }
 
+void AMainPlayerController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+}
+
+void AMainPlayerController::OnUnPossess()
+{
+	UE_LOG(LogTemp, Warning, TEXT("UNPOSSESSED"));
+	if (IsLocalController() && PlayerHUD)
+	{
+		PlayerHUD->RemoveFromParent();
+		PlayerHUD = nullptr;
+	}
+	
+	Super::OnUnPossess();
+}
+
+void AMainPlayerController::SetPlayerHUD(AMainPlayer* OwnerPlayer)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[%s] Possessed in %s"), *GetName(), *OwnerPlayer->GetName())
+	AMainPlayer* InPlayer = Cast<AMainPlayer>(OwnerPlayer);
+	if (InPlayer && HUDClass && IsLocalController())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%hs]Set Player HUD"), HasAuthority()?"SERVER":"CLIENT")
+		PlayerHUD = CreateWidget<UPlayerHUD>(this, HUDClass);
+		PlayerHUD->SetPlayerRef(InPlayer);
+		InPlayer->SetHUDWidget(PlayerHUD);
+		PlayerHUD->AddToViewport();
+	}
+}
+
 void AMainPlayerController::ToggleChatMode()
 {
 	if (IsChat) ExitChatMode();
@@ -72,7 +105,7 @@ void AMainPlayerController::ToggleChatMode()
 
 void AMainPlayerController::TogglePause()
 {
-	if (IsPause) HidePuaseMenu();
+	if (IsPause) HidePauseMenu();
 	else DisplayPauseMenu();
 }
 
@@ -111,7 +144,8 @@ void AMainPlayerController::ExitChatMode()
 
 void AMainPlayerController::DisplayPauseMenu()
 {
-	IsPause = true;
+	IsPause = !Cast<AMultiGameMode>(GetWorld()->GetAuthGameMode());
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE MULTI?] : %d"), IsPause)
 	bShowMouseCursor = true;
 	
 	FInputModeUIOnly Mode;
@@ -122,7 +156,7 @@ void AMainPlayerController::DisplayPauseMenu()
 	PauseMenu->SetVisibility(ESlateVisibility::Visible);
 }
 
-void AMainPlayerController::HidePuaseMenu()
+void AMainPlayerController::HidePauseMenu()
 {
 	IsPause = false;
 	bShowMouseCursor = false;
@@ -179,6 +213,37 @@ void AMainPlayerController::SendChat(FChattingData NewChattingData)
 	MainGameState->AddChattingMessage(NewChattingData);
 }
 
+void AMainPlayerController::Client_SetInputModeGame_Implementation()
+{
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+	bShowMouseCursor = false;
+}
+
+void AMainPlayerController::Server_ConfirmRole_Implementation(ECharacterRole NewRole)
+{
+	AMultiGameMode* GM = Cast<AMultiGameMode>(GetWorld()->GetAuthGameMode());
+	AMainPlayerState* PS = Cast<AMainPlayerState>(PlayerState);
+	PS->SetPlayerRole(NewRole);
+	UE_LOG(LogTemp, Warning, TEXT("Check Role %d in Server"), PS->GetPlayerRole());
+	FInputModeGameOnly Mode;
+	SetInputMode(Mode);
+	SetShowMouseCursor(false);
+	GM->RestartPlayer(this);
+}
+
+void AMainPlayerController::Client_OpenSelectionUI_Implementation()
+{	
+	URoleSelection* SelectionWidget = CreateWidget<URoleSelection>(this, RoleSelectionWidgetClass);
+	
+	FInputModeUIOnly InputMode;
+	InputMode.SetWidgetToFocus(SelectionWidget->TakeWidget());
+	SetInputMode(InputMode);
+	bShowMouseCursor = true;
+	
+	SelectionWidget->AddToViewport();	
+}
+
 void AMainPlayerController::AddChat(FChattingData NewChattingData)
 {
 	if (!ChattingPanel) return;
@@ -188,7 +253,7 @@ void AMainPlayerController::AddChat(FChattingData NewChattingData)
 
 void AMainPlayerController::OnResume()
 {
-	HidePuaseMenu();
+	HidePauseMenu();
 }
 
 void AMainPlayerController::OnSetting()

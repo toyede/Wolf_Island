@@ -45,6 +45,9 @@ public:
 	UFUNCTION()
 	void OnOpenAnimationFinished();
 	
+	UFUNCTION()
+	void OnCloseAnimationFinished();
+	
 	UFUNCTION(BlueprintCallable)
 	void ClearFocusInput();
 	

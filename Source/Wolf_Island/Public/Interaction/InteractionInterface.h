@@ -54,8 +54,10 @@ class WOLF_ISLAND_API IInteractionInterface
 public:
 	FInteractableData InteractableData = FInteractableData();
 	
-	virtual void BeginFocus();
-	virtual void EndFocus();
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void BeginFocus();
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void EndFocus();
 	virtual void BeginInteract();
 	virtual void EndInteract();
 	virtual void Interact(AActor* Interactor);

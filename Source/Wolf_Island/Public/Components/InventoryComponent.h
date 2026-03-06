@@ -398,8 +398,17 @@ public:
 	
 	//특정 인덱스의 아이템 데이터 반환
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Inventory")
-	FItemBaseData& GetItemAtIndex(int32 Index)
+	FItemBaseData GetItemAtIndex(int32 Index)
 	{
+		if (!InventoryContents.IsValidIndex(Index))
+		{
+			return FItemBaseData();
+		}
+		if (!InventoryContents[Index].ItemData.IsValid())
+		{
+			return FItemBaseData();
+		}
+		
 		return InventoryContents[Index].ItemData;
 	};
 	//해당 ID의 아이템이 있는 슬롯 반환
@@ -442,7 +451,11 @@ public:
 
 	//인벤토리 슬롯 용량 설정
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	FORCEINLINE void SetSlotsCapacity(int32 Capacity) { SlotsCapacity = Capacity; };
+	FORCEINLINE void SetSlotsCapacity(int32 Capacity)
+	{
+		SlotsCapacity = Capacity;
+		InventoryContents.Init(FItemSlot(), SlotsCapacity);
+	};
 	//인벤토리 무게 용량 설정
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	FORCEINLINE void SetWeightCapacity(int32 Capacity) { WeightCapacity = Capacity; };

@@ -10,6 +10,7 @@
 #include "Widgets/Record/UnknownRecordPanel.h"
 #include "Components/WidgetSwitcher.h"
 #include "Item/ItemBase.h"
+#include "Widgets/BaseButton.h"
 #include "Widgets/Craft/BuildingPanel.h"
 #include "Widgets/Craft/CraftPanel.h"
 #include "Widgets/Inventory/InventoryPanel.h"
