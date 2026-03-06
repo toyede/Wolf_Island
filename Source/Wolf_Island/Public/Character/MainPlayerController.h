@@ -14,6 +14,7 @@
  * 
  */
 
+class UDeathScreen;
 class URoleSelection;
 class UMainGameInstance;
 class AMainGameMode;
@@ -50,6 +51,9 @@ public:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	URoleSelection* RoleSelectionWidget;
 	
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category="Widget")
+	UDeathScreen* DeathScreenWidget;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	TSubclassOf<UPlayerHUD> HUDClass;
 	
@@ -61,6 +65,9 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, Category="Widget")
 	TSubclassOf<URoleSelection> RoleSelectionWidgetClass;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Widget")
+	TSubclassOf<UDeathScreen> DeathScreenWidgetClass;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	UMainGameInstance* MainGameInstance;
@@ -112,6 +119,12 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void AddChat(FChattingData NewChattingData);
+	
+	UFUNCTION(BlueprintCallable)
+	void OpenDeathScreen();
+	
+	UFUNCTION(BlueprintCallable)
+	void OnCloseDeathScreen();
 	
 	UFUNCTION(BlueprintCallable)
 	void OnResume();

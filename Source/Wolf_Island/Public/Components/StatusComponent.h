@@ -62,6 +62,8 @@ public:
 	//최대 체력
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
 	float MaxHP = 100.0f;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Status")
+	bool IsDead = false;
 
 	//스태미나
 	//현재 스태미나

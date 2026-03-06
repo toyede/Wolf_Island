@@ -85,6 +85,9 @@ public:
 	bool HasSaveData(FString PlayerId);
 	
 	UFUNCTION(BlueprintCallable)
+	void  RespawnPlayer(AController* Player);
+	
+	UFUNCTION(BlueprintCallable)
 	UMainSaveGame* DuplicateSaveData(UMainSaveGame* TargetSaveGame);
 	
 	//아침 시간에 이 함수를 작동시키면 아침 시점 데이터가 세이브 됨

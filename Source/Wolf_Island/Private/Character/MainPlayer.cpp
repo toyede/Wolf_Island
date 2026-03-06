@@ -18,7 +18,6 @@
 #include "Item/Tree.h"
 #include "Components/InventoryComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Games/MainHUD.h"
 #include "Interaction/InteractionInterface.h"
 #include "Item/Pickup.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -81,8 +80,7 @@ AMainPlayer::AMainPlayer()
 			FRotator(0, 90, -90),
 			FVector(0,10,0)
 			));
-	
-	
+		
 	//인벤토리 초기화
 	InventoryComponent->SetSlotsCapacity(30);
 	InventoryComponent->SetWeightCapacity(100);
@@ -122,6 +120,9 @@ void AMainPlayer::PawnClientRestart()
 	
 	if (IsLocallyControlled())
 	{
+		FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
+		FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(1, 1,1,1);
+		
 		if (AMainPlayerController* MainController = Cast<AMainPlayerController>(GetController()))
 		{
 			MainController->SetPlayerHUD(this);
@@ -150,7 +151,7 @@ void AMainPlayer::BeginPlay()
 			StatusComponent->OnStaminaZero.AddDynamic(this, &AMainPlayer::Request_StopRun);
 
 			//죽음 바인딩
-			StatusComponent->OnHPZero.AddDynamic(this, &AMainPlayer::OnDeath);
+			StatusComponent->OnHPZero.AddUniqueDynamic(this, &AMainPlayer::OnDeath);
 
 			//배고픔, 수분 감소 시작
 			StatusComponent->StartHunger();
@@ -665,6 +666,16 @@ void AMainPlayer::OnDeath_Implementation()
 	//멀티 플레이 죽음 시
 	//1. 10초간 기절 : 다른 플레이어가 붕대로 상호작용 시 회복
 	//2. 10초 뒤 사망 후 리스폰 지역에서 부활
+	
+	//로컬 화면 흑백으로 전환
+	if (IsLocallyControlled())
+	{
+		FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
+		FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(0,0,0,0);
+		
+		MainPlayerController->OpenDeathScreen();
+	}
+	
 	if (IsMulti)
 	{
 		UE_LOG(LogTemp, Display, TEXT("[MULTI]Player Dead"));
@@ -674,10 +685,10 @@ void AMainPlayer::OnDeath_Implementation()
 	else
 	{
 		UE_LOG(LogTemp, Display, TEXT("[SINGLE]Player Dead"));
-		AMainGameMode* GM = GetWorld()->GetAuthGameMode<AMainGameMode>();
+		//AMainGameMode* GM = GetWorld()->GetAuthGameMode<AMainGameMode>();
 		
-		GM->LoadWorld();
-		GM->RestartPlayer(GetController());
+		//GM->LoadWorld();
+		//GM->RestartPlayer(GetController());
 	}
 }
 

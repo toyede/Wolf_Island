@@ -17,6 +17,7 @@
 #include "Widgets/PlayerHUD.h"
 #include "Widgets/MainMenu/PauseMenu.h"
 #include "Widgets/RoleSelection/RoleSelection.h"
+#include "Widgets/DeathScreen.h"
 
 void AMainPlayerController::BeginPlay()
 {
@@ -285,6 +286,30 @@ void AMainPlayerController::AddChat(FChattingData NewChattingData)
 	if (!ChattingPanel) return;
 	
 	ChattingPanel->AddChatting(NewChattingData);
+}
+
+void AMainPlayerController::OpenDeathScreen()
+{
+	if (DeathScreenWidget) return;
+	
+	if (DeathScreenWidgetClass)
+	{
+		DeathScreenWidget = CreateWidget<UDeathScreen>(this, DeathScreenWidgetClass);
+	
+		bShowMouseCursor = true;
+		FInputModeUIOnly InputMode;
+		InputMode.SetWidgetToFocus(DeathScreenWidget->TakeWidget());
+		SetInputMode(InputMode);
+	
+		DeathScreenWidget->AddToViewport();
+	}
+}
+
+void AMainPlayerController::OnCloseDeathScreen()
+{
+	bShowMouseCursor = false;
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
 }
 
 void AMainPlayerController::OnResume()

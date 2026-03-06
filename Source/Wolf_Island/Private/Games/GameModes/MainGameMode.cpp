@@ -387,6 +387,11 @@ bool AMainGameMode::HasSaveData(FString PlayerId)
 	return PlayersSaveData.Find(PlayerId) != NULL;
 }
 
+void AMainGameMode::RespawnPlayer(AController* Player)
+{
+	RestartPlayer(Player);
+}
+
 UMainSaveGame* AMainGameMode::DuplicateSaveData(UMainSaveGame* TargetSaveGame)
 {
 	if (!TargetSaveGame) return nullptr;
