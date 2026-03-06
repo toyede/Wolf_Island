@@ -307,6 +307,7 @@ void AMainPlayerController::OpenDeathScreen()
 
 void AMainPlayerController::OnCloseDeathScreen()
 {
+	DeathScreenWidget = nullptr;
 	bShowMouseCursor = false;
 	FInputModeGameOnly InputMode;
 	SetInputMode(InputMode);

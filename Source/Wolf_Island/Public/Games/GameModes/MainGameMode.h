@@ -76,10 +76,19 @@ public:
 	void LoadWorld();
 	
 	UFUNCTION(BlueprintCallable)
+	void LoadWorldFromSave(UMainSaveGame* Save);
+	
+	UFUNCTION(BlueprintCallable)
 	void SavePlayer(AMainPlayerState* PlayerState);
 	
 	UFUNCTION(BlueprintCallable)
+	void SavePlayers();
+	
+	UFUNCTION(BlueprintCallable)
 	bool LoadPlayer(AMainPlayerState* PlayerState);
+	
+	UFUNCTION(BlueprintCallable)
+	void LoadPlayers();
 	
 	UFUNCTION(BlueprintCallable)
 	bool HasSaveData(FString PlayerId);
@@ -93,6 +102,14 @@ public:
 	//아침 시간에 이 함수를 작동시키면 아침 시점 데이터가 세이브 됨
 	UFUNCTION(BlueprintCallable)
 	void SaveMorningSaveData();
+	
+	//아침으로 되돌아 가기-! (싱글 전용)
+	UFUNCTION(BlueprintCallable)
+	void BackToMorning();
+	
+	//최신 저장 로드하기
+	UFUNCTION(BlueprintCallable)
+	void LoadCurrentSave();
 	
 	//이건 플레이어가 죽었을 때 할 동작들. 여기선 싱글에서 죽었을 때를 구현하고, MultiGameMode에서 멀티에서 죽얼을 때 구현.
 	UFUNCTION(BlueprintCallable)

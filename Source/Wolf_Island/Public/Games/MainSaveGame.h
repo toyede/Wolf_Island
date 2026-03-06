@@ -90,4 +90,7 @@ public:
 	
 	UPROPERTY(SaveGame)
 	int64 SaveUnixTime;
+	
+	UFUNCTION(BlueprintCallable)
+	void PrintSaveInfo();
 };

@@ -28,7 +28,7 @@ void AMainGameMode::InitGame(const FString& MapName, const FString& Options, FSt
 	//저장된 플레이어 데이터도 세팅
 	if (MainGameInstance && MainGameInstance->CurrenSaveGame)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Load Save Data From MainGameInstance"));
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD SAVE DATA FROM MainGameInstance"));
 		CurrentSaveData = MainGameInstance->CurrenSaveGame;
 		PlayersSaveData = CurrentSaveData->Players;
 	}
@@ -38,14 +38,14 @@ void AMainGameMode::InitGame(const FString& MapName, const FString& Options, FSt
 		//테스트 세이브 게임 데이터가 있으면 불러오기
 		if (UGameplayStatics::DoesSaveGameExist(TEXT("TEST001_")+MapName,0))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Load TEST SAVE GAME"));
+			UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD TEST SAVE GAME"));
 			CurrentSaveData = Cast<UMainSaveGame>(UGameplayStatics::LoadGameFromSlot(TEXT("TEST001_")+MapName, 0));
 			PlayersSaveData = CurrentSaveData->Players;
 		}
 		//테스트 세이브 게임 데이터가 없으면 생성
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Create TEST SAVE GAME"));
+			UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] CREATE TEST SAVE GAME"));
 			CurrentSaveData = Cast<UMainSaveGame>(UGameplayStatics::CreateSaveGameObject(UMainSaveGame::StaticClass()));
 			CurrentSaveData->SlotName = TEXT("TEST001_")+MapName;
 			CurrentSaveData->WorldName = MapName;
@@ -134,7 +134,7 @@ void AMainGameMode::SaveWorld()
 	
 	if (!Save)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("SAVE FAILED"));
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] WORLD SAVE FAILED"));
 		return;
 	}
 	
@@ -152,7 +152,7 @@ void AMainGameMode::SaveWorld()
 		{
 			FActorSaveData Data;
 			Savable->Execute_SaveData(Actor, Data);
-			UE_LOG(LogTemp, Warning, TEXT("[%s] Save Actor [%s]"), *Actor->GetName(), *Data.ActorID.ToString())
+			UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] SAVE ACTOR [%s] | [%s]"), *Actor->GetName(), *Data.ActorID.ToString())
 			//세이브 파일에 액터 저장 데이터 추가
 			Save->SavedActors.FindOrAdd(Data.ActorID) = Data;
 		}
@@ -163,22 +163,18 @@ void AMainGameMode::SaveWorld()
 	RemovedFoliageData.Empty();
 	
 	//플레이어 데이터 저장
-	AMainGameState* GS = GetGameState<AMainGameState>();
-	//월드에 있는 플레이어 순회
-	for (APlayerState* PS : GS->PlayerArray)
-	{
-		//각 플레이어의 저장 코드 실행
-		AMainPlayerState* MPS = Cast<AMainPlayerState>(PS);
-		SavePlayer(MPS);
-	}
+	SavePlayers();
+	
 	//세이브 파일에 플레이어 저장 데이터 추가
 	Save->Players = PlayersSaveData;
 	
+	Save->SaveUnixTime = FDateTime::UtcNow().ToUnixTimestamp();
+	
 	//세이브 파일 슬롯에 저장
 	UGameplayStatics::SaveGameToSlot(CurrentSaveData, CurrentSaveData->SlotName, 0);
-	UE_LOG(LogTemp, Warning, TEXT("Test Save at %s"), *CurrentSaveData->SlotName);
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] TEST SAVE SLOT : %s"), *CurrentSaveData->SlotName);
 	
-	
+	AMainGameState* GS = GetGameState<AMainGameState>();
 	FChattingData Chat = FChattingData(
 		TEXT("SYSTEM"),TEXT("자동 저장 완료"), EMessageType::NOTICE);
 	GS->AddChattingMessage(Chat);
@@ -187,7 +183,7 @@ void AMainGameMode::SaveWorld()
 void AMainGameMode::LoadWorld()
 {
 	if (!HasAuthority()) return;
-	UE_LOG(LogTemp, Warning, TEXT("Test Load at %s"), *CurrentSaveData->SlotName);
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] TEST LOAD SLOT : %s"), *CurrentSaveData->SlotName);
 	
 	UMainSaveGame* Save =
 		Cast<UMainSaveGame>(UGameplayStatics::LoadGameFromSlot(CurrentSaveData->SlotName, 0));
@@ -283,11 +279,105 @@ void AMainGameMode::LoadWorld()
 		}
 	}
 	
-	UE_LOG(LogTemp, Warning, TEXT("Load at %s COMPLETE"), *CurrentSaveData->SlotName);
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD WORLD COMPLETE"));
+}
+
+void AMainGameMode::LoadWorldFromSave(UMainSaveGame* Save)
+{
+	//저장된 액터가 있으면 액터 로드
+	if (Save->SavedActors.Num() != 0)
+	{
+		//초기 상태 액터 캐시 생성
+		SetActorCache();
+	
+		//삭제된 기존 액터는 삭제
+		for (auto& Pair : ActorCache)
+		{
+			if (!Save->SavedActors.Contains(Pair.Key))
+			{
+				Pair.Value->Destroy();
+			}
+		}
+	
+		//저장된 액터 로드
+		for (auto& Pair : Save->SavedActors)
+		{
+			FGuid GUID = Pair.Key;
+			FActorSaveData& Data = Pair.Value;
+		
+			//저장된 액터가 이미 존재하는 거면
+			if (ActorCache.Contains(GUID))
+			{
+				//데이터 로드
+				if (ISaveInterface* Savable = Cast<ISaveInterface>(ActorCache[GUID]))
+				{
+					Savable->Execute_LoadData(ActorCache[GUID], Data);
+				}
+			}
+			//저장된 액터가 삭제됐으면
+			else
+			{
+				//새로 스폰
+				AActor* NewActor = GetWorld()->SpawnActor<AActor>(
+					Data.ActorClass,
+					Data.Transform);
+			
+				//데이터 로드
+				if (ISaveInterface* Savable = Cast<ISaveInterface>(NewActor))
+				{
+					Savable->Execute_LoadData(NewActor, Data);
+				}
+			}
+		}
+	}
+	
+	//폴리지 데이터 로드
+	for (const FRemovedFoliageData& FoliageData : Save->RemovedFoliages)
+	{
+		//월드 액터 스캔
+		for (TActorIterator<AActor> TargetActor(GetWorld()); TargetActor; ++TargetActor)
+		{
+			//해당 액터의 컴포넌트 확인
+			TArray<UInstancedStaticMeshComponent*> Comps;
+			TargetActor->GetComponents<UInstancedStaticMeshComponent>(Comps);
+			
+			//인스턴스 스태틱 메시 컴포넌트가 없으면 건너뛰기
+			if (Comps.Num() == 0) continue;
+			
+			//컴포넌트가 있으면 체크
+			for (UInstancedStaticMeshComponent* ISMC : Comps)
+			{
+				//저장된 데이터의 메쉬와 같지 않으면 건너뛰기
+				if (ISMC->GetStaticMesh() != FoliageData.Mesh) continue;
+				
+				//컴포넌트의 폴리지 인스턴스 개수 가져오기
+				int32 Count = ISMC->GetInstanceCount();
+				
+				//폴리지 인스턴스 하나씩 확인
+				for (int32 i = Count - 1; i >= 0; --i)
+				{
+					//폴리지 인스턴스 트랜스폼 가져오기
+					FTransform Transform;
+					ISMC->GetInstanceTransform(i, Transform, true);
+					
+					//폴리지 위치가이 삭제된 폴리지 데이터와 같으면 삭제 후 다음으로
+					if (FVector::DistSquared(
+							Transform.GetLocation(),
+							FoliageData.Location) < 4.0f)
+					{
+						ISMC->RemoveInstance(i);
+						break;
+					}
+				}
+			}
+		}
+	}
 }
 
 void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] SAVE PLAYER [%s]"), *PlayerState->GetPersistantId());
+	
 	//해당 플레이어의 아이디를 키로하는 맵에 데이터를 저장.
 	FString PlayerID = PlayerState->GetPersistantId();
 	FPlayerSaveData& PlayerSaveData = PlayersSaveData.FindOrAdd(PlayerID);
@@ -330,13 +420,26 @@ void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 	//<?>인벤토리 업데이트 할때마다 플레이어 스테이트에 아이템 데이터가 저장됨.
 	PlayerSaveData.InventoryItems = PlayerState->GetItems();
 	
-	UE_LOG(LogTemp, Warning, TEXT("Save Player ID: %s | PlayersSaveData Num : %d"), *PlayerID, PlayersSaveData.Num());
-	
 	//선택창 대기 중인 뉴비를 위한 선택한 역할 리스트 업데이트
 	if (AMainGameState* GS = GetGameState<AMainGameState>())
 	{
 		GS->RefreshSelectedRoles();
 		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] SELECTED ROLES UPDATE"));
+	}
+	
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] SAVE PLAYER COMPLETE [%s]"), *PlayerState->GetPersistantId());
+}
+
+void AMainGameMode::SavePlayers()
+{
+	//플레이어 데이터 저장
+	AMainGameState* GS = GetGameState<AMainGameState>();
+	//월드에 있는 플레이어 순회
+	for (APlayerState* PS : GS->PlayerArray)
+	{
+		//각 플레이어의 저장 코드 실행
+		AMainPlayerState* MPS = Cast<AMainPlayerState>(PS);
+		SavePlayer(MPS);
 	}
 }
 
@@ -353,7 +456,6 @@ bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState)
 	FPlayerSaveData& PlayerSaveData = PlayersSaveData[PlayerID];
 	
 	PlayerState->SetItemsData(PlayerSaveData.InventoryItems);
-	
 	
 	if (PlayerCharacter)
 	{
@@ -378,13 +480,26 @@ bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState)
 		UE_LOG(LogTemp, Warning, TEXT("Deserialize Status"));
 	}
 	
-	UE_LOG(LogTemp, Warning, TEXT("Load Player ID: %s"), *PlayerID);
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD PLAYER [%s]"), *PlayerID);
 	return true;
+}
+
+void AMainGameMode::LoadPlayers()
+{
+	AMainGameState* GS = GetGameState<AMainGameState>();
+	
+	if (!GS) return;
+	
+	for (auto Player : GS->PlayerArray)
+	{
+		AMainPlayerState* PS = Cast<AMainPlayerState>(Player);
+		LoadPlayer(PS);
+	}
 }
 
 bool AMainGameMode::HasSaveData(FString PlayerId)
 {
-	return PlayersSaveData.Find(PlayerId) != NULL;
+	return PlayersSaveData.Find(PlayerId) != nullptr;
 }
 
 void AMainGameMode::RespawnPlayer(AController* Player)
@@ -416,22 +531,67 @@ UMainSaveGame* AMainGameMode::DuplicateSaveData(UMainSaveGame* TargetSaveGame)
 
 void AMainGameMode::SaveMorningSaveData()
 {
+	if (!HasAuthority()) return;
 	//월드를 저장하고, 그 저장된 걸 복제해서 아침 세이브데이터로 저장.
 	//CurrentSaveData 는 그 뒤로 자동 저장되어 계속 덮어씌워지고, MorningSaveData는 아침 때로 유지.
 	//라고 생각했었는데 생각해보니까 이러면 월드 종료하면 아침 데이터가 날아감...
 	//저장 슬롯으로 접미사에 _morning을 갖는 슬롯을 만들어 저장해놓는 게 좋겠다.
 	SaveWorld();
+	
 	UMainSaveGame* NewSave = DuplicateSaveData(CurrentSaveData);
 	MorningSaveData = NewSave;
 	MorningSaveData->SlotName += TEXT("_morning");
 	
-	//세이브 파일 슬롯에 저장(슬롯 이름에 _morning 붙여서)
-	UGameplayStatics::SaveGameToSlot(MorningSaveData, MorningSaveData->SlotName, 0);
-	
 	AMainGameState* GS = GetGameState<AMainGameState>();
-	FChattingData Chat = FChattingData(
+	
+	//세이브 파일 슬롯에 저장(슬롯 이름에 _morning 붙여서)
+	if (UGameplayStatics::SaveGameToSlot(MorningSaveData, MorningSaveData->SlotName, 0))
+	{
+		FChattingData Chat = FChattingData(
 		TEXT("SYSTEM"),TEXT("아침 데이터 저장"), EMessageType::NOTICE);
-	GS->AddChattingMessage(Chat);
+		GS->AddChattingMessage(Chat);
+	} else
+	{
+		FChattingData Chat = FChattingData(
+		TEXT("SYSTEM"),TEXT("아침 데이터 저장 실패"), EMessageType::ALERT);
+		GS->AddChattingMessage(Chat);
+	}
+}
+
+void AMainGameMode::BackToMorning()
+{
+	if (!HasAuthority()) return;
+	
+	//아침 데이터 불러오기
+	FString MorningSlot = CurrentSaveData->SlotName+TEXT("_morning");
+	UMainSaveGame* Save =
+		Cast<UMainSaveGame>(UGameplayStatics::LoadGameFromSlot(MorningSlot, 0));
+	
+	if (!Save) return;
+	
+	CurrentSaveData = Save;
+	CurrentSaveData->SlotName.RemoveFromEnd(TEXT("_morning"));
+	PlayersSaveData = Save->Players;
+	
+	Save->PrintSaveInfo();
+	
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD MORNING SAVE : %s"), *MorningSlot);
+	
+	//1. 월드 로드
+	LoadWorldFromSave(Save);
+	
+	//2. 플레이어 로드
+	LoadPlayers();
+	
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD MORNING COMPLETE"));
+}
+
+void AMainGameMode::LoadCurrentSave()
+{
+	if (!HasAuthority() || !CurrentSaveData) return;
+	
+	LoadWorldFromSave(CurrentSaveData);
+	LoadPlayers();
 }
 
 //싱글에서 죽었을 때
@@ -440,13 +600,30 @@ void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 	//사망한 당일 아침으로 부활(아침으로 월드 롤백)
 	//아침 데이터 슬롯 구하기
 	FString MorningSlotName = CurrentSaveData->SlotName+TEXT("_morning");
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] SEARCH SLOT : %s"), *MorningSlotName);
+	
 	//아침 데이터 슬롯에서 데이터 가져오기
-	UMainSaveGame* Save =
-		Cast<UMainSaveGame>(UGameplayStatics::LoadGameFromSlot(MorningSlotName, 0));
-	//현재 세이브 파일을 아침 데이터로 교체
-	CurrentSaveData = Save;
-	//그 세이브 파일을 기반으로 월드 로드
-	LoadWorld();
+	if (UMainSaveGame* Save =
+		Cast<UMainSaveGame>(UGameplayStatics::LoadGameFromSlot(MorningSlotName, 0)))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD MORNING SAVE : %s"), *MorningSlotName);
+	
+		//현재 세이브 파일을 아침 데이터로 교체
+		CurrentSaveData = Save;
+		CurrentSaveData->SlotName.RemoveFromEnd(TEXT("_morning"));
+		PlayersSaveData = Save->Players;
+	
+		//아침 세이브로 월드 로드
+		LoadWorldFromSave(Save);
+	
+		//아침 세이브로 플레이어 로드
+		LoadPlayers();
+	
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD MORNING COMPLETE"));
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] NO MORNING SAVE EXIST"));
+	}	
 }
 
 
