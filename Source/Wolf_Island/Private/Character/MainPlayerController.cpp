@@ -169,6 +169,7 @@ void AMainPlayerController::HidePauseMenu()
 	PauseMenu->SetVisibility(ESlateVisibility::Collapsed);
 }
 
+
 void AMainPlayerController::Client_OpenFishTrapUI_Implementation(class AFishTrap* TargetTrap, class AActor* Interactor)
 {
 	if (FishTrapScreenClass && TargetTrap)

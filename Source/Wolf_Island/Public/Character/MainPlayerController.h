@@ -107,9 +107,10 @@ public:
 	
 	UFUNCTION()
 	void DisplayPauseMenu();
+	
 	UFUNCTION()
-	void HidePuaseMenu();
-
+	void HidePauseMenu();
+	
 	UFUNCTION(Client, Reliable)
 	void Client_OpenFishTrapUI(class AFishTrap* TargetTrap, class AActor* Interactor);
 	
