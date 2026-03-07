@@ -17,6 +17,8 @@ AInteractableActor::AInteractableActor()
 void AInteractableActor::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	SetInteractionDuration(InteractionDuration);
 }
 
 // Called every frame

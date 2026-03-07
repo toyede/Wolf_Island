@@ -190,94 +190,7 @@ void AMainGameMode::LoadWorld()
 
 	if (!Save) return;
 	
-	//저장된 액터가 있으면 액터 로드
-	if (Save->SavedActors.Num() != 0)
-	{
-		//초기 상태 액터 캐시 생성
-		SetActorCache();
-	
-		//삭제된 기존 액터는 삭제
-		for (auto& Pair : ActorCache)
-		{
-			if (!Save->SavedActors.Contains(Pair.Key))
-			{
-				Pair.Value->Destroy();
-			}
-		}
-	
-		//저장된 액터 로드
-		for (auto& Pair : Save->SavedActors)
-		{
-			FGuid GUID = Pair.Key;
-			FActorSaveData& Data = Pair.Value;
-		
-			//저장된 액터가 이미 존재하는 거면
-			if (ActorCache.Contains(GUID))
-			{
-				//데이터 로드
-				if (ISaveInterface* Savable = Cast<ISaveInterface>(ActorCache[GUID]))
-				{
-					Savable->Execute_LoadData(ActorCache[GUID], Data);
-				}
-			}
-			//저장된 액터가 삭제됐으면
-			else
-			{
-				//새로 스폰
-				AActor* NewActor = GetWorld()->SpawnActor<AActor>(
-					Data.ActorClass,
-					Data.Transform);
-			
-				//데이터 로드
-				if (ISaveInterface* Savable = Cast<ISaveInterface>(NewActor))
-				{
-					Savable->Execute_LoadData(NewActor, Data);
-				}
-			}
-		}
-	}
-	
-	//폴리지 데이터 로드
-	for (const FRemovedFoliageData& FoliageData : Save->RemovedFoliages)
-	{
-		//월드 액터 스캔
-		for (TActorIterator<AActor> TargetActor(GetWorld()); TargetActor; ++TargetActor)
-		{
-			//해당 액터의 컴포넌트 확인
-			TArray<UInstancedStaticMeshComponent*> Comps;
-			TargetActor->GetComponents<UInstancedStaticMeshComponent>(Comps);
-			
-			//인스턴스 스태틱 메시 컴포넌트가 없으면 건너뛰기
-			if (Comps.Num() == 0) continue;
-			
-			//컴포넌트가 있으면 체크
-			for (UInstancedStaticMeshComponent* ISMC : Comps)
-			{
-				//저장된 데이터의 메쉬와 같지 않으면 건너뛰기
-				if (ISMC->GetStaticMesh() != FoliageData.Mesh) continue;
-				
-				//컴포넌트의 폴리지 인스턴스 개수 가져오기
-				int32 Count = ISMC->GetInstanceCount();
-				
-				//폴리지 인스턴스 하나씩 확인
-				for (int32 i = Count - 1; i >= 0; --i)
-				{
-					//폴리지 인스턴스 트랜스폼 가져오기
-					FTransform Transform;
-					ISMC->GetInstanceTransform(i, Transform, true);
-					
-					//폴리지 위치가이 삭제된 폴리지 데이터와 같으면 삭제 후 다음으로
-					if (FVector::DistSquared(
-							Transform.GetLocation(),
-							FoliageData.Location) < 4.0f)
-					{
-						ISMC->RemoveInstance(i);
-						break;
-					}
-				}
-			}
-		}
-	}
+	LoadWorldFromSave(Save);
 	
 	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD WORLD COMPLETE"));
 }
@@ -411,6 +324,10 @@ void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 		FObjectAndNameAsStringProxyArchive StatusArchive(StatusWriter, true);
 		StatusArchive.ArIsSaveGame = false;
 		TargetPlayer->StatusComponent->Serialize(StatusArchive);
+		UE_LOG(LogTemp, Warning, TEXT("SAVE HP: %f"), TargetPlayer->StatusComponent->CurrentHP);
+		UE_LOG(LogTemp, Warning, TEXT("SAVE SP: %f"), TargetPlayer->StatusComponent->CurrentStamina);
+		UE_LOG(LogTemp, Warning, TEXT("SAVE HG: %f"), TargetPlayer->StatusComponent->CurrentHunger);
+		UE_LOG(LogTemp, Warning, TEXT("SAVE HY: %f"), TargetPlayer->StatusComponent->CurrentHydration);
 		UE_LOG(LogTemp, Warning, TEXT("Serialize Status"));
 		
 		PlayerState->SetItemsData(TargetPlayer->InventoryComponent->GetInventory());
@@ -477,6 +394,10 @@ bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState)
 		FObjectAndNameAsStringProxyArchive StatusArchive(StatusReader, true);
 		StatusArchive.ArIsSaveGame = false;
 		TargetPlayer->StatusComponent->Serialize(StatusArchive);
+		UE_LOG(LogTemp, Warning, TEXT("HP After Deserialize: %f"), TargetPlayer->StatusComponent->CurrentHP);
+		UE_LOG(LogTemp, Warning, TEXT("SP After Deserialize: %f"), TargetPlayer->StatusComponent->CurrentStamina);
+		UE_LOG(LogTemp, Warning, TEXT("HG After Deserialize: %f"), TargetPlayer->StatusComponent->CurrentHunger);
+		UE_LOG(LogTemp, Warning, TEXT("HY After Deserialize: %f"), TargetPlayer->StatusComponent->CurrentHydration);
 		UE_LOG(LogTemp, Warning, TEXT("Deserialize Status"));
 	}
 	
@@ -597,6 +518,7 @@ void AMainGameMode::LoadCurrentSave()
 //싱글에서 죽었을 때
 void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE][SINGLE] HANDLE PLAYER DEATH"));
 	//사망한 당일 아침으로 부활(아침으로 월드 롤백)
 	//아침 데이터 슬롯 구하기
 	FString MorningSlotName = CurrentSaveData->SlotName+TEXT("_morning");
@@ -617,7 +539,7 @@ void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 		LoadWorldFromSave(Save);
 	
 		//아침 세이브로 플레이어 로드
-		LoadPlayers();
+		RestartPlayer(DeadPlayerController);
 	
 		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD MORNING COMPLETE"));
 	} else

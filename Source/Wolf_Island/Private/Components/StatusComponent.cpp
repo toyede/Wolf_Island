@@ -47,6 +47,7 @@ void UStatusComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 	if (GetOwner()->HasAuthority())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[STATUS] CLEAR ALL TIMERS"));
 		ClearAllTimers();
 	}
 }

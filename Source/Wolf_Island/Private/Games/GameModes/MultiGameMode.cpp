@@ -156,5 +156,6 @@ UClass* AMultiGameMode::GetDefaultPawnClassForController_Implementation(AControl
 
 void AMultiGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE][MULTI] HANDLE PLAYER DEATH"));
 	RestartPlayer(DeadPlayerController);
 }

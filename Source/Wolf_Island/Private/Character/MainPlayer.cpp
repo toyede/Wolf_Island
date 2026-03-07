@@ -185,6 +185,7 @@ void AMainPlayer::BeginPlay()
 	UE_LOG(LogTemp, Warning, TEXT("[%s] All Components Set"), *GetName());
 	
 	MainPlayerController = Cast<AMainPlayerController>(GetController());
+	InteractableData.CanInteract = false;
 }
 
 // Called every frame
@@ -661,34 +662,20 @@ void AMainPlayer::SetHotbarIndex(int32 Index)
 }
 
 void AMainPlayer::OnDeath_Implementation()
-{
-	bool IsMulti = GetWorld()->GetGameState<AMainGameState>()->IsMulti;
+{	
 	//멀티 플레이 죽음 시
 	//1. 10초간 기절 : 다른 플레이어가 붕대로 상호작용 시 회복
 	//2. 10초 뒤 사망 후 리스폰 지역에서 부활
-	
-	//로컬 화면 흑백으로 전환
-	if (IsLocallyControlled())
-	{
-		FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
-		FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(0,0,0,0);
-		
-		MainPlayerController->OpenDeathScreen();
-	}
-	
-	if (IsMulti)
+	if (GetWorld()->GetGameState<AMainGameState>()->IsMulti)
 	{
 		UE_LOG(LogTemp, Display, TEXT("[MULTI]Player Dead"));
-		
+		KnockOut();
 	}
 	//싱글 플레이 죽음 시 - 사망한 당일 아침으로 부활
 	else
 	{
 		UE_LOG(LogTemp, Display, TEXT("[SINGLE]Player Dead"));
-		//AMainGameMode* GM = GetWorld()->GetAuthGameMode<AMainGameMode>();
-		
-		//GM->LoadWorld();
-		//GM->RestartPlayer(GetController());
+		Client_ShowDeathScreen();
 	}
 }
 
@@ -744,6 +731,37 @@ void AMainPlayer::Attack()
 	if (WeaponComponent) {
 		WeaponComponent->Request_UseWeapon();
 	}
+}
+
+void AMainPlayer::KnockOut()
+{
+	UE_LOG(LogTemp, Display, TEXT("[PLAYER] KNOCKOUT"));
+	//일단 기본 스탠드 상태로 전환
+	if (IsCrouching) ToggleCrouch();
+	if (IsRunning) Request_StopRun();
+	
+	//기절 타이머 실행 - 누가 소생시켜주지 않으면 10초 뒤 사망
+	GetWorld()->GetTimerManager().SetTimer(
+		KnockOutTimer,
+		[this]()
+		{
+			Client_ShowDeathScreen();
+		},
+		KnockOutToDeathTime,
+		false);
+	
+	//기절 상태로 전환
+	IsInability = true;
+	GetCharacterMovement()->MaxWalkSpeed = KnockOutSpeed;
+	InteractableData.CanInteract = true;
+}
+
+void AMainPlayer::Revive()
+{
+	GetWorld()->GetTimerManager().ClearTimer(KnockOutTimer);
+	IsInability = false;
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+	InteractableData.CanInteract = false;
 }
 
 void AMainPlayer::CheckInteraction()
@@ -868,8 +886,6 @@ void AMainPlayer::NotFoundInteractable()
 //인터랙션 시작 함수 (인터랙션 키 눌렀을 때)
 void AMainPlayer::BeginInteract()
 {
-	IInteractionInterface::BeginInteract();
-
 	//인터랙션이 시작됐을 때부터 인터렉션 상태가 변하지 않는 것을 체크
 	CheckInteraction();
 
@@ -913,7 +929,11 @@ void AMainPlayer::BeginInteract()
 
 void AMainPlayer::EndInteract()
 {
-	IInteractionInterface::EndInteract();
+	if (!HUD)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("NO HUD"));
+		return;
+	}
 	HUD->HideInteraction();
 	//인터랙션 타이머 클리어
 	GetWorldTimerManager().ClearTimer(InteractionTimer);
@@ -1658,6 +1678,18 @@ void AMainPlayer::Request_StopCraft()
 	} else
 	{
 		Server_StopCraft();
+	}
+}
+
+void AMainPlayer::Client_ShowDeathScreen_Implementation()
+{
+	//로컬 화면 흑백으로 전환
+	if (IsLocallyControlled())
+	{
+		FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
+		FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(0,0,0,0);
+		
+		MainPlayerController->OpenDeathScreen();
 	}
 }
 

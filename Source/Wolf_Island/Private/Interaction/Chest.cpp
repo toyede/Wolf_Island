@@ -21,8 +21,6 @@ AChest::AChest()
 	
 	InventoryComponent->SetSlotsCapacity(ChestSlotsSize);
 	InventoryComponent->SetWeightCapacity(ChestWeightCapacity);
-	
-	InteractableData.InteractionDuration = InteractionDuration;
 }
 
 void AChest::BeginPlay()
@@ -84,8 +82,6 @@ void AChest::Interact(AActor* Interactor)
 
 void AChest::BeginFocus_Implementation()
 {
-	Super::BeginFocus();
-	
 	if (ChestSkeletalMesh)
 	{
 		ChestSkeletalMesh->SetRenderCustomDepth(true);
@@ -94,8 +90,6 @@ void AChest::BeginFocus_Implementation()
 
 void AChest::EndFocus_Implementation()
 {
-	Super::EndFocus();
-	
 	if (ChestSkeletalMesh)
 	{
 		ChestSkeletalMesh->SetRenderCustomDepth(false);

@@ -234,6 +234,22 @@ void AMainPlayerController::OnRep_PlayerState()
 	}
 }
 
+void AMainPlayerController::Request_Respawn()
+{
+	if (HasAuthority())
+	{
+		Respawn();
+	} else
+	{
+		Server_Respawn();
+	}
+}
+
+void AMainPlayerController::Server_Respawn_Implementation()
+{
+	Respawn();
+}
+
 void AMainPlayerController::Client_RoleDeny_Implementation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Role Selection Denied"))
@@ -330,4 +346,8 @@ void AMainPlayerController::OnQuit()
 	UGameplayStatics::OpenLevelBySoftObjectPtr(GetWorld(), MainMenuLevel);
 }
 
-
+void AMainPlayerController::Respawn()
+{
+	AMainGameMode* GM = GetWorld()->GetAuthGameMode<AMainGameMode>();
+	GM->HandlePlayerDeath(this);
+}

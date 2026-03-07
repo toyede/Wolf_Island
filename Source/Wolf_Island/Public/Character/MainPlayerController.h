@@ -133,8 +133,11 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void OnQuit();
 	
-	//멀티 플레이 코드
+	//플레이어 사망 후 리스폰 버튼 클릭 시 실행할 리스폰 시퀀스
+	UFUNCTION(BlueprintCallable)
+	void Respawn();
 	
+	//멀티 플레이 코드
 	UFUNCTION(BlueprintCallable)
 	void Request_SendChat(FChattingData NewChattingData);
 	
@@ -161,4 +164,11 @@ public:
 	void Client_EndSelection();
 	
 	virtual void OnRep_PlayerState() override;
+	
+	//사망 시 부활 요청
+	UFUNCTION(BlueprintCallable)
+	void Request_Respawn();
+	
+	UFUNCTION(Server, Reliable)
+	void Server_Respawn();
 };

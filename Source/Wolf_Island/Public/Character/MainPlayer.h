@@ -118,9 +118,12 @@ public:
 	UPROPERTY(ReplicatedUsing=OnRep_HandedItem, EditAnywhere, BlueprintReadWrite)
 	UStaticMeshComponent* ItemMesh;
 	
-	//이동 관련 변수====================================================================
+	//이동 관련 변수====================================================================	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
 	float MovementMultiplier = 1.0f;
+	
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	float KnockOutSpeed = 50.0f;
 	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
 	float WalkSpeed = 300.0f;
@@ -192,6 +195,14 @@ public:
 	//상태 관련 변수 (뛰는 중인지, ~~하는 중인지 등등)=====================================
 	//캐릭터 역할 (선장, 요리사, 정비공, 군인)
 	ECharacterRole Role = ECharacterRole::NONE;
+	
+	//기절 타이머
+	UPROPERTY(BlueprintReadWrite)
+	FTimerHandle KnockOutTimer;
+	
+	//기절 후 사망까지 소요 시간
+	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	float KnockOutToDeathTime = 10.0f;
 	
 	//뛰는 중인지
 	UPROPERTY(ReplicatedUsing=OnRep_IsRunning, EditDefaultsOnly, BlueprintReadWrite, Category="State")
@@ -453,6 +464,14 @@ public:
 	//공격 함수
 	UFUNCTION()
 	void Attack();
+	
+	//기절 함수
+	UFUNCTION(BlueprintCallable)
+	void KnockOut();
+	
+	//소생 함수
+	UFUNCTION(BlueprintCallable)
+	void Revive();
 
 	//인터랙션 관련 함수===================================================
 	//인터랙션 체크 함수 - 라인트레이스로 인터랙션 액터 체크
@@ -628,6 +647,9 @@ public:
 	//클라이언트 실행 함수 (UI 사운드 등 클라이언트 혼자만 보면 되는 것)
 	UFUNCTION(Client, Reliable)
 	void Client_PlaySound2D(USoundBase* Sound);
+	
+	UFUNCTION(Client, Reliable)
+	void Client_ShowDeathScreen();
 	
 	//멀티캐스트 실행 함수
 	UFUNCTION(NetMulticast, Reliable)
