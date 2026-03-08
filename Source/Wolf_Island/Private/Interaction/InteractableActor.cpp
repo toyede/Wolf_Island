@@ -32,3 +32,11 @@ void AInteractableActor::SetInteractionDuration(float NewInteractionDuration)
 {
 	InteractableData.InteractionDuration = NewInteractionDuration;
 }
+
+void AInteractableActor::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(AInteractableActor, CanInteract);
+	DOREPLIFETIME(AInteractableActor, InteractionDuration);
+}

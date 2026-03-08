@@ -33,6 +33,46 @@
 #include "Games/MainSaveGame.h"
 #include "Games/GameModes/MainGameMode.h"
 
+void AMainPlayer::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	
+	if (AMainPlayerController* MainController = Cast<AMainPlayerController>(GetController()))
+	{
+		if (AMainGameMode* GM = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode()))
+		{
+			AMainPlayerState* PS = Cast<AMainPlayerState>(MainController->PlayerState);
+			GM->LoadPlayer(PS);
+			UE_LOG(LogTemp, Warning, TEXT("[%s] LOAD PLAYER DATA"), *PS->GetPersistantId());
+			GM->SavePlayer(PS);
+			UE_LOG(LogTemp, Warning, TEXT("[%s] SAVE PLAYER DATA FOR NOOB"), *PS->GetPersistantId());
+		}
+	} 
+}
+
+void AMainPlayer::PawnClientRestart()
+{
+	Super::PawnClientRestart();
+	
+	if (IsLocallyControlled())
+	{
+		FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
+		FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(1, 1,1,1);
+		
+		if (AMainPlayerController* MainController = Cast<AMainPlayerController>(GetController()))
+		{
+			MainController->SetPlayerHUD(this);
+		} 
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("HAS NO CONTROLLER"))
+		}	
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("NOT LOCALLY CONTROLLED"))
+	}
+}
+
 // Sets default values
 AMainPlayer::AMainPlayer()
 {
@@ -95,46 +135,6 @@ AMainPlayer::AMainPlayer()
 	NickName->SetupAttachment(GetMesh());
 	
 	GetCharacterMovement()->MaxFlySpeed = SwimmingSpeed;
-}
-
-void AMainPlayer::PossessedBy(AController* NewController)
-{
-	Super::PossessedBy(NewController);
-	
-	if (AMainPlayerController* MainController = Cast<AMainPlayerController>(GetController()))
-	{
-		if (AMainGameMode* GM = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode()))
-		{
-			AMainPlayerState* PS = Cast<AMainPlayerState>(MainController->PlayerState);
-			GM->LoadPlayer(PS);
-			UE_LOG(LogTemp, Warning, TEXT("[%s] LOAD PLAYER DATA"), *PS->GetPersistantId());
-			GM->SavePlayer(PS);
-			UE_LOG(LogTemp, Warning, TEXT("[%s] SAVE PLAYER DATA FOR NOOB"), *PS->GetPersistantId());
-		}
-	} 
-}
-
-void AMainPlayer::PawnClientRestart()
-{
-	Super::PawnClientRestart();
-	
-	if (IsLocallyControlled())
-	{
-		FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
-		FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(1, 1,1,1);
-		
-		if (AMainPlayerController* MainController = Cast<AMainPlayerController>(GetController()))
-		{
-			MainController->SetPlayerHUD(this);
-		} 
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("HAS NO CONTROLLER"))
-		}	
-	} else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("NOT LOCALLY CONTROLLED"))
-	}
 }
 
 // Called when the game starts or when spawned
@@ -753,15 +753,18 @@ void AMainPlayer::KnockOut()
 	//기절 상태로 전환
 	IsInability = true;
 	GetCharacterMovement()->MaxWalkSpeed = KnockOutSpeed;
-	InteractableData.CanInteract = true;
+	CanInteract = true;
+	InteractableData.CanInteract = CanInteract;
 }
 
 void AMainPlayer::Revive()
 {
 	GetWorld()->GetTimerManager().ClearTimer(KnockOutTimer);
+	StatusComponent->IncreaseHP(20.0f);
 	IsInability = false;
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-	InteractableData.CanInteract = false;
+	CanInteract = false;
+	InteractableData.CanInteract = CanInteract;
 }
 
 void AMainPlayer::CheckInteraction()
@@ -796,6 +799,7 @@ void AMainPlayer::CheckInteraction()
 				{
 					//UE_LOG(LogTemp, Warning, TEXT("FoundInteractable"));
 					//TargetInteractable에 결과물 넣기
+					UE_LOG(LogTemp, Warning, TEXT("[PLAYER] INTERACTABLE : %s"), *HitResult.GetActor()->GetName())
 					FoundInteractable(HitResult.GetActor());
 					return;
 				}
@@ -835,19 +839,30 @@ void AMainPlayer::FoundInteractable(AActor* Interactable)
 	//인터랙터블 액터의 상태가 인터랙션 가능한 상태가 아니면
 	if (!TargetInteractionInterface->InteractableData.CanInteract)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] THIS ACTOR CAN'T INTERACT"));
 		//TODO:여기 인터랙션 UI 해제 코드 추가 예정
 		if (IsLocallyControlled())
 		{
 			HUD->DisplayDefault();
+		} else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PLAYER] NOT LOCALLY CONTROLLED : Can't Change Aim to Unfocus"));
 		}
 		TargetInteractionInterface->Execute_EndFocus(InteractionData.CurrentInteractable);
 		return;
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] THIS ACTOR CAN INTERACT"));
 	}
 	
 	//TODO:여기 인터랙션 UI 업데이트 코드 추가 예정
 	if (IsLocallyControlled())
 	{
 		HUD->DisplayInteractable();
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] NOT LOCALLY CONTROLLED : Can't Change Aim to Focus"));
+		
 	}
 	TargetInteractionInterface->Execute_BeginFocus(InteractionData.CurrentInteractable);
 }
@@ -883,6 +898,15 @@ void AMainPlayer::NotFoundInteractable()
 	}
 }
 
+void AMainPlayer::Client_InteractionExecuted_Implementation()
+{
+	if (HUD)
+	{
+		HUD->HideInteraction();
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER][CLIENT] Interaction Complete. Hide Bar"));
+	}
+}
+
 //인터랙션 시작 함수 (인터랙션 키 눌렀을 때)
 void AMainPlayer::BeginInteract()
 {
@@ -898,7 +922,7 @@ void AMainPlayer::BeginInteract()
 			//인터랙션 타겟 액터
 			AActor* Target = Cast<AActor>(TargetInteractionInterface.GetObject());
 			//인터랙션 액터의 인터랙션 시작 함수 실행
-			TargetInteractionInterface->BeginInteract();
+			//TargetInteractionInterface->BeginInteract();
 			//즉시 인터랙션이 가능하면 (꾹 누르는 인터랙션이 아니면)
 			if (TargetInteractionInterface->InteractableData.InteractionDuration == 0.0f)
 			{
@@ -912,16 +936,20 @@ void AMainPlayer::BeginInteract()
 			//꾹 누르는 인터랙션이면
 			else
 			{
-				HUD->DisplayInteraction();
-				//인터랙션 실행 시간 만큼 대기 후 인터랙션 실행
-				GetWorldTimerManager().SetTimer(InteractionTimer,
-					[this, Target]()
-					{
-						//인터랙션 실행
-						Interaction(Target);
-					},
-					TargetInteractionInterface->InteractableData.InteractionDuration,
-					false);
+				//인터랙션 가능 상태인지 확인
+				if (TargetInteractionInterface->InteractableData.CanInteract)
+				{
+					HUD->DisplayInteraction();
+					//인터랙션 실행 시간 만큼 대기 후 인터랙션 실행
+					GetWorldTimerManager().SetTimer(InteractionTimer,
+						[this, Target]()
+						{
+							//인터랙션 실행
+							Interaction(Target);
+						},
+						TargetInteractionInterface->InteractableData.InteractionDuration,
+						false);
+				}
 			}
 		}
 	}
@@ -929,12 +957,11 @@ void AMainPlayer::BeginInteract()
 
 void AMainPlayer::EndInteract()
 {
-	if (!HUD)
+	if (HUD)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("NO HUD"));
-		return;
+		HUD->HideInteraction();
 	}
-	HUD->HideInteraction();
+	
 	//인터랙션 타이머 클리어
 	GetWorldTimerManager().ClearTimer(InteractionTimer);
 
@@ -946,6 +973,11 @@ void AMainPlayer::EndInteract()
 	}
 }
 
+void AMainPlayer::Interact(AActor* Interactor)
+{
+	Revive();
+}
+
 void AMainPlayer::Interaction_Implementation(AActor* Target)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[%hs] SERVER INTERACTION EXECUTED"), HasAuthority()?"SERVER":"CLIENT")
@@ -953,7 +985,11 @@ void AMainPlayer::Interaction_Implementation(AActor* Target)
 	GetWorldTimerManager().ClearTimer(InteractionTimer);
 	if (IsLocallyControlled())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER][SERVER] Interaction Complete. Hide Bar"));
 		HUD->HideInteraction();
+	} else
+	{
+		Client_InteractionExecuted();
 	}
 	
 	//인터랙션 액터가 유효한 지 체크
@@ -1492,6 +1528,7 @@ void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 	DOREPLIFETIME(AMainPlayer, ItemMesh);
 	DOREPLIFETIME(AMainPlayer, IsSwimming);
 	DOREPLIFETIME(AMainPlayer, MovementMultiplier);
+	DOREPLIFETIME(AMainPlayer, CanInteract);
 }
 
 void AMainPlayer::Request_Run()
