@@ -811,9 +811,10 @@ void AMainPlayer::CheckInteraction()
 		}
 		
 		// 폴리지 체크
-		else if (UInstancedStaticMeshComponent* ISMC = Cast<UInstancedStaticMeshComponent>(HitResult.GetComponent()))
+		if (UInstancedStaticMeshComponent* ISMC = Cast<UInstancedStaticMeshComponent>(HitResult.GetComponent()))
 		{
 			UStaticMesh* HitMesh = ISMC->GetStaticMesh();
+			UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Foliage"))
 			// 통합된 Map에 등록된 폴리지인지 확인
 			if (FoliageRewardMap.Contains(HitMesh))
 			{
