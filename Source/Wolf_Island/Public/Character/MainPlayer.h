@@ -193,18 +193,16 @@ public:
 	UInputAction* DropItemAction;
 
 	//상태 관련 변수 (뛰는 중인지, ~~하는 중인지 등등)=====================================
-	
 	//캐릭터 역할 (선장, 요리사, 정비공, 군인)
-	UPROPERTY(Replicated, BlueprintReadWrite, Category="State")
-	ECharacterRole CharacterRole = ECharacterRole::NONE;
+	ECharacterRole Role = ECharacterRole::NONE;
 	
 	//기절 타이머
 	UPROPERTY(BlueprintReadWrite)
 	FTimerHandle KnockOutTimer;
 	
 	//기절 후 사망까지 소요 시간
-	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State")
-	float KnockOutToDeathTime = 30.0f;
+	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	float KnockOutToDeathTime = 10.0f;
 	
 	//뛰는 중인지
 	UPROPERTY(ReplicatedUsing=OnRep_IsRunning, EditDefaultsOnly, BlueprintReadWrite, Category="State")
@@ -290,11 +288,8 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Interaction")
 	TScriptInterface<IInteractionInterface> TargetInteractionInterface;
 	//꾹 누르기 인터랙션 시간
-	UPROPERTY(ReplicatedUsing=OnRep_InteractionDuration, EditDefaultsOnly, BlueprintReadWrite, Category="Interaction")
-	float InteractionDuration = 5.0f;
-	//인터랙션 가능한 지
-	UPROPERTY(ReplicatedUsing=OnRep_CanInteract, EditDefaultsOnly, BlueprintReadWrite, Category="Interaction")
-	bool CanInteract = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction")
+	float InteractionDuration = 0.0f;
 
 	//애니메이션 변수======================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
@@ -501,14 +496,12 @@ public:
 	//인터랙션 실행 함수
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Interaction(AActor* Target);
-	UFUNCTION(Client, Reliable, BlueprintCallable)
-	void Client_InteractionExecuted();
 
 	UFUNCTION(BlueprintCallable)
 	void BeginInteract() override;
 	UFUNCTION(BlueprintCallable)
 	void EndInteract() override;
-	UFUNCTION()
+	UFUNCTION(BlueprintImplementableEvent)
 	void Interact(AActor* Interactor) override;
 
 	//아이템 떨구기 함수
@@ -577,12 +570,6 @@ public:
 	//서버 실행 함수는 서버에 이 함수를 실행하겠다고 요청을 보냄.
 	//서버 실행 함수 안에서는 실제 작동 함수를 실행시킴.
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
-	
-	//인터랙션
-	UFUNCTION()
-	void OnRep_CanInteract() { InteractableData.CanInteract = CanInteract; };
-	UFUNCTION()
-	void OnRep_InteractionDuration() { InteractableData.InteractionDuration = InteractionDuration; };
 		
 	//달리기
 	UFUNCTION()
