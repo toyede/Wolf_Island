@@ -14,7 +14,7 @@ class WOLF_ISLAND_API AFishTrap : public AInteractableActor
 public:
 	AFishTrap();
 
-	virtual void Interact(AActor* Interactor) override;
+	virtual void Interact_Implementation(AActor* Interactor) override;
 
 	UFUNCTION()
 	TArray<FName> GetFishTrapRowNames() const;

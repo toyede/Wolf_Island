@@ -18,7 +18,6 @@
 #include "Item/Tree.h"
 #include "Components/InventoryComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Games/MainHUD.h"
 #include "Interaction/InteractionInterface.h"
 #include "Item/Pickup.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -33,6 +32,46 @@
 #include "Components/WidgetComponent.h"
 #include "Games/MainSaveGame.h"
 #include "Games/GameModes/MainGameMode.h"
+
+void AMainPlayer::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	
+	if (AMainPlayerController* MainController = Cast<AMainPlayerController>(GetController()))
+	{
+		if (AMainGameMode* GM = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode()))
+		{
+			AMainPlayerState* PS = Cast<AMainPlayerState>(MainController->PlayerState);
+			GM->LoadPlayer(PS);
+			UE_LOG(LogTemp, Warning, TEXT("[%s] LOAD PLAYER DATA"), *PS->GetPersistantId());
+			GM->SavePlayer(PS);
+			UE_LOG(LogTemp, Warning, TEXT("[%s] SAVE PLAYER DATA FOR NOOB"), *PS->GetPersistantId());
+		}
+	} 
+}
+
+void AMainPlayer::PawnClientRestart()
+{
+	Super::PawnClientRestart();
+	
+	if (IsLocallyControlled())
+	{
+		FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
+		FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(1, 1,1,1);
+		
+		if (AMainPlayerController* MainController = Cast<AMainPlayerController>(GetController()))
+		{
+			MainController->SetPlayerHUD(this);
+		} 
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("HAS NO CONTROLLER"))
+		}	
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("NOT LOCALLY CONTROLLED"))
+	}
+}
 
 // Sets default values
 AMainPlayer::AMainPlayer()
@@ -81,8 +120,7 @@ AMainPlayer::AMainPlayer()
 			FRotator(0, 90, -90),
 			FVector(0,10,0)
 			));
-	
-	
+		
 	//인벤토리 초기화
 	InventoryComponent->SetSlotsCapacity(30);
 	InventoryComponent->SetWeightCapacity(100);
@@ -99,41 +137,6 @@ AMainPlayer::AMainPlayer()
 	GetCharacterMovement()->MaxFlySpeed = SwimmingSpeed;
 }
 
-void AMainPlayer::PossessedBy(AController* NewController)
-{
-	Super::PossessedBy(NewController);
-	
-	if (AMainPlayerController* MainController = Cast<AMainPlayerController>(GetController()))
-	{
-		if (AMainGameMode* GM = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode()))
-		{
-			AMainPlayerState* PS = Cast<AMainPlayerState>(MainController->PlayerState);
-			GM->LoadPlayer(PS);
-			UE_LOG(LogTemp, Warning, TEXT("[%s] LOAD PLAYER DATA"), *PS->GetPersistantId());
-		}
-	} 
-}
-
-void AMainPlayer::PawnClientRestart()
-{
-	Super::PawnClientRestart();
-	
-	if (IsLocallyControlled())
-	{
-		if (AMainPlayerController* MainController = Cast<AMainPlayerController>(GetController()))
-		{
-			MainController->SetPlayerHUD(this);
-		} 
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("HAS NO CONTROLLER"))
-		}	
-	} else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("NOT LOCALLY CONTROLLED"))
-	}
-}
-
 // Called when the game starts or when spawned
 void AMainPlayer::BeginPlay()
 {
@@ -148,7 +151,7 @@ void AMainPlayer::BeginPlay()
 			StatusComponent->OnStaminaZero.AddDynamic(this, &AMainPlayer::Request_StopRun);
 
 			//죽음 바인딩
-			StatusComponent->OnHPZero.AddDynamic(this, &AMainPlayer::OnDeath);
+			StatusComponent->OnHPZero.AddUniqueDynamic(this, &AMainPlayer::OnDeath);
 
 			//배고픔, 수분 감소 시작
 			StatusComponent->StartHunger();
@@ -181,8 +184,8 @@ void AMainPlayer::BeginPlay()
 	
 	UE_LOG(LogTemp, Warning, TEXT("[%s] All Components Set"), *GetName());
 	
-	GameMode = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode());
 	MainPlayerController = Cast<AMainPlayerController>(GetController());
+	InteractableData.CanInteract = false;
 }
 
 // Called every frame
@@ -659,8 +662,21 @@ void AMainPlayer::SetHotbarIndex(int32 Index)
 }
 
 void AMainPlayer::OnDeath_Implementation()
-{
-	UE_LOG(LogTemp, Display, TEXT("Player Dead"));
+{	
+	//멀티 플레이 죽음 시
+	//1. 10초간 기절 : 다른 플레이어가 붕대로 상호작용 시 회복
+	//2. 10초 뒤 사망 후 리스폰 지역에서 부활
+	if (GetWorld()->GetGameState<AMainGameState>()->IsMulti)
+	{
+		UE_LOG(LogTemp, Display, TEXT("[MULTI]Player Dead"));
+		KnockOut();
+	}
+	//싱글 플레이 죽음 시 - 사망한 당일 아침으로 부활
+	else
+	{
+		UE_LOG(LogTemp, Display, TEXT("[SINGLE]Player Dead"));
+		Client_ShowDeathScreen();
+	}
 }
 
 //손에 든 아이템 업데이트 함수
@@ -717,6 +733,40 @@ void AMainPlayer::Attack()
 	}
 }
 
+void AMainPlayer::KnockOut()
+{
+	UE_LOG(LogTemp, Display, TEXT("[PLAYER] KNOCKOUT"));
+	//일단 기본 스탠드 상태로 전환
+	if (IsCrouching) ToggleCrouch();
+	if (IsRunning) Request_StopRun();
+	
+	//기절 타이머 실행 - 누가 소생시켜주지 않으면 10초 뒤 사망
+	GetWorld()->GetTimerManager().SetTimer(
+		KnockOutTimer,
+		[this]()
+		{
+			Client_ShowDeathScreen();
+		},
+		KnockOutToDeathTime,
+		false);
+	
+	//기절 상태로 전환
+	IsInability = true;
+	GetCharacterMovement()->MaxWalkSpeed = KnockOutSpeed;
+	CanInteract = true;
+	InteractableData.CanInteract = CanInteract;
+}
+
+void AMainPlayer::Revive()
+{
+	GetWorld()->GetTimerManager().ClearTimer(KnockOutTimer);
+	StatusComponent->IncreaseHP(20.0f);
+	IsInability = false;
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+	CanInteract = false;
+	InteractableData.CanInteract = CanInteract;
+}
+
 void AMainPlayer::CheckInteraction()
 {
 	//플레이어 시야 카메라 체크
@@ -745,43 +795,38 @@ void AMainPlayer::CheckInteraction()
 				//부딪힌 액터가 인터랙션 인터페이스를 가지고 있나?
 				if (HitResult.GetActor()->GetClass()->ImplementsInterface(UInteractionInterface::StaticClass()))
 				{
-					//UE_LOG(LogTemp, Warning, TEXT("It has interface."));
-					//부딪힌 액터가 현재 인터랙터블 데이터와 다르다면
-					if (HitResult.GetActor() != InteractionData.CurrentInteractable)
-					{
-						//UE_LOG(LogTemp, Warning, TEXT("FoundInteractable"));
-						//TargetInteractable에 결과물 넣기
-						FoundInteractable(HitResult.GetActor());
-						return;
-					}
-
-					//부딪힌 액터가 현재 인터랙터블 액터와 같다면 암것두 안하기~
-					if (HitResult.GetActor() == InteractionData.CurrentInteractable)
-					{
-						return;
-					}
+					//UE_LOG(LogTemp, Warning, TEXT("FoundInteractable"));
+					//TargetInteractable에 결과물 넣기
+					UE_LOG(LogTemp, Warning, TEXT("[PLAYER] INTERACTABLE : %s"), *HitResult.GetActor()->GetName())
+					FoundInteractable(HitResult.GetActor());
+					return;
 				}
-			}
-			// 폴리지 체크
-			else if (UInstancedStaticMeshComponent* ISMC = Cast<UInstancedStaticMeshComponent>(HitResult.GetComponent()))
-			{
-				UStaticMesh* HitMesh = ISMC->GetStaticMesh();
-				// 통합된 Map에 등록된 폴리지인지 확인
-				if (FoliageRewardMap.Contains(HitMesh))
+
+				//부딪힌 액터가 현재 인터랙터블 액터와 같다면 암것두 안하기~
+				if (HitResult.GetActor() == InteractionData.CurrentInteractable)
 				{
-					int32 InstanceIndex = HitResult.Item;
-					if (InteractionData.CurrentFoliageComponent != ISMC || InteractionData.FoliageInstanceIndex != InstanceIndex)
-					{
-						FoundInteractableFoliage(ISMC, InstanceIndex);
-					}
 					return;
 				}
 			}
 		}
-	} else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("NO CAMERA"));
+		
+		// 폴리지 체크
+		else if (UInstancedStaticMeshComponent* ISMC = Cast<UInstancedStaticMeshComponent>(HitResult.GetComponent()))
+		{
+			UStaticMesh* HitMesh = ISMC->GetStaticMesh();
+			// 통합된 Map에 등록된 폴리지인지 확인
+			if (FoliageRewardMap.Contains(HitMesh))
+			{
+				int32 InstanceIndex = HitResult.Item;
+				if (InteractionData.CurrentFoliageComponent != ISMC || InteractionData.FoliageInstanceIndex != InstanceIndex)
+				{
+					FoundInteractableFoliage(ISMC, InstanceIndex);
+				}
+				return;
+			}
+		}
 	}
+	
 	NotFoundInteractable();
 }
 
@@ -806,19 +851,30 @@ void AMainPlayer::FoundInteractable(AActor* Interactable)
 	//인터랙터블 액터의 상태가 인터랙션 가능한 상태가 아니면
 	if (!TargetInteractionInterface->InteractableData.CanInteract)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] THIS ACTOR CAN'T INTERACT"));
 		//TODO:여기 인터랙션 UI 해제 코드 추가 예정
 		if (IsLocallyControlled())
 		{
 			HUD->DisplayDefault();
+		} else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PLAYER] NOT LOCALLY CONTROLLED : Can't Change Aim to Unfocus"));
 		}
 		TargetInteractionInterface->Execute_EndFocus(InteractionData.CurrentInteractable);
 		return;
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] THIS ACTOR CAN INTERACT"));
 	}
 	
 	//TODO:여기 인터랙션 UI 업데이트 코드 추가 예정
 	if (IsLocallyControlled())
 	{
 		HUD->DisplayInteractable();
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] NOT LOCALLY CONTROLLED : Can't Change Aim to Focus"));
+		
 	}
 	TargetInteractionInterface->Execute_BeginFocus(InteractionData.CurrentInteractable);
 }
@@ -872,11 +928,18 @@ void AMainPlayer::NotFoundInteractable()
 	}
 }
 
+void AMainPlayer::Client_InteractionExecuted_Implementation()
+{
+	if (HUD)
+	{
+		HUD->HideInteraction();
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER][CLIENT] Interaction Complete. Hide Bar"));
+	}
+}
+
 //인터랙션 시작 함수 (인터랙션 키 눌렀을 때)
 void AMainPlayer::BeginInteract()
 {
-	IInteractionInterface::BeginInteract();
-
 	//인터랙션이 시작됐을 때부터 인터렉션 상태가 변하지 않는 것을 체크
 	CheckInteraction();
 
@@ -885,25 +948,25 @@ void AMainPlayer::BeginInteract()
 		//인터랙션 데이터가 있으면
 		if (InteractionData.CurrentInteractable)
 		{
-			//인터랙션 액터가 유효하면
-			if (IsValid(TargetInteractionInterface.GetObject()))
+			//인터랙션 타겟 액터
+			AActor* Target = Cast<AActor>(TargetInteractionInterface.GetObject());
+			//인터랙션 액터의 인터랙션 시작 함수 실행
+			//TargetInteractionInterface->BeginInteract();
+			//즉시 인터랙션이 가능하면 (꾹 누르는 인터랙션이 아니면)
+			if (TargetInteractionInterface->InteractableData.InteractionDuration == 0.0f)
 			{
-				//인터랙션 타겟 액터
-				AActor* Target = Cast<AActor>(TargetInteractionInterface.GetObject());
-				//인터랙션 액터의 인터랙션 시작 함수 실행
-				TargetInteractionInterface->BeginInteract();
-				//즉시 인터랙션이 가능하면 (꾹 누르는 인터랙션이 아니면)
-				if (TargetInteractionInterface->InteractableData.InteractionDuration == 0.0f)
+				//인터랙션 가능 상태인지 확인
+				if (TargetInteractionInterface->InteractableData.CanInteract)
 				{
-					//인터랙션 가능 상태인지 확인
-					if (TargetInteractionInterface->InteractableData.CanInteract)
-					{
-						//인터랙션 실행
-						Interaction(Target);
-					}
+					//인터랙션 실행
+					Interaction(Target);
 				}
-				//꾹 누르는 인터랙션이면
-				else
+			}
+			//꾹 누르는 인터랙션이면
+			else
+			{
+				//인터랙션 가능 상태인지 확인
+				if (TargetInteractionInterface->InteractableData.CanInteract)
 				{
 					HUD->DisplayInteraction();
 					//인터랙션 실행 시간 만큼 대기 후 인터랙션 실행
@@ -928,8 +991,11 @@ void AMainPlayer::BeginInteract()
 
 void AMainPlayer::EndInteract()
 {
-	IInteractionInterface::EndInteract();
-	HUD->HideInteraction();
+	if (HUD)
+	{
+		HUD->HideInteraction();
+	}
+	
 	//인터랙션 타이머 클리어
 	GetWorldTimerManager().ClearTimer(InteractionTimer);
 
@@ -941,6 +1007,12 @@ void AMainPlayer::EndInteract()
 	}
 }
 
+void AMainPlayer::Interact_Implementation(AActor* Interactor)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Interact Executed"));
+	Revive();
+}
+
 void AMainPlayer::Interaction_Implementation(AActor* Target)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[%hs] SERVER INTERACTION EXECUTED"), HasAuthority()?"SERVER":"CLIENT")
@@ -948,7 +1020,11 @@ void AMainPlayer::Interaction_Implementation(AActor* Target)
 	GetWorldTimerManager().ClearTimer(InteractionTimer);
 	if (IsLocallyControlled())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER][SERVER] Interaction Complete. Hide Bar"));
 		HUD->HideInteraction();
+	} else
+	{
+		Client_InteractionExecuted();
 	}
 	
 	//인터랙션 액터가 유효한 지 체크
@@ -959,7 +1035,7 @@ void AMainPlayer::Interaction_Implementation(AActor* Target)
 		if (TargetInteractionInterface->InteractableData.CanInteract)
 		{
 			//인터랙션 액터의 인터랙션 함수 실행
-			TargetInteractionInterface->Interact(this);
+			TargetInteractionInterface->Execute_Interact(Target, this);
 		}
 	}
 }
@@ -1481,6 +1557,7 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 	
 	//====>> 2.19 조성윤 추가 <<====
 	//삭제될 폴리지 정보 저장
+	//이 함수는 서버에서만 실행되니까 GetAuthGameMode이 null이 아님.
 	AMainGameMode* GM = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode());
 	
 	FRemovedFoliageData RemovedData;
@@ -1582,6 +1659,7 @@ void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 	DOREPLIFETIME(AMainPlayer, ItemMesh);
 	DOREPLIFETIME(AMainPlayer, IsSwimming);
 	DOREPLIFETIME(AMainPlayer, MovementMultiplier);
+	DOREPLIFETIME(AMainPlayer, CanInteract);
 }
 
 void AMainPlayer::Request_Run()
@@ -1778,6 +1856,18 @@ void AMainPlayer::Request_StopCraft()
 	} else
 	{
 		Server_StopCraft();
+	}
+}
+
+void AMainPlayer::Client_ShowDeathScreen_Implementation()
+{
+	//로컬 화면 흑백으로 전환
+	if (IsLocallyControlled())
+	{
+		FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
+		FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(0,0,0,0);
+		
+		MainPlayerController->OpenDeathScreen();
 	}
 }
 

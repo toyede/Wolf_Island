@@ -12,7 +12,3 @@ void IInteractionInterface::BeginInteract()
 void IInteractionInterface::EndInteract()
 {
 }
-
-void IInteractionInterface::Interact(AActor* Interactor)
-{
-}
