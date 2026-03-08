@@ -28,7 +28,7 @@ void AFishTrap::BeginPlay()
 	}
 }
 
-void AFishTrap::Interact_Implementation(AActor* Interactor)
+void AFishTrap::Interact(AActor* Interactor)
 {
 	if (HasAuthority())
 	{

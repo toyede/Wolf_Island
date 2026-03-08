@@ -802,31 +802,33 @@ void AMainPlayer::CheckInteraction()
 					return;
 				}
 
-				//부딪힌 액터가 현재 인터랙터블 액터와 같다면 암것두 안하기~
-				if (HitResult.GetActor() == InteractionData.CurrentInteractable)
+					//부딪힌 액터가 현재 인터랙터블 액터와 같다면 암것두 안하기~
+					if (HitResult.GetActor() == InteractionData.CurrentInteractable)
+					{
+						return;
+					}
+				}
+			}
+			// 폴리지 체크
+			else if (UInstancedStaticMeshComponent* ISMC = Cast<UInstancedStaticMeshComponent>(HitResult.GetComponent()))
+			{
+				UStaticMesh* HitMesh = ISMC->GetStaticMesh();
+				// 통합된 Map에 등록된 폴리지인지 확인
+				if (FoliageRewardMap.Contains(HitMesh))
 				{
+					int32 InstanceIndex = HitResult.Item;
+					if (InteractionData.CurrentFoliageComponent != ISMC || InteractionData.FoliageInstanceIndex != InstanceIndex)
+					{
+						FoundInteractableFoliage(ISMC, InstanceIndex);
+					}
 					return;
 				}
 			}
 		}
-		
-		// 폴리지 체크
-		else if (UInstancedStaticMeshComponent* ISMC = Cast<UInstancedStaticMeshComponent>(HitResult.GetComponent()))
-		{
-			UStaticMesh* HitMesh = ISMC->GetStaticMesh();
-			// 통합된 Map에 등록된 폴리지인지 확인
-			if (FoliageRewardMap.Contains(HitMesh))
-			{
-				int32 InstanceIndex = HitResult.Item;
-				if (InteractionData.CurrentFoliageComponent != ISMC || InteractionData.FoliageInstanceIndex != InstanceIndex)
-				{
-					FoundInteractableFoliage(ISMC, InstanceIndex);
-				}
-				return;
-			}
-		}
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("NO CAMERA"));
 	}
-	
 	NotFoundInteractable();
 }
 
@@ -955,8 +957,12 @@ void AMainPlayer::BeginInteract()
 			//즉시 인터랙션이 가능하면 (꾹 누르는 인터랙션이 아니면)
 			if (TargetInteractionInterface->InteractableData.InteractionDuration == 0.0f)
 			{
-				//인터랙션 가능 상태인지 확인
-				if (TargetInteractionInterface->InteractableData.CanInteract)
+				//인터랙션 타겟 액터
+				AActor* Target = Cast<AActor>(TargetInteractionInterface.GetObject());
+				//인터랙션 액터의 인터랙션 시작 함수 실행
+				TargetInteractionInterface->BeginInteract();
+				//즉시 인터랙션이 가능하면 (꾹 누르는 인터랙션이 아니면)
+				if (TargetInteractionInterface->InteractableData.InteractionDuration == 0.0f)
 				{
 					//인터랙션 실행
 					Interaction(Target);
