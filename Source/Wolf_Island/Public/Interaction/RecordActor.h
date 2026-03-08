@@ -23,7 +23,7 @@ public:
 	UFUNCTION()
 	TArray<FString> GetRecordID() const;
 
-	virtual void Interact(AActor* Interactor) override;
+	virtual void Interact_Implementation(AActor* Interactor) override;
 
 protected:
 	// Called when the game starts or when spawned

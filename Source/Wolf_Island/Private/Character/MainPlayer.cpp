@@ -973,8 +973,9 @@ void AMainPlayer::EndInteract()
 	}
 }
 
-void AMainPlayer::Interact(AActor* Interactor)
+void AMainPlayer::Interact_Implementation(AActor* Interactor)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Interact Executed"));
 	Revive();
 }
 
@@ -1000,7 +1001,7 @@ void AMainPlayer::Interaction_Implementation(AActor* Target)
 		if (TargetInteractionInterface->InteractableData.CanInteract)
 		{
 			//인터랙션 액터의 인터랙션 함수 실행
-			TargetInteractionInterface->Interact(this);
+			TargetInteractionInterface->Execute_Interact(Target, this);
 		}
 	}
 }

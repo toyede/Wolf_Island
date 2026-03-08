@@ -60,5 +60,6 @@ public:
 	void EndFocus();
 	virtual void BeginInteract();
 	virtual void EndInteract();
-	virtual void Interact(AActor* Interactor);
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void Interact(AActor* Interactor);
 };

@@ -46,7 +46,7 @@ TArray<FString> ARecordActor::GetRecordID() const
 	return Options;
 }
 
-void ARecordActor::Interact(AActor* Interactor)
+void ARecordActor::Interact_Implementation(AActor* Interactor)
 {
 	if (!HasAuthority()) return;
 
