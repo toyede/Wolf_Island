@@ -30,6 +30,31 @@ struct FInteractionData
 
 	UPROPERTY(BlueprintReadOnly)
 	float LastInteractionCheckTime;
+
+	// 폴리지 상호작용 변수
+	UPROPERTY(BlueprintReadOnly)
+	UInstancedStaticMeshComponent* CurrentFoliageComponent;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 FoliageInstanceIndex;
+};
+
+USTRUCT(BlueprintType)
+struct FFoliageReward
+{
+	GENERATED_USTRUCT_BODY()
+
+	// 획득할 아이템 ID
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName ItemID;
+
+	// 획득할 아이템 수량
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 ItemAmount = 1;
+
+	// 파괴 시 소환할 BP
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<class AActor> SpawnBP;
 };
 
 UENUM(BlueprintType)
@@ -349,6 +374,27 @@ public:
 	
 	//트레이스 할 히트 포인트 모음
 	TMap<FName, FAttackTracePoint> TracePoints;
+
+	// 채집 시 플레이어 인벤토리로 들어올 아이템 정보 및 스폰될 BP가 담긴 맵
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
+	TMap<UStaticMesh*, FFoliageReward> FoliageRewardMap;
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
+	TSubclassOf<class AActor> OutlineActorClass;
+
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction")
+	AActor* CurrentOutlineActor;
+
+public:
+	// 폴리지를 찾았을 때 실행
+	UFUNCTION()
+	void FoundInteractableFoliage(UInstancedStaticMeshComponent* ISMC, int32 InstanceIndex);
+
+	// 폴리지 상호작용
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category="Interaction")
+	void Server_InteractFoliage(UInstancedStaticMeshComponent* ISMC, int32 InstanceIndex);
 
 	//공격시 폴리지 판정
 	UPROPERTY(EditAnywhere)
