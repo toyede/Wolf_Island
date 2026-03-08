@@ -55,9 +55,6 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, Category="Widget")
 	TSubclassOf<UPauseMenu> PauseWidgetClass;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Widget")
-	TSubclassOf<class UUserWidget> FishTrapScreenClass;
 	
 	UPROPERTY(EditDefaultsOnly, Category="Widget")
 	TSubclassOf<URoleSelection> RoleSelectionWidgetClass;
@@ -107,12 +104,8 @@ public:
 	
 	UFUNCTION()
 	void DisplayPauseMenu();
-	
 	UFUNCTION()
 	void HidePauseMenu();
-	
-	UFUNCTION(Client, Reliable)
-	void Client_OpenFishTrapUI(class AFishTrap* TargetTrap, class AActor* Interactor);
 	
 	UFUNCTION(BlueprintCallable)
 	void AddChat(FChattingData NewChattingData);

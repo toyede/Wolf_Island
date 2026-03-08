@@ -13,7 +13,6 @@
 #include "Games/MainGameState.h"
 #include "Games/GameModes/MultiGameMode.h"
 #include "Kismet/GameplayStatics.h"
-#include "Widgets/FishTrap/FishTrapScreen.h"
 #include "Widgets/BaseButton.h"
 #include "Widgets/PlayerHUD.h"
 #include "Widgets/MainMenu/PauseMenu.h"
@@ -167,28 +166,6 @@ void AMainPlayerController::HidePauseMenu()
 	UGameplayStatics::SetGamePaused(GetWorld(), false);
 	
 	PauseMenu->SetVisibility(ESlateVisibility::Collapsed);
-}
-
-
-void AMainPlayerController::Client_OpenFishTrapUI_Implementation(class AFishTrap* TargetTrap, class AActor* Interactor)
-{
-	if (FishTrapScreenClass && TargetTrap)
-	{
-		UUserWidget* CreatedWidget = CreateWidget<UUserWidget>(this, FishTrapScreenClass);
-		
-		if (UFishTrapScreen* FishTrapScreen = Cast<UFishTrapScreen>(CreatedWidget))
-		{
-			FishTrapScreen->InitializeScreen(TargetTrap, Interactor);
-			FishTrapScreen->SetIsFocusable(true);
-			FishTrapScreen->AddToViewport();
-
-			FInputModeGameAndUI InputMode;
-			InputMode.SetWidgetToFocus(FishTrapScreen->TakeWidget());
-			
-			SetInputMode(InputMode);
-			SetShowMouseCursor(true);
-		}
-	}
 }
 
 void AMainPlayerController::Request_SendChat(FChattingData NewChattingData)

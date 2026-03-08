@@ -533,6 +533,9 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	int32 RemoveItemsByID(FName ItemID, int32 Amount);
 	
+	//ID와 개수에 따른 아이템 데이터 생성
+	FItemBaseData CreateItemByID(FName ItemID, int32 Amount);
+	
 	//특정 인덱스에 아이템 삽입
 	void SetItemAtIndex(FItemBaseData* Item, int32 Index);
 	
@@ -542,6 +545,14 @@ protected:
 	//슬롯에 아이템 삭제
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void RemoveItemAtSlot(int32 Index, FItemBaseData Item);
+	
+	//아이템 수량 감소 함수(슬롯에서)
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void RemoveItemAmountAtSlot(int32 Index, int32 Amount);
+	
+	//아이템 수량 증가 함수(슬롯에서)
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void AddItemAmountAtSlot(int32 Index, int32 Amount);
 	
 	//서로 다른 인벤토리 간 아이템 스왑
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -639,17 +650,6 @@ public:
 	void Server_SetItemAmountAtSlot(int32 Index, int32 Amount);
 	UFUNCTION()
 	void Request_SetItemAmountAtSlot(int32 Index, int32 Amount);
-
-	//아이템 수량 감소 함수(슬롯에서)
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	void RemoveItemAmountAtSlot(int32 Index, int32 Amount);
-	
-	//아이템 수량 증가 함수(슬롯에서)
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	void AddItemAmountAtSlot(int32 Index, int32 Amount);
-
-	//ID와 개수에 따른 아이템 데이터 생성
-	FItemBaseData CreateItemByID(FName ItemID, int32 Amount);
 	
 	//슬롯 스왑
 	UFUNCTION(Server, Reliable)

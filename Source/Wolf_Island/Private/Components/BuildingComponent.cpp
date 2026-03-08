@@ -57,6 +57,7 @@ void UBuildingComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAc
 	{
 		UpdatePreview();
 	}
+	// ...
 }
 
 void UBuildingComponent::ExecuteSpawn(FRecipeData Recipe, FBuildingData BuildData, FTransform SpawnTransform)
@@ -141,49 +142,15 @@ bool UBuildingComponent::CheckPlacementValid() const
 	TArray<AActor*> OverlappingActors;
 	PreviewActor->GetOverlappingActors(OverlappingActors);
 
+
 	for (AActor* Actor : OverlappingActors)
 	{
 		if (!Actor || Actor == PreviewActor || Actor == GetOwner()) continue;
 		if (Actor->GetOwner() == GetOwner() || Actor->IsAttachedTo(GetOwner())) continue;
-       
-		if (Actor->ActorHasTag(TEXT("Floor")) || Actor->GetName().Contains(TEXT("Landscape")) || Actor->ActorHasTag(TEXT("Water"))) continue;
+		if (Actor->ActorHasTag(TEXT("Floor")) || Actor->GetName().Contains(TEXT("Landscape"))) continue;
 
+        
 		return false;
-	}
-
-	FVector Start = PreviewActor->GetActorLocation() + FVector(0, 0, 50.0f);
-	FVector End = Start - FVector(0, 0, 500.0f);
-	FHitResult Hit;
-	FCollisionQueryParams Params;
-	Params.AddIgnoredActor(PreviewActor);
-	Params.AddIgnoredActor(GetOwner());
-
-	bool bIsWater = false;
-    
-	if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params))
-	{
-		AActor* HitActor = Hit.GetActor();
-		UPrimitiveComponent* HitComp = Hit.GetComponent();
-
-		if (HitActor)
-		{
-			if (HitActor->ActorHasTag(TEXT("Water")) || 
-				HitActor->GetName().Contains(TEXT("Water")) ||
-				(HitComp && HitComp->ComponentHasTag(TEXT("Water"))))
-			{
-				bIsWater = true;
-			}
-		}
-	}
-
-	if (CurrentBuildData.PlacementTag == TEXT("Water") && !bIsWater)
-	{
-		return false; 
-	}
-    
-	if (CurrentBuildData.PlacementTag == TEXT("Land") && bIsWater)
-	{
-		return false; 
 	}
 
 	return true;
@@ -215,7 +182,6 @@ void UBuildingComponent::Server_RequestBuild_Implementation(FRecipeData Recipe, 
 		if (BuildData.BuildingClass)
 		{
 			GetWorld()->SpawnActor<AActor>(BuildData.BuildingClass, SpawnTransform, SpawnParams);
-			CleanupBuildMode();
 		}
 	}
 }
