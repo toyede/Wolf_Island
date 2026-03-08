@@ -508,7 +508,8 @@ public:
 	void BeginInteract() override;
 	UFUNCTION(BlueprintCallable)
 	void EndInteract() override;
-	virtual void Interact_Implementation(AActor* Interactor) override;
+	UFUNCTION()
+	void Interact(AActor* Interactor) override;
 
 	//아이템 떨구기 함수
 	UFUNCTION(BlueprintCallable)

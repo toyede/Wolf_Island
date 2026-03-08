@@ -29,6 +29,9 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void Interact(AActor* Interactor) override;
+
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE float GetInteractionDuration() { return InteractableData.InteractionDuration; };
 	

@@ -101,42 +101,24 @@ bool AMultiGameMode::ShouldSpawnAtStartSpot(AController* Player)
 //RestartPlayer 실행 시 호출되는 함수... 플레이어 폰 생성
 APawn* AMultiGameMode::SpawnDefaultPawnFor_Implementation(AController* NewPlayer, AActor* StartSpot)
 {
-	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE MULTI] SpawnFor EXECUTED : Set Spawn Transform"))
-	
-	AMainPlayerState* PS = Cast<AMainPlayerState>(NewPlayer->PlayerState);
-	
-	FRotator StartRotation(ForceInit);
-	StartRotation.Yaw = StartSpot->GetActorRotation().Yaw;
-	FVector StartLocation = StartSpot->GetActorLocation();
-	FTransform SpawnTransform = FTransform(StartRotation, StartLocation);
-	
-	//저장된 정보가 있으면(플레이어의 마지막 위치가 있으면) 그 곳에 소환.
-	if (PlayersSaveData.Find(PS->GetPersistantId()))
-	{
-		SpawnTransform = PlayersSaveData[PS->GetPersistantId()].Transform;
-	}
-	
-	return SpawnDefaultPawnAtTransform_Implementation(NewPlayer, SpawnTransform);
-}
-
-APawn* AMultiGameMode::SpawnDefaultPawnAtTransform_Implementation(AController* NewPlayer,
-	const FTransform& SpawnTransform)
-{
-	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE MULTI] SpawnAt EXECUTED : Spawn Pawn"))
-	
-	FActorSpawnParameters Params;
-	Params.SpawnCollisionHandlingOverride =
-		ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-	
+	UE_LOG(LogTemp, Warning, TEXT("SpawnFor EXECUTED"))
 	AMainPlayerState* PS = Cast<AMainPlayerState>(NewPlayer->PlayerState);
 
 	int32 RoleIndex = static_cast<int32>(PS->GetPlayerRole());
-	
+
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	int32 PointIndex = FMath::RandRange(0, SpawnPoints.Num()-1);
+	FVector SpawnLocation = SpawnPoints[PointIndex];
+	FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
+
 	AMainPlayer* Player = GetWorld()->SpawnActor<AMainPlayer>(
 		PlayerRoleClassList[RoleIndex],
 		SpawnTransform,
 		Params);
-	
+
 	return Player;
 }
 
