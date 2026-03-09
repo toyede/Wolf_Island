@@ -8,8 +8,10 @@
 #include "InputAction.h"
 #include "Interaction/InteractionInterface.h"
 #include "Data/ItemDataStruct.h"
+#include "Widgets/NickName.h"
 #include "MainPlayer.generated.h"
 
+class UWidgetComponent;
 class UWaterBodyComponent;
 class APickup;
 struct FInputActionValue;
@@ -28,6 +30,31 @@ struct FInteractionData
 
 	UPROPERTY(BlueprintReadOnly)
 	float LastInteractionCheckTime;
+
+	// 폴리지 상호작용 변수
+	UPROPERTY(BlueprintReadOnly)
+	UInstancedStaticMeshComponent* CurrentFoliageComponent;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 FoliageInstanceIndex;
+};
+
+USTRUCT(BlueprintType)
+struct FFoliageReward
+{
+	GENERATED_USTRUCT_BODY()
+
+	// 획득할 아이템 ID
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName ItemID;
+
+	// 획득할 아이템 수량
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 ItemAmount = 1;
+
+	// 파괴 시 소환할 BP
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<class AActor> SpawnBP;
 };
 
 UENUM(BlueprintType)
@@ -50,6 +77,17 @@ struct FAttackTracePoint
 	FVector Curr;
 };
 
+UENUM(BlueprintType)
+enum class ECharacterRole : uint8
+{
+	NONE UMETA(DisplayName = "NONE"),
+	CAPTAIN UMETA(DisplayName = "CAPTAIN"),
+	CHEF UMETA(DisplayName = "CHEF"),
+	MECHANIC UMETA(DisplayName = "MECHANIC"),
+	SOLDIER UMETA(DisplayName = "SOLDIER"),
+	
+};
+
 UCLASS()
 class WOLF_ISLAND_API AMainPlayer : public ACharacter, public IInteractionInterface
 {
@@ -58,7 +96,13 @@ class WOLF_ISLAND_API AMainPlayer : public ACharacter, public IInteractionInterf
 public:
 	// Sets default values for this character's properties
 	AMainPlayer();
-
+	
+	virtual void PossessedBy(AController* NewController) override;
+	
+	virtual void PawnClientRestart() override;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
+	class AMainPlayerController* MainPlayerController;
 	//HUD=============================================================================
 	//UPROPERTY(EditAnywhere)
 	//class AMainHUD* HUD;
@@ -75,6 +119,9 @@ public:
 
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
 	class UWeaponComponent* WeaponComponent;
+	
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
+	class UBuildingComponent* BuildingComponent;
 	
 	//부력 컴포넌트 - 수영을 위한 것
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
@@ -96,9 +143,12 @@ public:
 	UPROPERTY(ReplicatedUsing=OnRep_HandedItem, EditAnywhere, BlueprintReadWrite)
 	UStaticMeshComponent* ItemMesh;
 	
-	//이동 관련 변수====================================================================
+	//이동 관련 변수====================================================================	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
 	float MovementMultiplier = 1.0f;
+	
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	float KnockOutSpeed = 50.0f;
 	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
 	float WalkSpeed = 300.0f;
@@ -168,32 +218,45 @@ public:
 	UInputAction* DropItemAction;
 
 	//상태 관련 변수 (뛰는 중인지, ~~하는 중인지 등등)=====================================
+	
+	//캐릭터 역할 (선장, 요리사, 정비공, 군인)
+	UPROPERTY(Replicated, BlueprintReadWrite, Category="State", SaveGame)
+	ECharacterRole CharacterRole = ECharacterRole::NONE;
+	
+	//기절 타이머
+	UPROPERTY(BlueprintReadWrite)
+	FTimerHandle KnockOutTimer;
+	
+	//기절 후 사망까지 소요 시간
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	float KnockOutToDeathTime = 30.0f;
+	
 	//뛰는 중인지
-	UPROPERTY(ReplicatedUsing=OnRep_IsRunning, EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(ReplicatedUsing=OnRep_IsRunning, EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsRunning = false;
 
 	//웅크리는 중인지
-	UPROPERTY(ReplicatedUsing=OnRep_IsCrouching,EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(ReplicatedUsing=OnRep_IsCrouching,EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsCrouching = false;
 	
 	//수영 중인지
-	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsSwimming = false;
 	
 	//어떤 수영 인지-수면, 수중
-	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	ESwimMode SwimMode = ESwimMode::NONE;
 	
 	//슬라이딩 중인지
-	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsSliding = false;
 
 	//1인칭 카메라인지
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsFirstPerson = true;
 
 	//행동불능 상태인지
-	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsInability = false;
 
 	//공격 소모 스태미나
@@ -209,28 +272,28 @@ public:
 	float SlideConsumeAmount = 2.0f;
 
 	//인벤토리가 열려 있는지
-	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsInventoryOpen = false;
 
 	//손에 든 아이템이 있는지
-	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsHoldingItem = false;
 
 	//공격 중인지
-	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsAttacking = false;
 	
 	//공격 트레이스 실행 상태
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsTracingAttack = false;
 	
 	//아이템 사용 중인지
-	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsUsingItem = false;
 
 	//핫바 관련 변수==================================================================
 	//핫바 슬롯 인덱스
-	UPROPERTY(ReplicatedUsing=OnRep_HotBarIndex, VisibleAnywhere, BlueprintReadOnly, Category="HotBar")
+	UPROPERTY(ReplicatedUsing=OnRep_HotBarIndex, VisibleAnywhere, BlueprintReadOnly, Category="HotBar", SaveGame)
 	int32 HotBarIndex = 0;
 	UPROPERTY(VisibleAnywhere, Category="HotBar")
 	FTimerHandle ItemUseTimer;
@@ -252,8 +315,11 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Interaction")
 	TScriptInterface<IInteractionInterface> TargetInteractionInterface;
 	//꾹 누르기 인터랙션 시간
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction")
-	float InteractionDuration = 0.0f;
+	UPROPERTY(ReplicatedUsing=OnRep_InteractionDuration, EditDefaultsOnly, BlueprintReadWrite, Category="Interaction")
+	float InteractionDuration = 5.0f;
+	//인터랙션 가능한 지
+	UPROPERTY(ReplicatedUsing=OnRep_CanInteract, EditDefaultsOnly, BlueprintReadWrite, Category="Interaction", SaveGame)
+	bool CanInteract = false;
 
 	//애니메이션 변수======================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
@@ -266,10 +332,12 @@ public:
 	UAnimMontage* PickUpMontage;
 
 	//위젯=============================================================================
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
-	TSubclassOf<class UPlayerHUD> HUDClass;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Widget")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Widget")
 	UPlayerHUD* HUD;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
+	UWidgetComponent* NickName;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
+	TSubclassOf<UNickName> NickNameWidgetClass;
 
 	//사운드============================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
@@ -307,18 +375,43 @@ public:
 	//트레이스 할 히트 포인트 모음
 	TMap<FName, FAttackTracePoint> TracePoints;
 
+	// 채집 시 플레이어 인벤토리로 들어올 아이템 정보 및 스폰될 BP가 담긴 맵
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
+	TMap<UStaticMesh*, FFoliageReward> FoliageRewardMap;
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
+	TSubclassOf<class AActor> OutlineActorClass;
+
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction")
+	AActor* CurrentOutlineActor;
+
+public:
+	// 폴리지를 찾았을 때 실행
+	UFUNCTION()
+	void FoundInteractableFoliage(UInstancedStaticMeshComponent* ISMC, int32 InstanceIndex);
+
+	// 폴리지 상호작용
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category="Interaction")
+	void Server_InteractFoliage(UInstancedStaticMeshComponent* ISMC, int32 InstanceIndex);
+
 	//공격시 폴리지 판정
-	UPROPERTY(EditAnywhere, Category = "Interaction")
+	UPROPERTY(EditAnywhere)
 	TMap<UStaticMesh*, TSubclassOf<class ATree>> FoliageToActorMap;
 
 	void TryConvertFoliageToActor(const FHitResult& HitResult, float DamageAmount);
 
-	UFUNCTION(BlueprintCallable, Category = "Combat")
+	UFUNCTION(BlueprintCallable, Category = "Attack")
 	void ProcessAttackHit(const FHitResult& HitResult, float DamageAmount);
 
 	// 클라이언트에서 폴리지를 지우기 위한 멀티캐스트 함수
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_RemoveFoliageInstance(UInstancedStaticMeshComponent* ISMC, int32 InstanceIndex);
+	
+	//제작===================================================================================================
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	FTimerHandle CraftTimer;
 	
 	// 요리 및 수리 UI
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
@@ -337,6 +430,10 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	
+	virtual void Destroyed() override;
 
 public:
 	// Called every frame
@@ -350,6 +447,10 @@ public:
 	//무게 업데이트 시 능력치 영향
 	UFUNCTION()
 	void OnCurrentWeightChanged();
+	
+	//컨트롤러에서 HUD 연결
+	UFUNCTION()
+	void SetHUDWidget(UPlayerHUD* NewHUD) { HUD = NewHUD; }
 
 	//점프 시작 함수
 	UFUNCTION()
@@ -407,7 +508,7 @@ public:
 	void SetHotbarIndex(int32 Index);
 
 	//사망 시 함수
-	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	void OnDeath();
 	virtual void OnDeath_Implementation();
 
@@ -418,6 +519,14 @@ public:
 	//공격 함수
 	UFUNCTION()
 	void Attack();
+	
+	//기절 함수
+	UFUNCTION(BlueprintCallable)
+	void KnockOut();
+	
+	//소생 함수
+	UFUNCTION(BlueprintCallable)
+	void Revive();
 
 	//인터랙션 관련 함수===================================================
 	//인터랙션 체크 함수 - 라인트레이스로 인터랙션 액터 체크
@@ -442,13 +551,14 @@ public:
 	//인터랙션 실행 함수
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Interaction(AActor* Target);
+	UFUNCTION(Client, Reliable, BlueprintCallable)
+	void Client_InteractionExecuted();
 
 	UFUNCTION(BlueprintCallable)
 	void BeginInteract() override;
 	UFUNCTION(BlueprintCallable)
 	void EndInteract() override;
-	UFUNCTION(BlueprintImplementableEvent)
-	void Interact(AActor* Interactor) override;
+	virtual void Interact_Implementation(AActor* Interactor) override;
 
 	//아이템 떨구기 함수
 	UFUNCTION(BlueprintCallable)
@@ -500,6 +610,13 @@ public:
 	//수영 모드 바꾸기
 	UFUNCTION(BlueprintCallable)
 	void SetSwimMode(ESwimMode NewSwimMode);
+	
+	//제작 관련 함수================================================================================
+	UFUNCTION(BlueprintCallable)
+	void StartCraft(FRecipeData RecipeData);
+	
+	UFUNCTION(BlueprintCallable)
+	void StopCraft();
 
 	//멀티플레이어==================================================================================
 	//코드 리팩토링 방법 v1.0
@@ -509,7 +626,13 @@ public:
 	//서버 실행 함수는 서버에 이 함수를 실행하겠다고 요청을 보냄.
 	//서버 실행 함수 안에서는 실제 작동 함수를 실행시킴.
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
-
+	
+	//인터랙션
+	UFUNCTION()
+	void OnRep_CanInteract() { InteractableData.CanInteract = CanInteract; };
+	UFUNCTION()
+	void OnRep_InteractionDuration() { InteractableData.InteractionDuration = InteractionDuration; };
+		
 	//달리기
 	UFUNCTION()
 	void Request_Run();
@@ -570,11 +693,25 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_StopUseItem();
 	
+	//제작
+	UFUNCTION()
+	void Request_StartCraft(FRecipeData RecipeData);
+	UFUNCTION(Server, Reliable)
+	void Server_StartCraft(FRecipeData RecipeData);
+	UFUNCTION()
+	void Request_StopCraft();
+	UFUNCTION(Server, Reliable)
+	void Server_StopCraft();
+	
+	
 	//아이템 정보 저장
 	
 	//클라이언트 실행 함수 (UI 사운드 등 클라이언트 혼자만 보면 되는 것)
 	UFUNCTION(Client, Reliable)
 	void Client_PlaySound2D(USoundBase* Sound);
+	
+	UFUNCTION(Client, Reliable)
+	void Client_ShowDeathScreen();
 	
 	//멀티캐스트 실행 함수
 	UFUNCTION(NetMulticast, Reliable)

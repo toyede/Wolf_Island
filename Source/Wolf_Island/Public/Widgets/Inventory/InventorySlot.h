@@ -26,9 +26,9 @@ class WOLF_ISLAND_API UInventorySlot : public UUserWidget
 	GENERATED_BODY()
 public:
 
-	FORCEINLINE void SetItemReference(FItemBaseData* ItemIn) { ItemRef = ItemIn; };
+	FORCEINLINE void SetItemReference(FItemBaseData ItemIn) { ItemRef = ItemIn; };
 	FORCEINLINE void SetIndex(int32 InIndex) { Index = InIndex; };
-	FORCEINLINE FItemBaseData* GetItemReference() const { return ItemRef; };
+	FORCEINLINE FItemBaseData GetItemReference() const { return ItemRef; };
 	FORCEINLINE void SetDragDrop(bool CanDD) { CanDragDrop = CanDD; };
 	FORCEINLINE void SetOwner(AActor* Owner) { OwnerActor = Owner; };
 	FORCEINLINE void SetInventoryRef(UInventoryComponent* Inventory) { OwnerInventoryRef = Inventory; };
@@ -58,7 +58,7 @@ protected:
 	TSubclassOf<UInventoryToolTip> ToolTipClass;
 	
 	//UPROPERTY(VisibleAnywhere, Category = "Inventory Slot")
-	FItemBaseData* ItemRef;
+	FItemBaseData ItemRef;
 	
 	//UPROPERTY(VisibleAnywhere, Category = "Inventory Slot")
 	FItemData* ItemData;

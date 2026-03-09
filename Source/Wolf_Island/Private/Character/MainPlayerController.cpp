@@ -6,15 +6,19 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/Button.h"
 #include "Components/EditableTextBox.h"
+#include "Games/MainGameInstance.h"
 #include "Games/MainHUD.h"
 #include "Widgets/Chatting/ChattingPanel.h"
 #include "Games/MainGameState.h"
+#include "Games/GameModes/MultiGameMode.h"
 #include "Kismet/GameplayStatics.h"
+#include "Widgets/FishTrap/FishTrapScreen.h"
+#include "Widgets/BaseButton.h"
+#include "Widgets/PlayerHUD.h"
 #include "Widgets/MainMenu/PauseMenu.h"
-
-class UEnhancedInputLocalPlayerSubsystem;
+#include "Widgets/RoleSelection/RoleSelection.h"
+#include "Widgets/DeathScreen.h"
 
 void AMainPlayerController::BeginPlay()
 {
@@ -36,14 +40,26 @@ void AMainPlayerController::BeginPlay()
 		PauseMenu->SettingButton->OnClicked.AddDynamic(this, &AMainPlayerController::OnSetting);
 		PauseMenu->QuitButton->OnClicked.AddDynamic(this, &AMainPlayerController::OnQuit);
 		
-		PauseMenu->AddToViewport();
-		HidePuaseMenu();
+		PauseMenu->AddToViewport(10);
+		HidePauseMenu();
 	}
 	
+	MainGameInstance = Cast<UMainGameInstance>(GetGameInstance());
+	MainGameMode = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode());
 	MainPlayerState = GetPlayerState<AMainPlayerState>();
 	MainGameState = Cast<AMainGameState>(GetWorld()->GetGameState());
 	
-	//ExitChatMode();
+	if (HasAuthority()&&MainPlayerState&&MainGameState->IsMulti)
+	{
+		if (MainPlayerState->GetPlayerRole() == ECharacterRole::NONE)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Open Selection UI in Player Controller"))
+			Client_OpenSelectionUI();
+		} else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PC] Can't open Selection UI. Player role is %d"), MainPlayerState->GetPlayerRole())
+		}
+	}
 }
 
 void AMainPlayerController::SetupInputComponent()
@@ -63,6 +79,37 @@ void AMainPlayerController::SetupInputComponent()
 	}
 }
 
+void AMainPlayerController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+}
+
+void AMainPlayerController::OnUnPossess()
+{
+	UE_LOG(LogTemp, Warning, TEXT("UNPOSSESSED"));
+	if (IsLocalController() && PlayerHUD)
+	{
+		PlayerHUD->RemoveFromParent();
+		PlayerHUD = nullptr;
+	}
+	
+	Super::OnUnPossess();
+}
+
+void AMainPlayerController::SetPlayerHUD(AMainPlayer* OwnerPlayer)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[%s] Possessed in %s"), *GetName(), *OwnerPlayer->GetName())
+	AMainPlayer* InPlayer = Cast<AMainPlayer>(OwnerPlayer);
+	if (InPlayer && HUDClass && IsLocalController())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%hs]Set Player HUD"), HasAuthority()?"SERVER":"CLIENT")
+		PlayerHUD = CreateWidget<UPlayerHUD>(this, HUDClass);
+		PlayerHUD->SetPlayerRef(InPlayer);
+		InPlayer->SetHUDWidget(PlayerHUD);
+		PlayerHUD->AddToViewport();
+	}
+}
+
 void AMainPlayerController::ToggleChatMode()
 {
 	if (IsChat) ExitChatMode();
@@ -71,7 +118,7 @@ void AMainPlayerController::ToggleChatMode()
 
 void AMainPlayerController::TogglePause()
 {
-	if (IsPause) HidePuaseMenu();
+	if (IsPause) HidePauseMenu();
 	else DisplayPauseMenu();
 }
 
@@ -110,7 +157,8 @@ void AMainPlayerController::ExitChatMode()
 
 void AMainPlayerController::DisplayPauseMenu()
 {
-	IsPause = true;
+	IsPause = !Cast<AMultiGameMode>(GetWorld()->GetAuthGameMode());
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE MULTI?] : %d"), IsPause)
 	bShowMouseCursor = true;
 	
 	FInputModeUIOnly Mode;
@@ -121,7 +169,7 @@ void AMainPlayerController::DisplayPauseMenu()
 	PauseMenu->SetVisibility(ESlateVisibility::Visible);
 }
 
-void AMainPlayerController::HidePuaseMenu()
+void AMainPlayerController::HidePauseMenu()
 {
 	IsPause = false;
 	bShowMouseCursor = false;
@@ -132,6 +180,28 @@ void AMainPlayerController::HidePuaseMenu()
 	UGameplayStatics::SetGamePaused(GetWorld(), false);
 	
 	PauseMenu->SetVisibility(ESlateVisibility::Collapsed);
+}
+
+
+void AMainPlayerController::Client_OpenFishTrapUI_Implementation(class AFishTrap* TargetTrap, class AActor* Interactor)
+{
+	if (FishTrapScreenClass && TargetTrap)
+	{
+		UUserWidget* CreatedWidget = CreateWidget<UUserWidget>(this, FishTrapScreenClass);
+		
+		if (UFishTrapScreen* FishTrapScreen = Cast<UFishTrapScreen>(CreatedWidget))
+		{
+			FishTrapScreen->InitializeScreen(TargetTrap, Interactor);
+			FishTrapScreen->SetIsFocusable(true);
+			FishTrapScreen->AddToViewport();
+
+			FInputModeGameAndUI InputMode;
+			InputMode.SetWidgetToFocus(FishTrapScreen->TakeWidget());
+			
+			SetInputMode(InputMode);
+			SetShowMouseCursor(true);
+		}
+	}
 }
 
 void AMainPlayerController::Request_SendChat(FChattingData NewChattingData)
@@ -157,6 +227,99 @@ void AMainPlayerController::SendChat(FChattingData NewChattingData)
 	MainGameState->AddChattingMessage(NewChattingData);
 }
 
+void AMainPlayerController::Client_EndSelection_Implementation()
+{
+	FInputModeGameOnly Mode;
+	SetInputMode(Mode);
+	SetShowMouseCursor(false);
+	RoleSelectionWidget->RemoveFromParent();
+}
+
+void AMainPlayerController::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+	
+	MainPlayerState = GetPlayerState<AMainPlayerState>();
+	
+	if (MainPlayerState)
+	{
+		if (MainPlayerState->GetPlayerRole() == ECharacterRole::NONE)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Open Selection UI in Player Controller"), *GetPlayerState<AMainPlayerState>()->GetPersistantId())
+			Client_OpenSelectionUI();
+		} else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Can't open Selection UI. Player role is %d"), *GetPlayerState<AMainPlayerState>()->GetPersistantId(), MainPlayerState->GetPlayerRole())
+		}
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Can't open Selection UI. Player State is INVALID"), *GetPlayerState<AMainPlayerState>()->GetPersistantId())
+	}
+}
+
+void AMainPlayerController::Request_Respawn()
+{
+	if (HasAuthority())
+	{
+		Respawn();
+	} else
+	{
+		Server_Respawn();
+	}
+}
+
+void AMainPlayerController::Server_Respawn_Implementation()
+{
+	Respawn();
+}
+
+void AMainPlayerController::Client_RoleDeny_Implementation()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Role Selection Denied"))
+	if (RoleSelectionWidget)
+	{
+		RoleSelectionWidget->PlayDenyAlarm();
+	}
+}
+
+void AMainPlayerController::Client_SetInputModeGame_Implementation()
+{
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+	bShowMouseCursor = false;
+}
+
+void AMainPlayerController::Server_ConfirmRole_Implementation(ECharacterRole NewRole)
+{
+	AMultiGameMode* GM = Cast<AMultiGameMode>(GetWorld()->GetAuthGameMode());
+	AMainPlayerState* PS = Cast<AMainPlayerState>(PlayerState);
+	
+	if (GM->CheckRoleAvailable(NewRole))
+	{
+		PS->SetPlayerRole(NewRole);
+		UE_LOG(LogTemp, Warning, TEXT("Check Role %d in Server"), PS->GetPlayerRole());
+		GM->RestartPlayer(this);
+		Client_EndSelection();
+		
+	} else
+	{
+		Client_RoleDeny();
+	}
+}
+
+void AMainPlayerController::Client_OpenSelectionUI_Implementation()
+{	
+	URoleSelection* SelectionWidget = CreateWidget<URoleSelection>(this, RoleSelectionWidgetClass);
+	RoleSelectionWidget = SelectionWidget;
+	
+	FInputModeUIOnly InputMode;
+	InputMode.SetWidgetToFocus(SelectionWidget->TakeWidget());
+	SetInputMode(InputMode);
+	bShowMouseCursor = true;
+	
+	SelectionWidget->AddToViewport();	
+}
+
 void AMainPlayerController::AddChat(FChattingData NewChattingData)
 {
 	if (!ChattingPanel) return;
@@ -164,9 +327,34 @@ void AMainPlayerController::AddChat(FChattingData NewChattingData)
 	ChattingPanel->AddChatting(NewChattingData);
 }
 
+void AMainPlayerController::OpenDeathScreen()
+{
+	if (DeathScreenWidget) return;
+	
+	if (DeathScreenWidgetClass)
+	{
+		DeathScreenWidget = CreateWidget<UDeathScreen>(this, DeathScreenWidgetClass);
+	
+		bShowMouseCursor = true;
+		FInputModeUIOnly InputMode;
+		InputMode.SetWidgetToFocus(DeathScreenWidget->TakeWidget());
+		SetInputMode(InputMode);
+	
+		DeathScreenWidget->AddToViewport();
+	}
+}
+
+void AMainPlayerController::OnCloseDeathScreen()
+{
+	DeathScreenWidget = nullptr;
+	bShowMouseCursor = false;
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+}
+
 void AMainPlayerController::OnResume()
 {
-	HidePuaseMenu();
+	HidePauseMenu();
 }
 
 void AMainPlayerController::OnSetting()
@@ -181,4 +369,8 @@ void AMainPlayerController::OnQuit()
 	UGameplayStatics::OpenLevelBySoftObjectPtr(GetWorld(), MainMenuLevel);
 }
 
-
+void AMainPlayerController::Respawn()
+{
+	AMainGameMode* GM = GetWorld()->GetAuthGameMode<AMainGameMode>();
+	GM->HandlePlayerDeath(this);
+}

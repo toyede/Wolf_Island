@@ -3,14 +3,40 @@
 
 #include "Games/MainGameState.h"
 #include "Character/MainPlayerController.h"
-#include "Games/MainGameState.h"
-#include "Character/MainPlayerController.h"
+#include "Games/MainSaveGame.h"
+#include "Games/GameModes/MainGameMode.h"
+#include "Games/GameModes/MultiGameMode.h"
 #include "Net/UnrealNetwork.h"
 
 void AMainGameState::BeginPlay()
 {
 	Super::BeginPlay();
+	
 	UnlockedRecordIDs.Add(TEXT("REC_DIARY_01_01"));
+	
+	//현재 게임이 멀티인지 싱글인지
+	if (HasAuthority())
+	{
+		IsMulti = GetWorld()->GetAuthGameMode<AMultiGameMode>() != nullptr;
+	}
+}
+
+//선택된 역할 리스트 새로고침-서버에서만 새로고침 가능
+void AMainGameState::RefreshSelectedRoles()
+{
+	if (HasAuthority())
+	{
+		if (AMainGameMode* GM = GetWorld()->GetAuthGameMode<AMainGameMode>())
+		{
+			SelectedRoles.Empty();
+			
+			for (auto Player : GM->PlayersSaveData)
+			{
+				const FPlayerSaveData& PlayerSave = Player.Value;
+				SelectedRoles.Add(PlayerSave.PlayerRole);
+			}
+		}
+	}
 }
 
 void AMainGameState::AddChattingMessage(FChattingData NewChattingData)
@@ -37,6 +63,8 @@ void AMainGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	
 	DOREPLIFETIME(AMainGameState, ChattingData);
 	DOREPLIFETIME(AMainGameState, UnlockedRecordIDs);
+	DOREPLIFETIME(AMainGameState, SelectedRoles);
+	DOREPLIFETIME(AMainGameState, IsMulti);
 }
 
 void AMainGameState::Multi_AddChat_Implementation(FChattingData NewChattingData)
@@ -66,4 +94,10 @@ void AMainGameState::UnlockRecord(const FString& RecordID)
 void AMainGameState::OnRep_UnlockedRecordIDs()
 {
 	OnUnlockedRecordsChanged.Broadcast();
+}
+
+void AMainGameState::OnRep_SelectedRoles()
+{
+	UE_LOG(LogTemp, Warning, TEXT("SelectedRoles Updated"));
+	OnSelectedRolesChanged.Broadcast();
 }

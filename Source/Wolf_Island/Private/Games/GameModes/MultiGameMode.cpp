@@ -3,11 +3,178 @@
 
 #include "Games/GameModes/MultiGameMode.h"
 
-#include "GameFramework/PlayerState.h"
-#include "Games/MainGameState.h"
+#include "Character/MainPlayerController.h"
+#include "Games/MainPlayerState.h"
+#include "Widgets/RoleSelection/RoleButton.h"
+
+AMultiGameMode::AMultiGameMode()
+{
+	bPauseable = false;
+	bStartPlayersAsSpectators = true;
+}
 
 void AMultiGameMode::PostLogin(APlayerController* NewPlayer)
 {
-	Super::PostLogin(NewPlayer);
+	//채팅 테스트하는 데 플레이어 이름이 너무 길어서 귀염뽀짝 짧은 이름으로 재설정 해주는 개발용 코드
+	if (!NewPlayer) return;
+
+	AMainPlayerState* PS = Cast<AMainPlayerState>(NewPlayer->PlayerState);
+	if (!PS) return;
+
+	static int32 Counter = 1;
+	static const TArray<FString> Adjs = {
+		TEXT("새까만"), TEXT("순백의"), TEXT("노란"), TEXT("파란"),
+		TEXT("붉은"), TEXT("보랏빛"), TEXT("청록색"), TEXT("회색"),
+		TEXT("푸른"), TEXT("흰"), TEXT("검은"), TEXT("남색"),
+		TEXT("자홍색"), TEXT("고동색"), TEXT("회적색"), TEXT("담청색"),
+		TEXT("동빛"), TEXT("녹색"), TEXT("군청색"), TEXT("하늘색"),
+		TEXT("옥색"), TEXT("주홍빛"), TEXT("자색"), TEXT("보라색"),
+	};
+	static const TArray<FString> Nouns = {
+		TEXT("여우"), TEXT("늑대"), TEXT("토끼"), TEXT("곰"),
+		TEXT("고라니"), TEXT("멧돼지"), TEXT("개"), TEXT("고양이"),
+		TEXT("닭"), TEXT("땃쥐"), TEXT("까마귀"), TEXT("사슴"),
+		TEXT("코끼리"), TEXT("다람쥐"), TEXT("매"), TEXT("살쾡이"),
+		TEXT("거북이"), TEXT("앵무새"), TEXT("너구리"), TEXT("오소리"),
+		TEXT("기린"), TEXT("하마"), TEXT("코끼리"), TEXT("양")
+	};
+
+	int32 A = FMath::RandRange(0, Adjs.Num()-1);
+	int32 N = FMath::RandRange(0, Nouns.Num()-1);
 	
+	FString NewName = Adjs[A]+" "+Nouns[N]+FString::FromInt(Counter++);
+	
+	PS->SetPlayerName(NewName);
+	
+	//실제 스팀 기반 세션 온라인 환경에서 로그인 시 사용할 ID
+	//테스트 환경에서 이걸 사용할 시 스팀 연동이 안되어있기 때문에 테스트 실행할 때마다 ID가 변경되어 테스트 용은 고정.
+	//테스트용 플레이어 아이디
+	FString PlayerID = PS->GetPersistantId();
+	UE_LOG(LogTemp, Warning, TEXT("[Player Login] %s"), *PlayerID);
+	
+	if (PlayersSaveData.Contains(PlayerID))
+	{
+		FPlayerSaveData& PlayerSaveData = PlayersSaveData[PlayerID];
+		PS->SetItemsData(PlayerSaveData.InventoryItems);
+		PS->SetPlayerRole(PlayerSaveData.PlayerRole);
+	}
+	
+	AMainGameState* GS = GetGameState<AMainGameState>();
+	FChattingData Chat = FChattingData(
+		TEXT("알림"),PS->GetPlayerName()+TEXT(" 님이 접속했습니다."), EMessageType::NOTICE);
+	
+	GS->AddChattingMessage(Chat);
+	
+	Super::PostLogin(NewPlayer);
+}
+
+void AMultiGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
+{
+	AMainPlayerController* NewMainPlayerController = Cast<AMainPlayerController>(NewPlayer);
+	AMainPlayerState* PlayerState = Cast<AMainPlayerState>(NewMainPlayerController->PlayerState);
+	
+	UE_LOG(LogTemp, Warning, TEXT("Entered Players Role : %d"), PlayerState->GetPlayerRole())
+	
+	if (PlayerState->GetPlayerRole() == ECharacterRole::NONE) return;
+	
+	RestartPlayer(NewPlayer);
+}
+
+void AMultiGameMode::RestartPlayer(AController* NewPlayer)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Call RestartPlayer on MultiGamemode"));
+	Super::RestartPlayer(NewPlayer);
+}
+
+bool AMultiGameMode::ShouldSpawnAtStartSpot(AController* Player)
+{
+	AMainPlayerState* PlayerState = Cast<AMainPlayerState>(Player->PlayerState);
+	UE_LOG(LogTemp, Warning, TEXT("Check Role on ShouldSpawn : %d"), PlayerState->GetPlayerRole());
+	if (!PlayerState) return false;
+	
+	if (PlayerState->GetPlayerRole() == ECharacterRole::NONE) return false;
+	
+	UE_LOG(LogTemp, Warning, TEXT("Allow to Spawn"));
+	return true;
+}
+
+//RestartPlayer 실행 시 호출되는 함수... 플레이어 폰 생성
+APawn* AMultiGameMode::SpawnDefaultPawnFor_Implementation(AController* NewPlayer, AActor* StartSpot)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE MULTI] SpawnFor EXECUTED : Set Spawn Transform"))
+	
+	AMainPlayerState* PS = Cast<AMainPlayerState>(NewPlayer->PlayerState);
+	
+	FRotator StartRotation(ForceInit);
+	StartRotation.Yaw = StartSpot->GetActorRotation().Yaw;
+	FVector StartLocation = StartSpot->GetActorLocation();
+	FTransform SpawnTransform = FTransform(StartRotation, StartLocation);
+	
+	//저장된 정보가 있으면(플레이어의 마지막 위치가 있으면) 그 곳에 소환.
+	if (PlayersSaveData.Find(PS->GetPersistantId()))
+	{
+		SpawnTransform = PlayersSaveData[PS->GetPersistantId()].Transform;
+	}
+	
+	return SpawnDefaultPawnAtTransform_Implementation(NewPlayer, SpawnTransform);
+}
+
+APawn* AMultiGameMode::SpawnDefaultPawnAtTransform_Implementation(AController* NewPlayer,
+	const FTransform& SpawnTransform)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE MULTI] SpawnAt EXECUTED : Spawn Pawn"))
+	
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	
+	AMainPlayerState* PS = Cast<AMainPlayerState>(NewPlayer->PlayerState);
+
+	int32 RoleIndex = static_cast<int32>(PS->GetPlayerRole());
+	
+	AMainPlayer* Player = GetWorld()->SpawnActor<AMainPlayer>(
+		PlayerRoleClassList[RoleIndex],
+		SpawnTransform,
+		Params);
+	
+	return Player;
+}
+
+void AMultiGameMode::Logout(AController* Exiting)
+{
+	 AMainPlayerState* PS = Cast< AMainPlayerState>(Exiting->PlayerState);
+	
+	AMainGameState* GS = GetGameState<AMainGameState>();
+	FChattingData Chat = FChattingData(
+		TEXT("알림"),PS->GetPlayerName()+TEXT(" 님이 나갔습니다."), EMessageType::NOTICE);
+	
+	GS->AddChattingMessage(Chat);
+	
+	Super::Logout(Exiting);
+}
+
+bool AMultiGameMode::CheckRoleAvailable(ECharacterRole NewRole) const
+{
+	AMainGameState* GS = GetGameState<AMainGameState>();
+	for (auto Player : GS->PlayerArray)
+	{
+		AMainPlayerState* PS = Cast<AMainPlayerState>(Player);
+		if (PS->GetPlayerRole() == NewRole) return false;
+	}
+	return true;
+}
+
+UClass* AMultiGameMode::GetDefaultPawnClassForController_Implementation(AController* InController)
+{
+	AMainPlayerState* PS = Cast<AMainPlayerState>(InController->PlayerState);
+	
+	if (PS->GetPlayerRole() == ECharacterRole::NONE) return nullptr;
+	
+	return PlayerRoleClassList[static_cast<int32>(PS->GetPlayerRole())];
+}
+
+void AMultiGameMode::HandlePlayerDeath(AController* DeadPlayerController)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE][MULTI] HANDLE PLAYER DEATH"));
+	RestartPlayer(DeadPlayerController);
 }

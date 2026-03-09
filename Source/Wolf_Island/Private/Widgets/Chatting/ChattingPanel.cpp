@@ -27,6 +27,16 @@ void UChattingPanel::NativeConstruct()
 	}
 }
 
+void UChattingPanel::OnOpenAnimationFinished()
+{
+	ChattingInputBox->SetKeyboardFocus();
+}
+
+void UChattingPanel::OnCloseAnimationFinished()
+{
+	ChattingList->ScrollToEnd();
+}
+
 void UChattingPanel::FocusInput()
 {
 	if (!ChattingInputBox) return;
@@ -39,14 +49,14 @@ void UChattingPanel::FocusInput()
 	PlayAnimation(OpenAnim);
 }
 
-void UChattingPanel::OnOpenAnimationFinished()
-{
-	ChattingInputBox->SetKeyboardFocus();
-}
-
 void UChattingPanel::ClearFocusInput()
 {
 	if (!ChattingInputBox) return;
+	
+	FWidgetAnimationDynamicEvent EndEvent;
+	EndEvent.BindDynamic(this, &UChattingPanel::OnCloseAnimationFinished);
+	
+	BindToAnimationFinished(CloseAnim, EndEvent);
 	
 	PlayAnimation(CloseAnim);
 	UWidgetBlueprintLibrary::SetFocusToGameViewport(); 
@@ -95,8 +105,7 @@ void UChattingPanel::AddChatting(FChattingData NewChattingData)
 	UChattingBlock* Block = CreateWidget<UChattingBlock>(this, ChattingBlockClass);
 	Block->SetChattingBlock(NewChattingData);
 	
-	//ChattingBox->AddChild(Block);
-	//ChattingBox->ScrollToEnd();
 	ChattingList->InsertChildAt(0, Block);
+	ForceLayoutPrepass();
 	ChattingList->ScrollToEnd();
 }

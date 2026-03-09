@@ -47,6 +47,7 @@ void UStatusComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 	if (GetOwner()->HasAuthority())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[STATUS] CLEAR ALL TIMERS"));
 		ClearAllTimers();
 	}
 }
@@ -64,7 +65,7 @@ void UStatusComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 void UStatusComponent::IncreaseHP(float amount)
 {
 	CurrentHP = FMath::Clamp(CurrentHP+amount, 0.0f, MaxHP);
-	
+	IsDead = false;
 	//음수 방지
 	if (CurrentHP <= 0)
 	{
@@ -79,8 +80,9 @@ void UStatusComponent::DecreaseHP(float amount)
 	CurrentHP = FMath::Clamp(CurrentHP-amount, 0.0f, MaxHP);
 	
 	//음수 방지
-	if (CurrentHP <= 0)
+	if (CurrentHP <= 0 && !IsDead)
 	{
+		IsDead = true;
 		CurrentHP = 0;
 		OnHPZero.Broadcast();
 	}
