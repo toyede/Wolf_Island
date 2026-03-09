@@ -790,6 +790,47 @@ void AMainPlayer::CheckInteraction()
 		//라인트레이스 실행 후 부딪혔나?
 		if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECC_Visibility, QueryParams))
 		{
+			AActor* HitActor = HitResult.GetActor();
+			UPrimitiveComponent* HitComp = HitResult.GetComponent();
+
+			// 1. 맞은 컴포넌트(OceanCollisionBox 등)의 태그 문자열 만들기
+			FString CompTagsStr = TEXT("None");
+			if (HitComp && HitComp->ComponentTags.Num() > 0)
+			{
+				CompTagsStr = TEXT("");
+				for (FName Tag : HitComp->ComponentTags)
+				{
+					CompTagsStr += Tag.ToString() + TEXT(" "); // 태그들을 공백으로 띄워 나열
+				}
+			}
+
+			// 2. 맞은 액터 안의 WaterBodyComponent 태그 문자열 만들기 (우리가 태그를 단 진짜 타겟)
+			FString WaterBodyTagsStr = TEXT("None");
+			if (HitActor)
+			{
+				if (UWaterBodyComponent* WaterBodyComp = HitActor->FindComponentByClass<UWaterBodyComponent>())
+				{
+					if (WaterBodyComp->ComponentTags.Num() > 0)
+					{
+						WaterBodyTagsStr = TEXT("");
+						for (FName Tag : WaterBodyComp->ComponentTags)
+						{
+							WaterBodyTagsStr += Tag.ToString() + TEXT(" ");
+						}
+					}
+				}
+			}
+
+			// 3. 디버그 메시지 조립 및 출력
+			FString DebugMsg = FString::Printf(TEXT("Hit Comp Tags: [%s] | WaterBody Tags: [%s]"), 
+				*CompTagsStr, *WaterBodyTagsStr);
+
+			if (GEngine)
+			{
+				// 노란색 글씨로 잘 보이게 출력
+				GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, DebugMsg);
+			}
+			
 			if (HitResult.GetActor() && HitResult.GetActor()->GetClass()->ImplementsInterface(UInteractionInterface::StaticClass()))
 			{
 				//부딪힌 액터가 인터랙션 인터페이스를 가지고 있나?
@@ -824,6 +865,26 @@ void AMainPlayer::CheckInteraction()
 					FoundInteractableFoliage(ISMC, InstanceIndex);
 				}
 				return;
+			}
+		}
+
+		// 물 체크
+		AActor* HitActor = HitResult.GetActor();
+		UPrimitiveComponent* HitComp = HitResult.GetComponent();
+
+		if (HitActor)
+		{
+			FString ActorName = HitActor->GetName();
+
+			// 1. 이름에 "Ocean"(바다), "River"(강), "Lake"(호수)가 포함되어 있는지 확인
+			if (ActorName.Contains(TEXT("Ocean")) || ActorName.Contains(TEXT("River")) || ActorName.Contains(TEXT("Lake")))
+			{
+				// 상호작용 대상으로 저장
+				if (InteractionData.CurrentWaterComponent != HitComp)
+				{
+					FoundInteractableWater(HitComp);
+				}
+				return; // 물을 찾았으니 트레이스 종료
 			}
 		}
 	}
@@ -927,6 +988,11 @@ void AMainPlayer::NotFoundInteractable()
 		InteractionData.CurrentFoliageComponent = nullptr;
 		InteractionData.FoliageInstanceIndex = INDEX_NONE;
 	}
+
+	if (InteractionData.CurrentWaterComponent)
+	{
+		InteractionData.CurrentWaterComponent = nullptr;
+	}
 }
 
 void AMainPlayer::Client_InteractionExecuted_Implementation()
@@ -986,6 +1052,10 @@ void AMainPlayer::BeginInteract()
 	else if (InteractionData.CurrentFoliageComponent && InteractionData.FoliageInstanceIndex != INDEX_NONE)
 	{
 		Server_InteractFoliage(InteractionData.CurrentFoliageComponent, InteractionData.FoliageInstanceIndex);
+	}
+	else if (InteractionData.CurrentWaterComponent)
+	{
+		Server_DrinkWater(InteractionData.CurrentWaterComponent);
 	}
 	
 }
@@ -1857,6 +1927,45 @@ void AMainPlayer::Request_StopCraft()
 	} else
 	{
 		Server_StopCraft();
+	}
+}
+
+void AMainPlayer::FoundInteractableWater(UPrimitiveComponent* WaterComp)
+{
+	if (InteractionData.CurrentInteractable || InteractionData.CurrentFoliageComponent)
+	{
+		NotFoundInteractable(); 
+	}
+
+	InteractionData.CurrentWaterComponent = WaterComp;
+}
+
+void AMainPlayer::Server_DrinkWater_Implementation(UPrimitiveComponent* WaterComp)
+{
+	if (!WaterComp || !StatusComponent) return;
+	
+	AActor* WaterActor = WaterComp->GetOwner();
+	if (!WaterActor) return;
+
+	FString ActorName = WaterActor->GetName();
+
+	if (ActorName.Contains(TEXT("River")) || ActorName.Contains(TEXT("Lake")))
+	{
+		StatusComponent->IncreaseHydration(10.0f);
+        
+		if (EatingSound) 
+		{
+			Multi_PlaySound(EatingSound, GetActorLocation());
+		}
+	}
+	else if (ActorName.Contains(TEXT("Ocean")))
+	{
+		StatusComponent->DecreaseHydration(10.0f);
+        
+		if (EatingSound) 
+		{
+			Multi_PlaySound(EatingSound, GetActorLocation());
+		}
 	}
 }
 
