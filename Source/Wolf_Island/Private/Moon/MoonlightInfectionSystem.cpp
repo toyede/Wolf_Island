@@ -10,6 +10,7 @@
 #include "TimerManager.h"
 #include "GameFramework/Character.h"
 #include "Actors/Interfaces/SkyInterface.h"
+#include "Interaction/Repair_Actor.h"
 
 // 테스트용 헤더
 #include "Character/MainPlayer.h"
@@ -159,7 +160,19 @@ void AMoonlightInfectionSystem::StartSingleInfectionSequence(AMainPlayer* Player
 	}
 
 	// 3) 수리된 것 중 랜덤 1개 파괴
-	// TryDestroyRandomRepairedObject(); // TODO: Repair 시스템 API 호출
+	TArray<AActor*> RepairActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AActor::StaticClass(), RepairActors);
+
+	for (AActor* Actor : RepairActors)
+	{
+		if (ARepair_Actor* RepairActor = Cast<ARepair_Actor>(Actor))
+		{
+			if (RepairActor->BreakRandomCompletedRepair())
+			{
+				break;
+			}
+		}
+	}
 
 	// 4) 감염도 +20%
 	if (Player->StatusComponent)

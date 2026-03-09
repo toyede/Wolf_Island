@@ -85,4 +85,22 @@ public:
 	//저장 관련 코드
 	virtual void SaveData_Implementation(FActorSaveData& OutData) override;
 	virtual void LoadData_Implementation(const FActorSaveData& InData) override;
+
+public:
+	// 싱글 전용 늑대인간으로 변했을 때 수리된 것들 중 랜덤으로 파괴되는 기능
+	// 현재 파괴 가능한 수리 항목 목록 반환
+	UFUNCTION(BlueprintCallable, Category = "Repair")
+	TArray<FName> GetBreakableRecipes() const;
+
+	// 지정 항목 1개를 완료 상태에서 미완료 상태로 되돌림
+	UFUNCTION(BlueprintCallable, Category = "Repair")
+	bool BreakCompletedRepair(FName RecipeName);
+
+	// 후보 목록 중 랜덤 1개 선택해서 BreakCompletedRepair() 호출
+	UFUNCTION(BlueprintCallable, Category = "Repair")
+	bool BreakRandomCompletedRepair();
+
+	// 부위별 bool과 비주얼을 다시 맞춤
+	UFUNCTION(BlueprintCallable, Category = "Repair")
+	void RefreshRepairProgressState();
 };
