@@ -20,6 +20,9 @@ class WOLF_ISLAND_API AMainGameMode : public AGameMode
 	
 public:
 	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	bool TurnOnAutoSave = true;
+	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
 	FTimerHandle AutoSaveTimer;
 	

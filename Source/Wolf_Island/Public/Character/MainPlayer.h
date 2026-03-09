@@ -220,7 +220,7 @@ public:
 	//상태 관련 변수 (뛰는 중인지, ~~하는 중인지 등등)=====================================
 	
 	//캐릭터 역할 (선장, 요리사, 정비공, 군인)
-	UPROPERTY(Replicated, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated, BlueprintReadWrite, Category="State", SaveGame)
 	ECharacterRole CharacterRole = ECharacterRole::NONE;
 	
 	//기절 타이머
@@ -232,31 +232,31 @@ public:
 	float KnockOutToDeathTime = 30.0f;
 	
 	//뛰는 중인지
-	UPROPERTY(ReplicatedUsing=OnRep_IsRunning, EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(ReplicatedUsing=OnRep_IsRunning, EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsRunning = false;
 
 	//웅크리는 중인지
-	UPROPERTY(ReplicatedUsing=OnRep_IsCrouching,EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(ReplicatedUsing=OnRep_IsCrouching,EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsCrouching = false;
 	
 	//수영 중인지
-	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsSwimming = false;
 	
 	//어떤 수영 인지-수면, 수중
-	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	ESwimMode SwimMode = ESwimMode::NONE;
 	
 	//슬라이딩 중인지
-	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsSliding = false;
 
 	//1인칭 카메라인지
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsFirstPerson = true;
 
 	//행동불능 상태인지
-	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsInability = false;
 
 	//공격 소모 스태미나
@@ -272,28 +272,28 @@ public:
 	float SlideConsumeAmount = 2.0f;
 
 	//인벤토리가 열려 있는지
-	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsInventoryOpen = false;
 
 	//손에 든 아이템이 있는지
-	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsHoldingItem = false;
 
 	//공격 중인지
-	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsAttacking = false;
 	
 	//공격 트레이스 실행 상태
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsTracingAttack = false;
 	
 	//아이템 사용 중인지
-	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsUsingItem = false;
 
 	//핫바 관련 변수==================================================================
 	//핫바 슬롯 인덱스
-	UPROPERTY(ReplicatedUsing=OnRep_HotBarIndex, VisibleAnywhere, BlueprintReadOnly, Category="HotBar")
+	UPROPERTY(ReplicatedUsing=OnRep_HotBarIndex, VisibleAnywhere, BlueprintReadOnly, Category="HotBar", SaveGame)
 	int32 HotBarIndex = 0;
 	UPROPERTY(VisibleAnywhere, Category="HotBar")
 	FTimerHandle ItemUseTimer;
@@ -318,7 +318,7 @@ public:
 	UPROPERTY(ReplicatedUsing=OnRep_InteractionDuration, EditDefaultsOnly, BlueprintReadWrite, Category="Interaction")
 	float InteractionDuration = 5.0f;
 	//인터랙션 가능한 지
-	UPROPERTY(ReplicatedUsing=OnRep_CanInteract, EditDefaultsOnly, BlueprintReadWrite, Category="Interaction")
+	UPROPERTY(ReplicatedUsing=OnRep_CanInteract, EditDefaultsOnly, BlueprintReadWrite, Category="Interaction", SaveGame)
 	bool CanInteract = false;
 
 	//애니메이션 변수======================================================================
@@ -430,6 +430,10 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	
+	virtual void Destroyed() override;
 
 public:
 	// Called every frame

@@ -12,6 +12,11 @@ FString AMainPlayerState::GetPersistantId()
 #if WITH_EDITOR
 	if (GIsEditor)
 	{
+		if (!GetWorld())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("NO WORLD"));
+			return TEXT("UNKNOWN");
+		}
 		if (AGameStateBase* GS = GetWorld()->GetGameState())
 		{
 			int32 Index = GS->PlayerArray.IndexOfByKey(this);

@@ -71,12 +71,15 @@ void AMainGameMode::StartPlay()
 	LoadWorld();
 	
 	//자동 저장 타이머
-	GetWorld()->GetTimerManager().SetTimer(
+	if (TurnOnAutoSave)
+	{
+		GetWorld()->GetTimerManager().SetTimer(
 		AutoSaveTimer,
 		this,
 		&AMainGameMode::SaveWorld,
 		AutoSaveInterval * 60.0f,
 		true);
+	}
 }
 
 void AMainGameMode::PostLogin(APlayerController* NewPlayer)
@@ -313,7 +316,13 @@ void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 	
 	//플레이어가 인간인 상태에서 MainPlayer 액터 데이터를 저장.
 	if (AMainPlayer* TargetPlayer = Cast<AMainPlayer>(PlayerCharacter))
-	{		
+	{	
+		FMemoryWriter PlayerWriter(PlayerSaveData.SubBinaryData1, true);
+		FObjectAndNameAsStringProxyArchive PlayerArchive(PlayerWriter, true);
+		PlayerArchive.ArIsSaveGame = true;
+		TargetPlayer->Serialize(PlayerArchive);
+		UE_LOG(LogTemp, Warning, TEXT("Serialize Character"));
+		
 		FMemoryWriter InventoryWriter(PlayerSaveData.InventoryBinaryData, true);
 		FObjectAndNameAsStringProxyArchive InventoryArchive(InventoryWriter, true);
 		InventoryArchive.ArIsSaveGame = true;
@@ -383,6 +392,12 @@ bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState)
 	
 	if (AMainPlayer* TargetPlayer = Cast<AMainPlayer>(PlayerCharacter))
 	{
+		FMemoryReader PlayerReader(PlayerSaveData.SubBinaryData1, true);
+		FObjectAndNameAsStringProxyArchive PlayerArchive(PlayerReader, true);
+		PlayerArchive.ArIsSaveGame = true;
+		TargetPlayer->Serialize(PlayerArchive);
+		UE_LOG(LogTemp, Warning, TEXT("Deserialize Character"));
+		
 		FMemoryReader InventoryReader(PlayerSaveData.InventoryBinaryData, true);
 		FObjectAndNameAsStringProxyArchive InventoryArchive(InventoryReader, true);
 		InventoryArchive.ArIsSaveGame = true;

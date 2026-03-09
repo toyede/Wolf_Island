@@ -142,7 +142,8 @@ APawn* AMultiGameMode::SpawnDefaultPawnAtTransform_Implementation(AController* N
 
 void AMultiGameMode::Logout(AController* Exiting)
 {
-	APlayerState* PS = Cast<APlayerState>(Exiting->PlayerState);
+	 AMainPlayerState* PS = Cast< AMainPlayerState>(Exiting->PlayerState);
+	
 	AMainGameState* GS = GetGameState<AMainGameState>();
 	FChattingData Chat = FChattingData(
 		TEXT("알림"),PS->GetPlayerName()+TEXT(" 님이 나갔습니다."), EMessageType::NOTICE);

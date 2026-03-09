@@ -43,6 +43,15 @@ struct FPlayerSaveData
 	
 	UPROPERTY(SaveGame)
 	TArray<uint8> StatusBinaryData;
+	
+	UPROPERTY(SaveGame)
+	TArray<uint8> SubBinaryData1;
+	
+	UPROPERTY(SaveGame)
+	TArray<uint8> SubBinaryData2;
+	
+	UPROPERTY(SaveGame)
+	TArray<uint8> SubBinaryData3;
 };
 
 USTRUCT(BlueprintType)
