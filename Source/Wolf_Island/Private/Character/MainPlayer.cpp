@@ -27,6 +27,7 @@
 #include "Components/AudioComponent.h"
 #include "Components/BillboardComponent.h"
 #include "WaterBodyComponent.h"
+#include "Actors/RespawnableFoliage.h"
 #include "Character/MainPlayerController.h"
 #include "Components/BuildingComponent.h"
 #include "Components/WidgetComponent.h"
@@ -1490,7 +1491,12 @@ void AMainPlayer::Server_InteractFoliage_Implementation(UInstancedStaticMeshComp
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-		GetWorld()->SpawnActor<AActor>(Reward.SpawnBP, InstanceTransform, SpawnParams);
+		AActor* SpawnedActor = GetWorld()->SpawnActor<AActor>(Reward.SpawnBP, InstanceTransform, SpawnParams);
+
+		if (ARespawnableFoliage* RespawnableBP = Cast<ARespawnableFoliage>(SpawnedActor))
+		{
+			RespawnableBP->InitializeFoliage(ISMC, InstanceTransform);
+		}
 	}
 
 	if (AMainGameMode* GM = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode()))
