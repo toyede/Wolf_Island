@@ -792,44 +792,6 @@ void AMainPlayer::CheckInteraction()
 		{
 			AActor* HitActor = HitResult.GetActor();
 			UPrimitiveComponent* HitComp = HitResult.GetComponent();
-
-			// 1. 맞은 컴포넌트(OceanCollisionBox 등)의 태그 문자열 만들기
-			FString CompTagsStr = TEXT("None");
-			if (HitComp && HitComp->ComponentTags.Num() > 0)
-			{
-				CompTagsStr = TEXT("");
-				for (FName Tag : HitComp->ComponentTags)
-				{
-					CompTagsStr += Tag.ToString() + TEXT(" "); // 태그들을 공백으로 띄워 나열
-				}
-			}
-
-			// 2. 맞은 액터 안의 WaterBodyComponent 태그 문자열 만들기 (우리가 태그를 단 진짜 타겟)
-			FString WaterBodyTagsStr = TEXT("None");
-			if (HitActor)
-			{
-				if (UWaterBodyComponent* WaterBodyComp = HitActor->FindComponentByClass<UWaterBodyComponent>())
-				{
-					if (WaterBodyComp->ComponentTags.Num() > 0)
-					{
-						WaterBodyTagsStr = TEXT("");
-						for (FName Tag : WaterBodyComp->ComponentTags)
-						{
-							WaterBodyTagsStr += Tag.ToString() + TEXT(" ");
-						}
-					}
-				}
-			}
-
-			// 3. 디버그 메시지 조립 및 출력
-			FString DebugMsg = FString::Printf(TEXT("Hit Comp Tags: [%s] | WaterBody Tags: [%s]"), 
-				*CompTagsStr, *WaterBodyTagsStr);
-
-			if (GEngine)
-			{
-				// 노란색 글씨로 잘 보이게 출력
-				GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, DebugMsg);
-			}
 			
 			if (HitResult.GetActor() && HitResult.GetActor()->GetClass()->ImplementsInterface(UInteractionInterface::StaticClass()))
 			{
