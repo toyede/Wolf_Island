@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "SavableActor.h"
 #include "GameFramework/Actor.h"
 #include "BarricadeTrap.generated.h"
 
@@ -11,7 +12,7 @@ class UBoxComponent;
 class USoundBase;
 
 UCLASS()
-class WOLF_ISLAND_API ABarricadeTrap : public AActor
+class WOLF_ISLAND_API ABarricadeTrap : public ASavableActor
 {
 	GENERATED_BODY()
 	

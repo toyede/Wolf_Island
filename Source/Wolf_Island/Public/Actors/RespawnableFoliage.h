@@ -3,12 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "SavableActor.h"
 #include "GameFramework/Actor.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "RespawnableFoliage.generated.h"
 
 UCLASS()
-class WOLF_ISLAND_API ARespawnableFoliage : public AActor
+class WOLF_ISLAND_API ARespawnableFoliage : public ASavableActor
 {
 	GENERATED_BODY()
 	
