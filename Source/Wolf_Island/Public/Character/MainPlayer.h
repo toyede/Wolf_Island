@@ -38,6 +38,10 @@ struct FInteractionData
 
 	UPROPERTY(BlueprintReadOnly)
 	int32 FoliageInstanceIndex;
+
+	// 물 상호작용 변수 추가
+	UPROPERTY(BlueprintReadOnly)
+	UPrimitiveComponent* CurrentWaterComponent;
 };
 
 USTRUCT(BlueprintType)
@@ -732,4 +736,15 @@ public:
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_PlayAnimMontage(UAnimMontage* Anim);
+
+
+	// 물 마시기 추가(준행)
+	
+	// 물을 찾았을 때 실행
+	UFUNCTION()
+	void FoundInteractableWater(UPrimitiveComponent* WaterComp);
+
+	// 물 마시기 서버 실행 함수
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category="Interaction")
+	void Server_DrinkWater(UPrimitiveComponent* WaterComp);
 };
