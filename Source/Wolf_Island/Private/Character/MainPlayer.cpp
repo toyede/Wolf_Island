@@ -883,6 +883,25 @@ void AMainPlayer::CheckInteraction()
 					return;
 				}
 			}
+			// 물 체크
+			AActor* HitActor = HitResult.GetActor();
+			UPrimitiveComponent* HitComp = HitResult.GetComponent();
+
+			if (HitActor)
+			{
+				FString ActorName = HitActor->GetName();
+
+				// 1. 이름에 "Ocean"(바다), "River"(강), "Lake"(호수)가 포함되어 있는지 확인
+				if (ActorName.Contains(TEXT("Ocean")) || ActorName.Contains(TEXT("River")) || ActorName.Contains(TEXT("Lake")))
+				{
+					// 상호작용 대상으로 저장
+					if (InteractionData.CurrentWaterComponent != HitComp)
+					{
+						FoundInteractableWater(HitComp);
+					}
+					return; // 물을 찾았으니 트레이스 종료
+				}
+			}
 		}
 	}
 	
@@ -989,6 +1008,11 @@ void AMainPlayer::NotFoundInteractable()
 		InteractionData.CurrentFoliageComponent = nullptr;
 		InteractionData.FoliageInstanceIndex = INDEX_NONE;
 	}
+
+	if (InteractionData.CurrentWaterComponent)
+	{
+		InteractionData.CurrentWaterComponent = nullptr;
+	}
 }
 
 void AMainPlayer::Client_InteractionExecuted_Implementation()
@@ -1048,7 +1072,10 @@ void AMainPlayer::BeginInteract()
 	{
 		Server_InteractFoliage(InteractionData.CurrentFoliageComponent, InteractionData.FoliageInstanceIndex);
 	}
-	
+	else if (InteractionData.CurrentWaterComponent)
+	{
+		Server_DrinkWater(InteractionData.CurrentWaterComponent);
+	}
 }
 
 void AMainPlayer::EndInteract()
@@ -1926,6 +1953,46 @@ void AMainPlayer::Request_StopCraft()
 	{
 		Server_StopCraft();
 	}
+}
+
+void AMainPlayer::FoundInteractableWater(UPrimitiveComponent* WaterComp)
+{
+	if (InteractionData.CurrentInteractable || InteractionData.CurrentFoliageComponent)
+	{
+		NotFoundInteractable(); 
+	}
+
+	InteractionData.CurrentWaterComponent = WaterComp;
+}
+
+void AMainPlayer::Server_DrinkWater_Implementation(UPrimitiveComponent* WaterComp)
+{
+	if (!WaterComp || !StatusComponent) return;
+	
+	AActor* WaterActor = WaterComp->GetOwner();
+	if (!WaterActor) return;
+
+	FString ActorName = WaterActor->GetName();
+
+	if (ActorName.Contains(TEXT("River")) || ActorName.Contains(TEXT("Lake")))
+	{
+		StatusComponent->IncreaseHydration(10.0f);
+        
+		if (EatingSound) 
+		{
+			Multi_PlaySound(EatingSound, GetActorLocation());
+		}
+	}
+	else if (ActorName.Contains(TEXT("Ocean")))
+	{
+		StatusComponent->DecreaseHydration(10.0f);
+        
+		if (EatingSound) 
+		{
+			Multi_PlaySound(EatingSound, GetActorLocation());
+		}
+	}
+
 }
 
 void AMainPlayer::Client_ShowDeathScreen_Implementation()
