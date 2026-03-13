@@ -24,4 +24,7 @@ class WOLF_ISLAND_API ISkyInterface
 public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Sky")
 	void RemoveEnemy(AActor* EnemyActor);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Sky")
+	void SkipToMorning();
 };

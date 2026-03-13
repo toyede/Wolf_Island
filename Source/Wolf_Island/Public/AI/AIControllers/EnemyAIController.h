@@ -72,6 +72,7 @@ protected:
 	void HandleDamage(AActor* Actor, const FAIStimulus& Stimulus);
 	void HandleHearing(AActor* Actor, const FAIStimulus& Stimulus);
 	void HandleScent(const FAIStimulus& Stimulus);
+	bool IsFriendlyAggroSource(AActor* SourceActor) const;
 
 	bool ShouldSwitchTarget(AActor* Newtarget) const;
 	bool IsTargetValid(AActor* Target) const;
