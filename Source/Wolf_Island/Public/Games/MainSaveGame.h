@@ -39,6 +39,9 @@ struct FPlayerSaveData
 	TArray<struct FItemSlot> InventoryItems;
 	
 	UPROPERTY(SaveGame)
+	TArray<uint8> MovementBinaryData;
+	
+	UPROPERTY(SaveGame)
 	TArray<uint8> InventoryBinaryData;
 	
 	UPROPERTY(SaveGame)

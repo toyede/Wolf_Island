@@ -4,6 +4,7 @@
 #include "Widgets/RoleSelection/RoleButton.h"
 
 #include "Components/Button.h"
+#include "Components/Image.h"
 #include "Components/TextBlock.h"
 
 void URoleButton::NativeConstruct()
@@ -17,12 +18,18 @@ void URoleButton::NativeConstruct()
 	{
 		FString EnumString = StaticEnum<ECharacterRole>()->GetNameStringByValue((uint8)Role);
 		FName RowName(*EnumString);
-		const FRoleData* RoleData = RoleDataTable->FindRow<FRoleData>(RowName, "RoleData");
+		const FRoleData* FoundRoleData = RoleDataTable->FindRow<FRoleData>(RowName, "RoleData");
+		RoleData = *FoundRoleData;
 		
-		if (RoleData)
+		if (FoundRoleData)
 		{
-			RoleName->SetText(RoleData->RoleName);
-			RoleDesc->SetText(RoleData->RoleDescription);
+			RoleName->SetText(RoleData.RoleName);
+			RoleDesc->SetText(RoleData.RoleDescription);
+			
+			if (RoleData.RoleIcon)
+			{
+				RoleIcon->SetBrushFromTexture(RoleData.RoleIcon);
+			}
 		}
 	}
 }

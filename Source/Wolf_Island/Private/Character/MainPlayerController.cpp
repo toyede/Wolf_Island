@@ -98,15 +98,21 @@ void AMainPlayerController::OnUnPossess()
 
 void AMainPlayerController::SetPlayerHUD(AMainPlayer* OwnerPlayer)
 {
+	if (PlayerHUD)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER CONTROLLER] Player HUD is already exist."));
+		return;
+	}
+	
 	UE_LOG(LogTemp, Warning, TEXT("[%s] Possessed in %s"), *GetName(), *OwnerPlayer->GetName())
-	AMainPlayer* InPlayer = Cast<AMainPlayer>(OwnerPlayer);
-	if (InPlayer && HUDClass && IsLocalController())
+
+	if (OwnerPlayer && HUDClass && IsLocalController())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[%hs]Set Player HUD"), HasAuthority()?"SERVER":"CLIENT")
 		PlayerHUD = CreateWidget<UPlayerHUD>(this, HUDClass);
-		PlayerHUD->SetPlayerRef(InPlayer);
-		InPlayer->SetHUDWidget(PlayerHUD);
 		PlayerHUD->AddToViewport();
+		PlayerHUD->SetPlayerRef(OwnerPlayer);
+		OwnerPlayer->SetHUDWidget(PlayerHUD);
 	}
 }
 

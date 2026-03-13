@@ -14,6 +14,7 @@
 class UWidgetComponent;
 class UWaterBodyComponent;
 class APickup;
+class UPlayerHUD;
 struct FInputActionValue;
 
 USTRUCT(BlueprintType)
@@ -148,7 +149,7 @@ public:
 	float MovementMultiplier = 1.0f;
 	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
-	float KnockOutSpeed = 50.0f;
+	float KnockOutSpeed = 100.0f;
 	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
 	float WalkSpeed = 300.0f;
@@ -158,6 +159,18 @@ public:
 	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
 	float CrouchSpeed = 150.0f;
+	
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	float DefaultHeight = 88.0f;
+	
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	float DefaultZ = -88.0f;
+	
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	float CrouchHeight = 60.0f;
+	
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	float CrouchZ = -60.0f;
 	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
 	float SwimmingSpeed = 300.0f;

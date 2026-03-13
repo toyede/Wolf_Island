@@ -29,6 +29,7 @@
 #include "WaterBodyComponent.h"
 #include "Character/MainPlayerController.h"
 #include "Components/BuildingComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Games/MainSaveGame.h"
 #include "Games/GameModes/MainGameMode.h"
@@ -52,6 +53,7 @@ void AMainPlayer::PossessedBy(AController* NewController)
 
 void AMainPlayer::PawnClientRestart()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] PawnClientRestart Called"))
 	Super::PawnClientRestart();
 	
 	if (IsLocallyControlled())
@@ -197,7 +199,7 @@ void AMainPlayer::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void AMainPlayer::Destroyed()
 {
-	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Destroyed"));
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] DESTROYED"));
 	
 	if (HasAuthority())
 	{
@@ -366,8 +368,8 @@ void AMainPlayer::StartJump()
 	//낙하 중(점프 중) 이면 점프 불가
 	if (GetCharacterMovement()->IsFalling()) return;
 
-	//슬라이딩 중이면 점프 불가
-	if (IsSliding) return;
+	//슬라이딩 중이면 점프 불가 또는 기절 중이면
+	if (IsSliding || IsInability) return;
 	
 	//앉아 있으면 일어서기
 	if (IsCrouching)
@@ -487,8 +489,8 @@ void AMainPlayer::Run()
 	//속도가 있는가? -> 뛰는 중인가?
 	if (GetVelocity().Size() > 0){
 
-		//낙하 중이면 달리기 불가
-		if (GetMovementComponent()->IsFalling())
+		//낙하 중이면 달리기 불가 또는 기절 중이면
+		if (GetMovementComponent()->IsFalling() || IsInability)
 		{
 			if(IsRunning){
 				//스태미나 감소 중단
@@ -530,6 +532,9 @@ void AMainPlayer::Run()
 
 void AMainPlayer::StopRun()
 {
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+	GetCharacterMovement()->MaxFlySpeed = SwimmingSpeed;
+	
 	//달리기 중일 때만 달리기 중지 시퀀스 작동
 	if (IsRunning)
 	{
@@ -549,17 +554,23 @@ void AMainPlayer::StopRun()
 
 void AMainPlayer::ToggleCrouch()
 {
+	//기절 중이면 못함
+	if (IsInability) return;
+	
 	//웅크리는 중이면
 	if (IsCrouching)
 	{
 		UnCrouch();
 		GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+		//GetCapsuleComponent()->SetCapsuleHalfHeight(DefaultHeight);
 		IsCrouching = false;
 	} else
 	{
 		if (GetCharacterMovement()->IsFalling()) return;
+		
 		Crouch();
 		GetCharacterMovement()->MaxWalkSpeed = CrouchSpeed;
+		//GetCapsuleComponent()->SetCapsuleHalfHeight(CrouchHeight);
 		IsCrouching = true;
 	}
 }
@@ -746,7 +757,8 @@ void AMainPlayer::RefreshHand()
 
 void AMainPlayer::Attack()
 {
-	if (IsSwimming) return;
+	if (IsSwimming || IsInability) return;
+	
 	if (UBuildingComponent* BuildComp = FindComponentByClass<UBuildingComponent>())
 	{
 		int32 StateInt = (int32)BuildComp->GetCurrentState();
@@ -777,7 +789,22 @@ void AMainPlayer::KnockOut()
 		KnockOutTimer,
 		[this]()
 		{
-			Client_ShowDeathScreen();
+			if (HasAuthority())
+			{
+				if (IsLocallyControlled())
+				{
+					FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
+					FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(0,0,0,0);
+		
+					if (AMainPlayerController* PC = GetController<AMainPlayerController>())
+					{
+						PC->OpenDeathScreen();
+					}
+				}
+			} else
+			{
+				Client_ShowDeathScreen();
+			}
 		},
 		KnockOutToDeathTime,
 		false);
@@ -887,7 +914,7 @@ void AMainPlayer::FoundInteractable(AActor* Interactable)
 		//TODO:여기 인터랙션 UI 해제 코드 추가 예정
 		if (IsLocallyControlled())
 		{
-			HUD->DisplayDefault();
+			if (HUD) HUD->DisplayDefault();
 		} else
 		{
 			UE_LOG(LogTemp, Warning, TEXT("[PLAYER] NOT LOCALLY CONTROLLED : Can't Change Aim to Unfocus"));
@@ -902,7 +929,7 @@ void AMainPlayer::FoundInteractable(AActor* Interactable)
 	//TODO:여기 인터랙션 UI 업데이트 코드 추가 예정
 	if (IsLocallyControlled())
 	{
-		HUD->DisplayInteractable();
+		if (HUD) HUD->DisplayInteractable();
 	} else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] NOT LOCALLY CONTROLLED : Can't Change Aim to Focus"));
@@ -933,7 +960,11 @@ void AMainPlayer::NotFoundInteractable()
 		//TODO:여기 인터랙션 UI 업데이트 코드 추가 예정
 		if (IsLocallyControlled())
 		{
-			HUD->DisplayDefault();
+			if (HUD)
+			{
+				HUD->DisplayDefault();
+				HUD->HideInteraction();
+			}
 		}
 		
 		//인터랙션 액터 데이터 비우기
@@ -965,7 +996,6 @@ void AMainPlayer::Client_InteractionExecuted_Implementation()
 	if (HUD)
 	{
 		HUD->HideInteraction();
-		UE_LOG(LogTemp, Warning, TEXT("[PLAYER][CLIENT] Interaction Complete. Hide Bar"));
 	}
 }
 
@@ -1035,7 +1065,7 @@ void AMainPlayer::EndInteract()
 	if (IsValid(TargetInteractionInterface.GetObject()))
 	{
 		//인터랙션 액터의 인터랙션 종료 함수 실행
-		TargetInteractionInterface->EndInteract();
+		//TargetInteractionInterface->EndInteract();
 	}
 }
 
@@ -1293,7 +1323,7 @@ void AMainPlayer::ExitWater(const FSphericalPontoon& Pontoon)
 
 void AMainPlayer::HideAirBar()
 {
-	if (IsLocallyControlled())
+	if (IsLocallyControlled()&&HUD)
 	{
 		HUD->HideAirBar();
 	}
@@ -1455,6 +1485,8 @@ void AMainPlayer::SetSwimMode(ESwimMode NewSwimMode)
 
 void AMainPlayer::Server_InteractFoliage_Implementation(UInstancedStaticMeshComponent* ISMC, int32 InstanceIndex)
 {
+	if (!HasAuthority()) return;
+	
 	if (!ISMC || InstanceIndex == INDEX_NONE) return;
 
 	UStaticMesh* HitMesh = ISMC->GetStaticMesh();
@@ -1501,6 +1533,11 @@ void AMainPlayer::Server_InteractFoliage_Implementation(UInstancedStaticMeshComp
 		RemovedData.Mesh = HitMesh;
 		
 		GM->RemovedFoliageData.Add(RemovedData);
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Pebble Interact : Save Modified"))
+		
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Pebble Interact : No GameMode"))
 	}
 
 	Multi_RemoveFoliageInstance(ISMC, InstanceIndex);
@@ -1899,7 +1936,13 @@ void AMainPlayer::Client_ShowDeathScreen_Implementation()
 		FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
 		FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(0,0,0,0);
 		
-		MainPlayerController->OpenDeathScreen();
+		if (MainPlayerController)
+		{
+			MainPlayerController->OpenDeathScreen();
+		} else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Main Player Controller Not Connected"));	
+		}
 	}
 }
 

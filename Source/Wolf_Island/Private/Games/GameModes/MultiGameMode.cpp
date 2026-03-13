@@ -113,7 +113,7 @@ APawn* AMultiGameMode::SpawnDefaultPawnFor_Implementation(AController* NewPlayer
 	//저장된 정보가 있으면(플레이어의 마지막 위치가 있으면) 그 곳에 소환.
 	if (PlayersSaveData.Find(PS->GetPersistantId()))
 	{
-		SpawnTransform = PlayersSaveData[PS->GetPersistantId()].Transform;
+		//SpawnTransform = PlayersSaveData[PS->GetPersistantId()].Transform;
 	}
 	
 	return SpawnDefaultPawnAtTransform_Implementation(NewPlayer, SpawnTransform);

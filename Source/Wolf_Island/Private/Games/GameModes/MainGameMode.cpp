@@ -15,6 +15,7 @@
 #include "Games/MainPlayerState.h"
 #include "Games/MainSaveGame.h"
 #include "Games/SaveInterface.h"
+#include "Games/GameModes/MultiGameMode.h"
 #include "Kismet/GameplayStatics.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
@@ -35,11 +36,12 @@ void AMainGameMode::InitGame(const FString& MapName, const FString& Options, FSt
 	//에디터에서 월드로 바로 입장 시 테스트 세이브 게임 데이터 생성 및 로드
 	else
 	{
+		FString Type = Cast<AMultiGameMode>(this) ? "M" : "S";
 		//테스트 세이브 게임 데이터가 있으면 불러오기
-		if (UGameplayStatics::DoesSaveGameExist(TEXT("TEST001_")+MapName,0))
+		if (UGameplayStatics::DoesSaveGameExist(Type+TEXT("TEST001_")+MapName,0))
 		{
 			UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD TEST SAVE GAME"));
-			CurrentSaveData = Cast<UMainSaveGame>(UGameplayStatics::LoadGameFromSlot(TEXT("TEST001_")+MapName, 0));
+			CurrentSaveData = Cast<UMainSaveGame>(UGameplayStatics::LoadGameFromSlot(Type+TEXT("TEST001_")+MapName, 0));
 			PlayersSaveData = CurrentSaveData->Players;
 		}
 		//테스트 세이브 게임 데이터가 없으면 생성
@@ -47,7 +49,7 @@ void AMainGameMode::InitGame(const FString& MapName, const FString& Options, FSt
 		{
 			UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] CREATE TEST SAVE GAME"));
 			CurrentSaveData = Cast<UMainSaveGame>(UGameplayStatics::CreateSaveGameObject(UMainSaveGame::StaticClass()));
-			CurrentSaveData->SlotName = TEXT("TEST001_")+MapName;
+			CurrentSaveData->SlotName = Type+TEXT("TEST001_")+MapName;
 			CurrentSaveData->WorldName = MapName;
 			UGameplayStatics::SaveGameToSlot(CurrentSaveData, CurrentSaveData->SlotName, 0);
 		}
@@ -68,7 +70,7 @@ void AMainGameMode::StartPlay()
 		UE_LOG(LogTemp, Warning, TEXT("No Game State Detected"));
 	}
 	
-	LoadWorld();
+	LoadCurrentSave();
 	
 	//자동 저장 타이머
 	if (TurnOnAutoSave)
@@ -84,12 +86,26 @@ void AMainGameMode::StartPlay()
 
 void AMainGameMode::PostLogin(APlayerController* NewPlayer)
 {
+	AMainPlayerState* PS = Cast<AMainPlayerState>(NewPlayer->PlayerState);
+	if (!PS) return;
+	
+	FString PlayerID = PS->GetPersistantId();
+	UE_LOG(LogTemp, Warning, TEXT("[Player Login] %s"), *PlayerID);
+	
+	if (PlayersSaveData.Contains(PlayerID))
+	{
+		FPlayerSaveData& PlayerSaveData = PlayersSaveData[PlayerID];
+		PS->SetItemsData(PlayerSaveData.InventoryItems);
+		PS->SetPlayerRole(PlayerSaveData.PlayerRole);
+	}
+	
 	Super::PostLogin(NewPlayer);
 }
 
 void AMainGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
 {
-	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
+	//Super::HandleStartingNewPlayer_Implementation(NewPlayer);
+	RestartPlayer(NewPlayer);
 }
 
 void AMainGameMode::RestartPlayer(AController* NewPlayer)
@@ -108,11 +124,6 @@ void AMainGameMode::Logout(AController* Exiting)
 	}
 	
 	Super::Logout(Exiting);
-}
-
-void AMainGameMode::StartingNewPlayer(APlayerController* NewPlayer)
-{
-	UE_LOG(LogTemp, Warning, TEXT("[SINGLEPLAY] Starting New Player"));
 }
 
 void AMainGameMode::SetActorCache()
@@ -186,7 +197,7 @@ void AMainGameMode::SaveWorld()
 void AMainGameMode::LoadWorld()
 {
 	if (!HasAuthority()) return;
-	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] TEST LOAD SLOT : %s"), *CurrentSaveData->SlotName);
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD SLOT : %s"), *CurrentSaveData->SlotName);
 	
 	UMainSaveGame* Save =
 		Cast<UMainSaveGame>(UGameplayStatics::LoadGameFromSlot(CurrentSaveData->SlotName, 0));
@@ -323,6 +334,12 @@ void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 		TargetPlayer->Serialize(PlayerArchive);
 		UE_LOG(LogTemp, Warning, TEXT("Serialize Character"));
 		
+		FMemoryWriter MovementWriter(PlayerSaveData.MovementBinaryData, true);
+		FObjectAndNameAsStringProxyArchive MovementArchive(MovementWriter, true);
+		MovementArchive.ArIsSaveGame = false;
+		TargetPlayer->GetCharacterMovement()->Serialize(MovementArchive);
+		UE_LOG(LogTemp, Warning, TEXT("Serialize Movement"));
+		
 		FMemoryWriter InventoryWriter(PlayerSaveData.InventoryBinaryData, true);
 		FObjectAndNameAsStringProxyArchive InventoryArchive(InventoryWriter, true);
 		InventoryArchive.ArIsSaveGame = true;
@@ -397,6 +414,12 @@ bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState)
 		PlayerArchive.ArIsSaveGame = true;
 		TargetPlayer->Serialize(PlayerArchive);
 		UE_LOG(LogTemp, Warning, TEXT("Deserialize Character"));
+		
+		FMemoryReader MovementWriter(PlayerSaveData.MovementBinaryData, true);
+		FObjectAndNameAsStringProxyArchive MovementArchive(MovementWriter, true);
+		MovementArchive.ArIsSaveGame = false;
+		TargetPlayer->GetCharacterMovement()->Serialize(MovementArchive);
+		UE_LOG(LogTemp, Warning, TEXT("Deserialize Movement"));
 		
 		FMemoryReader InventoryReader(PlayerSaveData.InventoryBinaryData, true);
 		FObjectAndNameAsStringProxyArchive InventoryArchive(InventoryReader, true);

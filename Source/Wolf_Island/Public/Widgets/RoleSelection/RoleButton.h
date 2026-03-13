@@ -7,6 +7,7 @@
 #include "Character/MainPlayer.h"
 #include "RoleButton.generated.h"
 
+class UImage;
 /**
  * 
  */
@@ -23,6 +24,12 @@ struct FRoleData : public FTableRowBase
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FText RoleDescription;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UTexture2D* RoleThumbnail;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UTexture2D* RoleIcon;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnButtonClick, ECharacterRole, Role);
@@ -39,6 +46,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	UDataTable* RoleDataTable;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	FRoleData RoleData;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	ECharacterRole Role;
 	
@@ -50,6 +60,9 @@ public:
 	
 	UPROPERTY(meta=(BindWidget))
 	UTextBlock* RoleDesc;
+	
+	UPROPERTY(meta=(BindWidget))
+	UImage* RoleIcon;
 	
 	virtual void NativeConstruct() override;
 	

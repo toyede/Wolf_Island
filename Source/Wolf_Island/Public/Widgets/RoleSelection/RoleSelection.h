@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "RoleSelection.generated.h"
 
+class UImage;
 class UTextBlock;
 class UBorder;
 class UBaseButton;
@@ -39,6 +40,9 @@ public:
 	
 	UPROPERTY(meta=(BindWidget))
 	UWrapBox* RoleList;
+	
+	UPROPERTY(meta=(BindWidget))
+	UImage* RoleThumbnail;
 	
 	UPROPERTY(meta=(BindWidget))
 	UBaseButton* ConfirmButton;

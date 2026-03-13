@@ -67,9 +67,6 @@ public:
 	virtual void Logout(AController* Exiting) override;
 	
 	UFUNCTION(BlueprintCallable)
-	virtual void StartingNewPlayer(APlayerController* NewPlayer);
-	
-	UFUNCTION(BlueprintCallable)
 	void SetActorCache();
 	
 	UFUNCTION(BlueprintCallable)

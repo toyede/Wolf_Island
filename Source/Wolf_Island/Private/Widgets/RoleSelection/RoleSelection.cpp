@@ -5,6 +5,7 @@
 
 #include "Character/MainPlayerController.h"
 #include "Components/Button.h"
+#include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Components/WrapBox.h"
 #include "Games/MainGameState.h"
@@ -74,8 +75,9 @@ void URoleSelection::SetInfoSection_Implementation(ECharacterRole Role)
 		{
 			if (Button->Role == SelectedRole)
 			{
-				RoleName->SetText(Button->RoleName->GetText());
-				RoleDesc->SetText(Button->RoleDesc->GetText());
+				RoleName->SetText(Button->RoleData.RoleName);
+				RoleDesc->SetText(Button->RoleData.RoleDescription);
+				RoleThumbnail->SetBrushFromTexture(Button->RoleData.RoleThumbnail);
 			}
 		}
 	}
