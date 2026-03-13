@@ -486,14 +486,19 @@ void AEnemyAIBase::OnHowlingMontageEnded(UAnimMontage* Montage, bool bInterrupte
 void AEnemyAIBase::OnAttackHit(const FHitResult& HitResult)
 {
     AActor* HitActor = HitResult.GetActor();
-    if (!HitActor)
+    if (!HitActor || !HasAuthority())
     {
         return;
     }
 
-    // 데미지 적용
-    FDamageEvent DamageEvent;
-    HitActor->TakeDamage(AttackDamage, DamageEvent, GetController(), this);
+    TSubclassOf<UDamageType> DamageTypeClass = UDamageType::StaticClass();
+
+    if (!bIsHuman && WolfAttackDamageType)
+    {
+        DamageTypeClass = WolfAttackDamageType;
+    }
+    
+    UGameplayStatics::ApplyDamage(HitActor, AttackDamage, GetController(), this, DamageTypeClass);
 }
 
 float AEnemyAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)

@@ -3,6 +3,7 @@
 
 #include "Widgets/Craft/CraftPanel.h"
 
+#include "Character/MainPlayer.h"
 #include "Components/Button.h"
 #include "Components/Image.h"
 #include "Components/InventoryComponent.h"
@@ -39,7 +40,10 @@ void UCraftPanel::OnCraftButtonClicked()
 {
 	if (OwnerInventory && CurrentRecipeData.ResultID != NAME_None)
 	{
-		OwnerInventory->Request_MakeItem(CurrentRecipeData);
+		if (AMainPlayer* Player = Cast<AMainPlayer>(OwnerInventory->GetOwner()))
+		{
+			Player->Request_StartCraft(CurrentRecipeData);
+		}
 
 		SetCraftButton(CurrentRecipeData);
 	}
@@ -137,8 +141,8 @@ void UCraftPanel::SetCraftButton(FRecipeData RecipeData)
 {
 	if (OwnerInventory->CheckCanMakeRecipe(RecipeData))
 	{
-		CurrentRecipeData = RecipeData;		
 		CraftButton->SetIsEnabled(true);
+		CurrentRecipeData = RecipeData;
 	} else
 	{
 		CraftButton->SetIsEnabled(false);

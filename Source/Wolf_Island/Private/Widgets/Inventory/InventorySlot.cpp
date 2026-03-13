@@ -51,9 +51,9 @@ void UInventorySlot::SetEmptySlot()
 void UInventorySlot::RefreshSlot()
 {
 	//UE_LOG(LogTemp, Warning, TEXT("%s's [ %d ] SLOT REFRESHING"), *OwnerInventoryRef->GetOwner()->GetName() ,Index);
-	ItemRef = &OwnerInventoryRef->GetItemAtIndex(Index);
+	ItemRef = OwnerInventoryRef->GetItemAtIndex(Index);
 	
-	ItemData = OwnerInventoryRef->GetItemData(*ItemRef);
+	ItemData = OwnerInventoryRef->GetItemData(ItemRef);
 	
 	if (ItemData)
 	{
@@ -63,7 +63,12 @@ void UInventorySlot::RefreshSlot()
 		if (ItemData->NumericData.IsStackable)
 		{
 			ItemAmount->SetVisibility(ESlateVisibility::Visible);
-			ItemAmount->SetText(FText::AsNumber(ItemRef->Amount));
+			ItemAmount->SetText(FText::AsNumber(ItemRef.Amount));
+			
+			if (ItemRef.Amount == 1)
+			{
+				ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
+			}
 		} else
 		{
 			ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
@@ -74,7 +79,7 @@ void UInventorySlot::RefreshSlot()
 		SetEmptySlot();
 	}
 	
-	if (CanDragDrop && ToolTipClass && ItemRef->IsValid())
+	if (CanDragDrop && ToolTipClass && ItemRef.IsValid())
 	{
 		UInventoryToolTip* ToolTip = CreateWidget<UInventoryToolTip>(this, ToolTipClass);
 		ToolTip->InventorySlotBeingHovered = this;
@@ -122,17 +127,19 @@ void UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPo
 	//좌클릭 드래그면 이동
 	if (InMouseEvent.IsMouseButtonDown(EKeys::LeftMouseButton))
 	{
-		if (DragItemVisualClass && ItemRef && ItemData)
+		if (DragItemVisualClass && ItemRef.IsValid() && ItemData)
 		{			
 			const TObjectPtr<UDragItemVisual> DragVisual = CreateWidget<UDragItemVisual>(this, DragItemVisualClass);
 			DragVisual->ItemIcon->SetBrushFromTexture(ItemData->AssetData.Icon);
 			DragVisual->ItemBorder->SetBrush(UnSelectedSlotBrush);
-			DragVisual->ItemAmount->SetText(FText::AsNumber(ItemRef->Amount));
+			DragVisual->ItemAmount->SetText(FText::AsNumber(ItemRef.Amount));
+			if (ItemRef.Amount == 1)
+				DragVisual->ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
 
 			UItemDragDropOperation* DragItemOperation = NewObject<UItemDragDropOperation>();
 			DragItemOperation->SourceInventory = OwnerInventoryRef;
 			DragItemOperation->SourceIndex = Index;
-			DragItemOperation->SourceItemData = *ItemRef;
+			DragItemOperation->SourceItemData = ItemRef;
 
 			DragItemOperation->DefaultDragVisual = DragVisual;
 			DragItemOperation->Pivot = EDragPivot::MouseDown;
@@ -147,15 +154,15 @@ void UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPo
 	//우클릭 드래그면 반으로 나눠보리기
 	else if (InMouseEvent.IsMouseButtonDown(EKeys::RightMouseButton))
 	{
-		if (DragItemVisualClass && ItemRef)
+		if (DragItemVisualClass && ItemRef.IsValid())
 		{
 			//반갈 개수
-			int32 MovedAmount = ItemRef->Amount/2;
+			int32 MovedAmount = ItemRef.Amount/2;
 			//1개면 우클릭 불가능
 			if (MovedAmount == 0 ) return;
 			
 			//기존 슬롯에 남은 아이템 개수
-			int32 RemaindAmount = ItemRef->Amount - MovedAmount;
+			int32 RemaindAmount = ItemRef.Amount - MovedAmount;
 
 			//기존 슬롯 아이템 개수 설정 - 드래그 떼어 간 만큼 감소(무게 제외 수량만 감소)
 			OwnerInventoryRef->Request_RemoveOnlyItemAmountAtSlot(Index, MovedAmount);
@@ -165,11 +172,13 @@ void UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPo
 			DragVisual->ItemIcon->SetBrushFromTexture(ItemData->AssetData.Icon);
 			DragVisual->ItemBorder->SetBrush(UnSelectedSlotBrush);
 			DragVisual->ItemAmount->SetText(FText::AsNumber(MovedAmount));
+			if (ItemRef.Amount == 1)
+				DragVisual->ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
 
 			//드래그 아이템 데이터 생성
 			UItemDragDropOperation* DragItemOperation = NewObject<UItemDragDropOperation>();
 			DragItemOperation->SourceInventory = OwnerInventoryRef;
-			DragItemOperation->SourceItemData = *ItemRef;
+			DragItemOperation->SourceItemData = ItemRef;
 			DragItemOperation->SourceItemData.Amount = MovedAmount;
 			DragItemOperation->SourceIndex = Index;
 			
@@ -249,7 +258,7 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 					//옮길 곳에 최대로 더하고 남은 건 원래 자리로
 					//옮길(드롭 받는) 곳 : Index | 옮기는(드래그 한) 것 : SourceIndex
 					//총 분배 개수 - 드롭 받는 곳의 아이템 개수와 드래그 한 아이템 개수의 합
-					int32 TotalAmount = ItemRef->Amount + ItemDragDrop->SourceItemData.Amount;
+					int32 TotalAmount = ItemRef.Amount + ItemDragDrop->SourceItemData.Amount;
 					//최대 스택 개수
 					int32 MaxStack = ItemData->NumericData.MaxAmount;
 

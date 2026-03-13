@@ -28,6 +28,8 @@ public:
 	class UInventoryComponent* OwnerInventory;
 	UPROPERTY(EditAnywhere)
 	FRecipeData CurrentRecipeData;
+	UPROPERTY(EditAnywhere)
+	FTimerHandle CraftingTimer;
 
 
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))

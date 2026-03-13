@@ -148,7 +148,6 @@ void UPlayerHUD::HideAirBar()
 void UPlayerHUD::RefreshHotBar()
 {
 	HotBar->ClearChildren();
-	//HotBar->InvalidateLayoutAndVolatility();
 	
 	for (int i=0; i<6; i++)
 	{
