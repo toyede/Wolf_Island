@@ -81,12 +81,13 @@ void AMainPlayerController::SetupInputComponent()
 
 void AMainPlayerController::OnPossess(APawn* InPawn)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER CONTROLLER] ON POSSESSED"));
 	Super::OnPossess(InPawn);
 }
 
 void AMainPlayerController::OnUnPossess()
 {
-	UE_LOG(LogTemp, Warning, TEXT("UNPOSSESSED"));
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER CONTROLLER] UNPOSSESSED"));
 	if (IsLocalController() && PlayerHUD)
 	{
 		PlayerHUD->RemoveFromParent();

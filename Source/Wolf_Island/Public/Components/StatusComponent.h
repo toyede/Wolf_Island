@@ -47,168 +47,168 @@ public:
 
 	//늑대인간
 	//현재 감염률
-	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Infection")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Infection", SaveGame)
 	float CurrentInfectionRate = 0.0f;
 	//감염 여부
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection", SaveGame)
 	bool IsInfected = false;
 	//감염 속도
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection", SaveGame)
 	float InfectionInterval = 0.01f;
 	//감염 증가율
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection", SaveGame)
 	float InfectionIncrement = 0.01f;
 
 	//체력
 	//현재 체력
-	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	float CurrentHP = 100.0f;
 	//최대 체력
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	float MaxHP = 100.0f;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Status")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	bool IsDead = false;
 
 	//스태미나
 	//현재 스태미나
-	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	float CurrentStamina = 100.0f;
 	//최대 스태미나
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	float MaxStamina = 100.0f;
 	//
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	float DeadLineStamina = 5.0f;
 	float TempMaxStamina = 0.0f;
 
 	//배고픔
 	//현재 배고픔
-	UPROPERTY(ReplicatedUsing = OnRep_CurrentHunger, VisibleAnywhere, BlueprintReadWrite, Category = "Status")
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentHunger, VisibleAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	float CurrentHunger = 100.0f;
 	//최대 배고픔
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	float MaxHunger = 100.0f;
 
 	//수분
-	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	float CurrentHydration = 100.0f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	float MaxHydration = 100.0f;
 	
 	//무게에 따른 감소율 증가분
 	float AmountMultiplier = 1.0f;
 	
 	//산소
-	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	float CurrentAir = 100.0f;
-	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	float MaxAir = 100.0f;
 	
 
 	//타이머
 	//스태미나 타이머
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer", SaveGame)
 	FTimerHandle StaminaTimer;
 	//스태미나 회복 타이머
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer", SaveGame)
 	FTimerHandle StaminaRecoverTimer;
 	//배고픔 타이머
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer", SaveGame)
 	FTimerHandle HungerTimer;
 	//수분 타이머
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer", SaveGame)
 	FTimerHandle HydrationTimer;
 	//달리기 타이머
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer", SaveGame)
 	FTimerHandle RunningTimer;
 	//배고픔 사망 타이머
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer", SaveGame)
 	FTimerHandle HungerDeathTimer;
 	//수분 사망 타이머
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer", SaveGame)
 	FTimerHandle HydrationDeathTimer;
 	//강제 휴식 타이머
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer", SaveGame)
 	FTimerHandle ForcedRestTimer;
 	//감염 타이머
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer", SaveGame)
 	FTimerHandle InfectionTimer;
 	//산소 타이머
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer", SaveGame)
 	FTimerHandle AirTimer;
 	//산소 회복 타이머
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer", SaveGame)
 	FTimerHandle AirRecoverTimer;
 	//산소 사망 타이머
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer", SaveGame)
 	FTimerHandle AirDeathTimer;
 
 	//스태미나 감소 주기
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float StaminaDecreaseRate = 0.1f;
 	//스태미나 감소량
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float StaminaDecreaseAmount = 0.1f;
 	//스태미나 회복 주기
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float StaminaRecovereRate = 0.1f;
 	//스태미나 회복량
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float StaminaRecoverAmount = 1.0f;
 	//스태미나 회복 대기 시간(초)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float StaminaRecoverDelay = 5.0f;
 	//스태미나 강제 휴식 시간(초)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float ForcedRestTime = 15.0f;
 
 	//배고픔 감소 주기
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float HungerRate = 0.1f;
 	//배고픔 감소량
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float HungerAmount = 0.005f;
 	//달리기 중 배고픔 감소량
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float HungerAmountWhileRunning = 0.033f;
 	//배고픔 사망 타이머 시간(초)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float HungerDeathRate = 60.0f;
 
 	//수분 감소 주기
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float HydrationRate = 0.1f;
 	//수분 감소량
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float HydrationAmount = 0.0033f;
 	//달리기 중 수분 감소향
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float HydrationAmountWhileRunning = 0.033f;
 	//수분 사망 타이머 시간(초)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float HydrationDeathRate = 30.0f;
 	
 	//산소 감소 주기
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float AirRate = 0.1f;
 	//산소 감소량
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float AirAmount = 0.001f;
 	//산소 회복량
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float AirRecoverAmount = 0.01f;
 	//산소 회복 주기
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float AirRecoverRate = 0.01f;
 	//산소 부족으로 받는 대미지량
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float SuffocatedDamage = 10.0f;
 	//산소 부족으로 받는 대미지 주기
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float SuffocatedRate = 1.0f;
 
 	// 테스트용
-	UPROPERTY(BlueprintReadWrite, Category = "Status")
+	UPROPERTY(BlueprintReadWrite, Category = "Status", SaveGame)
 	bool bIsIncapacitated = false;  // 쓰러진 상태
 
 protected:

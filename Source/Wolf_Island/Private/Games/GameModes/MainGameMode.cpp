@@ -348,7 +348,7 @@ void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 		
 		FMemoryWriter StatusWriter(PlayerSaveData.StatusBinaryData, true);
 		FObjectAndNameAsStringProxyArchive StatusArchive(StatusWriter, true);
-		StatusArchive.ArIsSaveGame = false;
+		StatusArchive.ArIsSaveGame = true;
 		TargetPlayer->StatusComponent->Serialize(StatusArchive);
 		UE_LOG(LogTemp, Warning, TEXT("SAVE HP: %f"), TargetPlayer->StatusComponent->CurrentHP);
 		UE_LOG(LogTemp, Warning, TEXT("SAVE SP: %f"), TargetPlayer->StatusComponent->CurrentStamina);
@@ -430,7 +430,7 @@ bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState)
 	
 		FMemoryReader StatusReader(PlayerSaveData.StatusBinaryData, true);
 		FObjectAndNameAsStringProxyArchive StatusArchive(StatusReader, true);
-		StatusArchive.ArIsSaveGame = false;
+		StatusArchive.ArIsSaveGame = true;
 		TargetPlayer->StatusComponent->Serialize(StatusArchive);
 		UE_LOG(LogTemp, Warning, TEXT("HP After Deserialize: %f"), TargetPlayer->StatusComponent->CurrentHP);
 		UE_LOG(LogTemp, Warning, TEXT("SP After Deserialize: %f"), TargetPlayer->StatusComponent->CurrentStamina);
@@ -506,6 +506,7 @@ void AMainGameMode::SaveMorningSaveData()
 	//세이브 파일 슬롯에 저장(슬롯 이름에 _morning 붙여서)
 	if (UGameplayStatics::SaveGameToSlot(MorningSaveData, MorningSaveData->SlotName, 0))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] Morning Data Saved in %s"), *MorningSaveData->SlotName);
 		FChattingData Chat = FChattingData(
 		TEXT("SYSTEM"),TEXT("아침 데이터 저장"), EMessageType::NOTICE);
 		GS->AddChattingMessage(Chat);
@@ -571,13 +572,17 @@ void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 		//현재 세이브 파일을 아침 데이터로 교체
 		CurrentSaveData = Save;
 		CurrentSaveData->SlotName.RemoveFromEnd(TEXT("_morning"));
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] Replace PlayerSaveData to Morning Data"));
 		PlayersSaveData = Save->Players;
-	
+		
+		Save->PrintSaveInfo();
+		
 		//아침 세이브로 월드 로드
 		LoadWorldFromSave(Save);
 	
 		//아침 세이브로 플레이어 로드
 		RestartPlayer(DeadPlayerController);
+		//LoadPlayer(DeadPlayerController->GetPlayerState<AMainPlayerState>());
 	
 		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD MORNING COMPLETE"));
 	} else

@@ -38,15 +38,17 @@ void AMainPlayer::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 	
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] POSSESSED BY"));
+	
 	if (AMainPlayerController* MainController = Cast<AMainPlayerController>(GetController()))
 	{
 		if (AMainGameMode* GM = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode()))
 		{
 			AMainPlayerState* PS = Cast<AMainPlayerState>(MainController->PlayerState);
-			GM->LoadPlayer(PS);
 			UE_LOG(LogTemp, Warning, TEXT("[%s] LOAD PLAYER DATA"), *PS->GetPersistantId());
-			GM->SavePlayer(PS);
+			GM->LoadPlayer(PS);
 			UE_LOG(LogTemp, Warning, TEXT("[%s] SAVE PLAYER DATA FOR NOOB"), *PS->GetPersistantId());
+			GM->SavePlayer(PS);
 		}
 	} 
 }
@@ -58,6 +60,7 @@ void AMainPlayer::PawnClientRestart()
 	
 	if (IsLocallyControlled())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Restore Color Saturation"))
 		FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
 		FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(1, 1,1,1);
 		
