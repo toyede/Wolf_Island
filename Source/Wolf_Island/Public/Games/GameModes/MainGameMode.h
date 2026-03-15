@@ -85,7 +85,7 @@ public:
 	void SavePlayers();
 	
 	UFUNCTION(BlueprintCallable)
-	bool LoadPlayer(AMainPlayerState* PlayerState);
+	bool LoadPlayer(AMainPlayerState* PlayerState, bool IsDead = false);
 	
 	UFUNCTION(BlueprintCallable)
 	void LoadPlayers();
@@ -114,4 +114,9 @@ public:
 	//이건 플레이어가 죽었을 때 할 동작들. 여기선 싱글에서 죽었을 때를 구현하고, MultiGameMode에서 멀티에서 죽얼을 때 구현.
 	UFUNCTION(BlueprintCallable)
 	virtual void HandlePlayerDeath(AController* DeadPlayerController);
+
+protected:
+	// Rollback(죽고 아침으로 되돌리기) 중에 아침 슬롯을 다시 저장해버리면,
+	// "죽은 상태(HP=0)"가 _morning 슬롯을 덮어써서 부활 시 HP가 0으로 로드되는 문제가 생길 수 있음.
+	bool bIsHandlingDeathRollback = false;
 };

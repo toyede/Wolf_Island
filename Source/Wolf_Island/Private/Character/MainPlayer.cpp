@@ -39,18 +39,6 @@ void AMainPlayer::PossessedBy(AController* NewController)
 	Super::PossessedBy(NewController);
 	
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] POSSESSED BY"));
-	
-	if (AMainPlayerController* MainController = Cast<AMainPlayerController>(GetController()))
-	{
-		if (AMainGameMode* GM = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode()))
-		{
-			AMainPlayerState* PS = Cast<AMainPlayerState>(MainController->PlayerState);
-			UE_LOG(LogTemp, Warning, TEXT("[%s] LOAD PLAYER DATA"), *PS->GetPersistantId());
-			GM->LoadPlayer(PS);
-			UE_LOG(LogTemp, Warning, TEXT("[%s] SAVE PLAYER DATA FOR NOOB"), *PS->GetPersistantId());
-			GM->SavePlayer(PS);
-		}
-	} 
 }
 
 void AMainPlayer::PawnClientRestart()
@@ -81,6 +69,7 @@ void AMainPlayer::PawnClientRestart()
 // Sets default values
 AMainPlayer::AMainPlayer()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Construct"))
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -145,6 +134,7 @@ AMainPlayer::AMainPlayer()
 // Called when the game starts or when spawned
 void AMainPlayer::BeginPlay()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] BeginPlay"))
 	Super::BeginPlay();
 	
 	InteractableData.InteractionDuration = InteractionDuration;
@@ -203,24 +193,6 @@ void AMainPlayer::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void AMainPlayer::Destroyed()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] DESTROYED"));
-	
-	if (HasAuthority())
-	{
-		AMainGameMode* GM = GetWorld()->GetAuthGameMode<AMainGameMode>();
-		AMainPlayerController* PC = GetController<AMainPlayerController>();
-		if (!PC)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Player Controller is NULL"));
-			return;
-		}
-		AMainPlayerState* PS = PC->GetPlayerState<AMainPlayerState>();
-		if (!PS)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Player State is NULL"));
-			return;
-		}
-		GM->SavePlayer(PS);
-	}
 	
 	Super::Destroyed();
 }

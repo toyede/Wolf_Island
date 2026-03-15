@@ -24,7 +24,7 @@ void AMainGameMode::InitGame(const FString& MapName, const FString& Options, FSt
 	Super::InitGame(MapName, Options, ErrorMessage);
 	
 	MainGameInstance = Cast<UMainGameInstance>(GetGameInstance());
-	
+	PlayersSaveData.Empty();
 	//메인 메뉴에서 입장 시 슬롯에서 불러온 세이브 게임 데이터 로드
 	//저장된 플레이어 데이터도 세팅
 	if (MainGameInstance && MainGameInstance->CurrenSaveGame)
@@ -108,9 +108,26 @@ void AMainGameMode::HandleStartingNewPlayer_Implementation(APlayerController* Ne
 	RestartPlayer(NewPlayer);
 }
 
-void AMainGameMode::RestartPlayer(AController* NewPlayer)
+void AMainGameMode:: RestartPlayer(AController* NewPlayer)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] MAINGAMEMODE RestartPlayer"))
 	Super::RestartPlayer(NewPlayer);
+	
+	if (!NewPlayer)
+	{
+		return;
+	}
+
+	AMainPlayerState* PS = Cast<AMainPlayerState>(NewPlayer->PlayerState);
+	if (!PS)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] NO PLAYER STATE"))
+		return;
+	}
+	if (!LoadPlayer(PS))
+	{
+		SavePlayer(PS);
+	}
 }
 
 void AMainGameMode::Logout(AController* Exiting)
@@ -350,11 +367,11 @@ void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 		FObjectAndNameAsStringProxyArchive StatusArchive(StatusWriter, true);
 		StatusArchive.ArIsSaveGame = true;
 		TargetPlayer->StatusComponent->Serialize(StatusArchive);
-		UE_LOG(LogTemp, Warning, TEXT("SAVE HP: %f"), TargetPlayer->StatusComponent->CurrentHP);
-		UE_LOG(LogTemp, Warning, TEXT("SAVE SP: %f"), TargetPlayer->StatusComponent->CurrentStamina);
-		UE_LOG(LogTemp, Warning, TEXT("SAVE HG: %f"), TargetPlayer->StatusComponent->CurrentHunger);
-		UE_LOG(LogTemp, Warning, TEXT("SAVE HY: %f"), TargetPlayer->StatusComponent->CurrentHydration);
 		UE_LOG(LogTemp, Warning, TEXT("Serialize Status"));
+		
+		// 구조체 기반 저장도 같이 유지 (바이너리 Serialize 디버깅/호환 보강용)
+		PlayerSaveData.StatusData = TargetPlayer->StatusComponent->SaveStatus();
+		PlayerSaveData.bHasStatusData = true;
 		
 		PlayerState->SetItemsData(TargetPlayer->InventoryComponent->GetInventory());
 	}
@@ -386,21 +403,30 @@ void AMainGameMode::SavePlayers()
 	}
 }
 
-bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState)
+bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState, bool IsDead)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD PLAYER DATA"));
+	
 	ACharacter* PlayerCharacter = Cast<ACharacter>(PlayerState->GetPawn());
 	
 	//해당 플레이어 스테이트를 가진 컨트롤러의 아이디로 조회.
 	FString PlayerID = PlayerState->GetPersistantId();
 	
 	//저장된 플레이어 목록 중 해당 플레이어가 없으면 로드 False.
-	if (PlayersSaveData.Find(PlayerID) == NULL) return false;
+	if (!PlayersSaveData.Contains(PlayerID))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] %s HAS NO SAVE DATA"), *PlayerID);
+		return false;
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] %s HAS SAVE DATA"), *PlayerID);
+	}
 	
 	FPlayerSaveData& PlayerSaveData = PlayersSaveData[PlayerID];
 	
 	PlayerState->SetItemsData(PlayerSaveData.InventoryItems);
 	
-	if (PlayerCharacter)
+	if (PlayerCharacter && !IsDead)
 	{
 		PlayerCharacter->SetActorTransform(PlayerSaveData.Transform);
 		PlayerCharacter->GetCharacterMovement()->Velocity = PlayerSaveData.Velocity;
@@ -432,14 +458,16 @@ bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState)
 		FObjectAndNameAsStringProxyArchive StatusArchive(StatusReader, true);
 		StatusArchive.ArIsSaveGame = true;
 		TargetPlayer->StatusComponent->Serialize(StatusArchive);
-		UE_LOG(LogTemp, Warning, TEXT("HP After Deserialize: %f"), TargetPlayer->StatusComponent->CurrentHP);
-		UE_LOG(LogTemp, Warning, TEXT("SP After Deserialize: %f"), TargetPlayer->StatusComponent->CurrentStamina);
-		UE_LOG(LogTemp, Warning, TEXT("HG After Deserialize: %f"), TargetPlayer->StatusComponent->CurrentHunger);
-		UE_LOG(LogTemp, Warning, TEXT("HY After Deserialize: %f"), TargetPlayer->StatusComponent->CurrentHydration);
 		UE_LOG(LogTemp, Warning, TEXT("Deserialize Status"));
+		
+		if (PlayerSaveData.bHasStatusData)
+		{
+			TargetPlayer->StatusComponent->LoadStatus(PlayerSaveData.StatusData);
+			UE_LOG(LogTemp, Warning, TEXT("Deserialize Status (Struct Override)"));
+		}
 	}
 	
-	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD PLAYER [%s]"), *PlayerID);
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD PLAYER COMPLETE [%s]"), *PlayerID);
 	return true;
 }
 
@@ -491,6 +519,35 @@ UMainSaveGame* AMainGameMode::DuplicateSaveData(UMainSaveGame* TargetSaveGame)
 void AMainGameMode::SaveMorningSaveData()
 {
 	if (!HasAuthority()) return;
+
+	// 죽어서 아침 세이브를 불러오는 도중(롤백 중)에 이 함수가 다시 호출되면,
+	// 현재 "죽은 상태(HP=0)"가 _morning 슬롯을 덮어써서 부활 시 HP가 0으로 로드될 수 있음.
+	if (bIsHandlingDeathRollback)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] Skip SaveMorningSaveData: death rollback in progress."));
+		return;
+	}
+
+	// 아침 세이브는 '부활 지점' 역할이라, 플레이어가 죽은 상태면 덮어쓰지 않도록 방어.
+	if (AMainGameState* GS = GetGameState<AMainGameState>())
+	{
+		for (APlayerState* PS : GS->PlayerArray)
+		{
+			AMainPlayerState* MPS = Cast<AMainPlayerState>(PS);
+			if (!MPS) continue;
+
+			if (AMainPlayer* PlayerPawn = Cast<AMainPlayer>(MPS->GetPawn()))
+			{
+				if (PlayerPawn->StatusComponent && PlayerPawn->StatusComponent->CurrentHP <= 0.f)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] Skip SaveMorningSaveData: player %s is dead (HP=%.2f)."),
+						*MPS->GetPersistantId(),
+						PlayerPawn->StatusComponent->CurrentHP);
+					return;
+				}
+			}
+		}
+	}
 	//월드를 저장하고, 그 저장된 걸 복제해서 아침 세이브데이터로 저장.
 	//CurrentSaveData 는 그 뒤로 자동 저장되어 계속 덮어씌워지고, MorningSaveData는 아침 때로 유지.
 	//라고 생각했었는데 생각해보니까 이러면 월드 종료하면 아침 데이터가 날아감...
@@ -558,6 +615,7 @@ void AMainGameMode::LoadCurrentSave()
 void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE][SINGLE] HANDLE PLAYER DEATH"));
+	bIsHandlingDeathRollback = true;
 	//사망한 당일 아침으로 부활(아침으로 월드 롤백)
 	//아침 데이터 슬롯 구하기
 	FString MorningSlotName = CurrentSaveData->SlotName+TEXT("_morning");
@@ -575,20 +633,21 @@ void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] Replace PlayerSaveData to Morning Data"));
 		PlayersSaveData = Save->Players;
 		
-		Save->PrintSaveInfo();
+		//Save->PrintSaveInfo();
 		
 		//아침 세이브로 월드 로드
 		LoadWorldFromSave(Save);
 	
 		//아침 세이브로 플레이어 로드
 		RestartPlayer(DeadPlayerController);
-		//LoadPlayer(DeadPlayerController->GetPlayerState<AMainPlayerState>());
 	
 		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD MORNING COMPLETE"));
 	} else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] NO MORNING SAVE EXIST"));
-	}	
+	}
+
+	bIsHandlingDeathRollback = false;
 }
 
 

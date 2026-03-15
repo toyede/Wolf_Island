@@ -6,8 +6,6 @@
 #include "Components/ActorComponent.h"
 #include "StatusComponent.generated.h"
 
-class UItemBase;
-class UStatusComponent;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHPZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStaminaZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHungerZero);
@@ -17,11 +15,49 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInfectionChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAirZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAirFull);
 
+USTRUCT(BlueprintType)
+struct FStatusSaveData
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(SaveGame)
+	float CurrentHP = 100.0f;
+	UPROPERTY(SaveGame)
+	float CurrentStamina = 100.0f;
+	UPROPERTY(SaveGame)
+	float CurrentHunger = 100.0f;
+	UPROPERTY(SaveGame)
+	float CurrentHydration = 100.0f;
+	UPROPERTY(SaveGame)
+	float CurrentAir = 100.0f;
+	UPROPERTY(SaveGame)
+	float CurrentInfection = 0.0f;
+	
+	UPROPERTY(SaveGame)
+	float AmountMultiplier = 1.0f;
+	
+	UPROPERTY(SaveGame)
+	float StaminaDecreaseTimerRemaining = 0.0f;
+	UPROPERTY(SaveGame)
+	float StaminaIncreaseTimerRemaining = 0.0f;
+	
+	UPROPERTY(SaveGame)
+	float HungerDeathTimerRemaining = 0.0f;
+	UPROPERTY(SaveGame)
+	float HydrationDeathTimerRemaining = 0.0f;
+	UPROPERTY(SaveGame)
+	float AirDeathTimerRemaining = 0.0f;
+};
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class WOLF_ISLAND_API UStatusComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
+	//저장할 변수들
+	//현재 체력, 현재 스태미나, 현재 배고픔, 현재 수분, 현재 산소, 현재 감염률 : 6개
+	//저장할 타이머들
+	//스태미나 감소 증가, 배고픔 감소 증가, 수분 감소 증가, 산소 감소 증가 : 8개
 public:	
 	// Sets default values for this component's properties
 	UStatusComponent();
@@ -66,7 +102,7 @@ public:
 	//최대 체력
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	float MaxHP = 100.0f;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	bool IsDead = false;
 
 	//스태미나
@@ -118,9 +154,6 @@ public:
 	//수분 타이머
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer", SaveGame)
 	FTimerHandle HydrationTimer;
-	//달리기 타이머
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer", SaveGame)
-	FTimerHandle RunningTimer;
 	//배고픔 사망 타이머
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer", SaveGame)
 	FTimerHandle HungerDeathTimer;
@@ -216,6 +249,8 @@ protected:
 	virtual void BeginPlay() override;
 
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	
+	virtual void DestroyComponent(bool bPromoteChildren = false) override;
 
 public:	
 	// Called every frame
@@ -355,6 +390,12 @@ public:
 	//디버그 함수
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Debug")
 	void DebugGetStatus(float &HP, float& Stamina, float& Hunger, float& Hydration);
+	
+	//저장 함수
+	FStatusSaveData SaveStatus();
+	
+	//로드 함수
+	void LoadStatus(const FStatusSaveData& SaveData);
 
 	//멀티플레이
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;

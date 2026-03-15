@@ -42,7 +42,7 @@ void AMultiGameMode::PostLogin(APlayerController* NewPlayer)
 	int32 A = FMath::RandRange(0, Adjs.Num()-1);
 	int32 N = FMath::RandRange(0, Nouns.Num()-1);
 	
-	FString NewName = Adjs[A]+" "+Nouns[N]+FString::FromInt(Counter++);
+	FString NewName = Adjs[A]+" "+Nouns[N];
 	
 	PS->SetPlayerName(NewName);
 	
@@ -50,7 +50,7 @@ void AMultiGameMode::PostLogin(APlayerController* NewPlayer)
 	//테스트 환경에서 이걸 사용할 시 스팀 연동이 안되어있기 때문에 테스트 실행할 때마다 ID가 변경되어 테스트 용은 고정.
 	//테스트용 플레이어 아이디
 	FString PlayerID = PS->GetPersistantId();
-	UE_LOG(LogTemp, Warning, TEXT("[Player Login] %s"), *PlayerID);
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] %s LOGIN"), *PlayerID);
 	
 	if (PlayersSaveData.Contains(PlayerID))
 	{

@@ -44,12 +44,17 @@ void UStatusComponent::BeginPlay()
 void UStatusComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
+}
 
+void UStatusComponent::DestroyComponent(bool bPromoteChildren)
+{
 	if (GetOwner()->HasAuthority())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[STATUS] CLEAR ALL TIMERS"));
 		ClearAllTimers();
 	}
+	
+	Super::DestroyComponent(bPromoteChildren);
 }
 
 
@@ -65,7 +70,7 @@ void UStatusComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 void UStatusComponent::IncreaseHP(float amount)
 {
 	CurrentHP = FMath::Clamp(CurrentHP+amount, 0.0f, MaxHP);
-	IsDead = false;
+
 	//음수 방지
 	if (CurrentHP <= 0)
 	{
@@ -80,9 +85,8 @@ void UStatusComponent::DecreaseHP(float amount)
 	CurrentHP = FMath::Clamp(CurrentHP-amount, 0.0f, MaxHP);
 	
 	//음수 방지
-	if (CurrentHP <= 0 && !IsDead)
+	if (CurrentHP <= 0)
 	{
-		IsDead = true;
 		CurrentHP = 0;
 		OnHPZero.Broadcast();
 	}
@@ -544,7 +548,6 @@ void UStatusComponent::ClearAllTimers()
 	TimerManager.ClearTimer(StaminaRecoverTimer);
 	TimerManager.ClearTimer(HungerTimer);
 	TimerManager.ClearTimer(HydrationTimer);
-	TimerManager.ClearTimer(RunningTimer);
 	TimerManager.ClearTimer(HungerDeathTimer);
 	TimerManager.ClearTimer(HydrationDeathTimer);
 	TimerManager.ClearTimer(ForcedRestTimer);
@@ -560,6 +563,36 @@ void UStatusComponent::DebugGetStatus(float &HP, float& Stamina, float& Hunger, 
 	Stamina = CurrentStamina;
 	Hunger = CurrentHunger;
 	Hydration = CurrentHydration;
+}
+
+FStatusSaveData UStatusComponent::SaveStatus()
+{
+	UE_LOG(LogTemp, Warning, TEXT("[STATUS] Save Status"));
+	
+	FStatusSaveData Data = FStatusSaveData();
+	
+	Data.CurrentHP = CurrentHP;
+	Data.CurrentStamina = CurrentStamina;
+	Data.CurrentHunger = CurrentHunger;
+	Data.CurrentHydration = CurrentHydration;
+	Data.CurrentAir = CurrentAir;
+	Data.AmountMultiplier = AmountMultiplier;
+	Data.CurrentInfection = CurrentInfectionRate;
+	
+	return Data;
+}
+
+void UStatusComponent::LoadStatus(const FStatusSaveData& SaveData)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[STATUS] Load Status"));
+	
+	CurrentHP = SaveData.CurrentHP;
+	CurrentStamina = SaveData.CurrentStamina;
+	CurrentHunger = SaveData.CurrentHunger;
+	CurrentHydration = SaveData.CurrentHydration;
+	CurrentAir = SaveData.CurrentAir;
+	AmountMultiplier = SaveData.AmountMultiplier;
+	CurrentInfectionRate = SaveData.CurrentInfection;
 }
 
 void UStatusComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
