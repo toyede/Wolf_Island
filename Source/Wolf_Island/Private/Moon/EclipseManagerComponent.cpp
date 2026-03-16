@@ -39,7 +39,7 @@ void UEclipseManagerComponent::Server_OnNewDay_Implementation(int32 CurrentDay)
     if (bEclipseOccurred) return;
 
     // 첫날은 0%, 매일 5%씩 증가
-    EclipseChance = FMath::Clamp(CurrentDay * 0.05f, 0.0f, 1.0f);
+    EclipseChance = FMath::Clamp(CurrentDay * 0.05f, 0.0f, 0.5f);
     float Roll = FMath::FRand();
 
     if (Roll < EclipseChance)
