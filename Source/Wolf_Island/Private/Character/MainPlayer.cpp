@@ -1978,9 +1978,11 @@ void AMainPlayer::Client_ShowDeathScreen_Implementation()
 		FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
 		FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(0,0,0,0);
 		
-		if (MainPlayerController)
+		MainPlayerController = GetController<AMainPlayerController>();
+		
+		if (AMainPlayerController* MPC = GetController<AMainPlayerController>())
 		{
-			MainPlayerController->OpenDeathScreen();
+			MPC->OpenDeathScreen();
 		} else
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Main Player Controller Not Connected"));	

@@ -177,4 +177,5 @@ void AMultiGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE][MULTI] HANDLE PLAYER DEATH"));
 	RestartPlayer(DeadPlayerController);
+	AfterRestartPlayer(DeadPlayerController, true);
 }

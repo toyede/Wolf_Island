@@ -252,15 +252,15 @@ void AMainPlayerController::OnRep_PlayerState()
 	{
 		if (MainPlayerState->GetPlayerRole() == ECharacterRole::NONE)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Open Selection UI in Player Controller"), *GetPlayerState<AMainPlayerState>()->GetPersistantId())
+			UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Open Selection UI in Player Controller"), *MainPlayerState->GetPersistantId())
 			Client_OpenSelectionUI();
 		} else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Can't open Selection UI. Player role is %d"), *GetPlayerState<AMainPlayerState>()->GetPersistantId(), MainPlayerState->GetPlayerRole())
+			UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Can't open Selection UI. Player role is %d"), *MainPlayerState->GetPersistantId(), MainPlayerState->GetPlayerRole())
 		}
 	} else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Can't open Selection UI. Player State is INVALID"), *GetPlayerState<AMainPlayerState>()->GetPersistantId())
+		UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Can't open Selection UI. Player State is INVALID"), *MainPlayerState->GetPersistantId())
 	}
 }
 

@@ -106,28 +106,19 @@ void AMainGameMode::HandleStartingNewPlayer_Implementation(APlayerController* Ne
 {
 	//Super::HandleStartingNewPlayer_Implementation(NewPlayer);
 	RestartPlayer(NewPlayer);
+	AfterRestartPlayer(NewPlayer, false);
 }
 
 void AMainGameMode:: RestartPlayer(AController* NewPlayer)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] MAINGAMEMODE RestartPlayer"))
-	Super::RestartPlayer(NewPlayer);
+	if (NewPlayer->GetPawn())
+	{
+		NewPlayer->GetPawn()->Destroy();
+		NewPlayer->SetPawn(nullptr);
+	}
 	
-	if (!NewPlayer)
-	{
-		return;
-	}
-
-	AMainPlayerState* PS = Cast<AMainPlayerState>(NewPlayer->PlayerState);
-	if (!PS)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] NO PLAYER STATE"))
-		return;
-	}
-	if (!LoadPlayer(PS))
-	{
-		SavePlayer(PS);
-	}
+	Super::RestartPlayer(NewPlayer);
 }
 
 void AMainGameMode::Logout(AController* Exiting)
@@ -141,6 +132,26 @@ void AMainGameMode::Logout(AController* Exiting)
 	}
 	
 	Super::Logout(Exiting);
+}
+
+void AMainGameMode::AfterRestartPlayer(AController* Player, bool IsDead)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] AfterRestartPlayer"))
+	if (!Player)
+	{
+		return;
+	}
+
+	AMainPlayerState* PS = Cast<AMainPlayerState>(Player->PlayerState);
+	if (!PS)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] NO PLAYER STATE"))
+		return;
+	}
+	if (!LoadPlayer(PS, IsDead))
+	{
+		SavePlayer(PS);
+	}
 }
 
 void AMainGameMode::SetActorCache()
@@ -207,7 +218,7 @@ void AMainGameMode::SaveWorld()
 	
 	AMainGameState* GS = GetGameState<AMainGameState>();
 	FChattingData Chat = FChattingData(
-		TEXT("SYSTEM"),TEXT("자동 저장 완료"), EMessageType::NOTICE);
+		TEXT("SYSTEM"),TEXT("저장 완료"), EMessageType::NOTICE);
 	GS->AddChattingMessage(Chat);
 }
 
@@ -371,7 +382,7 @@ void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 		
 		// 구조체 기반 저장도 같이 유지 (바이너리 Serialize 디버깅/호환 보강용)
 		PlayerSaveData.StatusData = TargetPlayer->StatusComponent->SaveStatus();
-		PlayerSaveData.bHasStatusData = true;
+		PlayerSaveData.HasStatusData = true;
 		
 		PlayerState->SetItemsData(TargetPlayer->InventoryComponent->GetInventory());
 	}
@@ -454,16 +465,19 @@ bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState, bool IsDead)
 		TargetPlayer->InventoryComponent->InventoryChanged();
 		UE_LOG(LogTemp, Warning, TEXT("Deserialize Inventory"));
 	
-		FMemoryReader StatusReader(PlayerSaveData.StatusBinaryData, true);
-		FObjectAndNameAsStringProxyArchive StatusArchive(StatusReader, true);
-		StatusArchive.ArIsSaveGame = true;
-		TargetPlayer->StatusComponent->Serialize(StatusArchive);
-		UE_LOG(LogTemp, Warning, TEXT("Deserialize Status"));
-		
-		if (PlayerSaveData.bHasStatusData)
+		if (!IsDead)
 		{
-			TargetPlayer->StatusComponent->LoadStatus(PlayerSaveData.StatusData);
-			UE_LOG(LogTemp, Warning, TEXT("Deserialize Status (Struct Override)"));
+			FMemoryReader StatusReader(PlayerSaveData.StatusBinaryData, true);
+			FObjectAndNameAsStringProxyArchive StatusArchive(StatusReader, true);
+			StatusArchive.ArIsSaveGame = true;
+			TargetPlayer->StatusComponent->Serialize(StatusArchive);
+			UE_LOG(LogTemp, Warning, TEXT("Deserialize Status"));
+		
+			if (PlayerSaveData.HasStatusData)
+			{
+				TargetPlayer->StatusComponent->LoadStatus(PlayerSaveData.StatusData);
+				UE_LOG(LogTemp, Warning, TEXT("Deserialize Status (Struct Override)"));
+			}
 		}
 	}
 	
@@ -519,37 +533,9 @@ UMainSaveGame* AMainGameMode::DuplicateSaveData(UMainSaveGame* TargetSaveGame)
 void AMainGameMode::SaveMorningSaveData()
 {
 	if (!HasAuthority()) return;
-
-	// 죽어서 아침 세이브를 불러오는 도중(롤백 중)에 이 함수가 다시 호출되면,
-	// 현재 "죽은 상태(HP=0)"가 _morning 슬롯을 덮어써서 부활 시 HP가 0으로 로드될 수 있음.
-	if (bIsHandlingDeathRollback)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] Skip SaveMorningSaveData: death rollback in progress."));
-		return;
-	}
-
-	// 아침 세이브는 '부활 지점' 역할이라, 플레이어가 죽은 상태면 덮어쓰지 않도록 방어.
-	if (AMainGameState* GS = GetGameState<AMainGameState>())
-	{
-		for (APlayerState* PS : GS->PlayerArray)
-		{
-			AMainPlayerState* MPS = Cast<AMainPlayerState>(PS);
-			if (!MPS) continue;
-
-			if (AMainPlayer* PlayerPawn = Cast<AMainPlayer>(MPS->GetPawn()))
-			{
-				if (PlayerPawn->StatusComponent && PlayerPawn->StatusComponent->CurrentHP <= 0.f)
-				{
-					UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] Skip SaveMorningSaveData: player %s is dead (HP=%.2f)."),
-						*MPS->GetPersistantId(),
-						PlayerPawn->StatusComponent->CurrentHP);
-					return;
-				}
-			}
-		}
-	}
-	//월드를 저장하고, 그 저장된 걸 복제해서 아침 세이브데이터로 저장.
-	//CurrentSaveData 는 그 뒤로 자동 저장되어 계속 덮어씌워지고, MorningSaveData는 아침 때로 유지.
+	
+	//월드를 저장하고, 그 저장된 걸 복제해서 아침 세이브데이터 변수로 저장.
+	//CurrentSaveData 는 그 뒤로 자동 저장되어 계속 덮어씌워지고, MorningSaveData 변수는 아침 때로 유지.
 	//라고 생각했었는데 생각해보니까 이러면 월드 종료하면 아침 데이터가 날아감...
 	//저장 슬롯으로 접미사에 _morning을 갖는 슬롯을 만들어 저장해놓는 게 좋겠다.
 	SaveWorld();
@@ -615,7 +601,6 @@ void AMainGameMode::LoadCurrentSave()
 void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE][SINGLE] HANDLE PLAYER DEATH"));
-	bIsHandlingDeathRollback = true;
 	//사망한 당일 아침으로 부활(아침으로 월드 롤백)
 	//아침 데이터 슬롯 구하기
 	FString MorningSlotName = CurrentSaveData->SlotName+TEXT("_morning");
@@ -628,18 +613,17 @@ void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD MORNING SAVE : %s"), *MorningSlotName);
 	
 		//현재 세이브 파일을 아침 데이터로 교체
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] Replace PlayerSaveData to Morning Data"));
 		CurrentSaveData = Save;
 		CurrentSaveData->SlotName.RemoveFromEnd(TEXT("_morning"));
-		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] Replace PlayerSaveData to Morning Data"));
 		PlayersSaveData = Save->Players;
-		
-		//Save->PrintSaveInfo();
 		
 		//아침 세이브로 월드 로드
 		LoadWorldFromSave(Save);
 	
 		//아침 세이브로 플레이어 로드
 		RestartPlayer(DeadPlayerController);
+		AfterRestartPlayer(DeadPlayerController, true);
 	
 		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD MORNING COMPLETE"));
 	} else
@@ -647,7 +631,6 @@ void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] NO MORNING SAVE EXIST"));
 	}
 
-	bIsHandlingDeathRollback = false;
 }
 
 

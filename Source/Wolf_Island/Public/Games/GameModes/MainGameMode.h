@@ -66,6 +66,8 @@ public:
 	
 	virtual void Logout(AController* Exiting) override;
 	
+	virtual void AfterRestartPlayer(AController* Player, bool IsDead = false);
+	
 	UFUNCTION(BlueprintCallable)
 	void SetActorCache();
 	
@@ -115,8 +117,4 @@ public:
 	UFUNCTION(BlueprintCallable)
 	virtual void HandlePlayerDeath(AController* DeadPlayerController);
 
-protected:
-	// Rollback(죽고 아침으로 되돌리기) 중에 아침 슬롯을 다시 저장해버리면,
-	// "죽은 상태(HP=0)"가 _morning 슬롯을 덮어써서 부활 시 HP가 0으로 로드되는 문제가 생길 수 있음.
-	bool bIsHandlingDeathRollback = false;
 };
