@@ -71,9 +71,13 @@ private:
 	FRecipeData CurrentRecipe;
 	FBuildingData CurrentBuildData;
 	FTimerHandle BuildTimerHandle;
+	float BuildStartTime = 0.0f;
+	float BuildDuration = 0.0f;
 
 	void UpdatePreview();
+	void UpdateBuildProgress();
 	void CompleteBuild();
 	bool CheckPlacementValid() const;
+	FTransform AdjustSpawnTransformToGround(const FTransform& InTransform) const;
 	void CleanupBuildMode();
 };
