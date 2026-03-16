@@ -398,8 +398,17 @@ public:
 	
 	//특정 인덱스의 아이템 데이터 반환
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Inventory")
-	FItemBaseData& GetItemAtIndex(int32 Index)
+	FItemBaseData GetItemAtIndex(int32 Index)
 	{
+		if (!InventoryContents.IsValidIndex(Index))
+		{
+			return FItemBaseData();
+		}
+		if (!InventoryContents[Index].ItemData.IsValid())
+		{
+			return FItemBaseData();
+		}
+		
 		return InventoryContents[Index].ItemData;
 	};
 	//해당 ID의 아이템이 있는 슬롯 반환
@@ -442,7 +451,11 @@ public:
 
 	//인벤토리 슬롯 용량 설정
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	FORCEINLINE void SetSlotsCapacity(int32 Capacity) { SlotsCapacity = Capacity; };
+	FORCEINLINE void SetSlotsCapacity(int32 Capacity)
+	{
+		SlotsCapacity = Capacity;
+		InventoryContents.Init(FItemSlot(), SlotsCapacity);
+	};
 	//인벤토리 무게 용량 설정
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	FORCEINLINE void SetWeightCapacity(int32 Capacity) { WeightCapacity = Capacity; };
@@ -520,9 +533,6 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	int32 RemoveItemsByID(FName ItemID, int32 Amount);
 	
-	//ID와 개수에 따른 아이템 데이터 생성
-	FItemBaseData CreateItemByID(FName ItemID, int32 Amount);
-	
 	//특정 인덱스에 아이템 삽입
 	void SetItemAtIndex(FItemBaseData* Item, int32 Index);
 	
@@ -532,14 +542,6 @@ protected:
 	//슬롯에 아이템 삭제
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void RemoveItemAtSlot(int32 Index, FItemBaseData Item);
-	
-	//아이템 수량 감소 함수(슬롯에서)
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	void RemoveItemAmountAtSlot(int32 Index, int32 Amount);
-	
-	//아이템 수량 증가 함수(슬롯에서)
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	void AddItemAmountAtSlot(int32 Index, int32 Amount);
 	
 	//서로 다른 인벤토리 간 아이템 스왑
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -637,6 +639,17 @@ public:
 	void Server_SetItemAmountAtSlot(int32 Index, int32 Amount);
 	UFUNCTION()
 	void Request_SetItemAmountAtSlot(int32 Index, int32 Amount);
+
+	//아이템 수량 감소 함수(슬롯에서)
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void RemoveItemAmountAtSlot(int32 Index, int32 Amount);
+	
+	//아이템 수량 증가 함수(슬롯에서)
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void AddItemAmountAtSlot(int32 Index, int32 Amount);
+
+	//ID와 개수에 따른 아이템 데이터 생성
+	FItemBaseData CreateItemByID(FName ItemID, int32 Amount);
 	
 	//슬롯 스왑
 	UFUNCTION(Server, Reliable)

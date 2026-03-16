@@ -278,3 +278,62 @@ void ARepair_Actor::LoadData_Implementation(const FActorSaveData& InData)
     
     ForceNetUpdate();
 }
+
+TArray<FName> ARepair_Actor::GetBreakableRecipes() const
+{
+    return CompletedRecipeNames;
+}
+
+bool ARepair_Actor::BreakCompletedRepair(FName RecipeName)
+{
+	if (!HasAuthority()) return false;
+
+    if (!CompletedRecipeNames.Contains(RecipeName)) return false;
+
+	CompletedRecipeNames.Remove(RecipeName);
+
+    if (RepairStatusMap.Contains(RecipeName))
+    {
+		RepairStatusMap[RecipeName] = false;
+    }
+
+    RefreshRepairProgressState();
+
+    if (UAdvancedFriendsGameInstance* GI = Cast<UAdvancedFriendsGameInstance>(GetGameInstance()))
+    {
+        GI->SaveRepairStatus(RepairStatusMap);
+    }
+
+    OnRep_CompletedRecipes();
+    OnRep_RepairStatus();
+    UpdateShipVisuals();
+    ForceNetUpdate();
+
+    return true;
+}
+
+bool ARepair_Actor::BreakRandomCompletedRepair()
+{
+    if (!HasAuthority())
+    {
+        return false;
+    }
+
+    TArray<FName> BreakableRecipes = GetBreakableRecipes();
+    if (BreakableRecipes.Num() == 0)
+    {
+        return false;
+    }
+
+    const int32 RandomIndex = FMath::RandRange(0, BreakableRecipes.Num() - 1);
+    return BreakCompletedRepair(BreakableRecipes[RandomIndex]);
+}
+
+void ARepair_Actor::RefreshRepairProgressState()
+{
+    bIsBody = CheckBodyComplete();
+    bIsEngine = CheckEngineComplete();
+    bIsSteering = CheckSteeringComplete();
+    bIsRadar = CheckRadarComplete();
+    bIsAnchor = CheckAnchorComplete();
+}

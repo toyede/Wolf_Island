@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Character/MainPlayer.h"
 #include "Games/SaveInterface.h"
 #include "GameFramework/SaveGame.h"
 #include "MainSaveGame.generated.h"
@@ -16,9 +17,15 @@ struct FPlayerSaveData
 {
 	GENERATED_BODY()
 	
+	//플레이어 스테이트 데이터
 	UPROPERTY(SaveGame)
 	FString PlayerID;
 	
+	UPROPERTY(SaveGame)
+	ECharacterRole PlayerRole;
+	
+	
+	//액터 데이터
 	UPROPERTY(SaveGame)
 	FTransform Transform;
 	
@@ -32,10 +39,22 @@ struct FPlayerSaveData
 	TArray<struct FItemSlot> InventoryItems;
 	
 	UPROPERTY(SaveGame)
+	TArray<uint8> MovementBinaryData;
+	
+	UPROPERTY(SaveGame)
 	TArray<uint8> InventoryBinaryData;
 	
 	UPROPERTY(SaveGame)
 	TArray<uint8> StatusBinaryData;
+	
+	UPROPERTY(SaveGame)
+	TArray<uint8> SubBinaryData1;
+	
+	UPROPERTY(SaveGame)
+	TArray<uint8> SubBinaryData2;
+	
+	UPROPERTY(SaveGame)
+	TArray<uint8> SubBinaryData3;
 };
 
 USTRUCT(BlueprintType)
@@ -63,27 +82,27 @@ class WOLF_ISLAND_API UMainSaveGame : public USaveGame
 	
 public:
 	
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	FString WorldName;
 	
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	FString SlotName;
 	
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	bool IsMulti;
 	
-	UPROPERTY()
-	float CurrentTime;
-	
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	TMap<FString, FPlayerSaveData> Players;
 	
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	TMap<FGuid, FActorSaveData> SavedActors;
 	
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	TArray<FRemovedFoliageData> RemovedFoliages;
 	
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	int64 SaveUnixTime;
+	
+	UFUNCTION(BlueprintCallable)
+	void PrintSaveInfo();
 };

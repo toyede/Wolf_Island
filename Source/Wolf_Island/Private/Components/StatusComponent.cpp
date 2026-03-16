@@ -47,6 +47,7 @@ void UStatusComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 	if (GetOwner()->HasAuthority())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[STATUS] CLEAR ALL TIMERS"));
 		ClearAllTimers();
 	}
 }
@@ -64,7 +65,7 @@ void UStatusComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 void UStatusComponent::IncreaseHP(float amount)
 {
 	CurrentHP = FMath::Clamp(CurrentHP+amount, 0.0f, MaxHP);
-	
+	IsDead = false;
 	//음수 방지
 	if (CurrentHP <= 0)
 	{
@@ -79,8 +80,9 @@ void UStatusComponent::DecreaseHP(float amount)
 	CurrentHP = FMath::Clamp(CurrentHP-amount, 0.0f, MaxHP);
 	
 	//음수 방지
-	if (CurrentHP <= 0)
+	if (CurrentHP <= 0 && !IsDead)
 	{
+		IsDead = true;
 		CurrentHP = 0;
 		OnHPZero.Broadcast();
 	}
@@ -408,25 +410,29 @@ void UStatusComponent::EnableController()
 
 void UStatusComponent::StartInfection()
 {
-	/*GetWorld()->GetTimerManager().SetTimer(
-		InfectionTimer,
-		this,
-		&UStatusComponent::IncreaseInfection,
-		InfectionInterval,
-		true);*/
-	IsInfected = true;
+	if (IsInfected) return;
 
+	IsInfected = true;
+	OnInfectionStarted.Broadcast(this);
 }
 
 void UStatusComponent::StopInfection()
 {
 	GetWorld()->GetTimerManager().ClearTimer(InfectionTimer);
+	IsInfected = false;
+	CurrentInfectionRate = 0.0f;
+	OnInfectionChanged.Broadcast();
 }
 
 void UStatusComponent::IncreaseInfection()
 {
+	IncreaseInfectionBy(InfectionIncrement);
+}
+
+void UStatusComponent::IncreaseInfectionBy(float Amount)
+{
 	float PrevRate = CurrentInfectionRate;  // 먼저 저장
-	CurrentInfectionRate = FMath::Clamp(CurrentInfectionRate + InfectionIncrement, 0.0f, 1.0f);
+	CurrentInfectionRate = FMath::Clamp(CurrentInfectionRate + Amount, 0.0f, 1.0f);
 
 	TArray<float> Thresholds = { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f };
 	for (float Threshold : Thresholds)
@@ -514,6 +520,12 @@ void UStatusComponent::ApplyItem(FItemData Item)
 		IncreaseStamina(Item.NumericData.Stamina);
 		IncreaseHunger(Item.NumericData.Hunger);
 		IncreaseHydration(Item.NumericData.Hydration);
+
+		if (Item.ID == FName(TEXT("FO102")))
+		{
+			StopInfection();
+			UE_LOG(LogTemp, Warning, TEXT("Infection Stopped"));
+		}
 		
 		AMainGameState* GS = Cast<AMainGameState>(GetWorld()->GetGameState());
 		AMainPlayerController* PC = Cast<AMainPlayerController>(Cast<APawn>(GetOwner())->GetController());
@@ -558,6 +570,7 @@ void UStatusComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
 	DOREPLIFETIME(UStatusComponent, CurrentStamina);
 	DOREPLIFETIME(UStatusComponent, CurrentHunger);
 	DOREPLIFETIME(UStatusComponent, CurrentHydration);
+	DOREPLIFETIME(UStatusComponent, CurrentInfectionRate);
 }
 
 void UStatusComponent::OnRep_CurrentHunger()

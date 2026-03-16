@@ -19,24 +19,30 @@
 void UPlayerHUD::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
-
-	PlayerRef = Cast<AMainPlayer>(GetOwningPlayerPawn());
-	DisplayDefault();
-	HideAirBar();
-	HideInteraction();
 }
 
 void UPlayerHUD::NativeConstruct()
 {
 	Super::NativeConstruct();
-
+	
+	UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NativeConstruct HUD CLASS = %s"), *GetClass()->GetName());
+	
+	PlayerRef = Cast<AMainPlayer>(GetOwningPlayerPawn());
+	DisplayDefault();
+	HideAirBar();
+	HideInteraction();
+	
 	RefreshHotBar();
 }
 
 void UPlayerHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
-
+	
+	if (!CrossHair)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("CrossHair is GONE!!!"));
+	}
 	//인터랙션 바 업데이트
 	UpdateInteraction();
 	
@@ -86,16 +92,48 @@ void UPlayerHUD::AddItemMessage(FItemAddResult Result)
 
 void UPlayerHUD::DisplayInteraction()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] DisplayInteraction | %s"), *GetName())
+	
 	ShowInteraction = true;
-	InteractionBar->SetVisibility(ESlateVisibility::Visible);
-	CrossHair->SetVisibility(ESlateVisibility::Hidden);
+	
+	if (InteractionBar)
+	{
+		InteractionBar->SetVisibility(ESlateVisibility::Visible);
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NO InteractionBar | %s"), *GetName())
+	}
+	
+	if (CrossHair)
+	{
+		CrossHair->SetVisibility(ESlateVisibility::Hidden);
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NO CrossHair | %s"), *GetName())
+	}
 }
 
 void UPlayerHUD::HideInteraction()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] HideInteraction | %s"), *GetName())
+	
 	ShowInteraction = false;
-	InteractionBar->SetVisibility(ESlateVisibility::Hidden);
-	CrossHair->SetVisibility(ESlateVisibility::Visible);
+	
+	if (InteractionBar)
+	{
+		InteractionBar->SetVisibility(ESlateVisibility::Hidden);
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NO InteractionBar | %s"), *GetName())
+	}
+	
+	if (CrossHair)
+	{
+		CrossHair->SetVisibility(ESlateVisibility::Visible);
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NO CrossHair | %s"), *GetName())
+	}
 }
 
 void UPlayerHUD::ToggleInteraction()
@@ -127,12 +165,28 @@ void UPlayerHUD::UpdateInteraction()
 
 void UPlayerHUD::DisplayInteractable()
 {
-	CrossHair->SetBrushFromTexture(InteractableCrossHair);
+	UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] DisplayInteractable | %s"), *GetName())
+	
+	if (CrossHair)
+	{
+		CrossHair->SetBrushFromTexture(InteractableCrossHair);
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NO CROSSHAIR | %s"), *GetName())
+	}
 }
 
 void UPlayerHUD::DisplayDefault()
 {
-	CrossHair->SetBrushFromTexture(DefaultCrossHair);
+	UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] DisplayDefault | %s"), *GetName())
+	
+	if (CrossHair)
+	{
+		CrossHair->SetBrushFromTexture(DefaultCrossHair);
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NO CROSSHAIR | %s"), *GetName())
+	}
 }
 
 void UPlayerHUD::DisplayAirBar()
@@ -148,7 +202,6 @@ void UPlayerHUD::HideAirBar()
 void UPlayerHUD::RefreshHotBar()
 {
 	HotBar->ClearChildren();
-	//HotBar->InvalidateLayoutAndVolatility();
 	
 	for (int i=0; i<6; i++)
 	{
@@ -172,7 +225,7 @@ void UPlayerHUD::RefreshHotBar()
 
 void UPlayerHUD::UpdateHotBar()
 {
-	UE_LOG(LogTemp, Warning, TEXT("UpdateHotBar EXECUTED"));
+	UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] UpdateHotBar EXECUTED | %s"), *GetName())
 	if (HotBar&&HotBar->HasAnyChildren())
 	{
 		int32 Count = HotBar->GetChildrenCount();
@@ -188,6 +241,9 @@ void UPlayerHUD::UpdateHotBar()
 			
 			HotSlot->RefreshSlot();
 		}
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] No HotBar | %s"), *GetName())
 	}
 }
 

@@ -10,6 +10,7 @@
 #include "BrainComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Item/Pickup.h"
 
 AAnimalBase::AAnimalBase()
 {
@@ -29,6 +30,26 @@ void AAnimalBase::BeginPlay()
 {
 	Super::BeginPlay();
 	
+}
+
+void AAnimalBase::DropItem()
+{
+	if (!HasAuthority()) return;
+	if (!DropItemClass) return;
+
+    FVector SpawnLocation = GetActorLocation() + FVector(0.f, 0.f, 50.f);
+    FRotator SpawnRotation = FRotator::ZeroRotator;
+
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+    APickup* DroppedItem = GetWorld()->SpawnActor<APickup>(DropItemClass, SpawnLocation, SpawnRotation, SpawnParams);
+
+    if (DroppedItem)
+    {
+        DroppedItem->ItemHandle = DropItemHandle;
+        DroppedItem->InitializePickUp(FMath::RandRange(MinDropAmount, MaxDropAmount));
+    }
 }
 
 void AAnimalBase::Tick(float DeltaTime)
@@ -63,6 +84,7 @@ float AAnimalBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEven
             AIC->SetAnimalState(EAnimalState::Dead);
         }
         Die();
+        DropItem();
     }
     // 반피 이상 → 반피 이하로 떨어지는 순간만 도망
     else if (OldHP > HalfHP && NewHP <= HalfHP)

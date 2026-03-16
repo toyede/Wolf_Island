@@ -14,8 +14,12 @@
  * 
  */
 
+class UDeathScreen;
+class URoleSelection;
 class UMainGameInstance;
+class AMainGameMode;
 class UPauseMenu;
+class UPlayerHUD;
 
 UCLASS()
 class WOLF_ISLAND_API AMainPlayerController : public APlayerController
@@ -23,37 +27,61 @@ class WOLF_ISLAND_API AMainPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputMappingContext* InputMappingContext;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputAction* ChatAction;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputAction* ESCAction;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	class AMainHUD* HUD;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category="Widget")
+	UPlayerHUD* PlayerHUD;
+	
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	UChattingPanel* ChattingPanel;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	UPauseMenu* PauseMenu;
 	
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category="Widget")
+	URoleSelection* RoleSelectionWidget;
+	
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category="Widget")
+	UDeathScreen* DeathScreenWidget;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
+	TSubclassOf<UPlayerHUD> HUDClass;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Widget")
 	TSubclassOf<UChattingPanel> ChattingPanelClass;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
+	UPROPERTY(EditDefaultsOnly, Category="Widget")
 	TSubclassOf<UPauseMenu> PauseWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Widget")
+	TSubclassOf<class UUserWidget> FishTrapScreenClass;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(EditDefaultsOnly, Category="Widget")
+	TSubclassOf<URoleSelection> RoleSelectionWidgetClass;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Widget")
+	TSubclassOf<UDeathScreen> DeathScreenWidgetClass;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	UMainGameInstance* MainGameInstance;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	AMainGameMode* MainGameMode;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	AMainPlayerState* MainPlayerState;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	AMainGameState* MainGameState;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
@@ -69,6 +97,13 @@ public:
 	
 	virtual void SetupInputComponent() override;
 	
+	virtual void OnPossess(APawn* InPawn) override;
+	
+	virtual void OnUnPossess() override;
+	
+	UFUNCTION(BlueprintCallable)
+	void SetPlayerHUD(AMainPlayer* OwnerPlayer);
+	
 	UFUNCTION(BlueprintCallable)
 	void ToggleChatMode();
 	
@@ -82,11 +117,21 @@ public:
 	
 	UFUNCTION()
 	void DisplayPauseMenu();
+	
 	UFUNCTION()
-	void HidePuaseMenu();
+	void HidePauseMenu();
+	
+	UFUNCTION(Client, Reliable)
+	void Client_OpenFishTrapUI(class AFishTrap* TargetTrap, class AActor* Interactor);
 	
 	UFUNCTION(BlueprintCallable)
 	void AddChat(FChattingData NewChattingData);
+	
+	UFUNCTION(BlueprintCallable)
+	void OpenDeathScreen();
+	
+	UFUNCTION(BlueprintCallable)
+	void OnCloseDeathScreen();
 	
 	UFUNCTION(BlueprintCallable)
 	void OnResume();
@@ -95,8 +140,11 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void OnQuit();
 	
-	//멀티 플레이 코드
+	//플레이어 사망 후 리스폰 버튼 클릭 시 실행할 리스폰 시퀀스
+	UFUNCTION(BlueprintCallable)
+	void Respawn();
 	
+	//멀티 플레이 코드
 	UFUNCTION(BlueprintCallable)
 	void Request_SendChat(FChattingData NewChattingData);
 	
@@ -105,4 +153,29 @@ public:
 	
 	UFUNCTION()
 	void SendChat(FChattingData NewChattingData);
+	
+	//역할 선택 관련
+	UFUNCTION(Client, Reliable)
+	void Client_OpenSelectionUI();
+	
+	UFUNCTION(Server, Reliable)
+	void Server_ConfirmRole(ECharacterRole NewRole);
+	
+	UFUNCTION(Client, Reliable)
+	void Client_SetInputModeGame();
+	
+	UFUNCTION(Client, Reliable)
+	void Client_RoleDeny();
+	
+	UFUNCTION(Client, Reliable)
+	void Client_EndSelection();
+	
+	virtual void OnRep_PlayerState() override;
+	
+	//사망 시 부활 요청
+	UFUNCTION(BlueprintCallable)
+	void Request_Respawn();
+	
+	UFUNCTION(Server, Reliable)
+	void Server_Respawn();
 };

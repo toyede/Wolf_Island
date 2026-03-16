@@ -7,6 +7,7 @@
 #include "AnimalBase.generated.h"
 
 class UStatusComponent;
+class APickup;
 
 UCLASS()
 class WOLF_ISLAND_API AAnimalBase : public ACharacter
@@ -38,6 +39,21 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dead")
 	TObjectPtr<USoundBase> DieSound;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dead|DropItem")
+	TSubclassOf<APickup> DropItemClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Dead|DropItem")
+	FDataTableRowHandle DropItemHandle;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Dead|DropItem")
+	int32 MinDropAmount = 1;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Dead|DropItem")
+	int32 MaxDropAmount = 1;
+
+	void DropItem();
+
 public:	
 	virtual void Tick(float DeltaTime) override;
 

@@ -6,15 +6,11 @@
 #include "Blueprint/UserWidget.h"
 #include "PauseMenu.generated.h"
 
+class UBaseButton;
 class AMainPlayerController;
-class UButton;
 /**
  * 
  */
-
-DECLARE_MULTICAST_DELEGATE(FOnResumeButtonClicked);
-DECLARE_MULTICAST_DELEGATE(FOnSettingButtonClicked);
-DECLARE_MULTICAST_DELEGATE(FOnQuitButtonClicked);
 
 UCLASS()
 class WOLF_ISLAND_API UPauseMenu : public UUserWidget
@@ -23,21 +19,14 @@ class WOLF_ISLAND_API UPauseMenu : public UUserWidget
 	
 public:
 	
-	/*UPROPERTY(BlueprintAssignable)
-	FOnResumeButtonClicked OnResumeButtonClicked;
-	UPROPERTY(BlueprintAssignable)
-	FOnSettingButtonClicked OnSettingButtonClicked;
-	UPROPERTY(BlueprintAssignable)
-	FOnQuitButtonClicked OnQuitButtonClicked;*/
+	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
+	UBaseButton* ResumeButton;
 	
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
-	UButton* ResumeButton;
-	
-	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
-	UButton* SettingButton;
+	UBaseButton* SettingButton;
 
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
-	UButton* QuitButton;
+	UBaseButton* QuitButton;
 	
 	UPROPERTY()
 	AMainPlayerController* PlayerController;

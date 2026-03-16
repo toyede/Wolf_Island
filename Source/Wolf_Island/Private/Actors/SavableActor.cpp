@@ -145,7 +145,8 @@ void ASavableActor::LoadData_Implementation(const FActorSaveData& InData)
 {
 	ISaveInterface::LoadData_Implementation(InData);
 	GUID = InData.ActorID;
-	SetActorTransform(InData.Transform);
+	if (RootComponent && RootComponent->Mobility == EComponentMobility::Movable)
+		SetActorTransform(InData.Transform);
 	
 	FMemoryReader Reader(InData.BinaryData, true);
 	FObjectAndNameAsStringProxyArchive Ar(Reader, true);
