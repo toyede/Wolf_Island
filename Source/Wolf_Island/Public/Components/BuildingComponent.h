@@ -29,6 +29,7 @@ public:
 	void ConfirmBuild();
 	void CancelBuild();
 	void SendDebugChat(FString Message);
+	void RotatePreview(float AxisValue);
 
 protected:
 	// Called when the game starts
@@ -61,6 +62,9 @@ public:
 private:
 	UPROPERTY(Replicated)
 	EBuildingState CurrentState = EBuildingState::Idle;
+
+	UPROPERTY(EditAnywhere, Category = "Building")
+	float PreviewRotationStepDegrees = 15.0f;
     
 	UPROPERTY(EditAnywhere, Category = "Building")
 	TSubclassOf<AActor> PreviewClass;

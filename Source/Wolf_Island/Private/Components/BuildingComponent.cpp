@@ -448,4 +448,23 @@ void UBuildingComponent::SendDebugChat(FString Message)
 	}
 }
 
+void UBuildingComponent::RotatePreview(float AxisValue)
+{
+	if (CurrentState != EBuildingState::Placing || !PreviewActor)
+	{
+		return;
+	}
+
+	if (FMath::IsNearlyZero(AxisValue))
+	{
+		return;
+	}
+
+	const float Step = PreviewRotationStepDegrees;
+	const float DeltaYaw = (AxisValue > 0.0f) ? Step : -Step;
+	FRotator NewRot = PreviewActor->GetActorRotation();
+	NewRot.Yaw = FMath::Fmod(NewRot.Yaw + DeltaYaw + 360.0f, 360.0f);
+	PreviewActor->SetActorRotation(NewRot);
+}
+
 

@@ -688,6 +688,15 @@ void AMainPlayer::HandleHotBar(const FInputActionValue& Value)
 
 void AMainPlayer::HandleHotBarWithWheel(const FInputActionValue& Value)
 {
+	if (UBuildingComponent* BuildComp = FindComponentByClass<UBuildingComponent>())
+	{
+		if (BuildComp->GetCurrentState() == EBuildingState::Placing)
+		{
+			BuildComp->RotatePreview(Value.Get<float>());
+			return;
+		}
+	}
+
 	if (Value.Get<float>() > 0)
 	{
 		Request_SetHotbarIndex((HotBarIndex + 1) % 6);
