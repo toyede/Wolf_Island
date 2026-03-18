@@ -11,6 +11,21 @@
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundBase.h"
 #include "Interaction/Repair_Actor.h"
+#include "Components/ScrollBoxSlot.h"
+
+namespace
+{
+    FText GetSortDisplayName(FName SortKey)
+    {
+        if (SortKey == FName("BD")) return FText::FromString(TEXT("Body"));
+        if (SortKey == FName("EG")) return FText::FromString(TEXT("Engine"));
+        if (SortKey == FName("CT")) return FText::FromString(TEXT("Control"));
+        if (SortKey == FName("RD")) return FText::FromString(TEXT("Radar"));
+        if (SortKey == FName("AC")) return FText::FromString(TEXT("Anchor"));
+
+        return FText::FromName(SortKey);
+    }
+}
 
 void URepairPanel::NativeConstruct()
 {
@@ -52,12 +67,67 @@ void URepairPanel::RefreshRecipeList()
     if (!RecipeList || !RepairRecipeTable) return;
 
     RecipeList->ClearChildren();
-    
-    RepairRecipeTable->ForeachRow<FRepairRecipeData>(TEXT("RepairTableContext"),
-    [&](const FName& RowName, const FRepairRecipeData& Recipe)
+
+    TArray<FName> RowNames = RepairRecipeTable->GetRowNames();
+    TMap<FName, TArray<FName>> SortToRows;
+    TMap<FName, FRepairRecipeData> RowDataMap;
+    TArray<FName> SortOrder;
+
+    for (const FName& RowName : RowNames)
     {
-        AddRecipe(RowName, Recipe);
-    });
+        FRepairRecipeData* Recipe = RepairRecipeTable->FindRow<FRepairRecipeData>(RowName, TEXT("RepairTableContext"));
+        if (!Recipe) continue;
+
+        RowDataMap.Add(RowName, *Recipe);
+
+        FName SortKey = Recipe->Sort.IsNone() ? FName("UNKNOWN") : Recipe->Sort;
+        if (!SortToRows.Contains(SortKey))
+        {
+            SortOrder.Add(SortKey);
+        }
+        SortToRows.FindOrAdd(SortKey).Add(RowName);
+    }
+
+    bool bSelectedFirst = CurrentRowName.IsNone();
+    for (int32 SortIndex = 0; SortIndex < SortOrder.Num(); ++SortIndex)
+    {
+        const FName SortKey = SortOrder[SortIndex];
+        AddSortHeader(SortKey);
+
+        const TArray<FName>& Rows = SortToRows[SortKey];
+        for (const FName& RowName : Rows)
+        {
+            const FRepairRecipeData* RecipeData = RowDataMap.Find(RowName);
+            if (!RecipeData) continue;
+
+            AddRecipe(RowName, *RecipeData);
+
+            if (bSelectedFirst)
+            {
+                SetRepairInfo(RowName, *RecipeData);
+                bSelectedFirst = false;
+            }
+        }
+    }
+}
+
+void URepairPanel::AddSortHeader(FName SortKey)
+{
+    if (!RecipeList) return;
+
+    UTextBlock* Header = NewObject<UTextBlock>(this, UTextBlock::StaticClass());
+    if (!Header) return;
+
+    Header->SetText(GetSortDisplayName(SortKey));
+    Header->SetAutoWrapText(true);
+    Header->SetJustification(ETextJustify::Center);
+
+    if (UScrollBoxSlot* ScrollSlot = Cast<UScrollBoxSlot>(RecipeList->AddChild(Header)))
+    {
+        ScrollSlot->SetHorizontalAlignment(HAlign_Center);
+        ScrollSlot->SetPadding(FMargin(0.0f, 5.0f, 0.0f, 5.0f));
+    }
+
 }
 
 void URepairPanel::AddRecipe(FName RowName, FRepairRecipeData Recipe)

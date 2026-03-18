@@ -2110,7 +2110,7 @@ void AMainPlayer::Client_OpenRepairUI_Implementation(class ARepair_Actor* Target
 			RepairWidget->InitRepairWindow(TargetActor);
 			RepairWidget->AddToViewport();
 
-			FInputModeGameAndUI InputMode;
+			FInputModeUIOnly InputMode;
 			InputMode.SetWidgetToFocus(RepairWidget->TakeWidget());
 			PC->SetInputMode(InputMode);
 			PC->bShowMouseCursor = true;

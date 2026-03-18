@@ -75,6 +75,8 @@ protected:
 
     UFUNCTION()
     void OnRepairButtonClicked();
+    
+    void AddSortHeader(FName SortKey);
 
 public:
     // 레시피 목록 갱신
