@@ -10,6 +10,9 @@
 class ARepair_Actor;
 class UInventoryComponent;
 class USoundBase;
+class UTextBlock;
+class UButton;
+class URepairMiniGameWidget;
 
 UCLASS()
 class WOLF_ISLAND_API URepairPanel : public UUserWidget
@@ -75,8 +78,11 @@ protected:
 
     UFUNCTION()
     void OnRepairButtonClicked();
-    
+
     void AddSortHeader(FName SortKey);
+
+    UFUNCTION()
+    void HandleMiniGameFinished(bool bSuccess);
 
 public:
     // 레시피 목록 갱신
@@ -99,4 +105,11 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Repair")
     void InitRepairPanel(class ARepair_Actor* InRepairActor);
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
+    TSubclassOf<URepairMiniGameWidget> MiniGameClass;
+
+private:
+    UPROPERTY()
+    URepairMiniGameWidget* ActiveMiniGame = nullptr;
 };

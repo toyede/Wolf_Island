@@ -8,10 +8,13 @@
 #include "Data/ItemDataStruct.h"
 #include "Widgets/Craft/RepairBlock.h"
 #include "Widgets/Craft/CraftSlot.h"
+#include "Widgets/Craft/RepairMiniGameWidget.h"
+#include "Widgets/Craft/RepairUI.h"
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundBase.h"
 #include "Interaction/Repair_Actor.h"
 #include "Components/ScrollBoxSlot.h"
+#include "GameFramework/PlayerController.h"
 
 namespace
 {
@@ -45,7 +48,6 @@ void URepairPanel::NativeConstruct()
     {
         RepairButton->OnClicked.AddDynamic(this, &URepairPanel::OnRepairButtonClicked);
     }
-
 
     RefreshRecipeList();
 }
@@ -231,14 +233,88 @@ void URepairPanel::OnRepairButtonClicked()
 
     if (OwnerInventory && TargetRepairActor && !CurrentRowName.IsNone())
     {
-        OwnerInventory->Request_RepairShip(CurrentRowName, CurrentRepairData, TargetRepairActor);
+        if (!MiniGameClass) return;
 
-        if (RepairSound)
+        if (ActiveMiniGame)
         {
-            UGameplayStatics::PlaySound2D(this, RepairSound);
+            ActiveMiniGame->RemoveFromParent();
+            ActiveMiniGame = nullptr;
         }
 
-        SetRepairButtonState(CurrentRepairData);
-        
+        ActiveMiniGame = CreateWidget<URepairMiniGameWidget>(GetWorld(), MiniGameClass);
+        if (!ActiveMiniGame) return;
+
+        ActiveMiniGame->OnMiniGameFinished.AddDynamic(this, &URepairPanel::HandleMiniGameFinished);
+        ActiveMiniGame->AddToViewport();
+        ActiveMiniGame->StartMiniGame(CurrentRepairData);
+
+        if (URepairUI* RepairUI = GetTypedOuter<URepairUI>())
+        {
+            RepairUI->SetVisibility(ESlateVisibility::Hidden);
+        }
+        else
+        {
+            SetVisibility(ESlateVisibility::Hidden);
+        }
+
+        if (APlayerController* PC = GetOwningPlayer())
+        {
+            FInputModeUIOnly InputMode;
+            InputMode.SetWidgetToFocus(ActiveMiniGame->TakeWidget());
+            PC->SetInputMode(InputMode);
+            PC->bShowMouseCursor = true;
+            PC->SetIgnoreLookInput(false);
+            ActiveMiniGame->SetKeyboardFocus();
+        }
     }
+}
+
+void URepairPanel::HandleMiniGameFinished(bool bSuccess)
+{
+    if (ActiveMiniGame)
+    {
+        ActiveMiniGame->RemoveFromParent();
+        ActiveMiniGame = nullptr;
+    }
+
+    if (URepairUI* RepairUI = GetTypedOuter<URepairUI>())
+    {
+        RepairUI->SetVisibility(ESlateVisibility::Visible);
+    }
+    else
+    {
+        SetVisibility(ESlateVisibility::Visible);
+    }
+
+    if (APlayerController* PC = GetOwningPlayer())
+    {
+        if (URepairUI* RepairUI = GetTypedOuter<URepairUI>())
+        {
+            FInputModeUIOnly InputMode;
+            InputMode.SetWidgetToFocus(RepairUI->TakeWidget());
+            PC->SetInputMode(InputMode);
+            PC->bShowMouseCursor = true;
+        }
+        else
+        {
+            FInputModeUIOnly InputMode;
+            PC->SetInputMode(InputMode);
+            PC->bShowMouseCursor = true;
+        }
+        PC->SetIgnoreLookInput(false);
+    }
+
+    if (!bSuccess) return;
+
+    if (OwnerInventory && TargetRepairActor && !CurrentRowName.IsNone())
+    {
+        OwnerInventory->Request_RepairShip(CurrentRowName, CurrentRepairData, TargetRepairActor);
+    }
+
+    if (RepairSound)
+    {
+        UGameplayStatics::PlaySound2D(this, RepairSound);
+    }
+
+    SetRepairButtonState(CurrentRepairData);
 }
