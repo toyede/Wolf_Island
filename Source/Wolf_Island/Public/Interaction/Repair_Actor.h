@@ -64,12 +64,18 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Repair|State", SaveGame)
 	TMap<FName, FName> RecipeIDMap;
+	
+	// Runtime-only cache (not a UPROPERTY because TMap<..., TArray<...>> is not supported by UPROPERTY)
+	TMap<FName, TArray<FName>> SortToRecipeRows;
 
 	UFUNCTION(BlueprintCallable, Category = "Repair")
 	void MarkRecipeAsComplete(FName RecipeName);
 
 	UFUNCTION(BlueprintCallable, Category = "Repair")
 	bool IsRecipeComplete(FName TargetRecipeName);
+	
+	UFUNCTION(BlueprintCallable, Category = "Repair")
+	bool IsSortComplete(FName SortKey);
 
 	UFUNCTION(BlueprintCallable, Category = "Repair")
 	void RestoreStateFromGameInstance();

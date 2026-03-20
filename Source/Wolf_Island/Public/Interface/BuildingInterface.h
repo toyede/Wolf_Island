@@ -24,4 +24,7 @@ class WOLF_ISLAND_API IBuildingInterface
 public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Building")
 	void UpdateGhostVisual(bool bIsAvailable);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Building")
+	void UpdateBuildProgress(float Progress);
 };
