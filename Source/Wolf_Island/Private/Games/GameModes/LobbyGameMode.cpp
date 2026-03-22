@@ -7,10 +7,13 @@
 #include "Games/LobbyPlayerController.h"
 #include "Games/PlayerSlot.h"
 #include "Kismet/GameplayStatics.h"
+#include "Widgets/Lobby/Lobby.h"
 
 void ALobbyGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	bUseSeamlessTravel = true;
 	
 	SetPlayerSlots();
 	
@@ -150,15 +153,25 @@ void ALobbyGameMode::RefreshSlot(APlayerController* TargetController)
 
 bool ALobbyGameMode::CheckAllPlayerReady()
 {
+	ALobbyPlayerController* LLPC = nullptr;
+	bool IsAllReady = true;;
+	
 	for (APlayerController* PC : PlayerControllers)
 	{
 		if (ALobbyPlayerController* LPC = Cast<ALobbyPlayerController>(PC))
 		{
-			if (!LPC->IsReady) return false;
+			if (!LPC->IsReady) IsAllReady = false;
+			
+			if (LPC->IsLocalPlayerController()) LLPC = LPC;
 		}
 	}
 	
-	return true;
+	if (ULobby* Lobby = Cast<ULobby>(LLPC->LobbyWidget))
+	{
+		Lobby->SwitchPlayButton(IsAllReady);
+	}
+	
+	return IsAllReady;
 }
 
 bool ALobbyGameMode::CheckRoleSelection()

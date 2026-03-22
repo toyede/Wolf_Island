@@ -7,6 +7,37 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
 
+AMainPlayerState::AMainPlayerState()
+{
+	bActorSeamlessTraveled = true;
+}
+
+void AMainPlayerState::CopyProperties(APlayerState* PlayerState)
+{
+	Super::CopyProperties(PlayerState);
+	
+	AMainPlayerState* NewPS = Cast<AMainPlayerState>(PlayerState);
+	if (NewPS)
+	{
+		NewPS->PlayerRole = PlayerRole;
+		NewPS->IsReady = IsReady;
+		NewPS->Items = Items;
+	}
+}
+
+void AMainPlayerState::OverrideWith(APlayerState* PlayerState)
+{
+	Super::OverrideWith(PlayerState);
+	
+	AMainPlayerState* OldPS = Cast<AMainPlayerState>(PlayerState);
+	if (OldPS)
+	{
+		PlayerRole = OldPS->PlayerRole;
+		IsReady = OldPS->IsReady;
+		Items = OldPS->Items;
+	}
+}
+
 void AMainPlayerState::SetRandomRole()
 {
 	int8 Index = FMath::RandRange(1, 4);
@@ -53,6 +84,7 @@ void AMainPlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
+	DOREPLIFETIME(AMainPlayerState, IsReady);
 	DOREPLIFETIME(AMainPlayerState, PlayerRole);
 	DOREPLIFETIME(AMainPlayerState, Items);
 }

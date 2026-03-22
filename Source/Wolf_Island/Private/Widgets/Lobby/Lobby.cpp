@@ -8,6 +8,7 @@
 #include "Components/TextBlock.h"
 #include "Games/LobbyPlayerController.h"
 #include "Games/MainPlayerState.h"
+#include "Widgets/BaseButton.h"
 #include "Widgets/RoleSelection/RoleButton.h"
 
 void ULobby::NativeConstruct()
@@ -26,6 +27,7 @@ void ULobby::NativeConstruct()
 		NextButton->OnClicked.AddDynamic(this, &ULobby::OnNext);
 	}
 	
+	SwitchPlayButton(false);
 	RefreshInfo();
 }
 
@@ -98,4 +100,10 @@ void ULobby::RefreshInfo()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[LOBBY WIDGET][%hs] No Player State"), GetOwningPlayer()->HasAuthority()?"SERVER":"CLIENT");
 	}
+}
+
+void ULobby::SwitchPlayButton(bool On)
+{
+	//StartButton->SetVisibility(On ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+	StartButton->Button->SetIsEnabled(On);
 }

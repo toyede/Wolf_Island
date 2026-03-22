@@ -4,20 +4,26 @@
 #include "Games/PlayerSlot.h"
 
 #include "Components/ArrowComponent.h"
+#include "Components/WidgetComponent.h"
 #include "Games/MainPlayerState.h"
 #include "Net/UnrealNetwork.h"
+#include "Widgets/Lobby/PlayerCard.h"
 
 // Sets default values
 APlayerSlot::APlayerSlot()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
+	SetReplicates(true);
 	
 	DefaultSceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("DefaultSceneRoot"));
 	ArrowComponent = CreateDefaultSubobject<UArrowComponent>(TEXT("ArrowComponent"));
+	WidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("WidgetComponent"));
 	
 	SetRootComponent(DefaultSceneRoot);
 	ArrowComponent->SetupAttachment(DefaultSceneRoot);
+	WidgetComponent->SetupAttachment(DefaultSceneRoot);
 }
 
 // Called when the game starts or when spawned
@@ -31,7 +37,7 @@ void APlayerSlot::BeginPlay()
 void APlayerSlot::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
+	RefreshCard();
 }
 
 void APlayerSlot::AddPlayer(APlayerController* NewPlayer)
@@ -98,10 +104,27 @@ void APlayerSlot::RefreshSlot()
 	}
 }
 
+void APlayerSlot::RefreshCard()
+{
+	if (UPlayerCard* PlayerCard = Cast<UPlayerCard>(WidgetComponent->GetWidget()))
+	{
+		if (PlayerState)
+		{
+			PlayerCard->SetVisibility(ESlateVisibility::Visible);
+			PlayerCard->UpdateCard(PlayerState);
+		} else
+		{
+			//UE_LOG(LogTemp, Warning, TEXT("[PLAYER SLOT] NO PLAYER STATE"));
+			PlayerCard->SetVisibility(ESlateVisibility::Collapsed);
+		}
+	}
+}
+
 void APlayerSlot::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
+	DOREPLIFETIME(APlayerSlot, PlayerState);
 	DOREPLIFETIME(APlayerSlot, PlayerVisual);
 }
 

@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Lobby.generated.h"
 
+class UBaseButton;
 class ALobbyPlayerController;
 class UTextBlock;
 class UButton;
@@ -30,6 +31,9 @@ public:
 	UButton* NextButton;
 	
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
+	UBaseButton* StartButton;
+	
+	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
 	UTextBlock* RoleName;
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
 	UTextBlock* RoleDescription;
@@ -41,6 +45,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void RefreshInfo();
+	
+	UFUNCTION(BlueprintCallable)
+	void SwitchPlayButton(bool On);
 	
 	virtual void NativeConstruct() override;
 };

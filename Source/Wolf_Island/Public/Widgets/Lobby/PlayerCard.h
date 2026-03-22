@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "PlayerCard.generated.h"
 
+class AMainPlayerState;
 class UTextBlock;
 /**
  * 
@@ -27,7 +28,7 @@ public:
 	void SetReady(bool IsReady);
 	
 	UFUNCTION(BlueprintCallable)
-	void UpdateCard(APlayerController* PlayerController);
+	void UpdateCard(AMainPlayerState* PlayerState);
 	
 	virtual void NativeConstruct() override;
 };

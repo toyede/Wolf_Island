@@ -4,7 +4,6 @@
 #include "Widgets/Lobby/PlayerCard.h"
 
 #include "Components/TextBlock.h"
-#include "Games/LobbyPlayerController.h"
 #include "Games/MainPlayerState.h"
 
 void UPlayerCard::NativeConstruct()
@@ -19,12 +18,9 @@ void UPlayerCard::SetReady(bool IsReady)
 	PlayerReady->SetOpacity(IsReady ? 1.0f : 0.0f);
 }
 
-void UPlayerCard::UpdateCard(APlayerController* PlayerController)
+void UPlayerCard::UpdateCard(AMainPlayerState* PlayerState)
 {
-	if (ALobbyPlayerController* LPC = Cast<ALobbyPlayerController>(PlayerController))
-	{
-		FString ID = LPC->GetPlayerState<AMainPlayerState>()->GetPersistantId();
-		PlayerName->SetText(FText::FromString(ID));
-		SetReady(LPC->IsReady);
-	}
+	FString ID = PlayerState->GetPersistantId();
+	PlayerName->SetText(FText::FromString(ID));
+	SetReady(PlayerState->GetReady());
 }

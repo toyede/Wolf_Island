@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "PlayerSlot.generated.h"
 
+class UWidgetComponent;
 class UArrowComponent;
 enum class ECharacterRole : uint8;
 class AMainPlayerState;
@@ -26,9 +27,12 @@ public:
 	UArrowComponent* ArrowComponent;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	APlayerController* PlayerController;
+	UWidgetComponent* WidgetComponent;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	APlayerController* PlayerController;
+	
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
 	AMainPlayerState* PlayerState;
 	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
@@ -48,6 +52,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void RefreshSlot();
+	
+	UFUNCTION(BlueprintCallable)
+	void RefreshCard();
 	
 protected:
 	// Called when the game starts or when spawned

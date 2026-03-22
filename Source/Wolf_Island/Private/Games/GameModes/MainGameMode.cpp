@@ -119,6 +119,8 @@ void AMainGameMode:: RestartPlayer(AController* NewPlayer)
 	}
 	
 	Super::RestartPlayer(NewPlayer);
+	
+	SaveWorld();
 }
 
 void AMainGameMode::Logout(AController* Exiting)

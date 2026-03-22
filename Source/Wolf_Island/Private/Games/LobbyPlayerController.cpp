@@ -62,6 +62,15 @@ void ALobbyPlayerController::Server_ToggleReady_Implementation()
 void ALobbyPlayerController::ToggleReady()
 {
 	IsReady = !IsReady;
+	if (AMainPlayerState* PS = GetPlayerState<AMainPlayerState>())
+	{
+		PS->ToggleReady();
+	}
+	
+	if (ALobbyGameMode* GM = GetWorld()->GetAuthGameMode<ALobbyGameMode>())
+	{
+		GM->CheckAllPlayerReady();
+	}
 }
 
 void ALobbyPlayerController::Request_ChangeRole(ECharacterRole NewRole)
