@@ -17,13 +17,13 @@ APickup::APickup()
     PickupMesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
     SetRootComponent(PickupMesh);
     
-    static ConstructorHelpers::FObjectFinder<UDataTable>
+    /*static ConstructorHelpers::FObjectFinder<UDataTable>
         DT_ItemData(TEXT("/Game/item/DT_ItemData.DT_ItemData"));
 
     if (DT_ItemData.Succeeded())
     {
         ItemDataTable = DT_ItemData.Object;
-    }
+    }*/
 }
 
 void APickup::BeginPlay()

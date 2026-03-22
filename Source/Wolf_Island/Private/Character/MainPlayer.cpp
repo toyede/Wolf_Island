@@ -1109,7 +1109,7 @@ void AMainPlayer::DropItem(UInventoryComponent* SourceInventory, int32 SourceInd
 	FItemBaseData ItemData = SourceInventory->GetInventory()[SourceIndex].ItemData;
 	
 	//아이템 데이터가 있으면
-	if (ItemData.IsValid())
+	if (ItemData.IsValid() && ItemClass)
 	{
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.Owner = this;
@@ -1125,7 +1125,7 @@ void AMainPlayer::DropItem(UInventoryComponent* SourceInventory, int32 SourceInd
 			SourceInventory->InventoryChanged();
 		}
 		
-		APickup* Pickup = GetWorld()->SpawnActor<APickup>(APickup::StaticClass(), SpawnTransform, SpawnParams);
+		APickup* Pickup = GetWorld()->SpawnActor<APickup>(ItemClass, SpawnTransform, SpawnParams);
 		Pickup->InitializeDrop(ItemData, AmountToDrop);
 
 		if (ItemGettingSound)

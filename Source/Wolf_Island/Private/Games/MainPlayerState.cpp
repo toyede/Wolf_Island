@@ -7,6 +7,13 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
 
+void AMainPlayerState::SetRandomRole()
+{
+	int8 Index = FMath::RandRange(1, 4);
+	PlayerRole = static_cast<ECharacterRole>(Index);
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER STATE] %s has Random role %d"), *GetPersistantId(), Index);
+}
+
 FString AMainPlayerState::GetPersistantId()
 {
 #if WITH_EDITOR

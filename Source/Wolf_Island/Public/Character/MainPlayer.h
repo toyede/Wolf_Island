@@ -399,6 +399,9 @@ public:
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	TSubclassOf<class AActor> OutlineActorClass;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Interaction")
+	TSubclassOf<APickup> ItemClass;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction")

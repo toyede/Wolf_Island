@@ -21,11 +21,27 @@ public class Wolf_Island : ModuleRules
 			"UMG",
 			"Niagara",
 			"Water",
-            "GameplayDebugger"
+            "GameplayDebugger",
+            "AdvancedSessions", 
+            "AdvancedSteamSessions",
+            "OnlineSubsystem", 
+            "OnlineSubsystemUtils",
+            "OnlineSubsystemSteam"
         });
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore", "AdvancedSessions", "OnlineSubsystem", "OnlineSubsystemUtils" });
-
+		PrivateDependencyModuleNames.AddRange(new string[]
+		{
+			"Slate", 
+			"SlateCore", 
+			"AdvancedSessions", 
+			"AdvancedSteamSessions",
+			"OnlineSubsystem", 
+			"OnlineSubsystemUtils",
+			"OnlineSubsystemSteam"
+		});
+		
+		//DynamicallyLoadedModuleNames.Add("OnlineSubsystemSteam");
+		
 		// Uncomment if you are using online features
 		//PrivateDependencyModuleNames.Add("OnlineSubsystem");
 
