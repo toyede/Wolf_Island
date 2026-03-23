@@ -56,4 +56,7 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void OnCancelClicked();
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	bool GetIsMultiPanel() const { return IsMultiPanel; }
 };

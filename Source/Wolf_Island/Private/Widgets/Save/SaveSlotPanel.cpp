@@ -62,7 +62,7 @@ void USaveSlotPanel::LoadSingleSlots()
 			USaveSlot* SaveSlot = CreateWidget<USaveSlot>(GetWorld(), SlotClass);
 			SaveSlot->SetSlotInfo(Pair.Value);
 			SaveSlot->SetSlotPanelRef(this);
-			SaveSlot->SetPadding(FMargin(0.0, 0.0, 16.0, 0.0));
+			SaveSlot->SetPadding(FMargin(0.0, 0.0, 0.0, 16.0));
 
 			SlotBox->AddChild(SaveSlot);
 		}
@@ -118,7 +118,7 @@ void USaveSlotPanel::LoadMultiSlots()
 			USaveSlot* SaveSlot = CreateWidget<USaveSlot>(GetWorld(), SlotClass);
 			SaveSlot->SetSlotInfo(Pair.Value);
 			SaveSlot->SetSlotPanelRef(this);
-			SaveSlot->SetPadding(FMargin(0.0, 0.0, 16.0, 0.0));
+			SaveSlot->SetPadding(FMargin(0.0, 0.0, 0.0, 16.0));
 
 			SlotBox->AddChild(SaveSlot);
 		}
@@ -156,7 +156,8 @@ void USaveSlotPanel::OnCreateCommited(const FString& Text)
 		//멀티 게임 시작
 		if (NewSave->IsMulti)
 		{
-			UGameplayStatics::OpenLevelBySoftObjectPtr(GetWorld(), MainGameInstance->MultiPlayWorld);
+			MainGameInstance->CreateSession();
+			//UGameplayStatics::OpenLevelBySoftObjectPtr(GetWorld(), MainGameInstance->MultiLobbyWorld);
 		}
 		//싱글 게임 시작
 		else
