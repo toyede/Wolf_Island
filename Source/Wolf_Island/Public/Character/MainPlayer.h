@@ -8,6 +8,7 @@
 #include "InputAction.h"
 #include "Interaction/InteractionInterface.h"
 #include "Data/ItemDataStruct.h"
+#include "Components/BillboardComponent.h"
 #include "Widgets/NickName.h"
 #include "MainPlayer.generated.h"
 

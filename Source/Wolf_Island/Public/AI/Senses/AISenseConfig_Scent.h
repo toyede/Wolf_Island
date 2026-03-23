@@ -15,10 +15,10 @@ public:
 
     virtual TSubclassOf<UAISense> GetSenseImplementation() const override;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sense", NoClear, config)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sense", NoClear)
     TSubclassOf<UAISense_Scent> Implementation;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sense", config, meta = (UIMin = 0.0, ClampMin = 0.0))
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sense", meta = (UIMin = 0.0, ClampMin = 0.0))
     float ScentDetectionRadius;
 
 #if WITH_GAMEPLAY_DEBUGGER

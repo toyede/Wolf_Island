@@ -63,6 +63,11 @@ FString AMainPlayerState::GetPersistantId()
 	}
 #endif
 	
+	if (!GetPlayerName().IsEmpty())
+	{
+		return GetPlayerName();
+	}
+	
 	if (GetUniqueId().IsValid())
 	{
 		return GetUniqueId()->ToString();

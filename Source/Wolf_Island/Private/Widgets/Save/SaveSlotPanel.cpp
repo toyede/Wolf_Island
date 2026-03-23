@@ -143,6 +143,7 @@ void USaveSlotPanel::OnAddButtonClicked()
 	TCP->AddToViewport();
 }
 
+//새 게임 시작 저장 시퀀스 수정해야 함
 void USaveSlotPanel::OnCreateCommited(const FString& Text)
 {
 	if (MainGameInstance)
