@@ -26,7 +26,6 @@ public class Wolf_Island : ModuleRules
             "AdvancedSteamSessions",
             "OnlineSubsystem", 
             "OnlineSubsystemUtils",
-            "OnlineSubsystemSteam"
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[]
@@ -37,10 +36,12 @@ public class Wolf_Island : ModuleRules
 			"AdvancedSteamSessions",
 			"OnlineSubsystem", 
 			"OnlineSubsystemUtils",
-			"OnlineSubsystemSteam"
 		});
 		
-		//DynamicallyLoadedModuleNames.Add("OnlineSubsystemSteam");
+		if (Target.Platform == UnrealTargetPlatform.Win64)
+		{
+			DynamicallyLoadedModuleNames.Add("OnlineSubsystemSteam");
+		}
 		
 		// Uncomment if you are using online features
 		//PrivateDependencyModuleNames.Add("OnlineSubsystem");
