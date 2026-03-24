@@ -33,6 +33,8 @@
 #include "Components/WidgetComponent.h"
 #include "Games/MainSaveGame.h"
 #include "Games/GameModes/MainGameMode.h"
+#include "Moon/MoonlightInfectionSystem.h"
+
 
 void AMainPlayer::PossessedBy(AController* NewController)
 {
@@ -144,6 +146,21 @@ void AMainPlayer::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	if (HasAuthority())
+	{
+		TArray<AActor*> Found;
+		UGameplayStatics::GetAllActorsOfClass(
+			GetWorld(), AMoonlightInfectionSystem::StaticClass(), Found);
+		if (Found.Num() > 0)
+		{
+			AMoonlightInfectionSystem* System =
+				Cast<AMoonlightInfectionSystem>(Found[0]);
+			TArray<AActor*> Self;
+			Self.Add(this);
+			System->BindPlayers(Self);
+		}
+	}
+
 	InteractableData.InteractionDuration = InteractionDuration;
 	
 	if(StatusComponent){

@@ -10,6 +10,27 @@
 
 class UStatusComponent;
 class AMainPlayer;
+class APlayerController;
+class AEnemyAIBase;
+
+// 멀티 전용 늑대인간 빙의 데이터
+USTRUCT()
+struct FWerewolfSessionData
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TWeakObjectPtr<AMainPlayer> OriginalCharacter;
+
+	UPROPERTY()
+	TWeakObjectPtr<ACharacter> WerewolfCharacter;
+
+	UPROPERTY()
+	TWeakObjectPtr<APlayerController> OwningPC;
+
+	bool bIsSpectating = false;
+	bool bIsIncapacitated = false;
+};
 
 UCLASS()
 class WOLF_ISLAND_API AMoonlightInfectionSystem : public AActor
@@ -74,6 +95,19 @@ public:
 	UFUNCTION()
 	void OnNightStarted();
 
+	// 멀티 전용: 늑대인간 세션 데이터
+	UFUNCTION()
+	void StartMultiInfectionSequence(AMainPlayer* Player);
+
+	UFUNCTION()
+	void OnMorningStarted();
+
+	void RestorePlayerAtDawn(APlayerController* PC);
+
+	// 디버그용 - 에디터에서 호출하거나 키 바인딩
+	UFUNCTION(BlueprintCallable, Category = "Moonlight System|Debug")
+	void Debug_ForceRestoreAll();
+
 private:
 	UPROPERTY()
 	TArray<TObjectPtr<UStatusComponent>> InfectedStatusList;
@@ -90,4 +124,14 @@ private:
 	bool IsPlayerExposedToMoonlight(AActor* Player);
 	void ApplyInfection(AActor* Player, float Amount);
 	FVector GetMoonlightCheckLocation(AActor* Player);
+
+	// 멀티 전용: 늑대인간 빙의 처리
+	void SpawnAndPossessWerewolf(APlayerController* PC, FVector Location);
+	void StoreOriginalCharacter(APlayerController* PC, AMainPlayer* Player);
+
+	UPROPERTY()
+	TMap<APlayerController*, FWerewolfSessionData> ActiveWerewolfSessions;
+
+	UPROPERTY(EditAnywhere, Category = "Infection|Multi")
+	TSubclassOf<ACharacter> WerewolfClass;
 };
