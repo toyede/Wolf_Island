@@ -36,9 +36,9 @@ void USettingsWidget::InitializeSettings()
     }
 
     EWindowMode::Type CurrentMode = Settings->GetFullscreenMode();
-    if (CurrentMode == EWindowMode::Fullscreen)         PendingDisplayModeIndex = 0;
-    else if (CurrentMode == EWindowMode::Windowed)           PendingDisplayModeIndex = 1;
-    else if (CurrentMode == EWindowMode::WindowedFullscreen) PendingDisplayModeIndex = 2;
+    if (CurrentMode == EWindowMode::WindowedFullscreen) PendingDisplayModeIndex = 0;
+    else if (CurrentMode == EWindowMode::Fullscreen)    PendingDisplayModeIndex = 0;
+    else if (CurrentMode == EWindowMode::Windowed)      PendingDisplayModeIndex = 1;
 
     bPendingVSync = Settings->IsVSyncEnabled();
 
@@ -74,8 +74,7 @@ TArray<FString> USettingsWidget::GetDisplayModeOptions()
 {
     return {
         TEXT("Fullscreen"),
-        TEXT("Windowed"),
-        TEXT("Borderless")
+        TEXT("Windowed")
     };
 }
 
@@ -209,9 +208,8 @@ void USettingsWidget::ApplySettings()
 
     switch (PendingDisplayModeIndex)
     {
-    case 0: Settings->SetFullscreenMode(EWindowMode::Fullscreen);         break;
+    case 0: Settings->SetFullscreenMode(EWindowMode::WindowedFullscreen); break;
     case 1: Settings->SetFullscreenMode(EWindowMode::Windowed);           break;
-    case 2: Settings->SetFullscreenMode(EWindowMode::WindowedFullscreen); break;
     }
 
     Settings->SetVSyncEnabled(bPendingVSync);
