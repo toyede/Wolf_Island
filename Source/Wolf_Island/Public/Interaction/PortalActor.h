@@ -36,13 +36,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal", meta = (GetOptions = "GetRecordIDOptions"), SaveGame)
 	FString RequiredRecordID;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal|Teleport")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport")
 	bool bUseRandomOffset = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal|Teleport", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport", meta = (ClampMin = "0.0"))
 	float RandomOffsetRadius = 150.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal|Teleport", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport", meta = (ClampMin = "0.0"))
 	float SpawnZOffset = 20.0f;
 
 	UFUNCTION()
