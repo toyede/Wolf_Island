@@ -4,13 +4,14 @@
 #include "GameFramework/Character.h"
 #include "InputMappingContext.h"
 #include "InputAction.h"
+#include "AI/Interfaces/AttackMeshProvider.h"
 #include "WerewolfInfected.generated.h"
 
 class UAttackCollisionComponent;
 class UCameraComponent;
 
 UCLASS()
-class WOLF_ISLAND_API AWerewolfInfected : public ACharacter
+class WOLF_ISLAND_API AWerewolfInfected : public ACharacter, public IAttackMeshProvider
 {
     GENERATED_BODY()
 
@@ -68,6 +69,9 @@ public:
     // === 리플리케이션 ===
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	// === AI 관련 ===
+    void StartAI();
+
 private:
     void HandleIncapacitated();
 
@@ -100,4 +104,19 @@ private:
     bool bShouldMove = false;
 
     FTimerHandle AttackResetHandle;
+
+	// / === 관전 전환 관련 ===
+public:
+    UPROPERTY(EditDefaultsOnly, Category = "Werewolf|Input")
+    TObjectPtr<UInputMappingContext> SpectateIMC;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Werewolf|Input")
+    TObjectPtr<UInputAction> SwitchSpectateAction;
+
+    void SwitchSpectateTarget();
+
+	// === IAttackMeshProvider 인터페이스 구현 ===
+public:
+    virtual USkeletalMeshComponent* GetAttackMesh() const override;
+	virtual UAttackCollisionComponent* GetAttackCollisionComponent() const override;
 };

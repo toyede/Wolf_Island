@@ -6,11 +6,18 @@
 #include "Character/MainPlayer.h"
 #include "Components/StatusComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
+#include "AIController.h"
 
 AWerewolfInfected::AWerewolfInfected()
 {
     PrimaryActorTick.bCanEverTick = true;
     bReplicates = true;
+
+    AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+    AIControllerClass = AAIController::StaticClass();
 
     FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(
         TEXT("FirstPersonCamera"));
@@ -32,16 +39,6 @@ void AWerewolfInfected::BeginPlay()
 {
     Super::BeginPlay();
     CurrentHealth = MaxHealth;
-
-    // 서버에서만 AI 로직 실행
-    if (HasAuthority())
-    {
-        GetWorldTimerManager().SetTimer(
-            AITickHandle, this,
-            &AWerewolfInfected::AITick,
-            AITickInterval, true
-        );
-    }
 }
 
 void AWerewolfInfected::Tick(float DeltaTime)
@@ -54,11 +51,7 @@ void AWerewolfInfected::Tick(float DeltaTime)
     if (bShouldMove && CurrentTarget.IsValid())
     {
         FVector Direction = (CurrentTarget->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-        FRotator LookRotation = Direction.Rotation();
-
-        // 컨트롤러 회전으로 변경
-        GetController()->SetControlRotation(FRotator(0, LookRotation.Yaw, 0));
-
+        SetActorRotation(FRotator(0, Direction.Rotation().Yaw, 0));
         AddMovementInput(Direction, 1.0f);
     }
 }
@@ -69,6 +62,18 @@ void AWerewolfInfected::GetLifetimeReplicatedProps(
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
     DOREPLIFETIME(AWerewolfInfected, CurrentHealth);
     DOREPLIFETIME(AWerewolfInfected, bIsIncapacitated);
+}
+
+void AWerewolfInfected::StartAI()
+{
+    if (!HasAuthority()) return;
+
+    GetWorldTimerManager().ClearTimer(AITickHandle);
+    GetWorldTimerManager().SetTimer(
+        AITickHandle, this,
+        &AWerewolfInfected::AITick,
+        AITickInterval, true
+    );
 }
 
 // === 데미지 & 기절 ===
@@ -132,8 +137,20 @@ void AWerewolfInfected::OnRep_CurrentHealth()
 void AWerewolfInfected::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
     Super::SetupPlayerInputComponent(PlayerInputComponent);
-    // Enhanced Input 사용 시 여기서 공격 액션 바인딩
-    // 기존 MainPlayer의 입력 시스템과 맞춰서 구성
+
+    if (APlayerController* PC = Cast<APlayerController>(GetController()))
+    {
+        if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
+            ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+        {
+            Subsystem->AddMappingContext(SpectateIMC, 0);
+        }
+    }
+
+    UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(PlayerInputComponent);
+    if (!EIC) return;
+
+    EIC->BindAction(SwitchSpectateAction, ETriggerEvent::Started, this, &AWerewolfInfected::SwitchSpectateTarget);
 }
 
 void AWerewolfInfected::OnAttackInput()
@@ -231,6 +248,42 @@ void AWerewolfInfected::TryAttack()
         [this]() { bIsAttacking = false; },
         Duration, false
     );
+}
+
+void AWerewolfInfected::SwitchSpectateTarget()
+{
+    APlayerController* PC = Cast<APlayerController>(GetController());
+    if (!PC) return;
+
+    TArray<AActor*> FoundPlayers;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMainPlayer::StaticClass(), FoundPlayers);
+
+    AActor* CurrentView = PC->GetViewTarget();
+
+    TArray<AMainPlayer*> ValidTargets;
+    for (AActor* Actor : FoundPlayers)
+    {
+        AMainPlayer* MP = Cast<AMainPlayer>(Actor);
+        if (!MP || MP->IsHidden()) continue;
+        ValidTargets.Add(MP);
+    }
+
+    if (ValidTargets.Num() == 0) return;
+
+    int32 CurrentIndex = ValidTargets.IndexOfByKey(CurrentView);
+    int32 NextIndex = (CurrentIndex + 1) % ValidTargets.Num();
+
+    PC->SetViewTargetWithBlend(ValidTargets[NextIndex], 0.3f);
+}
+
+USkeletalMeshComponent* AWerewolfInfected::GetAttackMesh() const
+{
+    return GetMesh();
+}
+
+UAttackCollisionComponent* AWerewolfInfected::GetAttackCollisionComponent() const
+{
+    return AttackCollisionComp;
 }
 
 void AWerewolfInfected::Server_RequestAttack_Implementation()

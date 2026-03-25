@@ -178,4 +178,10 @@ public:
 	
 	UFUNCTION(Server, Reliable)
 	void Server_Respawn();
+
+
+	// 관전 전용 카메라 시점 함수
+	// 클라이언트에서 실행될 RPC 선언
+	UFUNCTION(Client, Reliable)
+	void Client_SetViewTargetWithBlend(AActor* NewTarget, float BlendTime);
 };

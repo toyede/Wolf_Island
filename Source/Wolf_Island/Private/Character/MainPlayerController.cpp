@@ -274,6 +274,23 @@ void AMainPlayerController::Request_Respawn()
 	}
 }
 
+void AMainPlayerController::Client_SetViewTargetWithBlend_Implementation(AActor* NewTarget, float BlendTime)
+{
+	if (!NewTarget) return;
+
+	FTimerHandle TimerHandle;
+	GetWorldTimerManager().SetTimer(TimerHandle, [this, NewTarget, BlendTime]()
+		{
+			if (this && NewTarget)
+			{
+				this->bAutoManageActiveCameraTarget = false;
+
+				this->SetViewTargetWithBlend(NewTarget, BlendTime);
+				UE_LOG(LogTemp, Warning, TEXT("[Client] Forced View to %s"), *NewTarget->GetName());
+			}
+		}, 0.1f, false);
+}
+
 void AMainPlayerController::Server_Respawn_Implementation()
 {
 	Respawn();
