@@ -30,10 +30,18 @@ void AMainGameState::RefreshSelectedRoles()
 		{
 			SelectedRoles.Empty();
 			
-			for (auto Player : GM->PlayersSaveData)
+			/*for (auto Player : GM->PlayersSaveData)
 			{
 				const FPlayerSaveData& PlayerSave = Player.Value;
 				SelectedRoles.Add(PlayerSave.PlayerRole);
+			}*/
+			
+			for (auto PS : PlayerArray)
+			{
+				if (AMainPlayerState* MPS = Cast<AMainPlayerState>(PS))
+				{
+					SelectedRoles.Add(MPS->GetPlayerRole());
+				}
 			}
 		}
 	}

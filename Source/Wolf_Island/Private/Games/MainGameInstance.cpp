@@ -5,6 +5,15 @@
 
 #include "Games/MainSaveGame.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Kismet/KismetStringLibrary.h"
+
+void UMainGameInstance::Init()
+{
+	Super::Init();
+	
+	
+}
 
 UMainSaveGame* UMainGameInstance::CreateSaveSlot(FString WorldName, int32 SlotIndex, bool IsMulti)
 {
@@ -57,11 +66,33 @@ int32 UMainGameInstance::FindEmptySaveSlotIndex(bool IsMulti)
 	return -1;
 }
 
-void UMainGameInstance::Init()
+void UMainGameInstance::CreateLobbySession_Implementation()
 {
-	Super::Init();
-	
-	
 }
 
+void UMainGameInstance::CreateGameSession_Implementation()
+{
+}
 
+FString UMainGameInstance::GenerateSessionCode()
+{
+	FString Code;
+	int8 CodeLength = 6;
+	FString Characters = "0123456789ABCDEFGHIJKLNMOPQRSTUVWXYZ";
+	
+	for (int i=0; i<CodeLength; i++)
+	{
+		int8 StartIndex = UKismetMathLibrary::RandomInteger(Characters.Len());
+		Code += UKismetStringLibrary::GetSubstring(Characters, StartIndex, 1);
+	}
+	
+	return Code;
+}
+
+void UMainGameInstance::CreateSession_Implementation()
+{
+}
+
+void UMainGameInstance::FindSession_Implementation(const FString& SessionCode)
+{
+}

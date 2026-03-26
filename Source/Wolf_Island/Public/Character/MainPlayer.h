@@ -8,6 +8,7 @@
 #include "InputAction.h"
 #include "Interaction/InteractionInterface.h"
 #include "Data/ItemDataStruct.h"
+#include "Components/BillboardComponent.h"
 #include "Widgets/NickName.h"
 #include "MainPlayer.generated.h"
 
@@ -105,6 +106,12 @@ public:
 	virtual void PossessedBy(AController* NewController) override;
 	
 	virtual void PawnClientRestart() override;
+	
+	virtual void Restart() override;
+	
+	virtual void OnRep_PlayerState() override;
+	
+	virtual void OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState) override;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
 	class AMainPlayerController* MainPlayerController;
@@ -402,6 +409,9 @@ public:
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	TSubclassOf<class AActor> OutlineActorClass;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Interaction")
+	TSubclassOf<APickup> ItemClass;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction")
@@ -547,6 +557,14 @@ public:
 	//소생 함수
 	UFUNCTION(BlueprintCallable)
 	void Revive();
+	
+	//리스폰 처리 함수
+	UFUNCTION(BlueprintCallable)
+	void OnRespawn();
+	
+	//카메라 복구 함수
+	UFUNCTION(Client, Reliable, BlueprintCallable)
+	void RestoreCamera();
 
 	//인터랙션 관련 함수===================================================
 	//인터랙션 체크 함수 - 라인트레이스로 인터랙션 액터 체크

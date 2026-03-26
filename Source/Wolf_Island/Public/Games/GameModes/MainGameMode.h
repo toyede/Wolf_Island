@@ -58,6 +58,8 @@ public:
 	
 	virtual void StartPlay() override;
 	
+	virtual void BeginPlay() override;
+	
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	
 	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
@@ -65,6 +67,8 @@ public:
 	virtual void RestartPlayer(AController* NewPlayer) override;
 	
 	virtual void Logout(AController* Exiting) override;
+	
+	virtual void AfterRestartPlayer(AController* Player, bool IsDead = false);
 	
 	UFUNCTION(BlueprintCallable)
 	void SetActorCache();
@@ -85,7 +89,7 @@ public:
 	void SavePlayers();
 	
 	UFUNCTION(BlueprintCallable)
-	bool LoadPlayer(AMainPlayerState* PlayerState);
+	bool LoadPlayer(AMainPlayerState* PlayerState, bool IsDead = false);
 	
 	UFUNCTION(BlueprintCallable)
 	void LoadPlayers();
@@ -114,4 +118,5 @@ public:
 	//이건 플레이어가 죽었을 때 할 동작들. 여기선 싱글에서 죽었을 때를 구현하고, MultiGameMode에서 멀티에서 죽얼을 때 구현.
 	UFUNCTION(BlueprintCallable)
 	virtual void HandlePlayerDeath(AController* DeadPlayerController);
+
 };

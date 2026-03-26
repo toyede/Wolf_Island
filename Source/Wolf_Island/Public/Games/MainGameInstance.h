@@ -16,21 +16,23 @@ class WOLF_ISLAND_API UMainGameInstance : public UAdvancedFriendsGameInstance
 	GENERATED_BODY()
 	
 public:
-		
+	
 	UPROPERTY(BlueprintReadWrite)
 	UMainSaveGame* CurrenSaveGame;
 	
 	UPROPERTY(BlueprintReadWrite)
 	int32 MaxSlotIndex = 5;
 	
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	TSoftObjectPtr<UWorld> SinglePlayWorld;
 	
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	TSoftObjectPtr<UWorld> MultiPlayWorld;
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	TSoftObjectPtr<UWorld> MultiLobbyWorld;
+	
+	virtual void Init() override;
 	
 	UFUNCTION(BlueprintCallable)
 	UMainSaveGame* CreateSaveSlot(FString WorldName, int32 SlotIndex, bool IsMulti = false);
@@ -45,5 +47,21 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetCurrentSave(UMainSaveGame* SaveGame) { CurrenSaveGame = SaveGame; }
 	
-	virtual void Init() override;
+	//세션 함수
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void CreateSession();
+	
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void CreateLobbySession();
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void CreateGameSession();
+	
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void FindSession(const FString& SessionCode);
+	
+	UFUNCTION(BlueprintCallable)
+	FString GenerateSessionCode();
+	
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, BlueprintPure)
+	FString GetSessionCode();
 };

@@ -17,12 +17,20 @@ class WOLF_ISLAND_API AMainPlayerState : public APlayerState
 	GENERATED_BODY()
 	
 	UPROPERTY(Replicated)
+	bool IsReady = false;
+	
+	UPROPERTY(Replicated)
 	ECharacterRole PlayerRole = ECharacterRole::NONE;
 	
 	UPROPERTY(Replicated)
 	TArray<FItemSlot> Items;
 	
 public:
+	AMainPlayerState();
+	
+	virtual void CopyProperties(APlayerState* PlayerState) override;
+	
+	virtual void OverrideWith(APlayerState* PlayerState) override;
 	
 	UFUNCTION(BlueprintCallable)
 	void SetItemsData(TArray<FItemSlot> NewItems) { Items = NewItems;};
@@ -34,7 +42,16 @@ public:
 	ECharacterRole GetPlayerRole() const { return PlayerRole; };
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure)
+	bool GetReady() const { return IsReady; };
+	
+	UFUNCTION(BlueprintCallable)
+	void SetRandomRole();
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	TArray<FItemSlot> GetItems() const { return Items; };
+	
+	UFUNCTION(BlueprintCallable)
+	void ToggleReady() { IsReady = !IsReady; };
 	
 	//플레이어의 식별코드를 주는 코드. : 에디터에서 실행하면 테스트용 코드 반환. 실제 환경에선 NetID 반환.
 	UFUNCTION(BlueprintCallable, BlueprintPure)

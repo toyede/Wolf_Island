@@ -81,12 +81,13 @@ void AMainPlayerController::SetupInputComponent()
 
 void AMainPlayerController::OnPossess(APawn* InPawn)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER CONTROLLER] ON POSSESSED"));
 	Super::OnPossess(InPawn);
 }
 
 void AMainPlayerController::OnUnPossess()
 {
-	UE_LOG(LogTemp, Warning, TEXT("UNPOSSESSED"));
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER CONTROLLER] UNPOSSESSED"));
 	if (IsLocalController() && PlayerHUD)
 	{
 		PlayerHUD->RemoveFromParent();
@@ -201,7 +202,7 @@ void AMainPlayerController::Client_OpenFishTrapUI_Implementation(class AFishTrap
 			FishTrapScreen->SetIsFocusable(true);
 			FishTrapScreen->AddToViewport();
 
-			FInputModeUIOnly InputMode;
+			FInputModeGameAndUI InputMode;
 			InputMode.SetWidgetToFocus(FishTrapScreen->TakeWidget());
 			
 			SetInputMode(InputMode);
@@ -251,15 +252,15 @@ void AMainPlayerController::OnRep_PlayerState()
 	{
 		if (MainPlayerState->GetPlayerRole() == ECharacterRole::NONE)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Open Selection UI in Player Controller"), *GetPlayerState<AMainPlayerState>()->GetPersistantId())
+			UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Open Selection UI in Player Controller"), *MainPlayerState->GetPersistantId())
 			Client_OpenSelectionUI();
 		} else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Can't open Selection UI. Player role is %d"), *GetPlayerState<AMainPlayerState>()->GetPersistantId(), MainPlayerState->GetPlayerRole())
+			UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Can't open Selection UI. Player role is %d"), *MainPlayerState->GetPersistantId(), MainPlayerState->GetPlayerRole())
 		}
 	} else
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Can't open Selection UI. Player State is INVALID"), *GetPlayerState<AMainPlayerState>()->GetPersistantId())
+		UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Can't open Selection UI. Player State is INVALID"), *MainPlayerState->GetPersistantId())
 	}
 }
 
@@ -299,11 +300,18 @@ void AMainPlayerController::Server_ConfirmRole_Implementation(ECharacterRole New
 {
 	AMultiGameMode* GM = Cast<AMultiGameMode>(GetWorld()->GetAuthGameMode());
 	AMainPlayerState* PS = Cast<AMainPlayerState>(PlayerState);
+	AMainGameState* GS = Cast<AMainGameState>(GetWorld()->GetGameState());
 	
 	if (GM->CheckRoleAvailable(NewRole))
 	{
 		PS->SetPlayerRole(NewRole);
 		UE_LOG(LogTemp, Warning, TEXT("Check Role %d in Server"), PS->GetPlayerRole());
+		
+		if (GS)
+		{
+			GS->RefreshSelectedRoles();
+		}
+		
 		GM->RestartPlayer(this);
 		Client_EndSelection();
 		
@@ -377,6 +385,14 @@ void AMainPlayerController::OnQuit()
 
 void AMainPlayerController::Respawn()
 {
-	AMainGameMode* GM = GetWorld()->GetAuthGameMode<AMainGameMode>();
-	GM->HandlePlayerDeath(this);
+	if (AMultiGameMode* MGM = GetWorld()->GetAuthGameMode<AMultiGameMode>())
+	{
+		MGM->HandlePlayerDeath(this);
+		return;
+	}
+	
+	if (AMainGameMode* SGM = GetWorld()->GetAuthGameMode<AMainGameMode>())
+	{
+		SGM->HandlePlayerDeath(this);
+	}
 }
