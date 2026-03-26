@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Components/TextBlock.h"
 #include "Games/MainGameState.h"
 #include "ChattingBlock.generated.h"
 

@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "Interaction/RecordActor.h"
 #include "Games/MainGameState.h"
+#include "Interaction/RecordActor.h"
 
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
@@ -46,7 +46,7 @@ TArray<FString> ARecordActor::GetRecordID() const
 	return Options;
 }
 
-void ARecordActor::Interact_Implementation(AActor* Interactor)
+void ARecordActor::Interact(AActor* Interactor)
 {
 	if (!HasAuthority()) return;
 

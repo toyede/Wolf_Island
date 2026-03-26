@@ -32,13 +32,7 @@ public:
 	
 	virtual APawn* SpawnDefaultPawnFor_Implementation(AController* NewPlayer, AActor* StartSpot) override;
 	
-	virtual APawn* SpawnDefaultPawnAtTransform_Implementation(AController* NewPlayer, const FTransform& SpawnTransform) override;
-	
 	virtual void Logout(AController* Exiting) override;
-	
-	//선택한 역할이 사용 가능한 지 확인
-	UFUNCTION()
-	bool CheckRoleAvailable(ECharacterRole NewRole) const;
 	
 	//멀티에서 플레이어 죽었을 때 동작 구현.
 	virtual void HandlePlayerDeath(AController* DeadPlayerController) override;

@@ -14,7 +14,6 @@
  * 
  */
 
-class UDeathScreen;
 class URoleSelection;
 class UMainGameInstance;
 class AMainGameMode;
@@ -48,12 +47,6 @@ public:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	UPauseMenu* PauseMenu;
 	
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category="Widget")
-	URoleSelection* RoleSelectionWidget;
-	
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category="Widget")
-	UDeathScreen* DeathScreenWidget;
-	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	TSubclassOf<UPlayerHUD> HUDClass;
 	
@@ -62,15 +55,9 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, Category="Widget")
 	TSubclassOf<UPauseMenu> PauseWidgetClass;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Widget")
-	TSubclassOf<class UUserWidget> FishTrapScreenClass;
 	
 	UPROPERTY(EditDefaultsOnly, Category="Widget")
 	TSubclassOf<URoleSelection> RoleSelectionWidgetClass;
-	
-	UPROPERTY(EditDefaultsOnly, Category="Widget")
-	TSubclassOf<UDeathScreen> DeathScreenWidgetClass;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	UMainGameInstance* MainGameInstance;
@@ -117,21 +104,11 @@ public:
 	
 	UFUNCTION()
 	void DisplayPauseMenu();
-	
 	UFUNCTION()
 	void HidePauseMenu();
 	
-	UFUNCTION(Client, Reliable)
-	void Client_OpenFishTrapUI(class AFishTrap* TargetTrap, class AActor* Interactor);
-	
 	UFUNCTION(BlueprintCallable)
 	void AddChat(FChattingData NewChattingData);
-	
-	UFUNCTION(BlueprintCallable)
-	void OpenDeathScreen();
-	
-	UFUNCTION(BlueprintCallable)
-	void OnCloseDeathScreen();
 	
 	UFUNCTION(BlueprintCallable)
 	void OnResume();
@@ -140,11 +117,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void OnQuit();
 	
-	//플레이어 사망 후 리스폰 버튼 클릭 시 실행할 리스폰 시퀀스
-	UFUNCTION(BlueprintCallable)
-	void Respawn();
-	
 	//멀티 플레이 코드
+	
 	UFUNCTION(BlueprintCallable)
 	void Request_SendChat(FChattingData NewChattingData);
 	
@@ -154,7 +128,6 @@ public:
 	UFUNCTION()
 	void SendChat(FChattingData NewChattingData);
 	
-	//역할 선택 관련
 	UFUNCTION(Client, Reliable)
 	void Client_OpenSelectionUI();
 	
@@ -163,19 +136,4 @@ public:
 	
 	UFUNCTION(Client, Reliable)
 	void Client_SetInputModeGame();
-	
-	UFUNCTION(Client, Reliable)
-	void Client_RoleDeny();
-	
-	UFUNCTION(Client, Reliable)
-	void Client_EndSelection();
-	
-	virtual void OnRep_PlayerState() override;
-	
-	//사망 시 부활 요청
-	UFUNCTION(BlueprintCallable)
-	void Request_Respawn();
-	
-	UFUNCTION(Server, Reliable)
-	void Server_Respawn();
 };

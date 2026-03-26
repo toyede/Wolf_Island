@@ -11,28 +11,28 @@ struct FActorSaveData
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(BlueprintReadWrite, SaveGame)
+	UPROPERTY(BlueprintReadWrite)
 	FGuid ActorID;
 	
-	UPROPERTY(BlueprintReadWrite, SaveGame)
+	UPROPERTY(BlueprintReadWrite)
 	TSubclassOf<AActor> ActorClass;
 
-	UPROPERTY(BlueprintReadWrite, SaveGame)
+	UPROPERTY(BlueprintReadWrite)
 	FTransform Transform;
 	
-	UPROPERTY(BlueprintReadWrite, SaveGame)
+	UPROPERTY(BlueprintReadWrite)
 	FVector Velocity;
 
-	UPROPERTY(BlueprintReadWrite, SaveGame)
+	UPROPERTY(BlueprintReadWrite)
 	TArray<uint8> BinaryData;
 	
-	UPROPERTY(BlueprintReadWrite, SaveGame)
+	UPROPERTY(BlueprintReadWrite)
 	TArray<uint8> SubBinaryData1;
 	
-	UPROPERTY(BlueprintReadWrite, SaveGame)
+	UPROPERTY(BlueprintReadWrite)
 	TArray<uint8> SubBinaryData2;
 	
-	UPROPERTY(BlueprintReadWrite, SaveGame)
+	UPROPERTY(BlueprintReadWrite)
 	TArray<uint8> SubBinaryData3;
 };
 

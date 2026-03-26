@@ -42,7 +42,7 @@ public:
 
 	FORCEINLINE FItemBaseData& GetItemData() { return ItemReference; };
 
-	virtual void Interact_Implementation(AActor* Interactor) override;
+	virtual void Interact(AActor* Interactor) override;
 	
 	virtual void BeginFocus_Implementation() override;
 	
