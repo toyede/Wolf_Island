@@ -91,7 +91,7 @@ void APickup::InitializeDrop(FItemBaseData ItemToDrop, const int32 InAmount)
     
 }
 
-void APickup::Interact(AActor* Interactor)
+void APickup::Interact_Implementation(AActor* Interactor)
 {
     if (Interactor)
     {

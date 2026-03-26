@@ -59,7 +59,6 @@ public:
 	bool IsConstructing() const { return CurrentState == EBuildingState::Building; }
 
 private:
-	// 다른 플레이어에게도 건축 상태(애니메이션 등)를 보여주려면 Replicated 설정이 필요할 수 있습니다.
 	UPROPERTY(Replicated)
 	EBuildingState CurrentState = EBuildingState::Idle;
     

@@ -17,6 +17,7 @@ class WOLF_ISLAND_API UBaseButton : public UUserWidget
 	GENERATED_BODY()
 	
 public:
+	UPROPERTY(BlueprintAssignable)
 	FOnBaseButtonClicked OnClicked;
 	
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)

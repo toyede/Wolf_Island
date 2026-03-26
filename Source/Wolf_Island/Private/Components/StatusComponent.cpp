@@ -51,6 +51,7 @@ void UStatusComponent::DestroyComponent(bool bPromoteChildren)
 {
 	if (GetOwner()->HasAuthority())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[STATUS] CLEAR ALL TIMERS"));
 		ClearAllTimers();
 	}
 	
@@ -70,6 +71,7 @@ void UStatusComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 void UStatusComponent::IncreaseHP(float amount)
 {
 	CurrentHP = FMath::Clamp(CurrentHP+amount, 0.0f, MaxHP);
+
 	//음수 방지
 	if (CurrentHP <= 0)
 	{

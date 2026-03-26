@@ -833,15 +833,18 @@ void AMainPlayer::KnockOut()
 	//기절 상태로 전환
 	IsInability = true;
 	GetCharacterMovement()->MaxWalkSpeed = KnockOutSpeed;
-	InteractableData.CanInteract = true;
+	CanInteract = true;
+	InteractableData.CanInteract = CanInteract;
 }
 
 void AMainPlayer::Revive()
 {
 	GetWorld()->GetTimerManager().ClearTimer(KnockOutTimer);
+	StatusComponent->IncreaseHP(20.0f);
 	IsInability = false;
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-	InteractableData.CanInteract = false;
+	CanInteract = false;
+	InteractableData.CanInteract = CanInteract;
 }
 
 void AMainPlayer::OnRespawn()
@@ -895,6 +898,7 @@ void AMainPlayer::CheckInteraction()
 				{
 					//UE_LOG(LogTemp, Warning, TEXT("FoundInteractable"));
 					//TargetInteractable에 결과물 넣기
+					UE_LOG(LogTemp, Warning, TEXT("[PLAYER] INTERACTABLE : %s"), *HitResult.GetActor()->GetName())
 					FoundInteractable(HitResult.GetActor());
 					return;
 				}
@@ -941,6 +945,7 @@ void AMainPlayer::CheckInteraction()
 			}
 		}
 	}
+	
 	NotFoundInteractable();
 }
 
@@ -965,6 +970,7 @@ void AMainPlayer::FoundInteractable(AActor* Interactable)
 	//인터랙터블 액터의 상태가 인터랙션 가능한 상태가 아니면
 	if (!TargetInteractionInterface->InteractableData.CanInteract)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] THIS ACTOR CAN'T INTERACT"));
 		//TODO:여기 인터랙션 UI 해제 코드 추가 예정
 		if (IsLocallyControlled())
 		{
@@ -975,6 +981,9 @@ void AMainPlayer::FoundInteractable(AActor* Interactable)
 		}
 		TargetInteractionInterface->Execute_EndFocus(InteractionData.CurrentInteractable);
 		return;
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] THIS ACTOR CAN INTERACT"));
 	}
 	
 	//TODO:여기 인터랙션 UI 업데이트 코드 추가 예정
@@ -1061,16 +1070,15 @@ void AMainPlayer::BeginInteract()
 	//인터랙션이 시작됐을 때부터 인터렉션 상태가 변하지 않는 것을 체크
 	CheckInteraction();
 
-	//인터랙션 데이터가 있으면
-	if (InteractionData.CurrentInteractable)
+	if (InteractionData.CurrentInteractable && IsValid(TargetInteractionInterface.GetObject()))
 	{
-		//인터랙션 액터가 유효하면
-		if (IsValid(TargetInteractionInterface.GetObject()))
+		//인터랙션 데이터가 있으면
+		if (InteractionData.CurrentInteractable)
 		{
 			//인터랙션 타겟 액터
 			AActor* Target = Cast<AActor>(TargetInteractionInterface.GetObject());
 			//인터랙션 액터의 인터랙션 시작 함수 실행
-			TargetInteractionInterface->BeginInteract();
+			//TargetInteractionInterface->BeginInteract();
 			//즉시 인터랙션이 가능하면 (꾹 누르는 인터랙션이 아니면)
 			if (TargetInteractionInterface->InteractableData.InteractionDuration == 0.0f)
 			{
@@ -1084,16 +1092,20 @@ void AMainPlayer::BeginInteract()
 			//꾹 누르는 인터랙션이면
 			else
 			{
-				HUD->DisplayInteraction();
-				//인터랙션 실행 시간 만큼 대기 후 인터랙션 실행
-				GetWorldTimerManager().SetTimer(InteractionTimer,
-					[this, Target]()
-					{
-						//인터랙션 실행
-						Interaction(Target);
-					},
-					TargetInteractionInterface->InteractableData.InteractionDuration,
-					false);
+				//인터랙션 가능 상태인지 확인
+				if (TargetInteractionInterface->InteractableData.CanInteract)
+				{
+					HUD->DisplayInteraction();
+					//인터랙션 실행 시간 만큼 대기 후 인터랙션 실행
+					GetWorldTimerManager().SetTimer(InteractionTimer,
+						[this, Target]()
+						{
+							//인터랙션 실행
+							Interaction(Target);
+						},
+						TargetInteractionInterface->InteractableData.InteractionDuration,
+						false);
+				}
 			}
 		}
 	}
@@ -1109,12 +1121,11 @@ void AMainPlayer::BeginInteract()
 
 void AMainPlayer::EndInteract()
 {
-	if (!HUD)
+	if (HUD)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("NO HUD"));
-		return;
+		HUD->HideInteraction();
 	}
-	HUD->HideInteraction();
+	
 	//인터랙션 타이머 클리어
 	GetWorldTimerManager().ClearTimer(InteractionTimer);
 
@@ -1126,6 +1137,12 @@ void AMainPlayer::EndInteract()
 	}
 }
 
+void AMainPlayer::Interact_Implementation(AActor* Interactor)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Interact Executed"));
+	Revive();
+}
+
 void AMainPlayer::Interaction_Implementation(AActor* Target)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[%hs] SERVER INTERACTION EXECUTED"), HasAuthority()?"SERVER":"CLIENT")
@@ -1133,7 +1150,11 @@ void AMainPlayer::Interaction_Implementation(AActor* Target)
 	GetWorldTimerManager().ClearTimer(InteractionTimer);
 	if (IsLocallyControlled())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER][SERVER] Interaction Complete. Hide Bar"));
 		HUD->HideInteraction();
+	} else
+	{
+		Client_InteractionExecuted();
 	}
 	
 	//인터랙션 액터가 유효한 지 체크
@@ -1144,7 +1165,7 @@ void AMainPlayer::Interaction_Implementation(AActor* Target)
 		if (TargetInteractionInterface->InteractableData.CanInteract)
 		{
 			//인터랙션 액터의 인터랙션 함수 실행
-			TargetInteractionInterface->Interact(this);
+			TargetInteractionInterface->Execute_Interact(Target, this);
 		}
 	}
 }
@@ -1775,6 +1796,7 @@ void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 	DOREPLIFETIME(AMainPlayer, ItemMesh);
 	DOREPLIFETIME(AMainPlayer, IsSwimming);
 	DOREPLIFETIME(AMainPlayer, MovementMultiplier);
+	DOREPLIFETIME(AMainPlayer, CanInteract);
 }
 
 void AMainPlayer::Request_Run()
@@ -1911,6 +1933,16 @@ void AMainPlayer::Request_DropItem(UInventoryComponent* SourceInventory, int32 S
 
 void AMainPlayer::Request_StartUseItem()
 {
+	if (UBuildingComponent* BuildComp = FindComponentByClass<UBuildingComponent>())
+	{
+		if (BuildComp->GetCurrentState() == EBuildingState::Placing)
+		{
+			BuildComp->CancelBuild();
+			
+			return; 
+		}
+	}
+	
 	if (HasAuthority())
 	{
 		StartUseItem();

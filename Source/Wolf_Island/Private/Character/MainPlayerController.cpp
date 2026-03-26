@@ -13,10 +13,12 @@
 #include "Games/MainGameState.h"
 #include "Games/GameModes/MultiGameMode.h"
 #include "Kismet/GameplayStatics.h"
+#include "Widgets/FishTrap/FishTrapScreen.h"
 #include "Widgets/BaseButton.h"
 #include "Widgets/PlayerHUD.h"
 #include "Widgets/MainMenu/PauseMenu.h"
 #include "Widgets/RoleSelection/RoleSelection.h"
+#include "Widgets/DeathScreen.h"
 
 void AMainPlayerController::BeginPlay()
 {
@@ -46,6 +48,18 @@ void AMainPlayerController::BeginPlay()
 	MainGameMode = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode());
 	MainPlayerState = GetPlayerState<AMainPlayerState>();
 	MainGameState = Cast<AMainGameState>(GetWorld()->GetGameState());
+	
+	if (HasAuthority()&&MainPlayerState&&MainGameState->IsMulti)
+	{
+		if (MainPlayerState->GetPlayerRole() == ECharacterRole::NONE)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Open Selection UI in Player Controller"))
+			Client_OpenSelectionUI();
+		} else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PC] Can't open Selection UI. Player role is %d"), MainPlayerState->GetPlayerRole())
+		}
+	}
 }
 
 void AMainPlayerController::SetupInputComponent()
@@ -175,6 +189,28 @@ void AMainPlayerController::HidePauseMenu()
 	PauseMenu->SetVisibility(ESlateVisibility::Collapsed);
 }
 
+
+void AMainPlayerController::Client_OpenFishTrapUI_Implementation(class AFishTrap* TargetTrap, class AActor* Interactor)
+{
+	if (FishTrapScreenClass && TargetTrap)
+	{
+		UUserWidget* CreatedWidget = CreateWidget<UUserWidget>(this, FishTrapScreenClass);
+		
+		if (UFishTrapScreen* FishTrapScreen = Cast<UFishTrapScreen>(CreatedWidget))
+		{
+			FishTrapScreen->InitializeScreen(TargetTrap, Interactor);
+			FishTrapScreen->SetIsFocusable(true);
+			FishTrapScreen->AddToViewport();
+
+			FInputModeGameAndUI InputMode;
+			InputMode.SetWidgetToFocus(FishTrapScreen->TakeWidget());
+			
+			SetInputMode(InputMode);
+			SetShowMouseCursor(true);
+		}
+	}
+}
+
 void AMainPlayerController::Request_SendChat(FChattingData NewChattingData)
 {
 	if (HasAuthority())
@@ -288,6 +324,7 @@ void AMainPlayerController::Server_ConfirmRole_Implementation(ECharacterRole New
 void AMainPlayerController::Client_OpenSelectionUI_Implementation()
 {	
 	URoleSelection* SelectionWidget = CreateWidget<URoleSelection>(this, RoleSelectionWidgetClass);
+	RoleSelectionWidget = SelectionWidget;
 	
 	FInputModeUIOnly InputMode;
 	InputMode.SetWidgetToFocus(SelectionWidget->TakeWidget());
@@ -302,6 +339,31 @@ void AMainPlayerController::AddChat(FChattingData NewChattingData)
 	if (!ChattingPanel) return;
 	
 	ChattingPanel->AddChatting(NewChattingData);
+}
+
+void AMainPlayerController::OpenDeathScreen()
+{
+	if (DeathScreenWidget) return;
+	
+	if (DeathScreenWidgetClass)
+	{
+		DeathScreenWidget = CreateWidget<UDeathScreen>(this, DeathScreenWidgetClass);
+	
+		bShowMouseCursor = true;
+		FInputModeUIOnly InputMode;
+		InputMode.SetWidgetToFocus(DeathScreenWidget->TakeWidget());
+		SetInputMode(InputMode);
+	
+		DeathScreenWidget->AddToViewport();
+	}
+}
+
+void AMainPlayerController::OnCloseDeathScreen()
+{
+	DeathScreenWidget = nullptr;
+	bShowMouseCursor = false;
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
 }
 
 void AMainPlayerController::OnResume()
