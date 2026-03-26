@@ -92,7 +92,7 @@ void UPlayerHUD::AddItemMessage(FItemAddResult Result)
 
 void UPlayerHUD::DisplayInteraction()
 {
-	UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] DisplayInteraction | %s"), *GetName())
+	//UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] DisplayInteraction | %s"), *GetName())
 	
 	ShowInteraction = true;
 	
@@ -101,7 +101,7 @@ void UPlayerHUD::DisplayInteraction()
 		InteractionBar->SetVisibility(ESlateVisibility::Visible);
 	} else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NO InteractionBar | %s"), *GetName())
+		//UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NO InteractionBar | %s"), *GetName())
 	}
 	
 	if (CrossHair)
@@ -109,13 +109,13 @@ void UPlayerHUD::DisplayInteraction()
 		CrossHair->SetVisibility(ESlateVisibility::Hidden);
 	} else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NO CrossHair | %s"), *GetName())
+		//UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NO CrossHair | %s"), *GetName())
 	}
 }
 
 void UPlayerHUD::HideInteraction()
 {
-	UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] HideInteraction | %s"), *GetName())
+	//UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] HideInteraction | %s"), *GetName())
 	
 	ShowInteraction = false;
 	
@@ -124,7 +124,7 @@ void UPlayerHUD::HideInteraction()
 		InteractionBar->SetVisibility(ESlateVisibility::Hidden);
 	} else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NO InteractionBar | %s"), *GetName())
+		//UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NO InteractionBar | %s"), *GetName())
 	}
 	
 	if (CrossHair)
@@ -132,7 +132,7 @@ void UPlayerHUD::HideInteraction()
 		CrossHair->SetVisibility(ESlateVisibility::Visible);
 	} else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NO CrossHair | %s"), *GetName())
+		//UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NO CrossHair | %s"), *GetName())
 	}
 }
 
@@ -165,27 +165,27 @@ void UPlayerHUD::UpdateInteraction()
 
 void UPlayerHUD::DisplayInteractable()
 {
-	UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] DisplayInteractable | %s"), *GetName())
+	//UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] DisplayInteractable | %s"), *GetName())
 	
 	if (CrossHair)
 	{
 		CrossHair->SetBrushFromTexture(InteractableCrossHair);
 	} else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NO CROSSHAIR | %s"), *GetName())
+		//UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NO CROSSHAIR | %s"), *GetName())
 	}
 }
 
 void UPlayerHUD::DisplayDefault()
 {
-	UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] DisplayDefault | %s"), *GetName())
+	//UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] DisplayDefault | %s"), *GetName())
 	
 	if (CrossHair)
 	{
 		CrossHair->SetBrushFromTexture(DefaultCrossHair);
 	} else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NO CROSSHAIR | %s"), *GetName())
+		//UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NO CROSSHAIR | %s"), *GetName())
 	}
 }
 
@@ -225,7 +225,7 @@ void UPlayerHUD::RefreshHotBar()
 
 void UPlayerHUD::UpdateHotBar()
 {
-	UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] UpdateHotBar EXECUTED | %s"), *GetName())
+	//UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] UpdateHotBar EXECUTED | %s"), *GetName())
 	if (HotBar&&HotBar->HasAnyChildren())
 	{
 		int32 Count = HotBar->GetChildrenCount();
@@ -243,7 +243,7 @@ void UPlayerHUD::UpdateHotBar()
 		}
 	} else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] No HotBar | %s"), *GetName())
+		//UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] No HotBar | %s"), *GetName())
 	}
 }
 

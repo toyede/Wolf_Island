@@ -29,7 +29,6 @@
 #include "WaterBodyComponent.h"
 #include "Character/MainPlayerController.h"
 #include "Components/BuildingComponent.h"
-#include "Components/CapsuleComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Games/MainSaveGame.h"
 #include "Games/GameModes/MainGameMode.h"
@@ -64,6 +63,38 @@ void AMainPlayer::PawnClientRestart()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("NOT LOCALLY CONTROLLED"))
 	}
+}
+
+void AMainPlayer::Restart()
+{
+	Super::Restart();
+}
+
+void AMainPlayer::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+	
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] OnRep_PlayerState : %s"), *GetName());
+}
+
+void AMainPlayer::OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] On PlayerState Changed : %s"), *GetName());
+	Super::OnPlayerStateChanged(NewPlayerState, OldPlayerState);
+	
+	if (AMainGameMode* GM = GetWorld()->GetAuthGameMode<AMainGameMode>())
+	{
+		GM->AfterRestartPlayer(GetController(), false);
+	}
+	
+	if (NickName)
+	{
+		if (UNickName* NickNameWidget = Cast<UNickName>(NickName->GetWidget()))
+		{
+			NickNameWidget->UpdateName(NewPlayerState);
+		}
+	}
+	//UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Player State Changed. OLD[%s] -> NEW[%s]"), *OldPlayerState->GetName(), *NewPlayerState->GetName())
 }
 
 // Sets default values
@@ -127,6 +158,7 @@ AMainPlayer::AMainPlayer()
 	BuoyancyComponent->AddCustomPontoon(25.0f, WaterLevelCheckPoint->GetRelativeLocation());
 	
 	NickName->SetupAttachment(GetMesh());
+	//NickName->bOwnerNoSee = true;
 	
 	GetCharacterMovement()->MaxFlySpeed = SwimmingSpeed;
 }
@@ -138,6 +170,11 @@ void AMainPlayer::BeginPlay()
 	Super::BeginPlay();
 	
 	InteractableData.InteractionDuration = InteractionDuration;
+	
+	if (IsLocallyControlled())
+	{
+		NickName->SetVisibility(false);
+	}
 	
 	if(StatusComponent){
 		if (HasAuthority())
@@ -700,6 +737,7 @@ void AMainPlayer::OnDeath_Implementation()
 //손에 든 아이템 업데이트 함수
 void AMainPlayer::RefreshHand()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Refresh Hand"));
 	//핫바 인덱스의 아이템 정보 가져오기.
 	FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
 	
@@ -709,19 +747,25 @@ void AMainPlayer::RefreshHand()
 		//데이터 베이스에서 아이템 데이터 가져오기
 		FItemData* ItemData = InventoryComponent->GetItemData(Item);
 		
-		IsHoldingItem = true;
-		ItemMesh->SetStaticMesh(ItemData->AssetData.Mesh);
-		ItemMesh->AttachToComponent(
-		GetMesh(),
-		FAttachmentTransformRules::KeepRelativeTransform,
-		TEXT("hand_r"));
-		ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		if (ItemData->Type == EItemType::EQUIPMENT || ItemData->Type == EItemType::FOOD)
+		{
+			IsHoldingItem = true;
+			ItemMesh->SetStaticMesh(ItemData->AssetData.Mesh);
+			ItemMesh->AttachToComponent(
+			GetMesh(),
+			FAttachmentTransformRules::KeepRelativeTransform,
+			TEXT("hand_r"));
+			ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 		
-		FTransform SocketTransform = ItemMesh->GetSocketTransform(TEXT("HandSocket"), RTS_Component);
-		ItemMesh->SetRelativeTransform(SocketTransform.Inverse());
-
-		//ItemMesh->SetRelativeScale3D(FVector(0.1f, 0.1f, 0.1f));
-		WeaponComponent->CheckWeapon(Item);
+			FTransform SocketTransform = ItemMesh->GetSocketTransform(TEXT("HandSocket"), RTS_Component);
+			ItemMesh->SetRelativeTransform(SocketTransform.Inverse());
+			WeaponComponent->CheckWeapon(Item);
+		} else
+		{
+			WeaponComponent->CheckWeapon(Item);
+			IsHoldingItem = false;
+			ItemMesh->SetStaticMesh(nullptr);
+		}
 	} else
 	{
 		WeaponComponent->CheckWeapon(Item);
@@ -736,9 +780,9 @@ void AMainPlayer::Attack()
 	
 	if (UBuildingComponent* BuildComp = FindComponentByClass<UBuildingComponent>())
 	{
-		int32 StateInt = (int32)BuildComp->GetCurrentState();
+		/*int32 StateInt = (int32)BuildComp->GetCurrentState();
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, 
-			FString::Printf(TEXT("클라이언트 Attack 호출됨! 현재 상태: %d"), StateInt));
+			FString::Printf(TEXT("클라이언트 Attack 호출됨! 현재 상태: %d"), StateInt));*/
 
 		if (BuildComp->GetCurrentState() == EBuildingState::Placing)
 		{
@@ -764,8 +808,10 @@ void AMainPlayer::KnockOut()
 		KnockOutTimer,
 		[this]()
 		{
+			UE_LOG(LogTemp, Warning, TEXT("[PLAYER] KNOCK OUT TIMER ACTIAVTED"));
 			if (HasAuthority())
 			{
+				UE_LOG(LogTemp, Warning, TEXT("[PLAYER] SERVER PLAYER"));
 				if (IsLocallyControlled())
 				{
 					FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
@@ -775,10 +821,10 @@ void AMainPlayer::KnockOut()
 					{
 						PC->OpenDeathScreen();
 					}
+				} else
+				{
+					Client_ShowDeathScreen();
 				}
-			} else
-			{
-				Client_ShowDeathScreen();
 			}
 		},
 		KnockOutToDeathTime,
@@ -799,6 +845,26 @@ void AMainPlayer::Revive()
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	CanInteract = false;
 	InteractableData.CanInteract = CanInteract;
+}
+
+void AMainPlayer::OnRespawn()
+{
+	StatusComponent->IncreaseHP(20.0f);
+	
+	//안 기절 상태로 전환
+	IsInability = false;
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+	CanInteract = false;
+	InteractableData.CanInteract = CanInteract;
+		
+	RestoreCamera();
+}
+
+void AMainPlayer::RestoreCamera_Implementation()
+{
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] RESTORE CAMERA"));
+	FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
+	FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(1, 1,1,1);
 }
 
 void AMainPlayer::CheckInteraction()
@@ -1187,8 +1253,8 @@ void AMainPlayer::WeaponTrace(const FVector& StartPos, const FVector& EndPos)
 		TraceTypeQuery,
 		true,
 		IgnoreActors,
-		//EDrawDebugTrace::None,
-		EDrawDebugTrace::ForDuration,
+		EDrawDebugTrace::None,
+		//EDrawDebugTrace::ForDuration,
 		Hit,
 		true))
 	{
@@ -1602,7 +1668,7 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 	// 폴리지가 아니면 종료
 	if (!ISMC) 
 	{
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("맞은 건 폴리지가 아님"));
+		//if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("맞은 건 폴리지가 아님"));
 		return; 
 	}
 
@@ -1661,7 +1727,7 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 		FDamageEvent DamageEvent;
 		NewTree->TakeDamage(DamageAmount, DamageEvent, GetController(), this);
         
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, TEXT("나무 변환 성공!"));
+		//if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, TEXT("나무 변환 성공!"));
 	}
 }
 
@@ -1825,8 +1891,6 @@ void AMainPlayer::Request_SetHotbarIndex(int32 Index)
 		SetHotbarIndex(Index);
 		HUD->UpdateHotBar();
 		RefreshHand();
-		FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
-		WeaponComponent->CheckWeapon(Item);
 	} else
 	{
 		Server_SetHotbarIndex(Index);
@@ -1837,17 +1901,18 @@ void AMainPlayer::Server_SetHotbarIndex_Implementation(int32 Index)
 {
 	SetHotbarIndex(Index);
 	RefreshHand();
-	FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
-	WeaponComponent->CheckWeapon(Item);
 }
 
 void AMainPlayer::OnRep_HotBarIndex()
 {
 	if (IsLocallyControlled())
 	{
-		HUD->UpdateHotBar();
-		RefreshHand();
+		if (HUD)
+		{
+			HUD->UpdateHotBar();
+		}
 	}
+	RefreshHand();
 }
 
 void AMainPlayer::OnRep_HandedItem()
@@ -1977,8 +2042,6 @@ void AMainPlayer::Client_ShowDeathScreen_Implementation()
 	{
 		FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
 		FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(0,0,0,0);
-		
-		MainPlayerController = GetController<AMainPlayerController>();
 		
 		if (AMainPlayerController* MPC = GetController<AMainPlayerController>())
 		{

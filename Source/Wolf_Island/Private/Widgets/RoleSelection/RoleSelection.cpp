@@ -50,6 +50,7 @@ void URoleSelection::CheckOccupied()
 		return;
 	}
 	
+	UE_LOG(LogTemp, Warning, TEXT("[ROLE SELECTION UI] Occupied Check"))
 	for (UWidget* Child : RoleList->GetAllChildren())
 	{
 		URoleButton* Button = Cast<URoleButton>(Child);

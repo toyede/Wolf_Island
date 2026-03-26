@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "SaveSlotPanel.generated.h"
 
+class UBaseButton;
 class UMainGameInstance;
 class UScrollBox;
 class UButton;
@@ -23,7 +24,7 @@ public:
 	UScrollBox* SlotBox;
 	
 	UPROPERTY(meta=(BindWidget))
-	UButton* AddSlotButton;
+	UBaseButton* AddSlotButton;
 	
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<class USaveSlot> SlotClass;

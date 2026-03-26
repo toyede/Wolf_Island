@@ -181,7 +181,7 @@ public:
 	float StaminaDecreaseRate = 0.1f;
 	//스태미나 감소량
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
-	float StaminaDecreaseAmount = 0.1f;
+	float StaminaDecreaseAmount = 0.2f;
 	//스태미나 회복 주기
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float StaminaRecovereRate = 0.1f;
@@ -200,10 +200,10 @@ public:
 	float HungerRate = 0.1f;
 	//배고픔 감소량
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
-	float HungerAmount = 0.005f;
+	float HungerAmount = 0.01f;
 	//달리기 중 배고픔 감소량
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
-	float HungerAmountWhileRunning = 0.033f;
+	float HungerAmountWhileRunning = 0.066f;
 	//배고픔 사망 타이머 시간(초)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float HungerDeathRate = 60.0f;
@@ -213,10 +213,10 @@ public:
 	float HydrationRate = 0.1f;
 	//수분 감소량
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
-	float HydrationAmount = 0.0033f;
+	float HydrationAmount = 0.0066f;
 	//달리기 중 수분 감소향
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
-	float HydrationAmountWhileRunning = 0.033f;
+	float HydrationAmountWhileRunning = 0.099f;
 	//수분 사망 타이머 시간(초)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float HydrationDeathRate = 30.0f;
@@ -226,13 +226,13 @@ public:
 	float AirRate = 0.1f;
 	//산소 감소량
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
-	float AirAmount = 0.001f;
+	float AirAmount = 0.33f;
 	//산소 회복량
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float AirRecoverAmount = 0.01f;
 	//산소 회복 주기
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
-	float AirRecoverRate = 0.01f;
+	float AirRecoverRate = 1.0f;
 	//산소 부족으로 받는 대미지량
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float SuffocatedDamage = 10.0f;

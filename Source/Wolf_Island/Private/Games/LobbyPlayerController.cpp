@@ -50,6 +50,10 @@ void ALobbyPlayerController::Request_ToggleReady()
 		ToggleReady();
 	} else
 	{
+		if (AMainPlayerState* PS = GetPlayerState<AMainPlayerState>())
+		{
+			PS->ToggleReady();
+		}
 		Server_ToggleReady();
 	}
 }

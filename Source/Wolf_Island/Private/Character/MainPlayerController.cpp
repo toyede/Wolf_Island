@@ -300,11 +300,18 @@ void AMainPlayerController::Server_ConfirmRole_Implementation(ECharacterRole New
 {
 	AMultiGameMode* GM = Cast<AMultiGameMode>(GetWorld()->GetAuthGameMode());
 	AMainPlayerState* PS = Cast<AMainPlayerState>(PlayerState);
+	AMainGameState* GS = Cast<AMainGameState>(GetWorld()->GetGameState());
 	
 	if (GM->CheckRoleAvailable(NewRole))
 	{
 		PS->SetPlayerRole(NewRole);
 		UE_LOG(LogTemp, Warning, TEXT("Check Role %d in Server"), PS->GetPlayerRole());
+		
+		if (GS)
+		{
+			GS->RefreshSelectedRoles();
+		}
+		
 		GM->RestartPlayer(this);
 		Client_EndSelection();
 		
@@ -378,6 +385,14 @@ void AMainPlayerController::OnQuit()
 
 void AMainPlayerController::Respawn()
 {
-	AMainGameMode* GM = GetWorld()->GetAuthGameMode<AMainGameMode>();
-	GM->HandlePlayerDeath(this);
+	if (AMultiGameMode* MGM = GetWorld()->GetAuthGameMode<AMultiGameMode>())
+	{
+		MGM->HandlePlayerDeath(this);
+		return;
+	}
+	
+	if (AMainGameMode* SGM = GetWorld()->GetAuthGameMode<AMainGameMode>())
+	{
+		SGM->HandlePlayerDeath(this);
+	}
 }

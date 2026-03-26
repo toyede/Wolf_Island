@@ -66,6 +66,14 @@ int32 UMainGameInstance::FindEmptySaveSlotIndex(bool IsMulti)
 	return -1;
 }
 
+void UMainGameInstance::CreateLobbySession_Implementation()
+{
+}
+
+void UMainGameInstance::CreateGameSession_Implementation()
+{
+}
+
 FString UMainGameInstance::GenerateSessionCode()
 {
 	FString Code;

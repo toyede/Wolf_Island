@@ -50,6 +50,12 @@ public:
 	//세션 함수
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	void CreateSession();
+	
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void CreateLobbySession();
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void CreateGameSession();
+	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	void FindSession(const FString& SessionCode);
 	

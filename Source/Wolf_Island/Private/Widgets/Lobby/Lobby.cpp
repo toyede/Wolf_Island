@@ -104,6 +104,5 @@ void ULobby::RefreshInfo()
 
 void ULobby::SwitchPlayButton(bool On)
 {
-	//StartButton->SetVisibility(On ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 	StartButton->Button->SetIsEnabled(On);
 }

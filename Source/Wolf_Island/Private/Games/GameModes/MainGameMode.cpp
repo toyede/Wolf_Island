@@ -29,9 +29,10 @@ void AMainGameMode::InitGame(const FString& MapName, const FString& Options, FSt
 	//저장된 플레이어 데이터도 세팅
 	if (MainGameInstance && MainGameInstance->CurrenSaveGame)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD SAVE DATA FROM MainGameInstance"));
 		CurrentSaveData = MainGameInstance->CurrenSaveGame;
 		PlayersSaveData = CurrentSaveData->Players;
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD SAVE DATA FROM %s"), *CurrentSaveData->SlotName);
+		CurrentSaveData->PrintSaveInfo();
 	}
 	//에디터에서 월드로 바로 입장 시 테스트 세이브 게임 데이터 생성 및 로드
 	else
@@ -84,6 +85,13 @@ void AMainGameMode::StartPlay()
 	}
 }
 
+void AMainGameMode::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	
+}
+
 void AMainGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	AMainPlayerState* PS = Cast<AMainPlayerState>(NewPlayer->PlayerState);
@@ -119,8 +127,6 @@ void AMainGameMode:: RestartPlayer(AController* NewPlayer)
 	}
 	
 	Super::RestartPlayer(NewPlayer);
-	
-	SaveWorld();
 }
 
 void AMainGameMode::Logout(AController* Exiting)
@@ -152,12 +158,15 @@ void AMainGameMode::AfterRestartPlayer(AController* Player, bool IsDead)
 	}
 	if (!LoadPlayer(PS, IsDead))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] NO SAVE DETECTED ON AFTER RESTART. SAVE NEW PLAYER"))
 		SavePlayer(PS);
 	}
 }
 
 void AMainGameMode::SetActorCache()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] SET ACTOR CACHE"));
+	
 	TArray<AActor*> SaveActors;
 	UGameplayStatics::GetAllActorsWithInterface(GetWorld(), USaveInterface::StaticClass(), SaveActors);
 
@@ -241,9 +250,14 @@ void AMainGameMode::LoadWorld()
 
 void AMainGameMode::LoadWorldFromSave(UMainSaveGame* Save)
 {
+	if (!HasAuthority()) return;
+	
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD WORLD FROM %s"), *CurrentSaveData->SlotName);
+	
 	//저장된 액터가 있으면 액터 로드
-	if (Save->SavedActors.Num() != 0)
+	if (!Save->SavedActors.IsEmpty() || Save->SavedActors.Num() != 0)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD SAVED ACTORS"));
 		//초기 상태 액터 캐시 생성
 		SetActorCache();
 	
@@ -252,6 +266,7 @@ void AMainGameMode::LoadWorldFromSave(UMainSaveGame* Save)
 		{
 			if (!Save->SavedActors.Contains(Pair.Key))
 			{
+				UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] DESTROY ACTOR : %s"), *Pair.Value->GetName());
 				Pair.Value->Destroy();
 			}
 		}
@@ -288,6 +303,7 @@ void AMainGameMode::LoadWorldFromSave(UMainSaveGame* Save)
 		}
 	}
 	
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD FOLIAGES"));
 	//폴리지 데이터 로드
 	for (const FRemovedFoliageData& FoliageData : Save->RemovedFoliages)
 	{

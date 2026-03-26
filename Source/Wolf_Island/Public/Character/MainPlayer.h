@@ -107,6 +107,12 @@ public:
 	
 	virtual void PawnClientRestart() override;
 	
+	virtual void Restart() override;
+	
+	virtual void OnRep_PlayerState() override;
+	
+	virtual void OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState) override;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
 	class AMainPlayerController* MainPlayerController;
 	//HUD=============================================================================
@@ -548,6 +554,14 @@ public:
 	//소생 함수
 	UFUNCTION(BlueprintCallable)
 	void Revive();
+	
+	//리스폰 처리 함수
+	UFUNCTION(BlueprintCallable)
+	void OnRespawn();
+	
+	//카메라 복구 함수
+	UFUNCTION(Client, Reliable, BlueprintCallable)
+	void RestoreCamera();
 
 	//인터랙션 관련 함수===================================================
 	//인터랙션 체크 함수 - 라인트레이스로 인터랙션 액터 체크

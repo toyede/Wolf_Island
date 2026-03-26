@@ -114,4 +114,7 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void PrintSaveInfo();
+	
+	UFUNCTION(Blueprintable, BlueprintPure)
+	FString GetSlotName() const { return SlotName; };
 };

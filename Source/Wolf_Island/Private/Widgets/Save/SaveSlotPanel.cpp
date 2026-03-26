@@ -8,6 +8,7 @@
 #include "Games/MainGameInstance.h"
 #include "Games/MainSaveGame.h"
 #include "Kismet/GameplayStatics.h"
+#include "Widgets/BaseButton.h"
 #include "Widgets/Save/SaveSlot.h"
 #include "Widgets/TextCommitPanel.h"
 
@@ -154,13 +155,12 @@ void USaveSlotPanel::OnCreateCommited(const FString& Text)
 		
 		MainGameInstance->SetCurrentSave(NewSave);
 	
-		//멀티 게임 시작
+		//멀티 새 게임 시작
 		if (NewSave->IsMulti)
 		{
-			MainGameInstance->CreateSession();
-			//UGameplayStatics::OpenLevelBySoftObjectPtr(GetWorld(), MainGameInstance->MultiLobbyWorld);
+			MainGameInstance->CreateLobbySession();
 		}
-		//싱글 게임 시작
+		//싱글 새 게임 시작
 		else
 		{
 			UGameplayStatics::OpenLevelBySoftObjectPtr(GetWorld(), MainGameInstance->SinglePlayWorld);

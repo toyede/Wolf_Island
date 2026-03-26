@@ -58,6 +58,8 @@ public:
 	
 	virtual void StartPlay() override;
 	
+	virtual void BeginPlay() override;
+	
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	
 	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
