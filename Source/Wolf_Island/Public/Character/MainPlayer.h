@@ -308,6 +308,9 @@ public:
 	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsUsingItem = false;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="State")
+	bool bBuildingInputBlocked = false;
+
 	//핫바 관련 변수==================================================================
 	//핫바 슬롯 인덱스
 	UPROPERTY(ReplicatedUsing=OnRep_HotBarIndex, VisibleAnywhere, BlueprintReadOnly, Category="HotBar", SaveGame)
@@ -719,6 +722,12 @@ public:
 	void Request_StopCraft();
 	UFUNCTION(Server, Reliable)
 	void Server_StopCraft();
+
+	UFUNCTION(BlueprintCallable)
+	void SetBuildingInputBlocked(bool bBlocked);
+
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE bool IsBuildingInputBlocked() const { return bBuildingInputBlocked; }
 	
 	
 	//아이템 정보 저장

@@ -379,6 +379,8 @@ void AMainPlayer::OnCurrentWeightChanged()
 
 void AMainPlayer::StartJump()
 {
+	if (IsBuildingInputBlocked()) return;
+
 	//스태미나가 0이면 점프 불가
 	if (StatusComponent->CurrentStamina <= JumpConsumeAmount) return;
 
@@ -463,6 +465,8 @@ void AMainPlayer::Landed(const FHitResult& Hit)
 //시야 함수
 void AMainPlayer::Look(const FInputActionValue& Value)
 {
+	if (IsBuildingInputBlocked()) return;
+
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 	//UE_LOG(LogTemp, Warning, TEXT("LOOK X: %f, Y: %f"), LookAxisVector.X, LookAxisVector.Y);
 	float sen = 1;
@@ -477,6 +481,8 @@ void AMainPlayer::Look(const FInputActionValue& Value)
 //이동 함수
 void AMainPlayer::Move(const FInputActionValue& Value)
 {
+	if (IsBuildingInputBlocked()) return;
+
 	FVector2D MovementVector = Value.Get<FVector2D>();
 	//UE_LOG(LogTemp, Warning, TEXT("MOVE X: %f, Y: %f"), MovementVector.X, MovementVector.Y);
 
@@ -503,6 +509,8 @@ void AMainPlayer::Move(const FInputActionValue& Value)
 //특정 시간 후 스태미나 회복 -> Shift 떼면 스태미나 소진
 void AMainPlayer::Run()
 {	
+	if (IsBuildingInputBlocked()) return;
+
 	//속도가 있는가? -> 뛰는 중인가?
 	if (GetVelocity().Size() > 0){
 
@@ -571,6 +579,8 @@ void AMainPlayer::StopRun()
 
 void AMainPlayer::ToggleCrouch()
 {
+	if (IsBuildingInputBlocked()) return;
+
 	//기절 중이면 못함
 	if (IsInability) return;
 	
@@ -594,6 +604,8 @@ void AMainPlayer::ToggleCrouch()
 
 void AMainPlayer::ToggleInventory()
 {
+	if (IsBuildingInputBlocked()) return;
+
 	//인벤토리가 열려 있으면
 	if (IsInventoryOpen)
 	{
@@ -603,6 +615,16 @@ void AMainPlayer::ToggleInventory()
 	else
 	{
 		IsInventoryOpen = true;
+	}
+}
+
+void AMainPlayer::SetBuildingInputBlocked(bool bBlocked)
+{
+	bBuildingInputBlocked = bBlocked;
+
+	if (bBuildingInputBlocked && IsLocallyControlled())
+	{
+		GetCharacterMovement()->StopMovementImmediately();
 	}
 }
 
@@ -680,6 +702,8 @@ void AMainPlayer::StopUseItem()
 
 void AMainPlayer::HandleHotBar(const FInputActionValue& Value)
 {
+	if (IsBuildingInputBlocked()) return;
+
 	APlayerController* PlayerController = Cast<APlayerController>(GetController());
 	if (PlayerController)
 	{
@@ -705,6 +729,8 @@ void AMainPlayer::HandleHotBar(const FInputActionValue& Value)
 
 void AMainPlayer::HandleHotBarWithWheel(const FInputActionValue& Value)
 {
+	if (IsBuildingInputBlocked()) return;
+
 	if (UBuildingComponent* BuildComp = FindComponentByClass<UBuildingComponent>())
 	{
 		if (BuildComp->GetCurrentState() == EBuildingState::Placing)
@@ -1052,6 +1078,8 @@ void AMainPlayer::Client_InteractionExecuted_Implementation()
 //인터랙션 시작 함수 (인터랙션 키 눌렀을 때)
 void AMainPlayer::BeginInteract()
 {
+	if (IsBuildingInputBlocked()) return;
+
 	//인터랙션이 시작됐을 때부터 인터렉션 상태가 변하지 않는 것을 체크
 	CheckInteraction();
 
@@ -1106,6 +1134,8 @@ void AMainPlayer::BeginInteract()
 
 void AMainPlayer::EndInteract()
 {
+	if (IsBuildingInputBlocked()) return;
+
 	if (HUD)
 	{
 		HUD->HideInteraction();
@@ -1330,6 +1360,8 @@ void AMainPlayer::EndWeaponAttack()
 
 void AMainPlayer::DropItemOnHotBar()
 {
+	if (IsBuildingInputBlocked()) return;
+
 	FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
 	if (Item.IsValid())
 	{
@@ -1339,6 +1371,8 @@ void AMainPlayer::DropItemOnHotBar()
 
 void AMainPlayer::WaterElevation(const FInputActionValue& Value)
 {
+	if (IsBuildingInputBlocked()) return;
+
 	if (IsSwimming)
 	{
 		float Elevation = Value.Get<float>();
@@ -1786,6 +1820,8 @@ void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 
 void AMainPlayer::Request_Run()
 {
+	if (IsBuildingInputBlocked()) return;
+
 	if (HasAuthority())
 	{
 		Run();
@@ -1808,6 +1844,8 @@ void AMainPlayer::Request_StopRun()
 
 void AMainPlayer::Request_ToggleCrouch()
 {
+	if (IsBuildingInputBlocked()) return;
+
 	if (HasAuthority())
 	{
 		ToggleCrouch();
@@ -1841,6 +1879,8 @@ void AMainPlayer::OnRep_IsRunning()
 
 void AMainPlayer::Request_Attack()
 {
+	if (IsBuildingInputBlocked()) return;
+
 	if (UBuildingComponent* BuildComp = FindComponentByClass<UBuildingComponent>())
 	{
 		if (BuildComp->GetCurrentState() == EBuildingState::Placing)
@@ -1921,13 +1961,16 @@ void AMainPlayer::Request_StartUseItem()
 {
 	if (UBuildingComponent* BuildComp = FindComponentByClass<UBuildingComponent>())
 	{
-		if (BuildComp->GetCurrentState() == EBuildingState::Placing)
+		const EBuildingState State = BuildComp->GetCurrentState();
+		if (State == EBuildingState::Placing || State == EBuildingState::Building)
 		{
 			BuildComp->CancelBuild();
 			
 			return; 
 		}
 	}
+
+	if (IsBuildingInputBlocked()) return;
 	
 	if (HasAuthority())
 	{

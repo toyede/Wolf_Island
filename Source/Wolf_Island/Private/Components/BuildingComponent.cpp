@@ -9,6 +9,7 @@
 #include "Components/InventoryComponent.h"
 #include "Games/MainGameState.h"
 #include "Interface/BuildingInterface.h"
+#include "Character/MainPlayer.h"
 
 // Sets default values for this component's properties
 UBuildingComponent::UBuildingComponent()
@@ -196,6 +197,14 @@ bool UBuildingComponent::CheckPlacementValid() const
 
 void UBuildingComponent::CleanupBuildMode()
 {
+	if (AMainPlayer* OwnerPlayer = Cast<AMainPlayer>(GetOwner()))
+	{
+		if (OwnerPlayer->IsLocallyControlled())
+		{
+			OwnerPlayer->SetBuildingInputBlocked(false);
+		}
+	}
+
 	if (PreviewActor)
 	{
 		FString ActorName = PreviewActor->GetName();
@@ -297,6 +306,10 @@ void UBuildingComponent::ConfirmBuild()
 	if (CurrentState == EBuildingState::Placing && CheckPlacementValid())
 	{
 		CurrentState = EBuildingState::Building;
+		if (AMainPlayer* OwnerPlayer = Cast<AMainPlayer>(OwnerPawn))
+		{
+			OwnerPlayer->SetBuildingInputBlocked(true);
+		}
 
 		float BuildTime = CurrentRecipe.Duration;
 		BuildStartTime = GetWorld()->GetTimeSeconds();

@@ -85,18 +85,18 @@ inline void UCraftPanel::RefreshRecipeList()
 	RecipeTable->ForeachRow<FRecipeData>(TEXT("RecipeTableContext"),
 	[&](const FName& RowName, const FRecipeData& Recipe)
 	{
-		if (Index == 0)
-		{
-			CurrentRecipeData = Recipe;
-		}
 	   // 1. 아이템 타입 필터 (기존 로직)
-	   bool bTypeMatch = RecipeTypeList.Contains(Recipe.ItemType);
+	   bool bTypeMatch = RecipeTypeList.Contains(Recipe.ItemType) && (Recipe.ItemType != EItemType::BUILDING);
        
 	   bool bMethodMatch = (Recipe.Method == TargetCraftMethod);
 
 	   // 두 조건 다 맞으면 목록에 추가
 	   if (bTypeMatch && bMethodMatch)
 	   {
+			if (Index == 0)
+			{
+				CurrentRecipeData = Recipe;
+			}
 	   		AddRecipe(Recipe);
 	   		Index++;
 	   }
