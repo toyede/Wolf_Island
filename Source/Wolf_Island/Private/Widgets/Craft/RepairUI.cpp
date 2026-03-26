@@ -34,6 +34,8 @@ void URepairUI::NativeConstruct()
 	if (APlayerController* PC = GetOwningPlayer())
 	{
 		PC->SetShowMouseCursor(true);
+		PC->SetIgnoreLookInput(true);
+		PC->SetIgnoreMoveInput(true);
 		
 		FInputModeUIOnly InputMode;
 		InputMode.SetWidgetToFocus(this->TakeWidget());
@@ -53,6 +55,8 @@ void URepairUI::NativeDestruct()
 	if (APlayerController* PC = GetOwningPlayer())
 	{
 		PC->SetShowMouseCursor(false);
+		PC->SetIgnoreLookInput(false);
+		PC->SetIgnoreMoveInput(false);
 		PC->SetInputMode(FInputModeGameOnly());
 	}
 }

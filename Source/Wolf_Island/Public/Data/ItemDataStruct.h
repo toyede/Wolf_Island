@@ -271,9 +271,11 @@ USTRUCT(BlueprintType)
 struct FRepairRecipeData : public FTableRowBase
 {
 	GENERATED_USTRUCT_BODY();
-
+	
 	UPROPERTY(EditAnywhere)
 	FName RecipeName;
+	UPROPERTY(EditAnywhere)
+	FName Sort;
 	UPROPERTY(EditAnywhere)
 	FName Ingredient1ID;
 	UPROPERTY(EditAnywhere)

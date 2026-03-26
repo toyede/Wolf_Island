@@ -138,6 +138,12 @@ void AEnemyAIController::HandleSight(AActor* Actor, const FAIStimulus& Stimulus)
 	APawn* SensedPawn = Cast<APawn>(Actor);
 	if (!SensedPawn || !SensedPawn->IsPlayerControlled()) return;
 
+	if (Actor->ActorHasTag(FName("Invisible")) || Actor->ActorHasTag(FName("Werewolf")))
+	{
+		SetEnemyState(EEnemyState::Passive);
+		return;
+	}
+
 	GetWorld()->GetTimerManager().ClearTimer(LineOfSightTimer);
 
 	if (ShouldSwitchTarget(Actor))
@@ -155,7 +161,11 @@ void AEnemyAIController::HandleDamage(AActor* Actor, const FAIStimulus& Stimulus
 {
 	if (!Stimulus.WasSuccessfullySensed()) return;
 	if (IsFriendlyAggroSource(Actor)) return;
-
+	if (Actor->ActorHasTag(FName("Invisible")) || Actor->ActorHasTag(FName("Werewolf")))
+	{
+		SetEnemyState(EEnemyState::Passive);
+		return;
+	}
 	AttackTarget = Actor;
 	SetEnemyState(EEnemyState::Combat);
 }

@@ -1,0 +1,11 @@
+,RecipeName,Sort,Ingredient1ID,Ingredient1Amount,Ingredient2ID,Ingredient2Amount,Ingredient3ID,Ingredient3Amount,Ingredient4ID,Ingredient4Amount,Duration
+RRCP001,Body,BD,RE001,1,RE002,1,RE003,1,RE004,1,60
+RRCP002,Propeller,BD,RE021,1,,,,,,,60
+RRCP003,Engine,EG,RE005,2,RE006,2,RE007,1,RE008,1,60
+RRCP004,Pump,EG,RE009,1,RE010,1,RE011,1,,,60
+RRCP005,Control_Device,CT,RE012,3,,,,,,,60
+RRCP006,Follow-Up_Device,CT,RE013,1,RE014,1,,,,,60
+RRCP007,Rader,RD,RE015,1,RE005,2,RE006,2,,,60
+RRCP008,Transmitter,RD,RE016,1,RE017,1,,,,,60
+RRCP009,Anchor,AC,RE018,1,RE020,1,,,,,60
+RRCP010,Lifting_Device,AC,RE019,1,RE005,2,RE006,2,,1,60

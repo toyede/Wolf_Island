@@ -32,6 +32,8 @@
 #include "Components/WidgetComponent.h"
 #include "Games/MainSaveGame.h"
 #include "Games/GameModes/MainGameMode.h"
+#include "Moon/MoonlightInfectionSystem.h"
+
 
 void AMainPlayer::PossessedBy(AController* NewController)
 {
@@ -169,6 +171,21 @@ void AMainPlayer::BeginPlay()
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] BeginPlay"))
 	Super::BeginPlay();
 	
+	if (HasAuthority())
+	{
+		TArray<AActor*> Found;
+		UGameplayStatics::GetAllActorsOfClass(
+			GetWorld(), AMoonlightInfectionSystem::StaticClass(), Found);
+		if (Found.Num() > 0)
+		{
+			AMoonlightInfectionSystem* System =
+				Cast<AMoonlightInfectionSystem>(Found[0]);
+			TArray<AActor*> Self;
+			Self.Add(this);
+			System->BindPlayers(Self);
+		}
+	}
+
 	InteractableData.InteractionDuration = InteractionDuration;
 	
 	if (IsLocallyControlled())
@@ -700,6 +717,15 @@ void AMainPlayer::HandleHotBar(const FInputActionValue& Value)
 
 void AMainPlayer::HandleHotBarWithWheel(const FInputActionValue& Value)
 {
+	if (UBuildingComponent* BuildComp = FindComponentByClass<UBuildingComponent>())
+	{
+		if (BuildComp->GetCurrentState() == EBuildingState::Placing)
+		{
+			BuildComp->RotatePreview(Value.Get<float>());
+			return;
+		}
+	}
+
 	if (Value.Get<float>() > 0)
 	{
 		Request_SetHotbarIndex((HotBarIndex + 1) % 6);
@@ -2150,7 +2176,7 @@ void AMainPlayer::Client_OpenRepairUI_Implementation(class ARepair_Actor* Target
 			RepairWidget->InitRepairWindow(TargetActor);
 			RepairWidget->AddToViewport();
 
-			FInputModeGameAndUI InputMode;
+			FInputModeUIOnly InputMode;
 			InputMode.SetWidgetToFocus(RepairWidget->TakeWidget());
 			PC->SetInputMode(InputMode);
 			PC->bShowMouseCursor = true;
