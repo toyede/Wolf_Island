@@ -856,6 +856,8 @@ void AEnemyAIBoss::ApplyDeadState()
 
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
+	OnBossCombatEnd.Broadcast();
+
 	if (DieSound)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, DieSound, GetActorLocation());

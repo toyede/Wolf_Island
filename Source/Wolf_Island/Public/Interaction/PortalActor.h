@@ -10,6 +10,9 @@ class UBoxComponent;
 class UStaticMeshComponent;
 class AMainPlayer;
 
+// 포탈 타서 이동했을 때의 이벤트 델리게이트	
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPortalTriggered);
+
 UCLASS()
 class WOLF_ISLAND_API APortalActor : public AInteractableActor
 {
@@ -17,6 +20,8 @@ class WOLF_ISLAND_API APortalActor : public AInteractableActor
 
 public:
 	APortalActor();
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
 	USceneComponent* Root;
@@ -51,6 +56,25 @@ public:
 	virtual void BeginPlay() override;
 
 	virtual void Interact_Implementation(AActor* Interactor) override;
+
+	UPROPERTY(BlueprintAssignable, Category = "Delegate")
+	FOnPortalTriggered OnPortalTriggered;
+
+	// 포탈마다 다름. 인스턴수 변수
+	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Portal")
+	bool bRequiresBossDefeat = false;
+
+	UPROPERTY(ReplicatedUsing = OnRep_BossDefeated)
+	bool bBossDefeated = false;
+
+	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Portal")
+	class AEnemyAIBoss* LinkedBoss;
+
+	UFUNCTION()
+	void OnRep_BossDefeated();
+
+	UFUNCTION()
+	void OnBossDefeated();
 
 protected:
 	UFUNCTION()

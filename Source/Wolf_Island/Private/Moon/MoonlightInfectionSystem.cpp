@@ -148,45 +148,70 @@ void AMoonlightInfectionSystem::StartSingleInfectionSequence(AMainPlayer* Player
 {
 	if (!Player || GetNetMode() != NM_Standalone) return;
 
-	// 1) 연출: 화면 암전 + 하울링 (클라 RPC/블루프린트 이벤트)
-	// Player->Client_PlayInfectionSequenceFX(); // TODO: 구현/연결
-
-	// 2) 다음날 아침으로 스킵
+	// 아침으로 스킵
 	if (IsValid(DynamicSkyActor) && DynamicSkyActor->Implements<USkyInterface>())
 	{
 		ISkyInterface::Execute_SkipToMorning(DynamicSkyActor);
 	}
-	else if (bShowDebugMessages)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] SkipToMorning failed: DynamicSkyActor does not implement SkyInterface"));
-	}
 
-	// 3) 수리된 것 중 랜덤 1개 파괴
+	// 수리된 것 중 랜덤 1개 파괴
 	TArray<AActor*> RepairActors;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AActor::StaticClass(), RepairActors);
-
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ARepair_Actor::StaticClass(), RepairActors);
 	for (AActor* Actor : RepairActors)
 	{
 		if (ARepair_Actor* RepairActor = Cast<ARepair_Actor>(Actor))
 		{
-			if (RepairActor->BreakRandomCompletedRepair())
-			{
-				break;
-			}
+			if (RepairActor->BreakRandomCompletedRepair()) break;
 		}
 	}
 
-	// 4) 감염도 +20%
-	if (Player->StatusComponent)
-	{
-		Player->StatusComponent->IncreaseInfectionBy(PostSequenceInfectionBonus);
-	}
+	// +20%는 OnDayStarted에서 처리
 }
 
 void AMoonlightInfectionSystem::OnNightStarted()
 {
+	// 밤 시작: 하루 누적량 초기화
+	NightlyExposure.Empty();
 	TriggeredThisNight.Empty();
-	NightExposureAccumulated.Empty();
+}
+
+void AMoonlightInfectionSystem::OnDayStarted()
+{
+	if (bShowDebugMessages)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow,
+			FString::Printf(TEXT("[DayStarted] Triggered count: %d, Bonus: +%.0f%%"),
+				TriggeredThisNight.Num(), PostSequenceInfectionBonus * 100.f));
+	}
+
+	// 아침: 트리거된 플레이어에게 +20% 적용
+	for (auto& WeakPlayer : TriggeredThisNight)
+	{
+		AMainPlayer* Player = WeakPlayer.Get();
+		if (!IsValid(Player)) continue;
+
+		if (Player->StatusComponent)
+		{
+			Player->StatusComponent->IncreaseInfectionBy(PostSequenceInfectionBonus);
+
+			if (bShowDebugMessages)
+			{
+				UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] %s +%.0f%% infection at dawn (Total: %.2f%%)"),
+					*Player->GetName(),
+					PostSequenceInfectionBonus * 100.f,
+					Player->StatusComponent->CurrentInfectionRate * 100.f);
+			}
+		}
+	}
+
+	// 멀티: 늑대 복귀
+	if (GetNetMode() != NM_Standalone)
+	{
+		OnMorningStarted();
+	}
+
+	NightlyExposure.Empty();
+	TriggeredThisNight.Empty();
 }
 
 void AMoonlightInfectionSystem::StartMultiInfectionSequence(AMainPlayer* Player)
@@ -208,12 +233,6 @@ void AMoonlightInfectionSystem::StartMultiInfectionSequence(AMainPlayer* Player)
 
 	// 2) 늑대인간 스폰 + 빙의
 	SpawnAndPossessWerewolf(PC, SpawnLocation);
-
-	// 3) 감염도 +20%
-	if (Player->StatusComponent)
-	{
-		Player->StatusComponent->IncreaseInfectionBy(PostSequenceInfectionBonus);
-	}
 
 	if (bShowDebugMessages)
 	{
@@ -290,10 +309,7 @@ void AMoonlightInfectionSystem::Debug_ForceRestoreAll()
 
 void AMoonlightInfectionSystem::CheckAllPlayers()
 {
-	if (GetLocalRole() != ROLE_Authority)
-	{
-		return;
-	}
+	if (GetLocalRole() != ROLE_Authority) return;
 
 	for (int32 Index = InfectedStatusList.Num() - 1; Index >= 0; --Index)
 	{
@@ -304,27 +320,36 @@ void AMoonlightInfectionSystem::CheckAllPlayers()
 			continue;
 		}
 
-		if (!StatusComp->IsInfected || StatusComp->bIsIncapacitated)
-		{
-			continue;
-		}
+		if (!StatusComp->IsInfected || StatusComp->bIsIncapacitated) continue;
 
 		AActor* Player = StatusComp->GetOwner();
-		if (!IsValid(Player))
-		{
-			continue;
-		}
+		if (!IsValid(Player)) continue;
 
 		if (IsPlayerExposedToMoonlight(Player))
 		{
+			// 총 감염량 증가
 			ApplyInfection(Player, InfectionPerCheck);
 
 			if (AMainPlayer* MainPlayer = Cast<AMainPlayer>(Player))
 			{
-				float& Acc = NightExposureAccumulated.FindOrAdd(MainPlayer);
-				Acc += InfectionPerCheck;
+				// 하루 밤 누적량 증가
+				float& Nightly = NightlyExposure.FindOrAdd(MainPlayer);
+				Nightly += InfectionPerCheck;
 
-				if (!TriggeredThisNight.Contains(MainPlayer) && Acc >= TransformThreshold)
+				// 디버그 출력
+				if (bShowDebugMessages)
+				{
+					float TotalInfection = StatusComp->CurrentInfectionRate;
+					GEngine->AddOnScreenDebugMessage(-1, CheckInterval, FColor::Cyan,
+						FString::Printf(TEXT("[%s] Total: %.2f%% | Nightly: %.2f%% / %.2f%%"),
+							*MainPlayer->GetName(),
+							TotalInfection * 100.f,
+							Nightly * 100.f,
+							NightlyTransformThreshold * 100.f));
+				}
+
+				// 하루 누적이 임계치 넘고, 이번 밤에 아직 트리거 안 됐으면
+				if (!TriggeredThisNight.Contains(MainPlayer) && Nightly >= NightlyTransformThreshold)
 				{
 					TriggeredThisNight.Add(MainPlayer);
 
@@ -336,8 +361,7 @@ void AMoonlightInfectionSystem::CheckAllPlayers()
 					{
 						StartMultiInfectionSequence(MainPlayer);
 					}
-
-					Acc -= TransformThreshold; // 누적 유지하고 싶으면 이렇게
+					// +20%는 OnDayStarted에서 적용하므로 여기선 안 함
 				}
 			}
 		}
@@ -543,13 +567,8 @@ void AMoonlightInfectionSystem::SetSpectateTarget(APlayerController* PC)
 	{
 		AMainPlayer* MP = Cast<AMainPlayer>(Actor);
 
-		// 1. 유효성 체크: 본인 아니고, 살아있고(Hidden 아님), 유효한 액터인 경우
 		if (!MP || MP->IsHidden() || MP->GetController() == PC) continue;
 
-		// --- 여기서부터 하이브리드 로직 ---
-
-		// A. 서버(리슨 서버 본인)인 경우:
-		// 서버는 지금 당장 Possess 로직이 돌아가고 있을 확률이 높으니 NextTick으로 한 프레임 미룹니다.
 		if (PC->IsLocalController())
 		{
 			GetWorldTimerManager().SetTimerForNextTick([PC, MP]()
@@ -561,9 +580,7 @@ void AMoonlightInfectionSystem::SetSpectateTarget(APlayerController* PC)
 					}
 				});
 		}
-		// B. 클라이언트인 경우:
-		// 클라이언트는 서버가 RPC를 보내는 시간 자체가 일종의 딜레이 역할을 합니다.
-		// 하지만 더 안전하게 하기 위해 클라이언트 RPC 구현부에서 아주 살짝 시간을 주겠습니다.
+
 		else
 		{
 			AMainPlayerController* MainPC = Cast<AMainPlayerController>(PC);

@@ -77,23 +77,29 @@ public:
 	UFUNCTION()
 	void HandleInfectionStarted(UStatusComponent* StatusComp);
 
-	UPROPERTY(EditAnywhere, Category = "Infection|Single")
-	float TransformThreshold = 0.15f; // 감염률이 이 값 이상이면 변신
+	// 하루 밤 동안의 감염 누적량 (밤 시작 시 0으로 초기화)
+	UPROPERTY()
+	TMap<AMainPlayer*, float> NightlyExposure;
 
-	UPROPERTY(EditAnywhere, Category = "Infection|Single")
-	float PostSequenceInfectionBonus = 0.2f; // 시퀀스 후 추가 감염률
+	// 이번 밤에 이미 트리거된 플레이어 (밤당 1회 제한)
+	UPROPERTY()
+	TSet<TWeakObjectPtr<AMainPlayer>> TriggeredThisNight;
 
-	// 플레이어별 밤 누적 노출량
-	TMap<AMainPlayer*, float> NightExposureAccumulated;
+	UPROPERTY(EditAnywhere, Category = "Infection")
+	float NightlyTransformThreshold = 0.15f; // 하루 밤 누적 15% 넘으면 트리거
 
-	// 밤당 1회만 발동하고 싶으면 사용
-	TSet<TWeakObjectPtr<class AMainPlayer>> TriggeredThisNight;
+	UPROPERTY(EditAnywhere, Category = "Infection")
+	float PostSequenceInfectionBonus = 0.2f; // 트리거 후 다음날 아침에 +20%
 
 	UFUNCTION()
 	void StartSingleInfectionSequence(AMainPlayer* Player);
 
-	UFUNCTION()
+	// BP에서 호출할 함수
+	UFUNCTION(BlueprintCallable, Category = "Moonlight System")
 	void OnNightStarted();
+
+	UFUNCTION(BlueprintCallable, Category = "Moonlight System")
+	void OnDayStarted();
 
 	// 멀티 전용: 늑대인간 세션 데이터
 	UFUNCTION()
