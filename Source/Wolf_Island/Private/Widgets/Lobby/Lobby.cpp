@@ -7,8 +7,10 @@
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
 #include "Games/LobbyPlayerController.h"
+#include "Games/MainGameInstance.h"
 #include "Games/MainGameState.h"
 #include "Games/MainPlayerState.h"
+#include "Games/GameModes/LobbyGameMode.h"
 #include "Widgets/BaseButton.h"
 #include "Widgets/RoleSelection/RoleButton.h"
 
@@ -31,6 +33,11 @@ void ULobby::NativeConstruct()
 	if (ReadyButton)
 	{
 		ReadyButton->OnClicked.AddDynamic(this, &ULobby::OnReady);
+	}
+	
+	if (StartButton)
+	{
+		StartButton->OnClicked.AddDynamic(this, &ULobby::OnStart);
 	}
 	
 	SwitchPlayButton(false);
@@ -112,6 +119,32 @@ void ULobby::OnReady()
 		if (AMainPlayerState* PS = PlayerController->GetPlayerState<AMainPlayerState>())
 		{
 			SwitchRoleButton(!PS->GetIsReady());
+		}
+	}
+}
+
+void ULobby::OnStart()
+{
+	if (ALobbyGameMode* LGM = GetWorld()->GetAuthGameMode<ALobbyGameMode>())
+	{
+		//모두 레디 함
+		if (LGM->CheckAllPlayerReady())
+		{
+			if (UMainGameInstance* GI = GetGameInstance<UMainGameInstance>())
+			{
+				UMainSaveGame* NewSave = GI->CreateSaveSlot(
+					GI->CurrentServerName, 
+					GI->FindEmptySaveSlotIndex(true), 
+					true);
+				
+				GI->SetCurrentSave(NewSave);
+			}
+			LGM->RunGameTravel();
+		}
+		//어떤 쌧기가 레디 안했나
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[LOBBY WIDGET] SOMEONE DIDN'T READY"))
 		}
 	}
 }

@@ -46,6 +46,8 @@ public:
 	void OnNext();
 	UFUNCTION(BlueprintCallable)
 	void OnReady();
+	UFUNCTION(BlueprintCallable)
+	void OnStart();
 	
 	UFUNCTION(BlueprintCallable)
 	void RefreshInfo();
