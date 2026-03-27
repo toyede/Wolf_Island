@@ -78,7 +78,7 @@ FString UMainGameInstance::GenerateSessionCode()
 {
 	FString Code;
 	int8 CodeLength = 6;
-	FString Characters = "0123456789ABCDEFGHIJKLNMOPQRSTUVWXYZ";
+	FString Characters = "123456789ABCDEFGHIJKLNMOPQRSTUVWXYZ";
 	
 	for (int i=0; i<CodeLength; i++)
 	{

@@ -28,7 +28,7 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnCancelClicked OnCancelClicked;
 	
-	UPROPERTY(meta=(BindWidget))
+	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
 	UEditableTextBox* TextEditBox;
 	
 	UPROPERTY(meta=(BindWidget))
@@ -47,4 +47,7 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void OnTextCommited(const FText& Text, ETextCommit::Type CommitMethod);
+	
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void SetUseUppercase(bool Use);
 };

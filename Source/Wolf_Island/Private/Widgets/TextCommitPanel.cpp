@@ -34,3 +34,7 @@ void UTextCommitPanel::OnTextCommited(const FText& Text, ETextCommit::Type Commi
 	
 	OnCommitClicked.Broadcast(TextEditBox->GetText().ToString());
 }
+
+void UTextCommitPanel::SetUseUppercase_Implementation(bool Use)
+{
+}

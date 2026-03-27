@@ -28,6 +28,7 @@
 #include "Components/BillboardComponent.h"
 #include "WaterBodyComponent.h"
 #include "Character/MainPlayerController.h"
+#include "Character/Torch.h"
 #include "Components/BuildingComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Games/MainSaveGame.h"
@@ -249,6 +250,15 @@ void AMainPlayer::BeginPlay()
 	
 	MainPlayerController = Cast<AMainPlayerController>(GetController());
 	InteractableData.CanInteract = false;
+	
+	FActorSpawnParameters SpawnParams;
+		
+	Torch = GetWorld()->SpawnActor<ATorch>(TorchClass, SpawnParams);
+	Torch->AttachToComponent(
+		GetMesh(), 
+		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+		FName("hand_r"));
+	Torch->SetActorHiddenInGame(true);
 }
 
 void AMainPlayer::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -816,6 +826,21 @@ void AMainPlayer::RefreshHand()
 		if (ItemData->Type == EItemType::EQUIPMENT || ItemData->Type == EItemType::FOOD)
 		{
 			IsHoldingItem = true;
+			
+			//토치 들기
+			if (ItemData->ID == TEXT("EQ006"))
+			{
+				ItemMesh->SetStaticMesh(nullptr);
+				WeaponComponent->CheckWeapon(Item);
+				
+				if (Torch)
+				{
+					Torch->SetActorHiddenInGame(false);
+				}
+				
+				return;
+			}
+			
 			ItemMesh->SetStaticMesh(ItemData->AssetData.Mesh);
 			ItemMesh->AttachToComponent(
 			GetMesh(),
@@ -826,7 +851,8 @@ void AMainPlayer::RefreshHand()
 			FTransform SocketTransform = ItemMesh->GetSocketTransform(TEXT("HandSocket"), RTS_Component);
 			ItemMesh->SetRelativeTransform(SocketTransform.Inverse());
 			WeaponComponent->CheckWeapon(Item);
-		} else
+		} 
+		else
 		{
 			WeaponComponent->CheckWeapon(Item);
 			IsHoldingItem = false;
@@ -837,6 +863,11 @@ void AMainPlayer::RefreshHand()
 		WeaponComponent->CheckWeapon(Item);
 		IsHoldingItem = false;
 		ItemMesh->SetStaticMesh(nullptr);
+	}
+	
+	if (Torch)
+	{
+		Torch->SetActorHiddenInGame(true);
 	}
 }
 
