@@ -1294,7 +1294,7 @@ void AMainPlayer::DropItem(UInventoryComponent* SourceInventory, int32 SourceInd
 		
 		APickup* Pickup = GetWorld()->SpawnActor<APickup>(ItemClass, SpawnTransform, SpawnParams);
 		Pickup->InitializeDrop(ItemData, AmountToDrop);
-
+		
 		if (ItemGettingSound)
 		{
 			Client_PlaySound2D(ItemGettingSound);
