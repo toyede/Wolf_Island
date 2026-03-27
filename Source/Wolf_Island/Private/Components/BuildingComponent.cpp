@@ -9,6 +9,7 @@
 #include "Components/InventoryComponent.h"
 #include "Games/MainGameState.h"
 #include "Interface/BuildingInterface.h"
+#include "Character/MainPlayer.h"
 
 // Sets default values for this component's properties
 UBuildingComponent::UBuildingComponent()
@@ -56,6 +57,10 @@ void UBuildingComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAc
 	if (OwnerPawn && OwnerPawn->IsLocallyControlled() && CurrentState == EBuildingState::Placing)
 	{
 		UpdatePreview();
+	}
+	else if (OwnerPawn && OwnerPawn->IsLocallyControlled() && CurrentState == EBuildingState::Building)
+	{
+		UpdateBuildProgress();
 	}
 }
 
@@ -192,6 +197,14 @@ bool UBuildingComponent::CheckPlacementValid() const
 
 void UBuildingComponent::CleanupBuildMode()
 {
+	if (AMainPlayer* OwnerPlayer = Cast<AMainPlayer>(GetOwner()))
+	{
+		if (OwnerPlayer->IsLocallyControlled())
+		{
+			OwnerPlayer->SetBuildingInputBlocked(false);
+		}
+	}
+
 	if (PreviewActor)
 	{
 		FString ActorName = PreviewActor->GetName();
@@ -199,6 +212,8 @@ void UBuildingComponent::CleanupBuildMode()
 		PreviewActor = nullptr;
         
 	}
+	BuildStartTime = 0.0f;
+	BuildDuration = 0.0f;
 	CurrentState = EBuildingState::Idle;
 }
 
@@ -214,7 +229,8 @@ void UBuildingComponent::Server_RequestBuild_Implementation(FRecipeData Recipe, 
         
 		if (BuildData.BuildingClass)
 		{
-			GetWorld()->SpawnActor<AActor>(BuildData.BuildingClass, SpawnTransform, SpawnParams);
+			const FTransform AdjustedTransform = AdjustSpawnTransformToGround(SpawnTransform);
+			GetWorld()->SpawnActor<AActor>(BuildData.BuildingClass, AdjustedTransform, SpawnParams);
 			CleanupBuildMode();
 		}
 	}
@@ -260,17 +276,21 @@ void UBuildingComponent::EnterBuildMode(const FRecipeData& Recipe, const FBuildi
 			TArray<UStaticMeshComponent*> MeshComps;
 			PreviewActor->GetComponents<UStaticMeshComponent>(MeshComps);
 
-			if (MeshComps.Num() > 0 && BuildData.GhostMesh.IsValid())
+			if (MeshComps.Num() > 0 && !BuildData.GhostMesh.IsNull())
 			{
 				UStaticMesh* LoadedMesh = BuildData.GhostMesh.LoadSynchronous();
-        
-				for (UStaticMeshComponent* Mesh : MeshComps)
+				if (LoadedMesh)
 				{
-					if (Mesh)
+					for (UStaticMeshComponent* Mesh : MeshComps)
 					{
-						Mesh->SetStaticMesh(LoadedMesh);
-						Mesh->SetCastShadow(false);
-						Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+						if (Mesh)
+						{
+							Mesh->SetStaticMesh(LoadedMesh);
+							Mesh->SetCastShadow(false);
+							Mesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+							Mesh->SetCollisionResponseToAllChannels(ECR_Overlap);
+							Mesh->SetGenerateOverlapEvents(true);
+						}
 					}
 				}
 			}
@@ -286,8 +306,15 @@ void UBuildingComponent::ConfirmBuild()
 	if (CurrentState == EBuildingState::Placing && CheckPlacementValid())
 	{
 		CurrentState = EBuildingState::Building;
+		if (AMainPlayer* OwnerPlayer = Cast<AMainPlayer>(OwnerPawn))
+		{
+			OwnerPlayer->SetBuildingInputBlocked(true);
+		}
 
 		float BuildTime = CurrentRecipe.Duration;
+		BuildStartTime = GetWorld()->GetTimeSeconds();
+		BuildDuration = BuildTime;
+		UpdateBuildProgress();
 
 		if (BuildTime > 0.0f)
 		{
@@ -309,6 +336,120 @@ void UBuildingComponent::CancelBuild()
 	}
 }
 
+void UBuildingComponent::UpdateBuildProgress()
+{
+	if (!PreviewActor || BuildDuration <= 0.0f)
+	{
+		return;
+	}
+
+	const float Elapsed = GetWorld()->GetTimeSeconds() - BuildStartTime;
+	const float Progress = FMath::Clamp(Elapsed / BuildDuration, 0.0f, 1.0f);
+
+	if (PreviewActor->Implements<UBuildingInterface>())
+	{
+		IBuildingInterface::Execute_UpdateBuildProgress(PreviewActor, Progress);
+	}
+}
+
+FTransform UBuildingComponent::AdjustSpawnTransformToGround(const FTransform& InTransform) const
+{
+	if (!GetWorld())
+	{
+		return InTransform;
+	}
+
+	const FVector Origin = InTransform.GetLocation();
+	const FVector TraceUp(0.0f, 0.0f, 500.0f);
+	const FVector TraceDown(0.0f, 0.0f, 2000.0f);
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(GetOwner());
+
+	float ExtentX = 50.0f;
+	float ExtentY = 50.0f;
+	if (PreviewActor)
+	{
+		TArray<UStaticMeshComponent*> MeshComps;
+		PreviewActor->GetComponents<UStaticMeshComponent>(MeshComps);
+		if (MeshComps.Num() > 0 && MeshComps[0] && MeshComps[0]->GetStaticMesh())
+		{
+			const FVector LocalExtent = MeshComps[0]->GetStaticMesh()->GetBounds().BoxExtent;
+			const FVector Scale = MeshComps[0]->GetComponentScale();
+			ExtentX = LocalExtent.X * Scale.X;
+			ExtentY = LocalExtent.Y * Scale.Y;
+		}
+	}
+
+	const FQuat BaseRot = InTransform.GetRotation();
+	const FVector Right = BaseRot.GetRightVector();
+	const FVector Forward = BaseRot.GetForwardVector();
+
+	TArray<FVector> SampleOffsets;
+	SampleOffsets.Add(FVector::ZeroVector);
+	SampleOffsets.Add(Forward * ExtentX + Right * ExtentY);
+	SampleOffsets.Add(Forward * ExtentX - Right * ExtentY);
+	SampleOffsets.Add(-Forward * ExtentX + Right * ExtentY);
+	SampleOffsets.Add(-Forward * ExtentX - Right * ExtentY);
+
+	TArray<FHitResult> Hits;
+	Hits.Reserve(SampleOffsets.Num());
+
+	for (const FVector& Offset : SampleOffsets)
+	{
+		const FVector Start = Origin + Offset + TraceUp;
+		const FVector End = Origin + Offset - TraceDown;
+
+		FHitResult Hit;
+		if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params))
+		{
+			Hits.Add(Hit);
+		}
+	}
+
+	if (Hits.Num() == 0)
+	{
+		return InTransform;
+	}
+
+	// Average hit point and normal for a stable plane fit.
+	FVector AvgPoint(0.0f, 0.0f, 0.0f);
+	FVector AvgNormal(0.0f, 0.0f, 0.0f);
+	for (const FHitResult& Hit : Hits)
+	{
+		AvgPoint += Hit.ImpactPoint;
+		AvgNormal += Hit.ImpactNormal;
+	}
+	AvgPoint /= static_cast<float>(Hits.Num());
+	AvgNormal = AvgNormal.GetSafeNormal();
+	if (AvgNormal.IsNearlyZero())
+	{
+		AvgNormal = Hits[0].ImpactNormal.GetSafeNormal();
+	}
+
+	const float Yaw = InTransform.GetRotation().Rotator().Yaw;
+	const FVector YawForward = FRotator(0.0f, Yaw, 0.0f).Vector();
+	const FRotator AlignedRot = FRotationMatrix::MakeFromZX(AvgNormal, YawForward).Rotator();
+
+	// Push along normal so at least one sampled point touches ground (reduces floating).
+	const FQuat AlignedQuat = AlignedRot.Quaternion();
+	float MinDist = 0.0f;
+	for (int32 i = 0; i < Hits.Num(); ++i)
+	{
+		const FVector Predicted = AvgPoint + AlignedQuat.RotateVector(SampleOffsets[i]);
+		const float Dist = FVector::DotProduct(Hits[i].ImpactPoint - Predicted, AvgNormal);
+		if (Dist < MinDist)
+		{
+			MinDist = Dist;
+		}
+	}
+
+	FTransform Out = InTransform;
+	Out.SetRotation(AlignedQuat);
+	Out.SetLocation(AvgPoint + (AvgNormal * MinDist));
+	return Out;
+}
+
 void UBuildingComponent::SendDebugChat(FString Message)
 {
 	if (AMainGameState* GS = GetWorld()->GetGameState<AMainGameState>())
@@ -318,6 +459,25 @@ void UBuildingComponent::SendDebugChat(FString Message)
 		DebugMsg.Message = Message;
 		GS->AddChattingMessage(DebugMsg);
 	}
+}
+
+void UBuildingComponent::RotatePreview(float AxisValue)
+{
+	if (CurrentState != EBuildingState::Placing || !PreviewActor)
+	{
+		return;
+	}
+
+	if (FMath::IsNearlyZero(AxisValue))
+	{
+		return;
+	}
+
+	const float Step = PreviewRotationStepDegrees;
+	const float DeltaYaw = (AxisValue > 0.0f) ? Step : -Step;
+	FRotator NewRot = PreviewActor->GetActorRotation();
+	NewRot.Yaw = FMath::Fmod(NewRot.Yaw + DeltaYaw + 360.0f, 360.0f);
+	PreviewActor->SetActorRotation(NewRot);
 }
 
 

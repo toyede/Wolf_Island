@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "InteractableActor.h"
 #include "GameFramework/Actor.h"
+#include "Engine/DataTable.h"
 #include "Interaction/InteractionInterface.h"
 #include "RecordActor.generated.h"
 
@@ -36,4 +37,13 @@ public:
 	//저장 관련 코드
 	virtual void SaveData_Implementation(FActorSaveData& OutData) override;
 	virtual void LoadData_Implementation(const FActorSaveData& InData) override;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Record")
+	UDataTable* RecipeDataTable;
+
+	UFUNCTION(CallInEditor)
+	TArray<FString> GetRecipeNames() const;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Record", meta = (GetOptions = "GetRecipeNames"))
+	TArray<FName> SharedUnlockRecipes;
 };

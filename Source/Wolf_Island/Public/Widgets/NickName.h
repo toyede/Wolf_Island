@@ -20,4 +20,9 @@ public:
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
 	UTextBlock* NickName;
 	
+	UFUNCTION(BlueprintCallable)
+	void UpdateName(AController* Controller);
+	
+	//UFUNCTION(BlueprintCallable)
+	void UpdateName(APlayerState* PlayerState);
 };

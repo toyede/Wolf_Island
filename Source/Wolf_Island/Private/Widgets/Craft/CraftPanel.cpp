@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Widgets/Craft/CraftPanel.h"
@@ -77,7 +77,11 @@ void UCraftPanel::AddRecipe(FRecipeData Recipe)
 
 inline void UCraftPanel::RefreshRecipeList()
 {
-	if (!RecipeList || !RecipeTable) return;
+	if (!RecipeList || !RecipeTable || !OwnerInventory) return;
+
+	// 플레이어 참조 가져오기
+	AMainPlayer* Player = Cast<AMainPlayer>(OwnerInventory->GetOwner());
+	if (!Player) return;
 
 	RecipeList->ClearChildren();
 
@@ -85,24 +89,30 @@ inline void UCraftPanel::RefreshRecipeList()
 	RecipeTable->ForeachRow<FRecipeData>(TEXT("RecipeTableContext"),
 	[&](const FName& RowName, const FRecipeData& Recipe)
 	{
-		if (Index == 0)
-		{
-			CurrentRecipeData = Recipe;
-		}
-	   // 1. 아이템 타입 필터 (기존 로직)
-	   bool bTypeMatch = RecipeTypeList.Contains(Recipe.ItemType);
-       
-	   bool bMethodMatch = (Recipe.Method == TargetCraftMethod);
+		// 플레이어가 해금한 레시피가 아니라면 건너뜀
+		if (!Player->HasRecipe(RowName)) return;
 
-	   // 두 조건 다 맞으면 목록에 추가
-	   if (bTypeMatch && bMethodMatch)
-	   {
-	   		AddRecipe(Recipe);
-	   		Index++;
-	   }
+		// 1. 아이템 타입 필터
+		bool bTypeMatch = RecipeTypeList.Contains(Recipe.ItemType) && (Recipe.ItemType != EItemType::BUILDING);
+		bool bMethodMatch = (Recipe.Method == TargetCraftMethod);
+
+		// 두 조건 다 맞으면 목록에 추가
+		if (bTypeMatch && bMethodMatch)
+		{
+			if (Index == 0)
+			{
+				CurrentRecipeData = Recipe;
+			}
+			AddRecipe(Recipe);
+			Index++;
+		}
 	});
 
-	SetRecipeInfo(CurrentRecipeData);
+	// 해금된 레시피가 하나라도 있을 때만 정보창 업데이트
+	if (Index > 0)
+	{
+		SetRecipeInfo(CurrentRecipeData);
+	}
 }
 
 void UCraftPanel::SetRecipeInfo(FRecipeData RecipeData)

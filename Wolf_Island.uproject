@@ -30,6 +30,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "LiveLink",
+			"Enabled": true
+		},
+		{
 			"Name": "Water",
 			"Enabled": true
 		},
@@ -134,6 +138,18 @@
 		},
 		{
 			"Name": "MetaHumanRuntime",
+			"Enabled": true
+		},
+		{
+			"Name": "OnlineSubsystem",
+			"Enabled": true
+		},
+		{
+			"Name": "OnlineSubsystemUtils",
+			"Enabled": true
+		},
+		{
+			"Name": "OnlineSubsystemSteam",
 			"Enabled": true
 		}
 	],

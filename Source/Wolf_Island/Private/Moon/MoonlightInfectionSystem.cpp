@@ -187,6 +187,105 @@ void AMoonlightInfectionSystem::OnNightStarted()
 	NightExposureAccumulated.Empty();
 }
 
+void AMoonlightInfectionSystem::StartMultiInfectionSequence(AMainPlayer* Player)
+{
+	if (!Player || !HasAuthority()) return;
+	if (GetNetMode() == NM_Standalone) return; // 싱글이면 리턴
+
+	APlayerController* PC = Cast<APlayerController>(Player->GetController());
+	if (!PC) return;
+
+	// 이미 변신 중이면 무시
+	if (ActiveWerewolfSessions.Contains(PC)) return;
+
+	FVector SpawnLocation = Player->GetActorLocation();
+	FRotator SpawnRotation = Player->GetActorRotation();
+
+	// 1) 원래 캐릭터 백업 + 숨김
+	StoreOriginalCharacter(PC, Player);
+
+	// 2) 늑대인간 스폰 + 빙의
+	SpawnAndPossessWerewolf(PC, SpawnLocation);
+
+	// 3) 감염도 +20%
+	if (Player->StatusComponent)
+	{
+		Player->StatusComponent->IncreaseInfectionBy(PostSequenceInfectionBonus);
+	}
+
+	if (bShowDebugMessages)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] %s transformed into Werewolf (Multi)"),
+			*Player->GetName());
+	}
+}
+
+void AMoonlightInfectionSystem::OnMorningStarted()
+{
+	if (!HasAuthority()) return;
+
+	// 모든 활성 늑대 세션 복귀 처리
+	TArray<APlayerController*> PCsToRestore;
+	for (auto& Pair : ActiveWerewolfSessions)
+	{
+		PCsToRestore.Add(Pair.Key);
+	}
+
+	for (APlayerController* PC : PCsToRestore)
+	{
+		RestorePlayerAtDawn(PC);
+	}
+}
+
+void AMoonlightInfectionSystem::RestorePlayerAtDawn(APlayerController* PC)
+{
+	if (!PC) return;
+
+	FWerewolfSessionData* Session = ActiveWerewolfSessions.Find(PC);
+	if (!Session) return;
+
+	AMainPlayer* OriginalPlayer = Session->OriginalCharacter.Get();
+	ACharacter* Werewolf = Session->WerewolfCharacter.Get();
+
+	if (!OriginalPlayer || !Werewolf) return;
+
+	// 1) 늑대 위치 저장
+	FVector RestoreLocation = Werewolf->GetActorLocation();
+	FRotator RestoreRotation = Werewolf->GetActorRotation();
+
+	// 2) 늑대에서 Unpossess
+	PC->UnPossess();
+
+	// 3) 원래 캐릭터를 늑대 위치로 이동
+	OriginalPlayer->SetActorLocation(RestoreLocation);
+	OriginalPlayer->SetActorRotation(RestoreRotation);
+
+	// 4) 원래 캐릭터 복원
+	OriginalPlayer->SetActorHiddenInGame(false);
+	OriginalPlayer->SetActorEnableCollision(true);
+	OriginalPlayer->SetActorTickEnabled(true);
+
+	// 5) 원래 캐릭터에 다시 Possess
+	PC->Possess(OriginalPlayer);
+
+	// 6) 늑대 제거
+	Werewolf->Destroy();
+
+	// 7) 세션 데이터 제거
+	ActiveWerewolfSessions.Remove(PC);
+
+	if (bShowDebugMessages)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] %s restored at dawn"),
+			*OriginalPlayer->GetName());
+	}
+}
+
+void AMoonlightInfectionSystem::Debug_ForceRestoreAll()
+{
+	OnMorningStarted();
+}
+
 void AMoonlightInfectionSystem::CheckAllPlayers()
 {
 	if (GetLocalRole() != ROLE_Authority)
@@ -226,7 +325,16 @@ void AMoonlightInfectionSystem::CheckAllPlayers()
 				if (!TriggeredThisNight.Contains(MainPlayer) && Acc >= TransformThreshold)
 				{
 					TriggeredThisNight.Add(MainPlayer);
-					StartSingleInfectionSequence(MainPlayer);
+
+					if (GetNetMode() == NM_Standalone)
+					{
+						StartSingleInfectionSequence(MainPlayer);
+					}
+					else
+					{
+						StartMultiInfectionSequence(MainPlayer);
+					}
+
 					Acc -= TransformThreshold; // 누적 유지하고 싶으면 이렇게
 				}
 			}
@@ -375,6 +483,43 @@ FVector AMoonlightInfectionSystem::GetMoonlightCheckLocation(AActor* Player)
 	}
 }
 
+void AMoonlightInfectionSystem::SpawnAndPossessWerewolf(APlayerController* PC, FVector Location)
+{
+	if (!PC || !WerewolfClass) return;
 
+	// 세션 데이터를 Unpossess 전에 먼저 구성
+	FWerewolfSessionData SessionData;
+	SessionData.OriginalCharacter = Cast<AMainPlayer>(PC->GetPawn());
+	SessionData.OwningPC = PC;
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	ACharacter* Werewolf = GetWorld()->SpawnActor<ACharacter>(
+		WerewolfClass,
+		Location,
+		FRotator::ZeroRotator,
+		SpawnParams
+	);
+
+	if (!Werewolf) return;
+
+	PC->UnPossess();
+	PC->Possess(Werewolf);
+
+	SessionData.WerewolfCharacter = Werewolf;
+	ActiveWerewolfSessions.Add(PC, SessionData);
+}
+
+void AMoonlightInfectionSystem::StoreOriginalCharacter(APlayerController* PC, AMainPlayer* Player)
+{
+	if (!PC || !Player) return;
+
+	// 캐릭터 숨기기 + 충돌 비활성화
+	Player->SetActorHiddenInGame(true);
+	Player->SetActorEnableCollision(false);
+	Player->SetActorTickEnabled(false);
+}
 
 
