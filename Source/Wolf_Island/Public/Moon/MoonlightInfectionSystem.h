@@ -134,4 +134,9 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Infection|Multi")
 	TSubclassOf<ACharacter> WerewolfClass;
+
+
+	// 멀티 전용: 관전 모드로 전환
+private:
+	void SetSpectateTarget(APlayerController* PC);
 };

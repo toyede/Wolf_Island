@@ -15,6 +15,8 @@
 // 테스트용 헤더
 #include "Character/MainPlayer.h"
 #include "Components/StatusComponent.h"
+#include "Character/WerewolfInfected.h"
+#include "Character/MainPlayerController.h"
 
 // Sets default values
 AMoonlightInfectionSystem::AMoonlightInfectionSystem()
@@ -487,7 +489,6 @@ void AMoonlightInfectionSystem::SpawnAndPossessWerewolf(APlayerController* PC, F
 {
 	if (!PC || !WerewolfClass) return;
 
-	// 세션 데이터를 Unpossess 전에 먼저 구성
 	FWerewolfSessionData SessionData;
 	SessionData.OriginalCharacter = Cast<AMainPlayer>(PC->GetPawn());
 	SessionData.OwningPC = PC;
@@ -505,8 +506,17 @@ void AMoonlightInfectionSystem::SpawnAndPossessWerewolf(APlayerController* PC, F
 
 	if (!Werewolf) return;
 
+	// 기존 캐릭터에서 Unpossess만 하고 늑대에는 Possess 안 함
 	PC->UnPossess();
-	PC->Possess(Werewolf);
+
+	// 늑대는 자체 AI로 동작
+	if (AWerewolfInfected* Wolf = Cast<AWerewolfInfected>(Werewolf))
+	{
+		Wolf->StartAI();
+	}
+
+	// 관전 대상 설정
+	SetSpectateTarget(PC);
 
 	SessionData.WerewolfCharacter = Werewolf;
 	ActiveWerewolfSessions.Add(PC, SessionData);
@@ -522,4 +532,47 @@ void AMoonlightInfectionSystem::StoreOriginalCharacter(APlayerController* PC, AM
 	Player->SetActorTickEnabled(false);
 }
 
+void AMoonlightInfectionSystem::SetSpectateTarget(APlayerController* PC)
+{
+	if (!PC) return;
 
+	TArray<AActor*> FoundPlayers;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMainPlayer::StaticClass(), FoundPlayers);
+
+	for (AActor* Actor : FoundPlayers)
+	{
+		AMainPlayer* MP = Cast<AMainPlayer>(Actor);
+
+		// 1. 유효성 체크: 본인 아니고, 살아있고(Hidden 아님), 유효한 액터인 경우
+		if (!MP || MP->IsHidden() || MP->GetController() == PC) continue;
+
+		// --- 여기서부터 하이브리드 로직 ---
+
+		// A. 서버(리슨 서버 본인)인 경우:
+		// 서버는 지금 당장 Possess 로직이 돌아가고 있을 확률이 높으니 NextTick으로 한 프레임 미룹니다.
+		if (PC->IsLocalController())
+		{
+			GetWorldTimerManager().SetTimerForNextTick([PC, MP]()
+				{
+					if (PC && MP)
+					{
+						PC->SetViewTargetWithBlend(MP, 0.2f);
+						UE_LOG(LogTemp, Log, TEXT("[Spectate] SERVER View Fixed to %s"), *MP->GetName());
+					}
+				});
+		}
+		// B. 클라이언트인 경우:
+		// 클라이언트는 서버가 RPC를 보내는 시간 자체가 일종의 딜레이 역할을 합니다.
+		// 하지만 더 안전하게 하기 위해 클라이언트 RPC 구현부에서 아주 살짝 시간을 주겠습니다.
+		else
+		{
+			AMainPlayerController* MainPC = Cast<AMainPlayerController>(PC);
+			if (MainPC)
+			{
+				MainPC->Client_SetViewTargetWithBlend(MP, 0.2f);
+			}
+		}
+
+		return; // 한 명 찾았으면 종료
+	}
+}
