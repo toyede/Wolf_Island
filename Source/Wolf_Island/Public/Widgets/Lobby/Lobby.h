@@ -31,6 +31,8 @@ public:
 	UButton* NextButton;
 	
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
+	UBaseButton* ReadyButton;
+	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
 	UBaseButton* StartButton;
 	
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
@@ -42,12 +44,17 @@ public:
 	void OnPrev();
 	UFUNCTION(BlueprintCallable)
 	void OnNext();
+	UFUNCTION(BlueprintCallable)
+	void OnReady();
 	
 	UFUNCTION(BlueprintCallable)
 	void RefreshInfo();
 	
 	UFUNCTION(BlueprintCallable)
 	void SwitchPlayButton(bool On);
+	
+	UFUNCTION(BlueprintCallable)
+	void SwitchRoleButton(bool IsOn);
 	
 	virtual void NativeConstruct() override;
 };
