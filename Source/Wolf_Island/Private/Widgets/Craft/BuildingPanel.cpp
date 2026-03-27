@@ -19,14 +19,20 @@ void UBuildingPanel::RefreshBuildingList()
 {
 	if (!RecipeList || !RecipeTable) return;
 
+	// 플레이어 참조 가져오기
+	AMainPlayer* Player = Cast<AMainPlayer>(GetOwningPlayerPawn());
+	if (!Player) return;
+
 	RecipeList->ClearChildren();
 
 	int32 Index = 0;
 	RecipeTable->ForeachRow<FRecipeData>(TEXT("BuildingContext"),
 	[&](const FName& RowName, const FRecipeData& Recipe)
 	{
+		// 플레이어가 해금한 레시피가 아니라면 건너뜀
+		if (!Player->HasRecipe(RowName)) return;
+
 		bool bTypeMatch = (Recipe.ItemType == EItemType::BUILDING);
-        
 		bool bMethodMatch = (Recipe.Method == TargetBuildMethod);
 		
 		if (bTypeMatch && bMethodMatch)
@@ -41,7 +47,10 @@ void UBuildingPanel::RefreshBuildingList()
 		}
 	});
 	
-	SetBuildingInfo(CurrentRecipeData);
+	if (Index > 0)
+	{
+		SetBuildingInfo(CurrentRecipeData);
+	}
 }
 
 void UBuildingPanel::SetBuildingMethod(ECraftMethod NewMethod)

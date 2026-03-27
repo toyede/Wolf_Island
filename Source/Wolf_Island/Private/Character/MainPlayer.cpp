@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Wolf_Island/Public/Character/MainPlayer.h"
@@ -33,6 +33,8 @@
 #include "Games/MainSaveGame.h"
 #include "Games/GameModes/MainGameMode.h"
 #include "Moon/MoonlightInfectionSystem.h"
+#include "Games/MainPlayerState.h"
+#include "Games/MainGameState.h"
 
 
 void AMainPlayer::PossessedBy(AController* NewController)
@@ -93,7 +95,18 @@ void AMainPlayer::OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerStat
 	{
 		if (UNickName* NickNameWidget = Cast<UNickName>(NickName->GetWidget()))
 		{
-			NickNameWidget->UpdateName(NewPlayerState);
+			//NickNameWidget->UpdateName(NewPlayerState);
+		}
+	}
+
+	if (AMainPlayerState* PS = GetPlayerState<AMainPlayerState>())
+	{
+		for (const FName& RecipeID : DefaultRecipes)
+		{
+			if (RecipeID != NAME_None && RecipeID.ToString() != TEXT("None"))
+			{
+				PS->UnlockPersonalRecipe(RecipeID);
+			}
 		}
 	}
 	//UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Player State Changed. OLD[%s] -> NEW[%s]"), *OldPlayerState->GetName(), *NewPlayerState->GetName())
@@ -173,6 +186,7 @@ void AMainPlayer::BeginPlay()
 	
 	if (HasAuthority())
 	{
+		
 		TArray<AActor*> Found;
 		UGameplayStatics::GetAllActorsOfClass(
 			GetWorld(), AMoonlightInfectionSystem::StaticClass(), Found);
@@ -1817,6 +1831,42 @@ void AMainPlayer::ProcessAttackHit(const FHitResult& HitResult, float DamageAmou
 	TryConvertFoliageToActor(HitResult, DamageAmount);
 }
 
+TArray<FString> AMainPlayer::GetRecipeNames() const
+{
+	TArray<FString> Options;
+	Options.Add(TEXT("None"));
+
+	if (RecipeDataTable)
+	{
+		TArray<FName> RowNames = RecipeDataTable->GetRowNames();
+		for (const FName& RowName : RowNames)
+		{
+			Options.Add(RowName.ToString());
+		}
+	}
+
+	return Options;
+}
+
+bool AMainPlayer::HasRecipe(const FName& RecipeID) const
+{
+	if (RecipeID.IsNone()) return false;
+
+	// 1. 개인 레시피 확인
+	if (AMainPlayerState* PS = GetPlayerState<AMainPlayerState>())
+	{
+		if (PS->PersonalRecipes.Contains(RecipeID)) return true;
+	}
+
+	// 2. 공유 레시피 확인
+	if (AMainGameState* GS = GetWorld()->GetGameState<AMainGameState>())
+	{
+		if (GS->SharedRecipes.Contains(RecipeID)) return true;
+	}
+
+	return false;
+}
+
 void AMainPlayer::StartCraft(FRecipeData RecipeData)
 {
 	GetWorld()->GetTimerManager().SetTimer(
@@ -2159,7 +2209,7 @@ void AMainPlayer::Client_OpenBonfireUI_Implementation()
 		{
 			BonfireWidget->AddToViewport();
 
-			FInputModeGameAndUI InputMode;
+			FInputModeUIOnly InputMode;
 			InputMode.SetWidgetToFocus(BonfireWidget->TakeWidget());
 			PC->SetInputMode(InputMode);
 			PC->bShowMouseCursor = true;

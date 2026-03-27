@@ -73,6 +73,7 @@ void AMainGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(AMainGameState, UnlockedRecordIDs);
 	DOREPLIFETIME(AMainGameState, SelectedRoles);
 	DOREPLIFETIME(AMainGameState, IsMulti);
+	DOREPLIFETIME(AMainGameState, SharedRecipes);
 }
 
 void AMainGameState::Multi_AddChat_Implementation(FChattingData NewChattingData)
@@ -108,4 +109,18 @@ void AMainGameState::OnRep_SelectedRoles()
 {
 	UE_LOG(LogTemp, Warning, TEXT("SelectedRoles Updated"));
 	OnSelectedRolesChanged.Broadcast();
+}
+
+void AMainGameState::UnlockSharedRecipe(const FName& RecipeID)
+{
+	if (HasAuthority() && !RecipeID.IsNone() && !SharedRecipes.Contains(RecipeID))
+	{
+		SharedRecipes.Add(RecipeID);
+		OnSharedRecipesChanged.Broadcast();
+	}
+}
+
+void AMainGameState::OnRep_SharedRecipes()
+{
+	OnSharedRecipesChanged.Broadcast();
 }

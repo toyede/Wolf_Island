@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Games/MainPlayerState.h"
@@ -22,6 +22,7 @@ void AMainPlayerState::CopyProperties(APlayerState* PlayerState)
 		NewPS->PlayerRole = PlayerRole;
 		NewPS->IsReady = IsReady;
 		NewPS->Items = Items;
+		NewPS->PersonalRecipes = PersonalRecipes;
 	}
 }
 
@@ -35,6 +36,7 @@ void AMainPlayerState::OverrideWith(APlayerState* PlayerState)
 		PlayerRole = OldPS->PlayerRole;
 		IsReady = OldPS->IsReady;
 		Items = OldPS->Items;
+		PersonalRecipes = OldPS->PersonalRecipes;
 	}
 }
 
@@ -92,4 +94,13 @@ void AMainPlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
 	DOREPLIFETIME(AMainPlayerState, IsReady);
 	DOREPLIFETIME(AMainPlayerState, PlayerRole);
 	DOREPLIFETIME(AMainPlayerState, Items);
+	DOREPLIFETIME(AMainPlayerState, PersonalRecipes);
+}
+
+void AMainPlayerState::UnlockPersonalRecipe(const FName& RecipeID)
+{
+	if (HasAuthority() && !RecipeID.IsNone() && !PersonalRecipes.Contains(RecipeID))
+	{
+		PersonalRecipes.Add(RecipeID);
+	}
 }

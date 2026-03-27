@@ -52,13 +52,30 @@ void ARecordActor::Interact_Implementation(AActor* Interactor)
 
 	if (AMainGameState* GS = GetWorld()->GetGameState<AMainGameState>())
 	{
-		GS->UnlockRecord(RecordID);
-
-		FChattingData Notice;
-		Notice.Name = TEXT("알림");
-		Notice.Message = TEXT("새로운 생존 기록을 발견했습니다.");
-		Notice.MessageType = EMessageType::NOTICE;
-		GS->AddChattingMessage(Notice);
+		if (!RecordID.IsEmpty())
+		{
+			GS->UnlockRecord(RecordID);
+			
+			FChattingData Notice;
+			Notice.Name = TEXT("알림");
+			Notice.Message = TEXT("새로운 기록을 발견했습니다.");
+			Notice.MessageType = EMessageType::NOTICE;
+			GS->AddChattingMessage(Notice);
+		}
+		
+		for (const FName& RecipeID : SharedUnlockRecipes)
+		{
+			if (RecipeID != NAME_None && RecipeID.ToString() != TEXT("None"))
+			{
+				GS->UnlockSharedRecipe(RecipeID);
+			}
+			
+			FChattingData Notice;
+			Notice.Name = TEXT("알림");
+			Notice.Message = TEXT("새로운 제작법을 발견했습니다.");
+			Notice.MessageType = EMessageType::NOTICE;
+			GS->AddChattingMessage(Notice);
+		}
 
 		Destroy();
 	}
@@ -74,4 +91,21 @@ void ARecordActor::LoadData_Implementation(const FActorSaveData& InData)
 	Super::LoadData_Implementation(InData);
 	
 	ForceNetUpdate();
+}
+
+TArray<FString> ARecordActor::GetRecipeNames() const
+{
+	TArray<FString> Options;
+	Options.Add(TEXT("None"));
+
+	if (RecipeDataTable)
+	{
+		TArray<FName> RowNames = RecipeDataTable->GetRowNames();
+		for (const FName& RowName : RowNames)
+		{
+			Options.Add(RowName.ToString());
+		}
+	}
+
+	return Options;
 }

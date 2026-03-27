@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -10,6 +10,7 @@
 #include "Data/ItemDataStruct.h"
 #include "Components/BillboardComponent.h"
 #include "Widgets/NickName.h"
+#include "Engine/DataTable.h"
 #include "MainPlayer.generated.h"
 
 class UWidgetComponent;
@@ -440,6 +441,21 @@ public:
 	void Multi_RemoveFoliageInstance(UInstancedStaticMeshComponent* ISMC, int32 InstanceIndex);
 	
 	//제작===================================================================================================
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crafting")
+	UDataTable* RecipeDataTable;
+
+	// 레시피 드롭다운 목록 생성 함수
+	UFUNCTION(CallInEditor)
+	TArray<FString> GetRecipeNames() const;
+
+	// 시작 지급 레시피
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Crafting", meta = (GetOptions = "GetRecipeNames"))
+	TArray<FName> DefaultRecipes;
+	
+	// 이 플레이어가 특정 레시피를 제작할 수 있는지 (개인 + 공유) 종합 확인하는 함수
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Crafting")
+	bool HasRecipe(const FName& RecipeID) const;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	FTimerHandle CraftTimer;
 	

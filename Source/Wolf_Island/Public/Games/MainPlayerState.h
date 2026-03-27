@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -61,4 +61,12 @@ public:
 	void PrintItems(float DeltaTime);
 	
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
+	// 개인 보유 레시피 목록
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Crafting")
+	TArray<FName> PersonalRecipes;
+
+	// 개인 레시피 추가 함수
+	UFUNCTION(BlueprintCallable, Category = "Crafting")
+	void UnlockPersonalRecipe(const FName& RecipeID);
 };

@@ -202,7 +202,7 @@ void AMainPlayerController::Client_OpenFishTrapUI_Implementation(class AFishTrap
 			FishTrapScreen->SetIsFocusable(true);
 			FishTrapScreen->AddToViewport();
 
-			FInputModeGameAndUI InputMode;
+			FInputModeUIOnly InputMode;
 			InputMode.SetWidgetToFocus(FishTrapScreen->TakeWidget());
 			
 			SetInputMode(InputMode);
