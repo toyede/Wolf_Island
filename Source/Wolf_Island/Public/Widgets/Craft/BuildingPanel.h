@@ -36,6 +36,9 @@ public:
 
 	UPROPERTY(VisibleAnywhere, Category = "State")
 	FRecipeData CurrentRecipeData;
+	
+	UPROPERTY(BlueprintReadWrite)
+	URecipeBlock* CurrentRecipeBlock;
 
 	UPROPERTY()
 	class UInventoryComponent* OwnerInventory;
@@ -47,9 +50,9 @@ protected:
 	void OnBuildButtonClicked();
 
 	UFUNCTION()
-	void SetBuildingInfo(FRecipeData RecipeData);
-
-	void AddBuildingRecipe(FRecipeData Recipe);
+	void SetBuildingInfo(URecipeBlock* NewBlock, FRecipeData RecipeData);
+	
+	URecipeBlock* AddBuildingRecipe(FRecipeData Recipe);
 
 protected:
 	UPROPERTY(meta = (BindWidget))

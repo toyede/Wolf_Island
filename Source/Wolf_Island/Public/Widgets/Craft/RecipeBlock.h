@@ -10,7 +10,7 @@
 /**
  * 
  */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnRecipeButtonClicked, FRecipeData, RecipeData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnRecipeButtonClicked, URecipeBlock*, ClickedBlock, FRecipeData, RecipeData);
 
 UCLASS()
 class WOLF_ISLAND_API URecipeBlock : public UUserWidget
@@ -30,9 +30,14 @@ public:
 	class UImage* ItemIcon;
 	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
 	class UButton* RecipeButton;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	UImage* SelectedIcon;
 
 	UFUNCTION()
 	void OnRecipeButtonClicked();
+	
+	UFUNCTION()
+	void SetSelected(bool IsSelected);
 
 protected:
 	virtual void NativeConstruct() override;

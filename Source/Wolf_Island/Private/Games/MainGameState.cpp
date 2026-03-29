@@ -19,6 +19,14 @@ void AMainGameState::BeginPlay()
 	{
 		IsMulti = GetWorld()->GetAuthGameMode<AMultiGameMode>() != nullptr;
 	}
+	
+	if (IsMulti)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GAMESTATE] This Game is MULTI"));
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GAMESTATE] This Game is SINGLE"));
+	}
 }
 
 //선택된 역할 리스트 새로고침-서버에서만 새로고침 가능

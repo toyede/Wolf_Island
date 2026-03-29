@@ -30,6 +30,9 @@ public:
 	FRecipeData CurrentRecipeData;
 	UPROPERTY(EditAnywhere)
 	FTimerHandle CraftingTimer;
+	
+	UPROPERTY(BlueprintReadWrite)
+	URecipeBlock* CurrentRecipeBlock;
 
 
 	UPROPERTY(EditAnywhere, meta=(BindWidget), BlueprintReadWrite)
@@ -52,11 +55,11 @@ public:
 	ECraftMethod TargetCraftMethod = ECraftMethod::INVEN;
 	
 	UFUNCTION()
-	void AddRecipe(struct FRecipeData Recipe);
+	URecipeBlock* AddRecipe(struct FRecipeData Recipe);
 	UFUNCTION()
 	void RefreshRecipeList();
 	UFUNCTION(BlueprintCallable)
-	void SetRecipeInfo(FRecipeData RecipeData);
+	void SetRecipeInfo(URecipeBlock* ClickedBlock, FRecipeData RecipeData);
 	UFUNCTION(BlueprintCallable)
 	void SetCraftButton(FRecipeData RecipeData);
 	UFUNCTION(BlueprintCallable)

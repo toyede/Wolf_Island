@@ -85,6 +85,9 @@ public:
 	//현재 감염률
 	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Infection", SaveGame)
 	float CurrentInfectionRate = 0.0f;
+	//최대 감염
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection", SaveGame)
+	float MaxInfection = 100.0f;
 	//감염 여부
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection", SaveGame)
 	bool IsInfected = false;
@@ -382,6 +385,8 @@ public:
 	float GetHydrationPercent() { return CurrentHydration / MaxHydration; };
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	float GetAirPercent() { return CurrentAir / MaxAir; };
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	float GetInfectionPercent() { return CurrentInfectionRate / MaxInfection; }
 	
 	//증가 비율 설정 함수
 	UFUNCTION(BlueprintCallable)

@@ -37,20 +37,19 @@ void UBuildingPanel::RefreshBuildingList()
 		
 		if (bTypeMatch && bMethodMatch)
 		{
+			URecipeBlock* NewBlock = AddBuildingRecipe(Recipe);
+			
 			if (Index == 0)
 			{
 				CurrentRecipeData = Recipe;
+				CurrentRecipeBlock = NewBlock;
+				
+				SetBuildingInfo(NewBlock, CurrentRecipeData);
 			}
 			
-			AddBuildingRecipe(Recipe);
 			Index++;
 		}
 	});
-	
-	if (Index > 0)
-	{
-		SetBuildingInfo(CurrentRecipeData);
-	}
 }
 
 void UBuildingPanel::SetBuildingMethod(ECraftMethod NewMethod)
@@ -115,8 +114,16 @@ void UBuildingPanel::OnBuildButtonClicked()
 	}
 }
 
-void UBuildingPanel::SetBuildingInfo(FRecipeData RecipeData)
+void UBuildingPanel::SetBuildingInfo(URecipeBlock* NewBlock, FRecipeData RecipeData)
 {
+	//선택된 버튼 강조 변경
+	//원래 선택 됐던 거 강조 해제
+	CurrentRecipeBlock->SetSelected(false);
+	//선택된 버튼을 최신 거로 변경
+	CurrentRecipeBlock = NewBlock;
+	//최신 선택된 거 강조
+	CurrentRecipeBlock->SetSelected(true);
+	
 	CurrentRecipeData = RecipeData;
 	IngredientList->ClearChildren();
 
@@ -142,7 +149,7 @@ void UBuildingPanel::SetBuildingInfo(FRecipeData RecipeData)
 	}
 }
 
-void UBuildingPanel::AddBuildingRecipe(FRecipeData Recipe)
+URecipeBlock* UBuildingPanel::AddBuildingRecipe(FRecipeData Recipe)
 {
 	if (RecipeBlockClass)
 	{
@@ -157,7 +164,11 @@ void UBuildingPanel::AddBuildingRecipe(FRecipeData Recipe)
 			Block->OnRecipeClicked.AddDynamic(this, &UBuildingPanel::SetBuildingInfo);
 			RecipeList->AddChild(Block);
 		}
+		
+		return Block;
 	}
+	
+	return nullptr;
 }
 
 void UBuildingPanel::SendDebugChat(FString Message)
