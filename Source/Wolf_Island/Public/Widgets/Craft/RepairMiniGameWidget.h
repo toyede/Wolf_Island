@@ -10,6 +10,7 @@
 class UImage;
 class UTextBlock;
 class UButton;
+class USoundBase;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnRepairMiniGameFinished, bool, bSuccess);
 
@@ -118,6 +119,12 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
     float SuccessFlashDuration = 0.15f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|Sound")
+    USoundBase* SuccessSound;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|Sound")
+    USoundBase* FailSound;
 
 private:
     bool bMiniGameActive = false;
