@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "PlayerCard.generated.h"
 
+class UButton;
 class AMainPlayerState;
 class UTextBlock;
 /**
@@ -24,11 +25,23 @@ public:
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
 	UTextBlock* PlayerReady;
 	
+	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
+	UButton* KickButton;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	APlayerController* PlayerController;
+	
 	UFUNCTION(BlueprintCallable)
 	void SetReady(bool IsReady);
+
+	UFUNCTION(BlueprintCallable)
+	void SetPlayerController(APlayerController* NewPlayerController) { PlayerController = NewPlayerController; }
 	
 	UFUNCTION(BlueprintCallable)
 	void UpdateCard(AMainPlayerState* PlayerState);
+	
+	UFUNCTION(BlueprintCallable)
+	void OnKickButtonClicked();
 	
 	virtual void NativeConstruct() override;
 };

@@ -11,7 +11,7 @@
 /**
  * 
  */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnRepairBlockClicked, FName, RowName, FRepairRecipeData, RecipeData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnRepairBlockClicked, URepairBlock*, Clicked,  FName, RowName, FRepairRecipeData, RecipeData);
 
 UCLASS()
 class WOLF_ISLAND_API URepairBlock : public UUserWidget
@@ -32,6 +32,8 @@ class WOLF_ISLAND_API URepairBlock : public UUserWidget
     	class UTextBlock* RecipeName;
     	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
     	class UButton* RecipeButton;
+		UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+		UImage* SelectedIcon;
     
     	UFUNCTION()
     	void OnRepairButtonClicked();
@@ -41,6 +43,9 @@ class WOLF_ISLAND_API URepairBlock : public UUserWidget
 
 		UFUNCTION(BlueprintCallable, Category = "Repair")
 		void RefreshBlockStatus();
+	
+		UFUNCTION(BlueprintCallable)
+		void SetSelected(bool IsSelected);
     
     protected:
     	virtual void NativeConstruct() override;

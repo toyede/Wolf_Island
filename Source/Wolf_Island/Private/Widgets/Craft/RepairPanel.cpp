@@ -68,14 +68,15 @@ void URepairPanel::InitRepairPanel(class ARepair_Actor* InRepairActor)
 void URepairPanel::RefreshRecipeList()
 {
     if (!RecipeList || !RepairRecipeTable) return;
-
+    
+    CurrentBlock = nullptr;
     RecipeList->ClearChildren();
 
     TArray<FName> RowNames = RepairRecipeTable->GetRowNames();
     TMap<FName, TArray<FName>> SortToRows;
     TMap<FName, FRepairRecipeData> RowDataMap;
     TArray<FName> SortOrder;
-
+    
     for (const FName& RowName : RowNames)
     {
         FRepairRecipeData* Recipe = RepairRecipeTable->FindRow<FRepairRecipeData>(RowName, TEXT("RepairTableContext"));
@@ -91,7 +92,6 @@ void URepairPanel::RefreshRecipeList()
         SortToRows.FindOrAdd(SortKey).Add(RowName);
     }
 
-    bool bSelectedFirst = CurrentRowName.IsNone();
     for (int32 SortIndex = 0; SortIndex < SortOrder.Num(); ++SortIndex)
     {
         const FName SortKey = SortOrder[SortIndex];
@@ -103,13 +103,15 @@ void URepairPanel::RefreshRecipeList()
             const FRepairRecipeData* RecipeData = RowDataMap.Find(RowName);
             if (!RecipeData) continue;
 
-            AddRecipe(RowName, *RecipeData);
+            URepairBlock* NewBlock = AddRecipe(RowName, *RecipeData);
 
-            if (bSelectedFirst)
+            if (!CurrentBlock)
             {
-                SetRepairInfo(RowName, *RecipeData);
+                UE_LOG(LogTemp, Warning, TEXT("[REPAIR PANEL] Set First Repair Info"))
+                CurrentBlock = NewBlock;
+                
+                SetRepairInfo(NewBlock, RowName, *RecipeData);
                 SetRepairButtonState(*RecipeData);
-                bSelectedFirst = false;
             }
         }
     }
@@ -134,12 +136,12 @@ void URepairPanel::AddSortHeader(FName SortKey)
 
 }
 
-void URepairPanel::AddRecipe(FName RowName, FRepairRecipeData Recipe)
+URepairBlock* URepairPanel::AddRecipe(FName RowName, FRepairRecipeData Recipe)
 {
-    if (!RepairBlockClass || !RecipeList) return;
+    if (!RepairBlockClass || !RecipeList) return nullptr;
 
     URepairBlock* Block = CreateWidget<URepairBlock>(this, RepairBlockClass);
-    if (!Block) return;
+    if (!Block) return nullptr;
     
     Block->RowName = RowName;
     Block->RepairRecipeData = Recipe; 
@@ -159,10 +161,16 @@ void URepairPanel::AddRecipe(FName RowName, FRepairRecipeData Recipe)
     Block->RefreshBlockStatus();
     
     RecipeList->AddChild(Block);
+    
+    return Block;
 }
 
-void URepairPanel::SetRepairInfo(FName RowName, FRepairRecipeData RecipeData)
+void URepairPanel::SetRepairInfo(URepairBlock* NewBlock, FName RowName, FRepairRecipeData RecipeData)
 {
+    CurrentBlock->SetSelected(false);
+    CurrentBlock = NewBlock;
+    CurrentBlock->SetSelected(true);
+    
     CurrentRepairData = RecipeData;
     CurrentRowName = RowName; 
 
@@ -190,7 +198,7 @@ void URepairPanel::SetRepairInfo(FName RowName, FRepairRecipeData RecipeData)
     
     if (RecipeNameText) RecipeNameText->SetText(FText::FromName(RecipeData.RecipeName));
     if (DescriptionText) DescriptionText->SetText(FText::FromString(TEXT("수리하려면 재료를 모으세요.")));
-    if (DurationText) DurationText->SetText(FText::FromString(FString::Printf(TEXT("%.1f s"), RecipeData.Duration)));
+    //if (DurationText) DurationText->SetText(FText::FromString(FString::Printf(TEXT("%.1f s"), RecipeData.Duration)));
 
     SetRepairButtonState(RecipeData);
 }
@@ -208,10 +216,10 @@ void URepairPanel::SetRepairButtonState(FRepairRecipeData RecipeData)
         return; 
     }
 
-    if (RepairCheckSound)
+    /*if (RepairCheckSound)
     {
         UGameplayStatics::PlaySound2D(this, RepairCheckSound);
-    }
+    }*/
 
     FRecipeData TempRecipe;
     TempRecipe.Ingredient1ID = RecipeData.Ingredient1ID;

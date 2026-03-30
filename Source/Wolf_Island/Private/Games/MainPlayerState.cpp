@@ -4,6 +4,7 @@
 #include "Games/MainPlayerState.h"
 
 #include "GameFramework/GameStateBase.h"
+#include "Games/MainGameState.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
 
@@ -42,9 +43,13 @@ void AMainPlayerState::OverrideWith(APlayerState* PlayerState)
 
 void AMainPlayerState::SetRandomRole()
 {
-	int8 Index = FMath::RandRange(1, 4);
-	PlayerRole = static_cast<ECharacterRole>(Index);
-	UE_LOG(LogTemp, Warning, TEXT("[PLAYER STATE] %s has Random role %d"), *GetPersistantId(), Index);
+	if (AMainGameState* GS = GetWorld()->GetGameState<AMainGameState>())
+	{
+		TArray<ECharacterRole> Roles = GS->GetAvailableRoles();
+		int8 Index = FMath::RandRange(0, Roles.Num()-1);
+		PlayerRole = Roles[Index];
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER STATE] %s has Random role %d"), *GetPersistantId(), Index);
+	}
 }
 
 FString AMainPlayerState::GetPersistantId()
