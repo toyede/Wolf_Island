@@ -7,6 +7,8 @@
 #include "Components/CanvasPanelSlot.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 #include "Input/Reply.h"
 
 void URepairMiniGameWidget::NativeConstruct()
@@ -128,12 +130,22 @@ void URepairMiniGameWidget::OnCheckButtonClicked()
     {
         CurrentSuccesses = FMath::Clamp(CurrentSuccesses + 1, 0, TargetSuccesses);
         FlashZoneSuccess();
+
+        if (SuccessSound)
+        {
+            UGameplayStatics::PlaySound2D(this, SuccessSound);
+        }
     }
     else
     {
         // 실패 시 진행도 감소
         CurrentSuccesses = FMath::Max(0, CurrentSuccesses - 1);
         FlashZoneFail();
+
+        if (FailSound)
+        {
+            UGameplayStatics::PlaySound2D(this, FailSound);
+        }
     }
 
     UpdateRemainingText();
@@ -205,6 +217,12 @@ void URepairMiniGameWidget::UpdateHammerPosition(float DeltaTime)
             bMissedCurrentHammer = true;
             CurrentSuccesses = FMath::Max(0, CurrentSuccesses - 1);
             FlashZoneFail();
+            
+            if (FailSound)
+            {
+                UGameplayStatics::PlaySound2D(this, FailSound);
+            }
+            
             UpdateRemainingText();
             HideHammerAndScheduleRespawn();
             return;

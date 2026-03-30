@@ -34,14 +34,14 @@ void URepairPanel::NativeConstruct()
 {
     Super::NativeConstruct();
 
-    if (OwnerInventory)
-    {
-        OwnerInventory->OnInventoryUpdated.AddUObject(this, &URepairPanel::RefreshRecipeList);
-    }
-    
     if (GetOwningPlayerPawn())
     {
         OwnerInventory = GetOwningPlayerPawn()->GetComponentByClass<UInventoryComponent>();
+    }
+    
+    if (OwnerInventory)
+    {
+        OwnerInventory->OnInventoryUpdated.AddUObject(this, &URepairPanel::RefreshRecipeList);
     }
 
     if (RepairButton)
@@ -49,7 +49,8 @@ void URepairPanel::NativeConstruct()
         RepairButton->OnClicked.AddDynamic(this, &URepairPanel::OnRepairButtonClicked);
     }
 
-    RefreshRecipeList();
+    FTimerHandle TimerHandle;
+    GetWorld()->GetTimerManager().SetTimer(TimerHandle, this, &URepairPanel::RefreshRecipeList, 0.1f, false);
 }
 
 void URepairPanel::InitRepairPanel(class ARepair_Actor* InRepairActor)
@@ -107,6 +108,7 @@ void URepairPanel::RefreshRecipeList()
             if (bSelectedFirst)
             {
                 SetRepairInfo(RowName, *RecipeData);
+                SetRepairButtonState(*RecipeData);
                 bSelectedFirst = false;
             }
         }
