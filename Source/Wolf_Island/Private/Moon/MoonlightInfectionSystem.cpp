@@ -17,6 +17,7 @@
 #include "Components/StatusComponent.h"
 #include "Character/WerewolfInfected.h"
 #include "Character/MainPlayerController.h"
+#include "GameFramework/PlayerStart.h"
 
 // Sets default values
 AMoonlightInfectionSystem::AMoonlightInfectionSystem()
@@ -84,6 +85,12 @@ void AMoonlightInfectionSystem::ActivateInfectionCheck()
 	if (!MoonLight)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] Cannot activate: MoonLight is null"));
+		return;
+	}
+
+	if (GetWorldTimerManager().IsTimerActive(CheckTimerHandle))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] Already active, skipping"));
 		return;
 	}
 
@@ -181,7 +188,7 @@ void AMoonlightInfectionSystem::OnDayStarted()
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow,
 			FString::Printf(TEXT("[DayStarted] Triggered count: %d, Bonus: +%.0f%%"),
-				TriggeredThisNight.Num(), PostSequenceInfectionBonus * 100.f));
+				TriggeredThisNight.Num(), PostSequenceInfectionBonus));
 	}
 
 	// 아침: 트리거된 플레이어에게 +20% 적용
@@ -200,6 +207,24 @@ void AMoonlightInfectionSystem::OnDayStarted()
 					*Player->GetName(),
 					PostSequenceInfectionBonus * 100.f,
 					Player->StatusComponent->CurrentInfectionRate * 100.f);
+			}
+		}
+	}
+
+	for (auto& WeakPlayer : TriggeredThisNight)
+	{
+		AMainPlayer* Player = WeakPlayer.Get();
+		if (IsValid(Player))
+		{
+			if (GetNetMode() == NM_Standalone)
+			{
+				// 플레이어 위치 이동
+				AActor* SpawnPoint = UGameplayStatics::GetActorOfClass(GetWorld(), APlayerStart::StaticClass());
+				if (SpawnPoint)
+				{
+					Player->SetActorLocation(SpawnPoint->GetActorLocation());
+				}
+				Player->OnRespawn();
 			}
 		}
 	}
@@ -327,30 +352,35 @@ void AMoonlightInfectionSystem::CheckAllPlayers()
 
 		if (IsPlayerExposedToMoonlight(Player))
 		{
-			// 총 감염량 증가
-			ApplyInfection(Player, InfectionPerCheck);
-
 			if (AMainPlayer* MainPlayer = Cast<AMainPlayer>(Player))
 			{
-				// 하루 밤 누적량 증가
+				if (TriggeredThisNight.Contains(MainPlayer)) continue;
+
+				ApplyInfection(Player, InfectionPerCheck);
+
 				float& Nightly = NightlyExposure.FindOrAdd(MainPlayer);
 				Nightly += InfectionPerCheck;
 
-				// 디버그 출력
 				if (bShowDebugMessages)
 				{
 					float TotalInfection = StatusComp->CurrentInfectionRate;
 					GEngine->AddOnScreenDebugMessage(-1, CheckInterval, FColor::Cyan,
-						FString::Printf(TEXT("[%s] Total: %.2f%% | Nightly: %.2f%% / %.2f%%"),
+						FString::Printf(TEXT("[%s] Total: %.1f%% | Nightly: %.1f%% / %.1f%%"),
 							*MainPlayer->GetName(),
-							TotalInfection * 100.f,
-							Nightly * 100.f,
-							NightlyTransformThreshold * 100.f));
+							TotalInfection,
+							Nightly,
+							NightlyTransformThreshold));
 				}
 
-				// 하루 누적이 임계치 넘고, 이번 밤에 아직 트리거 안 됐으면
 				if (!TriggeredThisNight.Contains(MainPlayer) && Nightly >= NightlyTransformThreshold)
 				{
+					// 초과분 보정
+					float Overflow = Nightly - NightlyTransformThreshold;
+					if (Overflow > 0)
+					{
+						StatusComp->DecreaseInfection(Overflow);
+					}
+
 					TriggeredThisNight.Add(MainPlayer);
 
 					if (GetNetMode() == NM_Standalone)
@@ -361,7 +391,6 @@ void AMoonlightInfectionSystem::CheckAllPlayers()
 					{
 						StartMultiInfectionSequence(MainPlayer);
 					}
-					// +20%는 OnDayStarted에서 적용하므로 여기선 안 함
 				}
 			}
 		}

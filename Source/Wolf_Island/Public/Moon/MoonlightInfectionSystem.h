@@ -48,7 +48,7 @@ public:
 	float CheckInterval = 0.1f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Moonlight Settings")
-	float InfectionPerCheck = 0.1f;
+	float InfectionPerCheck = 10.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Moonlight Settings")
 	float CapsuleRadius = 30.0f;
@@ -86,10 +86,10 @@ public:
 	TSet<TWeakObjectPtr<AMainPlayer>> TriggeredThisNight;
 
 	UPROPERTY(EditAnywhere, Category = "Infection")
-	float NightlyTransformThreshold = 0.15f; // 하루 밤 누적 15% 넘으면 트리거
+	float NightlyTransformThreshold = 15.0f; // 하루 밤 누적 15% 넘으면 트리거
 
 	UPROPERTY(EditAnywhere, Category = "Infection")
-	float PostSequenceInfectionBonus = 0.2f; // 트리거 후 다음날 아침에 +20%
+	float PostSequenceInfectionBonus = 20.0f; // 트리거 후 다음날 아침에 +20%
 
 	UFUNCTION()
 	void StartSingleInfectionSequence(AMainPlayer* Player);
