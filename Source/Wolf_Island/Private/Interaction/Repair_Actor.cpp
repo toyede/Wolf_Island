@@ -38,19 +38,9 @@ ARepair_Actor::ARepair_Actor()
 
 void ARepair_Actor::Interact_Implementation(AActor* Interactor)
 {
-    if (!HasAuthority()) return;
-
-    if (bIsBody && bIsEngine)
+    if (AMainPlayer* Player = Cast<AMainPlayer>(Interactor))
     {
-        TryEscape(Interactor);
-    }
-    else
-    {
-        APlayerController* PC = Cast<APlayerController>(Interactor->GetInstigatorController());
-        if (PC)
-        {
-            Client_OpenRepairUI(PC);
-        }
+        Player->Client_OpenRepairUI(this);
     }
 }
 

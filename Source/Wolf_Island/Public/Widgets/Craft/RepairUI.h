@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Data/ItemDataStruct.h"
 #include "RepairUI.generated.h"
 
 /**
