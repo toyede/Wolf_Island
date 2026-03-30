@@ -38,10 +38,20 @@ ARepair_Actor::ARepair_Actor()
 
 void ARepair_Actor::Interact_Implementation(AActor* Interactor)
 {
-    if (AMainPlayer* Player = Cast<AMainPlayer>(Interactor))
+    if (!HasAuthority()) return;
+
+    if (bIsBody && bIsEngine && bIsSteering && bIsRadar && bIsAnchor)
     {
-        Player->Client_OpenRepairUI(this);
+        TryEscape(Interactor);
     }
+    else
+    {
+        if (AMainPlayer* Player = Cast<AMainPlayer>(Interactor))
+        {
+            Player->Client_OpenRepairUI(this);
+        }
+    }
+    
 }
 
 void ARepair_Actor::Client_OpenRepairUI_Implementation(class APlayerController* PC)
@@ -343,10 +353,9 @@ void ARepair_Actor::RefreshRepairProgressState()
 
 void ARepair_Actor::TryEscape(AActor* Interactor)
 {
-    if (!HasAuthority()) return;
+    if (!HasAuthority() || bIsEscaping) return;
 
-    //if (bIsBody && bIsEngine && bIsSteering && bIsRadar && bIsAnchor)
-    if (!bIsBody || !bIsEngine)
+    if (!bIsBody && !bIsEngine && !bIsSteering && !bIsRadar && !bIsAnchor)
     {
         return; 
     }
@@ -418,7 +427,7 @@ void ARepair_Actor::ExecuteMapTransition()
         EscapeReadyVolume->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     }
 
-    GetWorld()->ServerTravel(TEXT("/Game/Maps/StartMap"));
+    UGameplayStatics::OpenLevel(this, FName("/Game/JWY/Maps/StartMap"));
 }
 
 bool ARepair_Actor::AreAllPlayersInVolume() const
@@ -447,10 +456,14 @@ bool ARepair_Actor::AreAllPlayersInVolume() const
 
 void ARepair_Actor::Multicast_PlayEscapeCinematic_Implementation()
 {
+    bIsEscaping = true;
+
+    OnRepairStatusChanged.Clear();
+    
     if (EscapeReadyVolume)
     {
-        EscapeReadyVolume->SetGenerateOverlapEvents(false);
-        EscapeReadyVolume->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        EscapeReadyVolume->OnComponentBeginOverlap.RemoveAll(this);
+        EscapeReadyVolume->OnComponentEndOverlap.RemoveAll(this);
     }
 
     UWidgetLayoutLibrary::RemoveAllWidgets(this);
@@ -473,9 +486,7 @@ void ARepair_Actor::Multicast_PlayEscapeCinematic_Implementation()
         PC->SetShowMouseCursor(false);
         PC->SetInputMode(FInputModeGameOnly());
     }
+    
+    GetWorld()->GetTimerManager().SetTimer(CinematicTimerHandle, this, &ARepair_Actor::ExecuteMapTransition, CinematicDuration, false);
 
-    if (HasAuthority())
-    {
-        GetWorld()->GetTimerManager().SetTimer(CinematicTimerHandle, this, &ARepair_Actor::ExecuteMapTransition, CinematicDuration, false);
-    }
 }

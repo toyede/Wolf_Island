@@ -152,4 +152,6 @@ private:
 
 	// 시네마틱 재생을 위한 타이머 핸들
 	FTimerHandle CinematicTimerHandle;
+
+	bool bIsEscaping = false;
 };
