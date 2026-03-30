@@ -37,7 +37,7 @@ void UTextButton::SetSelected(bool IsSelected)
 		{
 			Text->SetFont(DefaultFont);
 		}
-		Text->SetColorAndOpacity(DefaultTextColor);
+		Text->SetColorAndOpacity(FSlateColor::UseForeground());
 	}
 }
 
