@@ -23,7 +23,7 @@ UMainSaveGame* UMainGameInstance::CreateSaveSlot(FString WorldName, int32 SlotIn
 		UMainSaveGame* Save = Cast<UMainSaveGame>(UGameplayStatics::CreateSaveGameObject(UMainSaveGame::StaticClass()));
 		Save->WorldName = WorldName;
 		Save->SaveUnixTime = FDateTime::UtcNow().ToUnixTimestamp();
-		UE_LOG(LogTemp, Warning, TEXT("CREATE SINGLE SAVE FILE %s [%s]"), *Save->WorldName, *FDateTime::UtcNow().ToString());
+		UE_LOG(LogTemp, Warning, TEXT("CREATE MULTI SAVE FILE %s [%s]"), *Save->WorldName, *FDateTime::UtcNow().ToString());
 		
 		FString SlotName = "M"+FString::Printf(TEXT("%03d"), SlotIndex);
 		Save->SlotName = SlotName;
@@ -78,7 +78,7 @@ FString UMainGameInstance::GenerateSessionCode()
 {
 	FString Code;
 	int8 CodeLength = 6;
-	FString Characters = "0123456789ABCDEFGHIJKLNMOPQRSTUVWXYZ";
+	FString Characters = "123456789ABCDEFGHIJKLNMOPQRSTUVWXYZ";
 	
 	for (int i=0; i<CodeLength; i++)
 	{

@@ -4,6 +4,7 @@
 #include "Games/GameModes/LobbyGameMode.h"
 
 #include "Character/MainPlayerController.h"
+#include "GameFramework/GameSession.h"
 #include "Games/LobbyPlayerController.h"
 #include "Games/PlayerSlot.h"
 #include "Kismet/GameplayStatics.h"

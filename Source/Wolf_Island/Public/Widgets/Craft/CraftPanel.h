@@ -24,27 +24,30 @@ public:
 	TSubclassOf<class URecipeBlock> RecipeBlockClass;
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<class UCraftSlot> SlotClass;
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UInventoryComponent* OwnerInventory;
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FRecipeData CurrentRecipeData;
 	UPROPERTY(EditAnywhere)
 	FTimerHandle CraftingTimer;
+	
+	UPROPERTY(BlueprintReadWrite)
+	URecipeBlock* CurrentRecipeBlock;
 
 
-	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
+	UPROPERTY(EditAnywhere, meta=(BindWidget), BlueprintReadWrite)
 	class UScrollBox* RecipeList;
-	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
+	UPROPERTY(EditAnywhere, meta=(BindWidget), BlueprintReadWrite)
 	class UTextBlock* ItemName;
-	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
+	UPROPERTY(EditAnywhere, meta=(BindWidget), BlueprintReadWrite)
 	UCraftSlot* ResultSlot;
-	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
+	UPROPERTY(EditAnywhere, meta=(BindWidget), BlueprintReadWrite)
 	UTextBlock* ItemDescription;
-	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
+	UPROPERTY(EditAnywhere, meta=(BindWidget), BlueprintReadWrite)
 	UTextBlock* DurationText;
-	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
+	UPROPERTY(EditAnywhere, meta=(BindWidget), BlueprintReadWrite)
 	class UWrapBox* IngredientList;
-	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
+	UPROPERTY(EditAnywhere, meta=(BindWidget), BlueprintReadWrite)
 	class UButton* CraftButton;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = " Setting")
 	TArray<EItemType> RecipeTypeList;
@@ -52,11 +55,11 @@ public:
 	ECraftMethod TargetCraftMethod = ECraftMethod::INVEN;
 	
 	UFUNCTION()
-	void AddRecipe(struct FRecipeData Recipe);
+	URecipeBlock* AddRecipe(struct FRecipeData Recipe);
 	UFUNCTION()
 	void RefreshRecipeList();
 	UFUNCTION(BlueprintCallable)
-	void SetRecipeInfo(FRecipeData RecipeData);
+	void SetRecipeInfo(URecipeBlock* ClickedBlock, FRecipeData RecipeData);
 	UFUNCTION(BlueprintCallable)
 	void SetCraftButton(FRecipeData RecipeData);
 	UFUNCTION(BlueprintCallable)

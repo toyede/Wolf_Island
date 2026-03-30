@@ -32,9 +32,14 @@ class WOLF_ISLAND_API UUnknownRecordPanel : public UUserWidget
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<class URecordBlock> RecordBlockClass;
+	
+public:
+	
+	UPROPERTY(BlueprintReadWrite)
+	URecordBlock* CurrentRecordBlock;
 
 	UFUNCTION()
-	void SetRecordInfo(FUnknownRecord RecordData);
+	void SetRecordInfo(URecordBlock* ClickedBlock, FUnknownRecord RecordData);
 
 public:
 	UFUNCTION()

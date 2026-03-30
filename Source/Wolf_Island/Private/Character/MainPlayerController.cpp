@@ -49,7 +49,7 @@ void AMainPlayerController::BeginPlay()
 	MainPlayerState = GetPlayerState<AMainPlayerState>();
 	MainGameState = Cast<AMainGameState>(GetWorld()->GetGameState());
 	
-	if (HasAuthority()&&MainPlayerState&&MainGameState->IsMulti)
+	if (HasAuthority() && MainPlayerState && MainGameState->IsMulti)
 	{
 		if (MainPlayerState->GetPlayerRole() == ECharacterRole::NONE)
 		{
@@ -77,6 +77,11 @@ void AMainPlayerController::SetupInputComponent()
 	{
 		Subsystem->AddMappingContext(InputMappingContext, 1);
 	}
+}
+
+void AMainPlayerController::InitPlayerState()
+{
+	Super::InitPlayerState();
 }
 
 void AMainPlayerController::OnPossess(APawn* InPawn)
@@ -248,7 +253,7 @@ void AMainPlayerController::OnRep_PlayerState()
 	
 	MainPlayerState = GetPlayerState<AMainPlayerState>();
 	
-	if (MainPlayerState)
+	if (MainPlayerState && MainGameState->IsMulti)
 	{
 		if (MainPlayerState->GetPlayerRole() == ECharacterRole::NONE)
 		{

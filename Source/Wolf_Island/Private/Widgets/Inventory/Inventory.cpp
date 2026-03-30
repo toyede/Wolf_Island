@@ -4,13 +4,11 @@
 #include "Widgets/Inventory/Inventory.h"
 
 #include "Character/MainPlayer.h"
-#include "Components/Button.h"
 #include "Components/InventoryComponent.h"
 #include "Components/SizeBox.h"
 #include "Widgets/Record/UnknownRecordPanel.h"
 #include "Components/WidgetSwitcher.h"
-#include "Item/ItemBase.h"
-#include "Widgets/BaseButton.h"
+#include "Widgets/TextButton.h"
 #include "Widgets/Craft/BuildingPanel.h"
 #include "Widgets/Craft/CraftPanel.h"
 #include "Widgets/Inventory/InventoryPanel.h"
@@ -20,18 +18,23 @@ void UInventory::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
-	PanelSwitcher->AddChild(InventorySection);
-	PanelSwitcher->AddChild(FoodRecipeSection);
 	PanelSwitcher->AddChild(CraftRecipeSection);
+	PanelSwitcher->AddChild(FoodRecipeSection);
 	PanelSwitcher->AddChild(BuildingRecipeSection);
 	PanelSwitcher->AddChild(UnknownRecordSection);
-
-	InventoryButton->OnClicked.AddDynamic(this, &UInventory::HandleInventoryClicked);
-	FoodRecipeButton->OnClicked.AddDynamic(this, &UInventory::HandleFoodRecipeClicked);
+	
 	CraftRecipeButton->OnClicked.AddDynamic(this, &UInventory::HandleCraftRecipeClicked);
+	FoodRecipeButton->OnClicked.AddDynamic(this, &UInventory::HandleFoodRecipeClicked);
 	BuildingRecipeButton->OnClicked.AddDynamic(this, &UInventory::HandleBuildingRecipeClicked);
 	UnknownRecordButton->OnClicked.AddDynamic(this, &UInventory::HandleUnknownRecordClicked);
-
+	
+	if (UCraftPanel* CraftPanel = Cast<UCraftPanel>(CraftRecipeSection))
+	{
+		CraftPanel->SetCraftingMethod(ECraftMethod::INVEN);
+	}
+	
+	CurrentPanelButton = CraftRecipeButton;
+	CurrentPanelButton->SetSelected(true);
 }
 
 void UInventory::NativeConstruct()
@@ -95,14 +98,12 @@ bool UInventory::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent&
 	return false;
 }
 
-void UInventory::HandleInventoryClicked()
+void UInventory::HandleFoodRecipeClicked(UTextButton* ClickedButton)
 {
-	PanelSwitcher->SetActiveWidget(InventorySection);
-	OnInventoryClicked.ExecuteIfBound();
-}
-
-void UInventory::HandleFoodRecipeClicked()
-{
+	CurrentPanelButton->SetSelected(false);
+	CurrentPanelButton = ClickedButton;
+	CurrentPanelButton->SetSelected(true);
+	
 	PanelSwitcher->SetActiveWidget(FoodRecipeSection);
 	if (UCraftPanel* FoodPanel = Cast<UCraftPanel>(FoodRecipeSection))
 	{
@@ -111,8 +112,12 @@ void UInventory::HandleFoodRecipeClicked()
 	OnCraftClicked.ExecuteIfBound();
 }
 
-void UInventory::HandleCraftRecipeClicked()
+void UInventory::HandleCraftRecipeClicked(UTextButton* ClickedButton)
 {
+	CurrentPanelButton->SetSelected(false);
+	CurrentPanelButton = ClickedButton;
+	CurrentPanelButton->SetSelected(true);
+	
 	PanelSwitcher->SetActiveWidget(CraftRecipeSection);
 	if (UCraftPanel* CraftPanel = Cast<UCraftPanel>(CraftRecipeSection))
 	{
@@ -121,8 +126,12 @@ void UInventory::HandleCraftRecipeClicked()
 	OnCraftClicked.ExecuteIfBound();
 }
 
-void UInventory::HandleUnknownRecordClicked()
+void UInventory::HandleUnknownRecordClicked(UTextButton* ClickedButton)
 {
+	CurrentPanelButton->SetSelected(false);
+	CurrentPanelButton = ClickedButton;
+	CurrentPanelButton->SetSelected(true);
+	
 	PanelSwitcher->SetActiveWidget(UnknownRecordSection);
 	if (UUnknownRecordPanel* UnknownPanel = Cast<UUnknownRecordPanel>(UnknownRecordSection))
 	{
@@ -131,8 +140,12 @@ void UInventory::HandleUnknownRecordClicked()
 	OnUnknownRecordClicked.ExecuteIfBound();
 }
 
-void UInventory::HandleBuildingRecipeClicked()
+void UInventory::HandleBuildingRecipeClicked(UTextButton* ClickedButton)
 {
+	CurrentPanelButton->SetSelected(false);
+	CurrentPanelButton = ClickedButton;
+	CurrentPanelButton->SetSelected(true);
+	
 	PanelSwitcher->SetActiveWidget(BuildingRecipeSection);
 	if (UBuildingPanel* BuildingPanel = Cast<UBuildingPanel>(BuildingRecipeSection))
 	{

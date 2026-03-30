@@ -13,6 +13,7 @@
 #include "Engine/DataTable.h"
 #include "MainPlayer.generated.h"
 
+class ATorch;
 class UWidgetComponent;
 class UWaterBodyComponent;
 class APickup;
@@ -135,6 +136,12 @@ public:
 	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
 	class UBuildingComponent* BuildingComponent;
+	
+	//횃불
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Torch")
+	ATorch* Torch;
+	UPROPERTY(EditDefaultsOnly, Category = "Torch")
+	TSubclassOf<ATorch> TorchClass;
 	
 	//부력 컴포넌트 - 수영을 위한 것
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)

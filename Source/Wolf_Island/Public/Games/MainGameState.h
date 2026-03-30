@@ -87,6 +87,14 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void RefreshSelectedRoles();
 	
+	//역할 중복 확인 함수
+	UFUNCTION(BlueprintCallable)
+	bool CheckAvailableRole(ECharacterRole NewRole);
+	
+	//사용 가능한 역할 리스트 반환 함수
+	UFUNCTION(BlueprintCallable)
+	TArray<ECharacterRole> GetAvailableRoles();
+	
 	UFUNCTION(BlueprintCallable)
 	void AddChattingMessage(FChattingData NewChattingData);
 	

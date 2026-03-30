@@ -4,6 +4,7 @@
 #include "Widgets/Record/RecordBlock.h"
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
+#include "Components/Image.h"
 
 void URecordBlock::NativeConstruct()
 {
@@ -30,7 +31,15 @@ void URecordBlock::NativeConstruct()
 
 void URecordBlock::OnRecordButtonClicked()
 {
-    OnRecordClicked.Broadcast(RecordData);
+    OnRecordClicked.Broadcast(this, RecordData);
+}
+
+void URecordBlock::SetSelected(bool IsSelected)
+{
+    if (SelectedIcon)
+    {
+        SelectedIcon->SetVisibility(IsSelected ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+    }
 }
 
 

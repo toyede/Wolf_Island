@@ -49,7 +49,7 @@ void UCraftPanel::OnCraftButtonClicked()
 	}
 }
 
-void UCraftPanel::AddRecipe(FRecipeData Recipe)
+URecipeBlock* UCraftPanel::AddRecipe(FRecipeData Recipe)
 {
 	if (RecipeBlockClass)
 	{
@@ -72,7 +72,10 @@ void UCraftPanel::AddRecipe(FRecipeData Recipe)
 		}
 
 		RecipeList->AddChild(Block);
+		return Block;
 	}
+	
+	return nullptr;
 }
 
 inline void UCraftPanel::RefreshRecipeList()
@@ -99,24 +102,32 @@ inline void UCraftPanel::RefreshRecipeList()
 		// 두 조건 다 맞으면 목록에 추가
 		if (bTypeMatch && bMethodMatch)
 		{
+			URecipeBlock* NewBlock = AddRecipe(Recipe);
+			
+			//첫번째 레시피로 업데이트
 			if (Index == 0)
 			{
 				CurrentRecipeData = Recipe;
+				CurrentRecipeBlock = NewBlock;
+				
+				SetRecipeInfo(NewBlock, CurrentRecipeData);
 			}
-			AddRecipe(Recipe);
+			
 			Index++;
 		}
 	});
-
-	// 해금된 레시피가 하나라도 있을 때만 정보창 업데이트
-	if (Index > 0)
-	{
-		SetRecipeInfo(CurrentRecipeData);
-	}
 }
 
-void UCraftPanel::SetRecipeInfo(FRecipeData RecipeData)
+void UCraftPanel::SetRecipeInfo(URecipeBlock* ClickedBlock, FRecipeData RecipeData)
 {
+	//선택된 버튼 강조 변경
+	//원래 선택 됐던 거 강조 해제
+	CurrentRecipeBlock->SetSelected(false);
+	//선택된 버튼을 최신 거로 변경
+	CurrentRecipeBlock = ClickedBlock;
+	//최신 선택된 거 강조
+	CurrentRecipeBlock->SetSelected(true);
+	
 	//재료 슬롯 초기화
 	IngredientList->ClearChildren();
 

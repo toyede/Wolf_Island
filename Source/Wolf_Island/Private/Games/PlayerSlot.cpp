@@ -49,7 +49,10 @@ void APlayerSlot::AddPlayer(APlayerController* NewPlayer)
 	
 	int RoleIndex = static_cast<int>(PlayerState->GetPlayerRole());
 	
-	//if (RoleIndex == 0) return;
+	if (UPlayerCard* PlayerCard = Cast<UPlayerCard>(WidgetComponent->GetWidget()))
+	{
+		PlayerCard->SetPlayerController(PlayerController);
+	}
 	
 	FActorSpawnParameters SpawnInfo;
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
