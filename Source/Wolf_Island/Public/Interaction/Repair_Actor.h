@@ -146,6 +146,8 @@ protected:
 private:
 	bool AreAllPlayersInVolume() const;
 
+	bool IsAnyPlayerInfected() const;
+	
 	// 현재 대기 구역에 있는 플레이어 목록
 	UPROPERTY()
 	TSet<class AMainPlayer*> PlayersInVolume;

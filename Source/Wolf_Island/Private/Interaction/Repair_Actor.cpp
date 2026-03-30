@@ -3,6 +3,7 @@
 #include "AdvancedFriendsGameInstance.h"
 #include "Components/BoxComponent.h"
 #include "Data/ItemDataStruct.h"
+#include "Components/StatusComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Blueprint/UserWidget.h"
 #include "Widgets/Craft/RepairUI.h"
@@ -391,6 +392,19 @@ void ARepair_Actor::TryEscape(AActor* Interactor)
             }
             return;
         }
+
+        if (IsAnyPlayerInfected())
+        {
+            if (GS)
+            {
+                FChattingData Notice;
+                Notice.Name = TEXT("경고");
+                Notice.Message = TEXT("감염된 플레이어가 있어 탈출할 수 없습니다!");
+                Notice.MessageType = EMessageType::NOTICE;
+                GS->AddChattingMessage(Notice);
+            }
+            return;
+        }
     }
 
     Multicast_PlayEscapeCinematic();
@@ -452,6 +466,30 @@ bool ARepair_Actor::AreAllPlayersInVolume() const
     }
 
     return true;
+}
+
+bool ARepair_Actor::IsAnyPlayerInfected() const
+{
+    const AMainGameState* GS = GetWorld()->GetGameState<AMainGameState>();
+    if (!GS) return false;
+
+    for (APlayerState* PS : GS->PlayerArray)
+    {
+        if (!PS) continue;
+
+        AController* Controller = PS->GetOwner<AController>();
+        if (!Controller) continue;
+
+        AMainPlayer* PlayerPawn = Cast<AMainPlayer>(Controller->GetPawn());
+        if (!PlayerPawn) continue;
+
+        if (PlayerPawn->StatusComponent && PlayerPawn->StatusComponent->IsInfected)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void ARepair_Actor::Multicast_PlayEscapeCinematic_Implementation()
