@@ -314,6 +314,12 @@ void AMoonlightInfectionSystem::RestorePlayerAtDawn(APlayerController* PC)
 	// 5) 원래 캐릭터에 다시 Possess
 	PC->Possess(OriginalPlayer);
 
+	// 복귀 시 관전 모드 해제
+	if (AMainPlayerController* MPC = Cast<AMainPlayerController>(PC))
+	{
+		MPC->Client_ExitSpectateMode();
+	}
+
 	// 6) 늑대 제거
 	Werewolf->Destroy();
 
@@ -573,6 +579,11 @@ void AMoonlightInfectionSystem::SpawnAndPossessWerewolf(APlayerController* PC, F
 
 	SessionData.WerewolfCharacter = Werewolf;
 	ActiveWerewolfSessions.Add(PC, SessionData);
+
+	if (AMainPlayerController* MPC = Cast<AMainPlayerController>(PC))
+	{
+		MPC->Client_EnterSpectateMode();
+	}
 }
 
 void AMoonlightInfectionSystem::StoreOriginalCharacter(APlayerController* PC, AMainPlayer* Player)
@@ -620,5 +631,90 @@ void AMoonlightInfectionSystem::SetSpectateTarget(APlayerController* PC)
 		}
 
 		return; // 한 명 찾았으면 종료
+	}
+}
+
+void AMoonlightInfectionSystem::SwitchSpectateTarget(APlayerController* PC)
+{
+	if (!PC) return;
+
+	TArray<AActor*> FoundPlayers;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMainPlayer::StaticClass(), FoundPlayers);
+
+	AActor* CurrentView = PC->GetViewTarget();
+
+	TArray<AMainPlayer*> ValidTargets;
+	for (AActor* Actor : FoundPlayers)
+	{
+		AMainPlayer* MP = Cast<AMainPlayer>(Actor);
+		if (!MP || MP->IsHidden()) continue;
+		ValidTargets.Add(MP);
+	}
+
+	if (ValidTargets.Num() == 0) return;
+
+	int32 CurrentIndex = ValidTargets.IndexOfByKey(CurrentView);
+	int32 NextIndex = (CurrentIndex + 1) % ValidTargets.Num();
+
+	AMainPlayer* NextTarget = ValidTargets[NextIndex];
+
+	// 서버/클라 분기
+	if (PC->IsLocalController())
+	{
+		PC->SetViewTargetWithBlend(NextTarget, 0.1f);
+	}
+	else
+	{
+		if (AMainPlayerController* MPC = Cast<AMainPlayerController>(PC))
+		{
+			MPC->Client_SetViewTargetWithBlend(NextTarget, 0.1f);
+		}
+	}
+}
+
+void AMoonlightInfectionSystem::NotifyWerewolfDown(ACharacter* Werewolf)
+{
+	if (!Werewolf || !HasAuthority()) return;
+
+	// 현재 세션 중 해당 늑대인간을 사용하는 세션 찾기
+	APlayerController* TargetPC = nullptr;
+	for (auto& Pair : ActiveWerewolfSessions)
+	{
+		if (Pair.Value.WerewolfCharacter == Werewolf)
+		{
+			TargetPC = Pair.Key;
+			break;
+		}
+	}
+
+	if (TargetPC)
+	{
+		FWerewolfSessionData& Session = ActiveWerewolfSessions[TargetPC];
+		AMainPlayer* OriginalPlayer = Session.OriginalCharacter.Get();
+
+		if (OriginalPlayer)
+		{
+			// 플레이어를 늑대가 쓰러진 위치로 이동
+			OriginalPlayer->SetActorLocation(Werewolf->GetActorLocation());
+			OriginalPlayer->SetActorRotation(Werewolf->GetActorRotation());
+
+			// 플레이어 캐릭터 가시화 및 충돌 활성화
+			OriginalPlayer->SetActorHiddenInGame(false);
+			OriginalPlayer->SetActorEnableCollision(true);
+			OriginalPlayer->SetActorTickEnabled(true);
+
+			// 플레이어 강제 기절
+			OriginalPlayer->KnockOut();
+
+			// 관전 모드 해제
+			TargetPC->Possess(OriginalPlayer);
+			if (AMainPlayerController* MPC = Cast<AMainPlayerController>(TargetPC))
+			{
+				MPC->Client_ExitSpectateMode();
+			}
+
+			// 늑대인간 제거
+			Werewolf->Destroy();
+		}
 	}
 }

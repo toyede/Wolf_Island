@@ -10,6 +10,8 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "AIController.h"
+#include "Engine/DamageEvents.h"
+#include "Moon/MoonlightInfectionSystem.h"
 
 AWerewolfInfected::AWerewolfInfected()
 {
@@ -39,6 +41,12 @@ void AWerewolfInfected::BeginPlay()
 {
     Super::BeginPlay();
     CurrentHealth = MaxHealth;
+
+    if (AttackCollisionComp)
+    {
+        AttackCollisionComp->OnHitActor.AddUObject(this, &AWerewolfInfected::OnAttackHit);
+        AttackCollisionComp->AddIgnoredActor(this);
+    }
 }
 
 void AWerewolfInfected::Tick(float DeltaTime)
@@ -103,10 +111,20 @@ void AWerewolfInfected::HandleIncapacitated()
 {
     bIsIncapacitated = true;
     bShouldMove = false;
-
-    // AI 타이머 정지
     GetWorldTimerManager().ClearTimer(AITickHandle);
-    OnRep_Incapacitated();  // 서버에서도 즉시 적용
+
+    // MoonlightInfectionSystem을 찾아 기절 처리 요청
+    AMoonlightInfectionSystem* System = Cast<AMoonlightInfectionSystem>(
+        UGameplayStatics::GetActorOfClass(GetWorld(), AMoonlightInfectionSystem::StaticClass()));
+
+    if (System)
+    {
+        // 이 늑대인간을 소유한 PlayerController를 찾아 전달
+        // (세션 데이터에 등록된 PC를 찾기 위한 용도)
+        System->NotifyWerewolfDown(this);
+    }
+
+    OnRep_Incapacitated();
 }
 
 void AWerewolfInfected::OnRep_Incapacitated()
@@ -295,4 +313,23 @@ void AWerewolfInfected::Server_RequestAttack_Implementation()
         PlayAnimMontage(AttackMontage);
         // AttackCollisionComp 활성화는 AnimNotify에서 처리
     }
+}
+
+void AWerewolfInfected::OnAttackHit(const FHitResult& HitResult)
+{
+    if (!HasAuthority()) return;
+
+    AActor* HitActor = HitResult.GetActor();
+    if (!HitActor) return;
+
+    GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red,
+		FString::Printf(TEXT("Hit: %s"), *HitActor->GetName()));
+
+    TSubclassOf<UDamageType> DamageTypeClass = UDamageType::StaticClass();
+    if (InfectedAttackDamageType)
+    {
+        DamageTypeClass = InfectedAttackDamageType;
+    }
+
+    UGameplayStatics::ApplyDamage(HitActor, AttackDamage, GetController(), this, DamageTypeClass);
 }

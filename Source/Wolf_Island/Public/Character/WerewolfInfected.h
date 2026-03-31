@@ -62,6 +62,15 @@ public:
     UPROPERTY(EditAnywhere, Category = "Werewolf|Combat")
     TObjectPtr<UAnimMontage> AttackMontage;
 
+    UPROPERTY(EditDefaultsOnly, Category = "Werewolf|Combat")
+    TSubclassOf<UDamageType> InfectedAttackDamageType;
+
+    UFUNCTION()
+    void OnAttackHit(const FHitResult& HitResult);
+
+	UPROPERTY(EditDefaultsOnly, Category = "Werewolf|Combat")
+	float AttackDamage = 10.0f;
+
     // === 관전 전환 지원 ===
     UPROPERTY(BlueprintReadOnly, Category = "Werewolf|State")
     bool bIsPlayerControlled = true;

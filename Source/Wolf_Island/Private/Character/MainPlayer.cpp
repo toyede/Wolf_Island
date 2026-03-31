@@ -942,6 +942,18 @@ void AMainPlayer::Revive()
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	CanInteract = false;
 	InteractableData.CanInteract = CanInteract;
+
+	// 만약 변신했다가 기절해서 돌아온 상태라면, 세션 데이터 삭제 필요
+	if (HasAuthority())
+	{
+		AMoonlightInfectionSystem* System = Cast<AMoonlightInfectionSystem>(
+			UGameplayStatics::GetActorOfClass(GetWorld(), AMoonlightInfectionSystem::StaticClass()));
+		if (System && GetController())
+		{
+			// 부활했으므로 늑대인간 세션 아님
+			System->ActiveWerewolfSessions.Remove(Cast<APlayerController>(GetController()));
+		}
+	}
 }
 
 void AMainPlayer::OnRespawn()

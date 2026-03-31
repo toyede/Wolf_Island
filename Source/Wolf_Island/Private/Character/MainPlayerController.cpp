@@ -19,6 +19,7 @@
 #include "Widgets/MainMenu/PauseMenu.h"
 #include "Widgets/RoleSelection/RoleSelection.h"
 #include "Widgets/DeathScreen.h"
+#include "Moon/MoonlightInfectionSystem.h"
 
 void AMainPlayerController::BeginPlay()
 {
@@ -71,6 +72,12 @@ void AMainPlayerController::SetupInputComponent()
 	{
 		EnhancedInputComponent->BindAction(ChatAction, ETriggerEvent::Started, this, &AMainPlayerController::ToggleChatMode);
 		EnhancedInputComponent->BindAction(ESCAction, ETriggerEvent::Started, this, &AMainPlayerController::TogglePause);
+	
+		// 관전 가능한 상태
+		if (SpectateNextAction)
+		{
+			EnhancedInputComponent->BindAction(SpectateNextAction, ETriggerEvent::Started, this, &AMainPlayerController::SwitchSpectateTarget);
+		}
 	}
 	
 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
@@ -265,7 +272,7 @@ void AMainPlayerController::OnRep_PlayerState()
 		}
 	} else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Can't open Selection UI. Player State is INVALID"), *MainPlayerState->GetPersistantId())
+		//UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Can't open Selection UI. Player State is INVALID"), *MainPlayerState->GetPersistantId())
 	}
 }
 
@@ -417,4 +424,54 @@ void AMainPlayerController::Respawn()
 	{
 		SGM->HandlePlayerDeath(this);
 	}
+}
+
+void AMainPlayerController::EnterSpectateMode()
+{
+	bIsSpectating = true;
+
+	if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
+		ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+	{
+		Subsystem->AddMappingContext(SpectateInputMappingContext, 2);
+	}
+}
+
+void AMainPlayerController::ExitSpectateMode()
+{
+	bIsSpectating = false;
+
+	if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
+		ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+	{
+		Subsystem->RemoveMappingContext(SpectateInputMappingContext);
+	}
+}
+
+void AMainPlayerController::SwitchSpectateTarget()
+{
+	if (!bIsSpectating) return;
+	Server_RequestNextSpectateTarget();
+}
+
+void AMainPlayerController::Server_RequestNextSpectateTarget_Implementation()
+{
+	// MoonlightInfectionSystem에서 다음 타겟 찾기
+	AMoonlightInfectionSystem* System = Cast<AMoonlightInfectionSystem>(
+		UGameplayStatics::GetActorOfClass(GetWorld(), AMoonlightInfectionSystem::StaticClass()));
+
+	if (System)
+	{
+		System->SwitchSpectateTarget(this);
+	}
+}
+
+void AMainPlayerController::Client_EnterSpectateMode_Implementation()
+{
+	EnterSpectateMode();
+}
+
+void AMainPlayerController::Client_ExitSpectateMode_Implementation()
+{
+	ExitSpectateMode();
 }

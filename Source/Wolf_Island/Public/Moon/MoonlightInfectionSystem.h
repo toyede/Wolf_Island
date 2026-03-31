@@ -114,6 +114,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Moonlight System|Debug")
 	void Debug_ForceRestoreAll();
 
+	// 멀티 전용: 활성 늑대인간 세션 데이터
+	UPROPERTY()
+	TMap<APlayerController*, FWerewolfSessionData> ActiveWerewolfSessions;
 private:
 	UPROPERTY()
 	TArray<TObjectPtr<UStatusComponent>> InfectedStatusList;
@@ -135,8 +138,7 @@ private:
 	void SpawnAndPossessWerewolf(APlayerController* PC, FVector Location);
 	void StoreOriginalCharacter(APlayerController* PC, AMainPlayer* Player);
 
-	UPROPERTY()
-	TMap<APlayerController*, FWerewolfSessionData> ActiveWerewolfSessions;
+	
 
 	UPROPERTY(EditAnywhere, Category = "Infection|Multi")
 	TSubclassOf<ACharacter> WerewolfClass;
@@ -145,4 +147,12 @@ private:
 	// 멀티 전용: 관전 모드로 전환
 private:
 	void SetSpectateTarget(APlayerController* PC);
+
+public:
+	void SwitchSpectateTarget(APlayerController* PC);
+
+
+	// 멀티 전용: 관전 모드에서 원래 캐릭터로 복귀
+public:
+	void NotifyWerewolfDown(ACharacter* Werewolf);
 };
