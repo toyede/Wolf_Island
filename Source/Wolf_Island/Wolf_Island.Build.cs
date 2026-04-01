@@ -15,6 +15,7 @@ public class Wolf_Island : ModuleRules
 			"Engine",
 			"InputCore",
 			"EnhancedInput",
+			"GameplayTags",
 			"AIModule",
 			"NavigationSystem",
 			"GameplayTasks",
