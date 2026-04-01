@@ -6,6 +6,8 @@
 #include "Blueprint/UserWidget.h"
 #include "Framework/Commands/InputChord.h"
 #include "InputCoreTypes.h"
+#include "Sound/SoundMix.h"
+#include "Sound/SoundClass.h"
 #include "UserSettings/EnhancedInputUserSettings.h"
 #include "SettingsWidget.generated.h"
 
@@ -204,6 +206,18 @@ private:
 	float PendingMasterVolume = 1.0f;
 	float PendingBGMVolume = 1.0f;
 	float PendingSFXVolume = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Settings|Audio")
+	TObjectPtr<USoundMix> GameSoundMix;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Settings|Audio")
+	TObjectPtr<USoundClass> MasterSoundClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Settings|Audio")
+	TObjectPtr<USoundClass> BGMSoundClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Settings|Audio")
+	TObjectPtr<USoundClass> SFXSoundClass;
 
 	TArray<FSettingsInputKeybindEntry> InputKeybindEntries;
 	FText LastInputKeybindMessage;

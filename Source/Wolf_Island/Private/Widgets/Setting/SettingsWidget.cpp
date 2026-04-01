@@ -11,7 +11,9 @@
 #include "Engine/World.h"
 #include "GameFramework/GameUserSettings.h"
 #include "GameFramework/Pawn.h"
+#include "Games/WolfGameUserSettings.h"
 #include "InputMappingContext.h"
+#include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
 
 #define LOCTEXT_NAMESPACE "SettingsWidget"
@@ -100,6 +102,13 @@ void USettingsWidget::InitializeSettings()
 	PendingShadowQuality = Settings->GetShadowQuality();
 	PendingEffectQuality = Settings->GetVisualEffectQuality();
 	PendingAntiAliasingIndex = Settings->GetAntiAliasingQuality();
+
+	if (UWolfGameUserSettings* WolfSettings = UWolfGameUserSettings::GetWolfGameUserSettings())
+	{
+		PendingMasterVolume = WolfSettings->MasterVolume;
+		PendingBGMVolume = WolfSettings->BGMVolume;
+		PendingSFXVolume = WolfSettings->SFXVolume;
+	}
 
 	RefreshInputKeybinds();
 }
@@ -286,6 +295,26 @@ void USettingsWidget::ApplySettings()
 
 	Settings->ApplySettings(false);
 	Settings->SaveSettings();
+
+	if (UWolfGameUserSettings* WolfSettings = UWolfGameUserSettings::GetWolfGameUserSettings())
+	{
+		WolfSettings->MasterVolume = PendingMasterVolume;
+		WolfSettings->BGMVolume = PendingBGMVolume;
+		WolfSettings->SFXVolume = PendingSFXVolume;
+		WolfSettings->SaveSettings();
+	}
+
+	if (GameSoundMix)
+	{
+		UGameplayStatics::SetBaseSoundMix(GetWorld(), GameSoundMix);
+		if (MasterSoundClass)
+			UGameplayStatics::SetSoundMixClassOverride(GetWorld(), GameSoundMix, MasterSoundClass, PendingMasterVolume, 1.0f, 0.0f);
+		if (BGMSoundClass)
+			UGameplayStatics::SetSoundMixClassOverride(GetWorld(), GameSoundMix, BGMSoundClass, PendingBGMVolume, 1.0f, 0.0f);
+		if (SFXSoundClass)
+			UGameplayStatics::SetSoundMixClassOverride(GetWorld(), GameSoundMix, SFXSoundClass, PendingSFXVolume, 1.0f, 0.0f);
+		UGameplayStatics::PushSoundMixModifier(GetWorld(), GameSoundMix);
+	}
 }
 
 void USettingsWidget::RefreshInputKeybinds()
