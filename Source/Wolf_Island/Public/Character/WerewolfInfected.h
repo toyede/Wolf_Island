@@ -5,24 +5,35 @@
 #include "InputMappingContext.h"
 #include "InputAction.h"
 #include "AI/Interfaces/AttackMeshProvider.h"
+#include "AI/Interfaces/EnemyCommonInterface.h"
 #include "WerewolfInfected.generated.h"
 
 class UAttackCollisionComponent;
 class UCameraComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FInfectedOnHitResponse); // 맞을 때 피격 모션 바인딩용
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FInfectedOnAttackEnd); // 기본 공격 끝났음을 알리는 용도
+
 UCLASS()
-class WOLF_ISLAND_API AWerewolfInfected : public ACharacter, public IAttackMeshProvider
+class WOLF_ISLAND_API AWerewolfInfected : public ACharacter, public IEnemyCommonInterface, public IAttackMeshProvider
 {
     GENERATED_BODY()
 
 public:
     AWerewolfInfected();
 
+	UPROPERTY(BlueprintAssignable, Category = "Delegate")
+	FInfectedOnHitResponse OnHitResponse;
+
+	UPROPERTY(BlueprintAssignable, Category = "Delegate")
+	FInfectedOnAttackEnd OnAttackEnd;
+
 protected:
     virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
     virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
+    void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 public:
     // === 컴포넌트 ===
     
@@ -78,8 +89,9 @@ public:
     // === 리플리케이션 ===
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	// === AI 관련 ===
-    void StartAI();
+    virtual void Die_Implementation() override;
+
+    virtual void NormalAttack_Implementation() override;
 
 private:
     void HandleIncapacitated();
@@ -88,17 +100,9 @@ private:
     void OnAttackInput();
 
 private:
-    FTimerHandle AITickHandle;
-
-    UPROPERTY()
-    TWeakObjectPtr<ACharacter> CurrentTarget;
 
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_PlayAttack();
-
-    void AITick();
-    void FindClosestPlayer();
-    void TryAttack();
 
     UPROPERTY(EditAnywhere, Category = "Werewolf|AI")
     float AITickInterval = 0.2f;
@@ -110,7 +114,6 @@ private:
     float DetectionRange = 3000.0f;
 
     bool bIsAttacking = false;
-    bool bShouldMove = false;
 
     FTimerHandle AttackResetHandle;
 

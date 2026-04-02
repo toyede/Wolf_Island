@@ -20,6 +20,7 @@
 #include "Widgets/RoleSelection/RoleSelection.h"
 #include "Widgets/DeathScreen.h"
 #include "Moon/MoonlightInfectionSystem.h"
+#include "Actors/SpectatorCameraActor.h"
 
 void AMainPlayerController::BeginPlay()
 {
@@ -111,7 +112,7 @@ void AMainPlayerController::OnUnPossess()
 
 void AMainPlayerController::SetPlayerHUD(AMainPlayer* OwnerPlayer)
 {
-	if (PlayerHUD)
+	/*if (PlayerHUD)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[PLAYER CONTROLLER] Player HUD is already exist."));
 		return;
@@ -124,6 +125,29 @@ void AMainPlayerController::SetPlayerHUD(AMainPlayer* OwnerPlayer)
 		UE_LOG(LogTemp, Warning, TEXT("[%hs]Set Player HUD"), HasAuthority()?"SERVER":"CLIENT")
 		PlayerHUD = CreateWidget<UPlayerHUD>(this, HUDClass);
 		PlayerHUD->AddToViewport();
+		PlayerHUD->SetPlayerRef(OwnerPlayer);
+		OwnerPlayer->SetHUDWidget(PlayerHUD);
+	}*/
+
+	if (!OwnerPlayer || !IsLocalController()) return;
+
+	if (!HUDClass)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[PC] HUDClass is NOT assigned in Blueprint!"));
+		return;
+	}
+
+	if (!PlayerHUD)
+	{
+		PlayerHUD = CreateWidget<UPlayerHUD>(this, HUDClass);
+		if (PlayerHUD)
+		{
+			PlayerHUD->AddToViewport();
+		}
+	}
+
+	if (PlayerHUD)
+	{
 		PlayerHUD->SetPlayerRef(OwnerPlayer);
 		OwnerPlayer->SetHUDWidget(PlayerHUD);
 	}
@@ -289,19 +313,20 @@ void AMainPlayerController::Request_Respawn()
 
 void AMainPlayerController::Client_SetViewTargetWithBlend_Implementation(AActor* NewTarget, float BlendTime)
 {
-	if (!NewTarget) return;
-
-	FTimerHandle TimerHandle;
-	GetWorldTimerManager().SetTimer(TimerHandle, [this, NewTarget, BlendTime]()
-		{
-			if (this && NewTarget)
+	if (!IsValid(NewTarget))
+	{
+		FTimerHandle RetryHandle;
+		GetWorldTimerManager().SetTimer(RetryHandle, [this, NewTarget, BlendTime]()
 			{
-				this->bAutoManageActiveCameraTarget = false;
+				Client_SetViewTargetWithBlend(NewTarget, BlendTime);
+			}, 0.1f, false);
+		return;
+	}
 
-				this->SetViewTargetWithBlend(NewTarget, BlendTime);
-				UE_LOG(LogTemp, Warning, TEXT("[Client] Forced View to %s"), *NewTarget->GetName());
-			}
-		}, 0.1f, false);
+	this->bAutoManageActiveCameraTarget = false;
+	this->SetViewTargetWithBlend(NewTarget, BlendTime);
+
+	EnterSpectateMode();
 }
 
 void AMainPlayerController::Server_Respawn_Implementation()
@@ -446,6 +471,19 @@ void AMainPlayerController::ExitSpectateMode()
 	{
 		Subsystem->RemoveMappingContext(SpectateInputMappingContext);
 	}
+	this->bAutoManageActiveCameraTarget = true; // 카메라 자동 관리 다시 활성화
+
+	if (APawn* MyPawn = GetPawn())
+	{
+		SetViewTargetWithBlend(MyPawn, 0.5f);
+	}
+
+	// 관전용 카메라 액터 제거
+	if (SpectatorCamera)
+	{
+		SpectatorCamera->Destroy();
+		SpectatorCamera = nullptr;
+	}
 }
 
 void AMainPlayerController::SwitchSpectateTarget()
@@ -474,4 +512,60 @@ void AMainPlayerController::Client_EnterSpectateMode_Implementation()
 void AMainPlayerController::Client_ExitSpectateMode_Implementation()
 {
 	ExitSpectateMode();
+}
+
+void AMainPlayerController::Client_SetSpectateTarget_Implementation(AActor* TargetPlayer)
+{
+	if (!IsValid(TargetPlayer))
+	{
+		// 리플리케이션 대기 후 재시도
+		FTimerHandle RetryHandle;
+		TWeakObjectPtr<AActor> WeakTarget = TargetPlayer;
+		GetWorldTimerManager().SetTimer(RetryHandle, [this, WeakTarget]()
+			{
+				if (WeakTarget.IsValid())
+				{
+					Client_SetSpectateTarget(WeakTarget.Get());
+				}
+			}, 0.1f, false);
+		return;
+	}
+
+	FVector SpawnLoc = TargetPlayer->GetActorLocation();
+
+	if (ACharacter* TargetChar = Cast<ACharacter>(TargetPlayer))
+	{
+		if (USkeletalMeshComponent* Mesh = TargetChar->GetMesh())
+		{
+			if (Mesh->DoesSocketExist(TEXT("headSocket")))
+			{
+				SpawnLoc = Mesh->GetSocketLocation(TEXT("headSocket"));
+			}
+		}
+	}
+
+	if (!SpectatorCamera)
+	{
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		SpectatorCamera = GetWorld()->SpawnActor<ASpectatorCameraActor>(
+			ASpectatorCameraActor::StaticClass(),
+			SpawnLoc,
+			TargetPlayer->GetActorRotation(),
+			Params
+		);
+	}
+
+	if (SpectatorCamera)
+	{
+		SpectatorCamera->TargetActor = TargetPlayer;
+
+		SpectatorCamera->SetActorLocation(SpawnLocation);
+
+		this->bAutoManageActiveCameraTarget = false;
+		this->SetViewTargetWithBlend(SpectatorCamera, 0.2f);
+	}
+
+	EnterSpectateMode();
 }

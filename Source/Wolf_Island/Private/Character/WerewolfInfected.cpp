@@ -12,6 +12,8 @@
 #include "AIController.h"
 #include "Engine/DamageEvents.h"
 #include "Moon/MoonlightInfectionSystem.h"
+#include "AI/AIControllers/InfectedAIController.h"
+#include "BehaviorTree/BlackboardComponent.h"
 
 AWerewolfInfected::AWerewolfInfected()
 {
@@ -19,17 +21,6 @@ AWerewolfInfected::AWerewolfInfected()
     bReplicates = true;
 
     AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
-    AIControllerClass = AAIController::StaticClass();
-
-    FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(
-        TEXT("FirstPersonCamera"));
-    FirstPersonCamera->SetupAttachment(GetMesh(), TEXT("headSocket"));
-    FirstPersonCamera->bUsePawnControlRotation = true;
-    FirstPersonCamera->SetRelativeTransform(
-        FTransform(
-            FRotator(0, 90, -90),
-            FVector(0, 10, 0)
-        ));
 
     AttackCollisionComp = CreateDefaultSubobject<UAttackCollisionComponent>(
         TEXT("AttackCollision"));
@@ -52,16 +43,6 @@ void AWerewolfInfected::BeginPlay()
 void AWerewolfInfected::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
-
-    if (!HasAuthority()) return;
-    if (bIsIncapacitated || bIsAttacking) return;
-
-    if (bShouldMove && CurrentTarget.IsValid())
-    {
-        FVector Direction = (CurrentTarget->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-        SetActorRotation(FRotator(0, Direction.Rotation().Yaw, 0));
-        AddMovementInput(Direction, 1.0f);
-    }
 }
 
 void AWerewolfInfected::GetLifetimeReplicatedProps(
@@ -69,20 +50,12 @@ void AWerewolfInfected::GetLifetimeReplicatedProps(
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
     DOREPLIFETIME(AWerewolfInfected, CurrentHealth);
-    DOREPLIFETIME(AWerewolfInfected, bIsIncapacitated);
 }
 
-void AWerewolfInfected::StartAI()
+void AWerewolfInfected::Die_Implementation()
 {
-    if (!HasAuthority()) return;
-
-    GetWorldTimerManager().ClearTimer(AITickHandle);
-    GetWorldTimerManager().SetTimer(
-        AITickHandle, this,
-        &AWerewolfInfected::AITick,
-        AITickInterval, true
-    );
 }
+
 
 // === 데미지 & 기절 ===
 
@@ -107,12 +80,26 @@ float AWerewolfInfected::TakeDamage(float DamageAmount,
     return ActualDamage;
 }
 
+void AWerewolfInfected::NormalAttack_Implementation()
+{
+    if (HasAuthority())
+    {
+        // 서버에서 멀티캐스트 호출
+        Multicast_PlayAttack();
+    }
+}
+
 void AWerewolfInfected::HandleIncapacitated()
 {
     bIsIncapacitated = true;
-    bShouldMove = false;
-    GetWorldTimerManager().ClearTimer(AITickHandle);
 
+    if (AAIController* AIC = Cast<AAIController>(GetController()))
+    {
+        if (UBlackboardComponent* BB = AIC->GetBlackboardComponent()) {
+            BB->SetValueAsBool(FName("bIsIncapacitated"), true);
+        }
+		AIC->StopMovement();
+	}
     // MoonlightInfectionSystem을 찾아 기절 처리 요청
     AMoonlightInfectionSystem* System = Cast<AMoonlightInfectionSystem>(
         UGameplayStatics::GetActorOfClass(GetWorld(), AMoonlightInfectionSystem::StaticClass()));
@@ -179,93 +166,37 @@ void AWerewolfInfected::OnAttackInput()
 
 void AWerewolfInfected::Multicast_PlayAttack_Implementation()
 {
-    if (AttackMontage)
+    GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, "z");
+
+    UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+    if (!AnimInstance || !AttackMontage)
     {
-        PlayAnimMontage(AttackMontage);
-    }
-}
-
-void AWerewolfInfected::AITick()
-{
-    if (bIsIncapacitated) return;
-
-    if (!CurrentTarget.IsValid() || CurrentTarget->IsActorBeingDestroyed())
-    {
-        FindClosestPlayer();
-    }
-
-    if (CurrentTarget.IsValid())
-    {
-        float Distance = FVector::Dist(
-            GetActorLocation(), CurrentTarget->GetActorLocation());
-
-        if (Distance <= AttackRange)
+        if (HasAuthority())
         {
-            bShouldMove = false;
-            TryAttack();
+            OnAttackEnd.Broadcast();
         }
-        else
-        {
-            bShouldMove = true;
-        }
-    }
-    else
-    {
-        bShouldMove = false;
-    }
-}
-
-void AWerewolfInfected::FindClosestPlayer()
-{
-    float ClosestDist = DetectionRange;
-    ACharacter* ClosestPlayer = nullptr;
-
-    TArray<AActor*> FoundPlayers;
-    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMainPlayer::StaticClass(), FoundPlayers);
-
-    for (AActor* Actor : FoundPlayers)
-    {
-        AMainPlayer* MP = Cast<AMainPlayer>(Actor);
-        if (!MP) continue;
-
-        // 숨겨진 캐릭터 제외 (변신한 플레이어의 원래 캐릭터)
-        if (MP->IsHidden()) continue;
-
-        // 기절/사망 제외
-        if (MP->StatusComponent && MP->StatusComponent->bIsIncapacitated) continue;
-
-        float Dist = FVector::Dist(GetActorLocation(), MP->GetActorLocation());
-        if (Dist < ClosestDist)
-        {
-            ClosestDist = Dist;
-            ClosestPlayer = MP;
-        }
-    }
-
-    CurrentTarget = ClosestPlayer;
-}
-
-void AWerewolfInfected::TryAttack()
-{
-    if (bIsAttacking || !AttackMontage) return;
-
-    bIsAttacking = true;
-
-    float Duration = PlayAnimMontage(AttackMontage);
-    Multicast_PlayAttack();
-
-    if (Duration <= 0.0f)
-    {
-        bIsAttacking = false;
         return;
     }
 
-    GetWorldTimerManager().ClearTimer(AttackResetHandle);
-    GetWorldTimerManager().SetTimer(
-        AttackResetHandle,
-        [this]() { bIsAttacking = false; },
-        Duration, false
-    );
+    // 공격 중 상태 설정
+    bIsAttacking = true;
+
+    // 몽타주 재생
+    AnimInstance->Montage_Play(AttackMontage);
+
+    // 공격 사운드 (EnemyAIBase 스타일 추가)
+    /*if (AttackSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, AttackSound, GetActorLocation());
+    }*/
+
+    // 서버인 경우 몽타주 종료 델리게이트 바인딩
+    if (HasAuthority())
+    {
+        FOnMontageEnded EndDelegate;
+        EndDelegate.BindUObject(this, &AWerewolfInfected::OnAttackMontageEnded);
+        AnimInstance->Montage_SetEndDelegate(EndDelegate, AttackMontage);
+    }
 }
 
 void AWerewolfInfected::SwitchSpectateTarget()
@@ -332,4 +263,14 @@ void AWerewolfInfected::OnAttackHit(const FHitResult& HitResult)
     }
 
     UGameplayStatics::ApplyDamage(HitActor, AttackDamage, GetController(), this, DamageTypeClass);
+}
+
+void AWerewolfInfected::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+    bIsAttacking = false;
+
+    if (!bInterrupted)
+    {
+        OnAttackEnd.Broadcast();
+    }
 }

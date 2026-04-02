@@ -12,12 +12,13 @@
 #include "Actors/Interfaces/SkyInterface.h"
 #include "Interaction/Repair_Actor.h"
 
-// 테스트용 헤더
 #include "Character/MainPlayer.h"
 #include "Components/StatusComponent.h"
 #include "Character/WerewolfInfected.h"
 #include "Character/MainPlayerController.h"
 #include "GameFramework/PlayerStart.h"
+#include "Actors/SpectatorCameraActor.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 // Sets default values
 AMoonlightInfectionSystem::AMoonlightInfectionSystem()
@@ -184,14 +185,13 @@ void AMoonlightInfectionSystem::OnNightStarted()
 
 void AMoonlightInfectionSystem::OnDayStarted()
 {
-	if (bShowDebugMessages)
+	// 먼저 모든 늑대 세션 복원 (Possess 포함)
+	if (GetNetMode() != NM_Standalone)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow,
-			FString::Printf(TEXT("[DayStarted] Triggered count: %d, Bonus: +%.0f%%"),
-				TriggeredThisNight.Num(), PostSequenceInfectionBonus));
+		OnMorningStarted(); // 여기서 RestorePlayerAtDawn → Possess
 	}
 
-	// 아침: 트리거된 플레이어에게 +20% 적용
+	// Possess 완료 후 +20% 적용 → OnRep이 정상적으로 클라이언트에 전파
 	for (auto& WeakPlayer : TriggeredThisNight)
 	{
 		AMainPlayer* Player = WeakPlayer.Get();
@@ -200,39 +200,25 @@ void AMoonlightInfectionSystem::OnDayStarted()
 		if (Player->StatusComponent)
 		{
 			Player->StatusComponent->IncreaseInfectionBy(PostSequenceInfectionBonus);
-
-			if (bShowDebugMessages)
-			{
-				UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] %s +%.0f%% infection at dawn (Total: %.2f%%)"),
-					*Player->GetName(),
-					PostSequenceInfectionBonus * 100.f,
-					Player->StatusComponent->CurrentInfectionRate * 100.f);
-			}
 		}
 	}
 
+	// 싱글에서는 위치 이동 + OnRespawn
 	for (auto& WeakPlayer : TriggeredThisNight)
 	{
 		AMainPlayer* Player = WeakPlayer.Get();
-		if (IsValid(Player))
-		{
-			if (GetNetMode() == NM_Standalone)
-			{
-				// 플레이어 위치 이동
-				AActor* SpawnPoint = UGameplayStatics::GetActorOfClass(GetWorld(), APlayerStart::StaticClass());
-				if (SpawnPoint)
-				{
-					Player->SetActorLocation(SpawnPoint->GetActorLocation());
-				}
-				Player->OnRespawn();
-			}
-		}
-	}
+		if (!IsValid(Player)) continue;
 
-	// 멀티: 늑대 복귀
-	if (GetNetMode() != NM_Standalone)
-	{
-		OnMorningStarted();
+		if (GetNetMode() == NM_Standalone)
+		{
+			AActor* SpawnPoint = UGameplayStatics::GetActorOfClass(
+				GetWorld(), APlayerStart::StaticClass());
+			if (SpawnPoint)
+			{
+				Player->SetActorLocation(SpawnPoint->GetActorLocation());
+			}
+			Player->OnRespawn();
+		}
 	}
 
 	NightlyExposure.Empty();
@@ -355,6 +341,17 @@ void AMoonlightInfectionSystem::CheckAllPlayers()
 
 		AActor* Player = StatusComp->GetOwner();
 		if (!IsValid(Player)) continue;
+
+		bool bIsCurrentlyWerewolf = false;
+		for (auto& Pair : ActiveWerewolfSessions)
+		{
+			if (Pair.Value.OriginalCharacter == Player)
+			{
+				bIsCurrentlyWerewolf = true;
+				break;
+			}
+		}
+		if (bIsCurrentlyWerewolf) continue;
 
 		if (IsPlayerExposedToMoonlight(Player))
 		{
@@ -568,11 +565,6 @@ void AMoonlightInfectionSystem::SpawnAndPossessWerewolf(APlayerController* PC, F
 	// 기존 캐릭터에서 Unpossess만 하고 늑대에는 Possess 안 함
 	PC->UnPossess();
 
-	// 늑대는 자체 AI로 동작
-	if (AWerewolfInfected* Wolf = Cast<AWerewolfInfected>(Werewolf))
-	{
-		Wolf->StartAI();
-	}
 
 	// 관전 대상 설정
 	SetSpectateTarget(PC);
@@ -606,31 +598,14 @@ void AMoonlightInfectionSystem::SetSpectateTarget(APlayerController* PC)
 	for (AActor* Actor : FoundPlayers)
 	{
 		AMainPlayer* MP = Cast<AMainPlayer>(Actor);
-
 		if (!MP || MP->IsHidden() || MP->GetController() == PC) continue;
 
-		if (PC->IsLocalController())
+		// 타겟 플레이어만 알려줌
+		if (AMainPlayerController* MPC = Cast<AMainPlayerController>(PC))
 		{
-			GetWorldTimerManager().SetTimerForNextTick([PC, MP]()
-				{
-					if (PC && MP)
-					{
-						PC->SetViewTargetWithBlend(MP, 0.2f);
-						UE_LOG(LogTemp, Log, TEXT("[Spectate] SERVER View Fixed to %s"), *MP->GetName());
-					}
-				});
+			MPC->Client_SetSpectateTarget(MP);
 		}
-
-		else
-		{
-			AMainPlayerController* MainPC = Cast<AMainPlayerController>(PC);
-			if (MainPC)
-			{
-				MainPC->Client_SetViewTargetWithBlend(MP, 0.2f);
-			}
-		}
-
-		return; // 한 명 찾았으면 종료
+		return;
 	}
 }
 
@@ -647,28 +622,28 @@ void AMoonlightInfectionSystem::SwitchSpectateTarget(APlayerController* PC)
 	for (AActor* Actor : FoundPlayers)
 	{
 		AMainPlayer* MP = Cast<AMainPlayer>(Actor);
-		if (!MP || MP->IsHidden()) continue;
+		if (!MP || MP->IsHidden() || MP->GetController() == PC) continue;
 		ValidTargets.Add(MP);
 	}
 
 	if (ValidTargets.Num() == 0) return;
 
-	int32 CurrentIndex = ValidTargets.IndexOfByKey(CurrentView);
-	int32 NextIndex = (CurrentIndex + 1) % ValidTargets.Num();
+	AActor* CurrentFollowingTarget = nullptr;
 
+	if (ASpectatorCameraActor* CurrentCam = Cast<ASpectatorCameraActor>(PC->GetViewTarget()))
+	{
+		CurrentFollowingTarget = CurrentCam->TargetActor; // 카메라가 쫓고 있는 본체를 가져옴
+	}
+
+	int32 CurrentIndex = ValidTargets.IndexOfByKey(CurrentFollowingTarget);
+
+	// 찾지 못했다면(처음이라면) 0번, 찾았다면 다음 인덱스로
+	int32 NextIndex = (CurrentIndex + 1) % ValidTargets.Num();
 	AMainPlayer* NextTarget = ValidTargets[NextIndex];
 
-	// 서버/클라 분기
-	if (PC->IsLocalController())
+	if (AMainPlayerController* MPC = Cast<AMainPlayerController>(PC))
 	{
-		PC->SetViewTargetWithBlend(NextTarget, 0.1f);
-	}
-	else
-	{
-		if (AMainPlayerController* MPC = Cast<AMainPlayerController>(PC))
-		{
-			MPC->Client_SetViewTargetWithBlend(NextTarget, 0.1f);
-		}
+		MPC->Client_SetSpectateTarget(NextTarget);
 	}
 }
 
@@ -687,34 +662,38 @@ void AMoonlightInfectionSystem::NotifyWerewolfDown(ACharacter* Werewolf)
 		}
 	}
 
-	if (TargetPC)
+	/*if (TargetPC)
 	{
 		FWerewolfSessionData& Session = ActiveWerewolfSessions[TargetPC];
 		AMainPlayer* OriginalPlayer = Session.OriginalCharacter.Get();
 
 		if (OriginalPlayer)
 		{
-			// 플레이어를 늑대가 쓰러진 위치로 이동
-			OriginalPlayer->SetActorLocation(Werewolf->GetActorLocation());
-			OriginalPlayer->SetActorRotation(Werewolf->GetActorRotation());
+			Werewolf->SetActorEnableCollision(false);
 
-			// 플레이어 캐릭터 가시화 및 충돌 활성화
+			FVector DeathLocation = Werewolf->GetActorLocation();
+			FRotator DeathRotation = Werewolf->GetActorRotation();
+
+			OriginalPlayer->SetActorLocationAndRotation(DeathLocation, DeathRotation, false, nullptr, ETeleportType::TeleportPhysics);
+
 			OriginalPlayer->SetActorHiddenInGame(false);
 			OriginalPlayer->SetActorEnableCollision(true);
 			OriginalPlayer->SetActorTickEnabled(true);
 
-			// 플레이어 강제 기절
-			OriginalPlayer->KnockOut();
+			if (UCharacterMovementComponent* MoveComp = OriginalPlayer->GetCharacterMovement())
+			{
+				MoveComp->StopMovementImmediately();
+			}
 
-			// 관전 모드 해제
+			OriginalPlayer->KnockOut();
 			TargetPC->Possess(OriginalPlayer);
+
 			if (AMainPlayerController* MPC = Cast<AMainPlayerController>(TargetPC))
 			{
 				MPC->Client_ExitSpectateMode();
 			}
 
-			// 늑대인간 제거
 			Werewolf->Destroy();
 		}
-	}
+	}*/
 }

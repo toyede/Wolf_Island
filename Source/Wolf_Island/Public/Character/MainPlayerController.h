@@ -116,6 +116,12 @@ public:
 
 	UFUNCTION(Client, Reliable)
 	void Client_ExitSpectateMode();
+
+	UFUNCTION(Client, Reliable)
+	void Client_SetSpectateTarget(AActor* TargetPlayer);
+
+	UPROPERTY()
+	class ASpectatorCameraActor* SpectatorCamera;
 	//
 
 	virtual void BeginPlay() override;
