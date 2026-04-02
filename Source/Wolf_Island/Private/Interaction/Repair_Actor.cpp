@@ -70,7 +70,11 @@ void ARepair_Actor::Client_OpenRepairUI_Implementation(class APlayerController* 
 
 void ARepair_Actor::OnRep_CompletedRecipes()
 {
-    if (IsPendingKillPending() || HasAnyFlags(RF_BeginDestroyed)) return;
+    UWorld* World = GetWorld();
+    if (!World || bIsEscaping || IsPendingKillPending() || HasAnyFlags(RF_BeginDestroyed) || World->bIsTearingDown) 
+    {
+        return;
+    }
     
     if (OnRepairStatusChanged.IsBound())
     {
@@ -113,6 +117,16 @@ void ARepair_Actor::BeginPlay()
     RestoreStateFromGameInstance();
 
     Super::BeginPlay();
+}
+
+void ARepair_Actor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().ClearTimer(CinematicTimerHandle);
+    }
+
+    Super::EndPlay(EndPlayReason);
 }
 
 bool ARepair_Actor::CheckBodyComplete()
@@ -356,7 +370,7 @@ void ARepair_Actor::TryEscape(AActor* Interactor)
 {
     if (!HasAuthority() || bIsEscaping) return;
 
-    if (!bIsBody && !bIsEngine && !bIsSteering && !bIsRadar && !bIsAnchor)
+    if (!bIsBody || !bIsEngine || !bIsSteering || !bIsRadar || !bIsAnchor)
     {
         return; 
     }
@@ -434,11 +448,15 @@ void ARepair_Actor::OnEscapeVolumeEndOverlap(UPrimitiveComponent* OverlappedComp
 
 void ARepair_Actor::ExecuteMapTransition()
 {
-    if (!HasAuthority()) return;
-
-    if (EscapeReadyVolume)
+    if (!HasAuthority())
     {
-        EscapeReadyVolume->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (!World || World->bIsTearingDown)
+    {
+        return;
     }
 
     UGameplayStatics::OpenLevel(this, FName("/Game/JWY/Maps/StartMap"));
@@ -525,6 +543,9 @@ void ARepair_Actor::Multicast_PlayEscapeCinematic_Implementation()
         PC->SetInputMode(FInputModeGameOnly());
     }
     
-    GetWorld()->GetTimerManager().SetTimer(CinematicTimerHandle, this, &ARepair_Actor::ExecuteMapTransition, CinematicDuration, false);
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().SetTimer(CinematicTimerHandle, this, &ARepair_Actor::ExecuteMapTransition, CinematicDuration, false);
+    }
 
 }

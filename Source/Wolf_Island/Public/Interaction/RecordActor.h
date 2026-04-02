@@ -44,6 +44,6 @@ public:
 	UFUNCTION(CallInEditor)
 	TArray<FString> GetRecipeNames() const;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Record", meta = (GetOptions = "GetRecipeNames"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Record", meta = (GetOptions = "GetRecipeNames"), SaveGame)
 	TArray<FName> SharedUnlockRecipes;
 };

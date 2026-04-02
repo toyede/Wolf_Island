@@ -127,6 +127,7 @@ public:
 	void TryEscape(AActor* Interactor);
 
 protected:
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	// 대기 구역 오버랩 이벤트
 	UFUNCTION()
 	void OnEscapeVolumeBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
