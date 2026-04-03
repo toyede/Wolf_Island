@@ -479,6 +479,17 @@ bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState, bool IsDead)
 	
 	PlayerState->PersonalRecipes.Empty();
 	PlayerState->PersonalRecipes = PlayerSaveData.SavedPersonalRecipes;
+
+	if (AMainPlayer* TargetPlayer = Cast<AMainPlayer>(PlayerCharacter))
+	{
+		for (const FName& RecipeID : TargetPlayer->DefaultRecipes)
+		{
+			if (RecipeID != NAME_None && RecipeID.ToString() != TEXT("None"))
+			{
+				PlayerState->UnlockPersonalRecipe(RecipeID);
+			}
+		}
+	}
 	
 	if (PlayerCharacter && !IsDead)
 	{
