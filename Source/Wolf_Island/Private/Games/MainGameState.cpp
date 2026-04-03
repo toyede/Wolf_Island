@@ -19,6 +19,14 @@ void AMainGameState::BeginPlay()
 	{
 		IsMulti = GetWorld()->GetAuthGameMode<AMultiGameMode>() != nullptr;
 	}
+	
+	if (IsMulti)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GAMESTATE] This Game is MULTI"));
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GAMESTATE] This Game is SINGLE"));
+	}
 }
 
 //선택된 역할 리스트 새로고침-서버에서만 새로고침 가능
@@ -30,12 +38,6 @@ void AMainGameState::RefreshSelectedRoles()
 		{
 			SelectedRoles.Empty();
 			
-			/*for (auto Player : GM->PlayersSaveData)
-			{
-				const FPlayerSaveData& PlayerSave = Player.Value;
-				SelectedRoles.Add(PlayerSave.PlayerRole);
-			}*/
-			
 			for (auto PS : PlayerArray)
 			{
 				if (AMainPlayerState* MPS = Cast<AMainPlayerState>(PS))
@@ -45,6 +47,39 @@ void AMainGameState::RefreshSelectedRoles()
 			}
 		}
 	}
+}
+
+bool AMainGameState::CheckAvailableRole(ECharacterRole NewRole)
+{
+	for ( auto PS : PlayerArray)
+	{
+		if (AMainPlayerState* MPS = Cast<AMainPlayerState>(PS))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[GAMSTATE] %d is Available"), MPS->GetPlayerRole());
+			if (MPS->GetPlayerRole() == NewRole) return false;
+		}
+	}
+	
+	return true;
+}
+
+TArray<ECharacterRole> AMainGameState::GetAvailableRoles()
+{
+	TArray<ECharacterRole> AvailableRoles;
+	AvailableRoles.Add(ECharacterRole::CAPTAIN);
+	AvailableRoles.Add(ECharacterRole::CHEF);
+	AvailableRoles.Add(ECharacterRole::MECHANIC);
+	AvailableRoles.Add(ECharacterRole::SOLDIER);
+	
+	for ( auto PS : PlayerArray )
+	{
+		if (AMainPlayerState* MPS = Cast<AMainPlayerState>(PS))
+		{
+			AvailableRoles.Remove(MPS->GetPlayerRole());
+		}
+	}	
+	
+	return AvailableRoles;
 }
 
 void AMainGameState::AddChattingMessage(FChattingData NewChattingData)

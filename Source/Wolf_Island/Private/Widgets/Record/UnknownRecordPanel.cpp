@@ -59,13 +59,18 @@ void UUnknownRecordPanel::RefreshList()
         URecordBlock* FirstBlock = Cast<URecordBlock>(RecordList->GetChildAt(0));
         if (FirstBlock)
         {
-            SetRecordInfo(FirstBlock->RecordData);
+            CurrentRecordBlock = FirstBlock;
+            SetRecordInfo(FirstBlock, FirstBlock->RecordData);
         }
     }
 }
 
-void UUnknownRecordPanel::SetRecordInfo(FUnknownRecord RecordData)
+void UUnknownRecordPanel::SetRecordInfo(URecordBlock* ClickedBlock, FUnknownRecord RecordData)
 {
+    CurrentRecordBlock->SetSelected(false);
+    CurrentRecordBlock = ClickedBlock;
+    CurrentRecordBlock->SetSelected(true);
+    
     if (RecordTitleText)
     {
         RecordTitleText->SetText(FText::FromString(RecordData.title));

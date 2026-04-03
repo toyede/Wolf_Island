@@ -149,20 +149,20 @@ void USaveSlotPanel::OnCreateCommited(const FString& Text)
 {
 	if (MainGameInstance)
 	{
-		UMainSaveGame* NewSave = MainGameInstance->CreateSaveSlot(Text, MainGameInstance->FindEmptySaveSlotIndex(IsMultiPanel), IsMultiPanel);
 		IsMultiPanel ? LoadMultiSlots() : LoadSingleSlots();
 		TCP->RemoveFromParent();
 		
-		MainGameInstance->SetCurrentSave(NewSave);
-	
 		//멀티 새 게임 시작
-		if (NewSave->IsMulti)
+		if (IsMultiPanel)
 		{
+			MainGameInstance->CurrentServerName = Text;
 			MainGameInstance->CreateLobbySession();
 		}
 		//싱글 새 게임 시작
 		else
 		{
+			UMainSaveGame* NewSave = MainGameInstance->CreateSaveSlot(Text, MainGameInstance->FindEmptySaveSlotIndex(IsMultiPanel), IsMultiPanel);
+			MainGameInstance->SetCurrentSave(NewSave);
 			UGameplayStatics::OpenLevelBySoftObjectPtr(GetWorld(), MainGameInstance->SinglePlayWorld);
 		}
 	}

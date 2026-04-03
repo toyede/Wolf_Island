@@ -11,7 +11,8 @@
  * 
  */
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnRecordButtonClicked, FUnknownRecord, RecordData);
+class UImage;
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnRecordButtonClicked, URecordBlock*, ClickedBlock, FUnknownRecord, RecordData);
 
 UCLASS()
 class WOLF_ISLAND_API URecordBlock : public UUserWidget
@@ -30,9 +31,14 @@ public:
 	class UTextBlock* RecordName;
 	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
 	class UButton* RecordButton;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	UImage* SelectedIcon;
 
 	UFUNCTION()
 	void OnRecordButtonClicked();
+	
+	UFUNCTION()
+	void SetSelected(bool IsSelected);
 
 protected:
 	virtual void NativeConstruct() override;

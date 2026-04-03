@@ -4,6 +4,7 @@
 #include "Widgets/Craft/RecipeBlock.h"
 
 #include "Components/Button.h"
+#include "Components/Image.h"
 
 void URecipeBlock::NativeConstruct()
 {
@@ -18,5 +19,13 @@ void URecipeBlock::NativeConstruct()
 
 void URecipeBlock::OnRecipeButtonClicked()
 {
-	OnRecipeClicked.Broadcast(RecipeData);
+	OnRecipeClicked.Broadcast(this, RecipeData);
+}
+
+void URecipeBlock::SetSelected(bool IsSelected)
+{
+	if (SelectedIcon)
+	{
+		SelectedIcon->SetVisibility(IsSelected ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+	}
 }

@@ -64,6 +64,9 @@ struct FPlayerSaveData
 
 	UPROPERTY(SaveGame)
 	FStatusSaveData StatusData;
+
+	UPROPERTY(SaveGame)
+	TArray<FName> SavedPersonalRecipes;
 };
 
 USTRUCT(BlueprintType)
@@ -117,4 +120,7 @@ public:
 	
 	UFUNCTION(Blueprintable, BlueprintPure)
 	FString GetSlotName() const { return SlotName; };
+
+	UPROPERTY(BlueprintReadWrite, Category = "SaveData")
+	TArray<FName> SavedSharedRecipes;
 };

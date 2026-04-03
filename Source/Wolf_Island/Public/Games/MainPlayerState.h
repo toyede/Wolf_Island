@@ -57,6 +57,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FString GetPersistantId();
 	
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	bool GetIsReady() const { return IsReady; };
+	
 	UFUNCTION(BlueprintCallable)
 	void PrintItems(float DeltaTime);
 	

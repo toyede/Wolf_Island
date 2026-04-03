@@ -57,8 +57,8 @@ public:
     UPROPERTY(VisibleAnywhere, meta=(BindWidget))
     class UTextBlock* DescriptionText;
 
-    UPROPERTY(VisibleAnywhere, meta=(BindWidget))
-    class UTextBlock* DurationText;
+    /*UPROPERTY(VisibleAnywhere, meta=(BindWidget))
+    class UTextBlock* DurationText;*/
 
     UPROPERTY(VisibleAnywhere, meta=(BindWidget))
     class UWrapBox* IngredientList;
@@ -71,7 +71,9 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound")
     TObjectPtr<USoundBase> RepairSound;
-
+    
+    UPROPERTY()
+    URepairBlock* CurrentBlock;
 
 protected:
     virtual void NativeConstruct() override;
@@ -90,11 +92,11 @@ public:
     void RefreshRecipeList();
 
     // 목록에 항목 하나 추가
-    void AddRecipe(FName RowName, FRepairRecipeData Recipe);
+    URepairBlock* AddRecipe(FName RowName, FRepairRecipeData Recipe);
 
     // 항목 클릭 시 상세 정보 세팅
     UFUNCTION(BlueprintCallable)
-    void SetRepairInfo(FName RowName, FRepairRecipeData RecipeData);
+    void SetRepairInfo(URepairBlock* NewBlock, FName RowName, FRepairRecipeData RecipeData);
 
     // 버튼 활성화/비활성화 상태 갱신
     UFUNCTION(BlueprintCallable)

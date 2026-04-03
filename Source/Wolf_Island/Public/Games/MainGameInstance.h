@@ -17,6 +17,10 @@ class WOLF_ISLAND_API UMainGameInstance : public UAdvancedFriendsGameInstance
 	
 public:
 	
+	//로비 이름
+	UPROPERTY(BlueprintReadWrite)
+	FString CurrentServerName;
+	
 	UPROPERTY(BlueprintReadWrite)
 	UMainSaveGame* CurrenSaveGame;
 	
