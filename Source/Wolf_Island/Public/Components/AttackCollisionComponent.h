@@ -33,8 +33,8 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Trace")
 	TArray<AActor*> IgnoredActors;
 
-	UPROPERTY(EditAnywhere, Category = "Debug")
-	TEnumAsByte<EDrawDebugTrace::Type> DrawDebugType = EDrawDebugTrace::ForDuration;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+	bool bShowDebug = false;
 
 	UPROPERTY()
 	TArray<AActor*> AlreadyHitActors;

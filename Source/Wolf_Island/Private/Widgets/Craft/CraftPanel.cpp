@@ -11,6 +11,7 @@
 #include "Components/TextBlock.h"
 #include "Components/WrapBox.h"
 #include "Data/ItemDataStruct.h"
+#include "Games/MainGameState.h"
 #include "Widgets/Craft/RecipeBlock.h"
 #include "Widgets/Craft//CraftSlot.h"
 
@@ -25,12 +26,18 @@ void UCraftPanel::NativeConstruct()
 {
 	Super::NativeConstruct();
 
+	OwnerInventory = GetOwningPlayerPawn()
+		? GetOwningPlayerPawn()->GetComponentByClass<UInventoryComponent>()
+		: nullptr;
 	if (OwnerInventory)
 	{
 		OwnerInventory->OnInventoryUpdated.AddUObject(this, &UCraftPanel::RefreshRecipeList);
 	}
 
-	OwnerInventory = GetOwningPlayerPawn()->GetComponentByClass<UInventoryComponent>();
+	if (AMainGameState* GS = GetWorld() ? GetWorld()->GetGameState<AMainGameState>() : nullptr)
+	{
+		GS->OnSharedRecipesChanged.AddDynamic(this, &UCraftPanel::RefreshRecipeList);
+	}
 	CraftButton->OnClicked.AddDynamic(this, &UCraftPanel::OnCraftButtonClicked);
 
 	RefreshRecipeList();

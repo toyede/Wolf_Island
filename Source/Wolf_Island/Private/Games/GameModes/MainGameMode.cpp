@@ -197,6 +197,12 @@ void AMainGameMode::SaveWorld()
 	UGameplayStatics::GetAllActorsWithInterface(GetWorld(), USaveInterface::StaticClass(), SaveActors);
 	
 	Save->SavedActors.Empty();
+
+	// 레시피 저장 코드 실행
+	if (AMainGameState* GS = GetGameState<AMainGameState>())
+	{
+		Save->SavedSharedRecipes = GS->SharedRecipes;
+	}
 	
 	//각 액터의 저장 코드 실행
 	for (AActor* Actor : SaveActors)
@@ -345,6 +351,19 @@ void AMainGameMode::LoadWorldFromSave(UMainSaveGame* Save)
 			}
 		}
 	}
+
+	// 공유 레시피 로드
+	if (AMainGameState* GS = GetWorld()->GetGameState<AMainGameState>())
+	{
+		// 1. 공유 레시피 초기화
+		GS->SharedRecipes.Empty();
+
+		// 2. 세이브 데이터 로드
+		GS->SharedRecipes = Save->SavedSharedRecipes;
+
+		// 3. UI 갱신
+		GS->OnSharedRecipesChanged.Broadcast();
+	}
 }
 
 void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
@@ -408,6 +427,9 @@ void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 	//아이템 데이터는 플레이어 스테이트에 있는 것을 저장.
 	//<?>인벤토리 업데이트 할때마다 플레이어 스테이트에 아이템 데이터가 저장됨.
 	PlayerSaveData.InventoryItems = PlayerState->GetItems();
+
+	//개인 레시피 저장
+	PlayerSaveData.SavedPersonalRecipes = PlayerState->PersonalRecipes;
 	
 	//선택창 대기 중인 뉴비를 위한 선택한 역할 리스트 업데이트
 	if (AMainGameState* GS = GetGameState<AMainGameState>())
@@ -454,6 +476,9 @@ bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState, bool IsDead)
 	FPlayerSaveData& PlayerSaveData = PlayersSaveData[PlayerID];
 	
 	PlayerState->SetItemsData(PlayerSaveData.InventoryItems);
+	
+	PlayerState->PersonalRecipes.Empty();
+	PlayerState->PersonalRecipes = PlayerSaveData.SavedPersonalRecipes;
 	
 	if (PlayerCharacter && !IsDead)
 	{

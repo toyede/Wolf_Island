@@ -797,4 +797,12 @@ public:
 	// 물 마시기 서버 실행 함수
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category="Interaction")
 	void Server_DrinkWater(UPrimitiveComponent* WaterComp);
+
+	// 물 마시기 쿨타임 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Survival|Interaction")
+	float DrinkCooldown = 1.0f;
+
+private:
+	// 마지막으로 물을 마신 시간
+	float LastDrinkTime = -999.0f;
 };

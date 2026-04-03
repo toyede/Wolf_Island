@@ -3,6 +3,7 @@
 #include "AdvancedFriendsGameInstance.h"
 #include "Components/BoxComponent.h"
 #include "Data/ItemDataStruct.h"
+#include "Components/StatusComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Blueprint/UserWidget.h"
 #include "Widgets/Craft/RepairUI.h"
@@ -38,10 +39,20 @@ ARepair_Actor::ARepair_Actor()
 
 void ARepair_Actor::Interact_Implementation(AActor* Interactor)
 {
-    if (AMainPlayer* Player = Cast<AMainPlayer>(Interactor))
+    if (!HasAuthority()) return;
+
+    if (bIsBody && bIsEngine && bIsSteering && bIsRadar && bIsAnchor)
     {
-        Player->Client_OpenRepairUI(this);
+        TryEscape(Interactor);
     }
+    else
+    {
+        if (AMainPlayer* Player = Cast<AMainPlayer>(Interactor))
+        {
+            Player->Client_OpenRepairUI(this);
+        }
+    }
+    
 }
 
 void ARepair_Actor::Client_OpenRepairUI_Implementation(class APlayerController* PC)
@@ -59,7 +70,11 @@ void ARepair_Actor::Client_OpenRepairUI_Implementation(class APlayerController* 
 
 void ARepair_Actor::OnRep_CompletedRecipes()
 {
-    if (IsPendingKillPending() || HasAnyFlags(RF_BeginDestroyed)) return;
+    UWorld* World = GetWorld();
+    if (!World || bIsEscaping || IsPendingKillPending() || HasAnyFlags(RF_BeginDestroyed) || World->bIsTearingDown) 
+    {
+        return;
+    }
     
     if (OnRepairStatusChanged.IsBound())
     {
@@ -102,6 +117,16 @@ void ARepair_Actor::BeginPlay()
     RestoreStateFromGameInstance();
 
     Super::BeginPlay();
+}
+
+void ARepair_Actor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().ClearTimer(CinematicTimerHandle);
+    }
+
+    Super::EndPlay(EndPlayReason);
 }
 
 bool ARepair_Actor::CheckBodyComplete()
@@ -343,10 +368,9 @@ void ARepair_Actor::RefreshRepairProgressState()
 
 void ARepair_Actor::TryEscape(AActor* Interactor)
 {
-    if (!HasAuthority()) return;
+    if (!HasAuthority() || bIsEscaping) return;
 
-    //if (bIsBody && bIsEngine && bIsSteering && bIsRadar && bIsAnchor)
-    if (!bIsBody || !bIsEngine)
+    if (!bIsBody || !bIsEngine || !bIsSteering || !bIsRadar || !bIsAnchor)
     {
         return; 
     }
@@ -382,6 +406,19 @@ void ARepair_Actor::TryEscape(AActor* Interactor)
             }
             return;
         }
+
+        if (IsAnyPlayerInfected())
+        {
+            if (GS)
+            {
+                FChattingData Notice;
+                Notice.Name = TEXT("경고");
+                Notice.Message = TEXT("감염된 플레이어가 있어 탈출할 수 없습니다!");
+                Notice.MessageType = EMessageType::NOTICE;
+                GS->AddChattingMessage(Notice);
+            }
+            return;
+        }
     }
 
     Multicast_PlayEscapeCinematic();
@@ -411,14 +448,18 @@ void ARepair_Actor::OnEscapeVolumeEndOverlap(UPrimitiveComponent* OverlappedComp
 
 void ARepair_Actor::ExecuteMapTransition()
 {
-    if (!HasAuthority()) return;
-
-    if (EscapeReadyVolume)
+    if (!HasAuthority())
     {
-        EscapeReadyVolume->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        return;
     }
 
-    GetWorld()->ServerTravel(TEXT("/Game/Maps/StartMap"));
+    UWorld* World = GetWorld();
+    if (!World || World->bIsTearingDown)
+    {
+        return;
+    }
+
+    UGameplayStatics::OpenLevel(this, FName("/Game/JWY/Maps/StartMap"));
 }
 
 bool ARepair_Actor::AreAllPlayersInVolume() const
@@ -445,12 +486,40 @@ bool ARepair_Actor::AreAllPlayersInVolume() const
     return true;
 }
 
+bool ARepair_Actor::IsAnyPlayerInfected() const
+{
+    const AMainGameState* GS = GetWorld()->GetGameState<AMainGameState>();
+    if (!GS) return false;
+
+    for (APlayerState* PS : GS->PlayerArray)
+    {
+        if (!PS) continue;
+
+        AController* Controller = PS->GetOwner<AController>();
+        if (!Controller) continue;
+
+        AMainPlayer* PlayerPawn = Cast<AMainPlayer>(Controller->GetPawn());
+        if (!PlayerPawn) continue;
+
+        if (PlayerPawn->StatusComponent && PlayerPawn->StatusComponent->IsInfected)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void ARepair_Actor::Multicast_PlayEscapeCinematic_Implementation()
 {
+    bIsEscaping = true;
+
+    OnRepairStatusChanged.Clear();
+    
     if (EscapeReadyVolume)
     {
-        EscapeReadyVolume->SetGenerateOverlapEvents(false);
-        EscapeReadyVolume->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        EscapeReadyVolume->OnComponentBeginOverlap.RemoveAll(this);
+        EscapeReadyVolume->OnComponentEndOverlap.RemoveAll(this);
     }
 
     UWidgetLayoutLibrary::RemoveAllWidgets(this);
@@ -473,9 +542,10 @@ void ARepair_Actor::Multicast_PlayEscapeCinematic_Implementation()
         PC->SetShowMouseCursor(false);
         PC->SetInputMode(FInputModeGameOnly());
     }
-
-    if (HasAuthority())
+    
+    if (UWorld* World = GetWorld())
     {
-        GetWorld()->GetTimerManager().SetTimer(CinematicTimerHandle, this, &ARepair_Actor::ExecuteMapTransition, CinematicDuration, false);
+        World->GetTimerManager().SetTimer(CinematicTimerHandle, this, &ARepair_Actor::ExecuteMapTransition, CinematicDuration, false);
     }
+
 }

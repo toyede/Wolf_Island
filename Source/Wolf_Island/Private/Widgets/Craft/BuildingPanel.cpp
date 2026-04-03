@@ -70,6 +70,11 @@ void UBuildingPanel::NativeConstruct()
 		OwnerBuildingComponent = Pawn->GetComponentByClass<UBuildingComponent>();
 	}
 
+	if (AMainGameState* GS = GetWorld() ? GetWorld()->GetGameState<AMainGameState>() : nullptr)
+	{
+		GS->OnSharedRecipesChanged.AddDynamic(this, &UBuildingPanel::RefreshBuildingList);
+	}
+
 	if (BuildButton)
 	{
 		BuildButton->OnClicked.AddDynamic(this, &UBuildingPanel::OnBuildButtonClicked);

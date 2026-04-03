@@ -127,6 +127,7 @@ public:
 	void TryEscape(AActor* Interactor);
 
 protected:
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	// 대기 구역 오버랩 이벤트
 	UFUNCTION()
 	void OnEscapeVolumeBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
@@ -146,10 +147,14 @@ protected:
 private:
 	bool AreAllPlayersInVolume() const;
 
+	bool IsAnyPlayerInfected() const;
+	
 	// 현재 대기 구역에 있는 플레이어 목록
 	UPROPERTY()
 	TSet<class AMainPlayer*> PlayersInVolume;
 
 	// 시네마틱 재생을 위한 타이머 핸들
 	FTimerHandle CinematicTimerHandle;
+
+	bool bIsEscaping = false;
 };

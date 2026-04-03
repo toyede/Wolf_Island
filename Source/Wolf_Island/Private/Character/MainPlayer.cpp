@@ -37,6 +37,7 @@
 #include "Moon/MoonlightInfectionSystem.h"
 #include "Games/MainPlayerState.h"
 #include "Games/MainGameState.h"
+#include "WaterBodyActor.h"
 
 
 void AMainPlayer::PossessedBy(AController* NewController)
@@ -943,6 +944,18 @@ void AMainPlayer::Revive()
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	CanInteract = false;
 	InteractableData.CanInteract = CanInteract;
+
+	// 만약 변신했다가 기절해서 돌아온 상태라면, 세션 데이터 삭제 필요
+	if (HasAuthority())
+	{
+		AMoonlightInfectionSystem* System = Cast<AMoonlightInfectionSystem>(
+			UGameplayStatics::GetActorOfClass(GetWorld(), AMoonlightInfectionSystem::StaticClass()));
+		if (System && GetController())
+		{
+			// 부활했으므로 늑대인간 세션 아님
+			System->ActiveWerewolfSessions.Remove(Cast<APlayerController>(GetController()));
+		}
+	}
 }
 
 void AMainPlayer::OnRespawn()
@@ -1025,20 +1038,25 @@ void AMainPlayer::CheckInteraction()
 			// 물 체크
 			AActor* HitActor = HitResult.GetActor();
 			UPrimitiveComponent* HitComp = HitResult.GetComponent();
-
+			
+			
+			
 			if (HitActor)
 			{
-				FString ActorName = HitActor->GetName();
-
-				// 1. 이름에 "Ocean"(바다), "River"(강), "Lake"(호수)가 포함되어 있는지 확인
-				if (ActorName.Contains(TEXT("Ocean")) || ActorName.Contains(TEXT("River")) || ActorName.Contains(TEXT("Lake")))
+				FString ClassName = HitActor->GetClass()->GetName();
+				if (ClassName.Contains(TEXT("WaterBodyOcean")) || 
+					ClassName.Contains(TEXT("WaterBodyRiver")) || 
+					ClassName.Contains(TEXT("WaterBodyLake")))
 				{
-					// 상호작용 대상으로 저장
-					if (InteractionData.CurrentWaterComponent != HitComp)
+					if (GetWorld()->GetTimeSeconds() >= LastDrinkTime + DrinkCooldown)
 					{
-						FoundInteractableWater(HitComp);
+						if (InteractionData.CurrentWaterComponent != HitComp)
+						{
+							FoundInteractableWater(HitComp);
+						}
+						return;
 					}
-					return; // 물을 찾았으니 트레이스 종료
+					return;
 				}
 			}
 		}
@@ -2164,31 +2182,37 @@ void AMainPlayer::FoundInteractableWater(UPrimitiveComponent* WaterComp)
 void AMainPlayer::Server_DrinkWater_Implementation(UPrimitiveComponent* WaterComp)
 {
 	if (!WaterComp || !StatusComponent) return;
-	
+
+	float CurrentTime = GetWorld()->GetTimeSeconds();
+	if (CurrentTime < LastDrinkTime + DrinkCooldown) return;
+    
 	AActor* WaterActor = WaterComp->GetOwner();
 	if (!WaterActor) return;
 
-	FString ActorName = WaterActor->GetName();
+	FString ClassName = WaterActor->GetClass()->GetName();
 
-	if (ActorName.Contains(TEXT("River")) || ActorName.Contains(TEXT("Lake")))
+	if (ClassName.Contains(TEXT("WaterBodyRiver")) || ClassName.Contains(TEXT("WaterBodyLake")))
 	{
-		StatusComponent->IncreaseHydration(10.0f);
+		StatusComponent->IncreaseHydration(5.0f);
         
 		if (EatingSound) 
 		{
 			Multi_PlaySound(EatingSound, GetActorLocation());
 		}
+
+		LastDrinkTime = CurrentTime;
 	}
-	else if (ActorName.Contains(TEXT("Ocean")))
+	else if (ClassName.Contains(TEXT("WaterBodyOcean")))
 	{
-		StatusComponent->DecreaseHydration(10.0f);
+		StatusComponent->DecreaseHydration(5.0f);
         
 		if (EatingSound) 
 		{
 			Multi_PlaySound(EatingSound, GetActorLocation());
 		}
-	}
 
+		LastDrinkTime = CurrentTime;
+	}
 }
 
 void AMainPlayer::Client_ShowDeathScreen_Implementation()
