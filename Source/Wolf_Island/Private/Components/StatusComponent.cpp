@@ -436,25 +436,18 @@ void UStatusComponent::IncreaseInfection()
 
 void UStatusComponent::IncreaseInfectionBy(float Amount)
 {
-	float PrevRate = CurrentInfectionRate;  // 먼저 저장
-	CurrentInfectionRate = FMath::Clamp(CurrentInfectionRate + Amount, 0.0f, 1.0f);
+	float PrevRate = CurrentInfectionRate;
+	CurrentInfectionRate = FMath::Clamp(CurrentInfectionRate + Amount, 0.0f, MaxInfection);
 
-	TArray<float> Thresholds = { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f };
-	for (float Threshold : Thresholds)
+	if (CurrentInfectionRate != PrevRate)
 	{
-		if (PrevRate < Threshold && CurrentInfectionRate >= Threshold)
-		{
-			OnInfectionChanged.Broadcast();
-			break;
-		}
+		OnInfectionChanged.Broadcast();
 	}
 }
 
 void UStatusComponent::DecreaseInfection(float Amount)
 {
-	CurrentInfectionRate -= Amount;
-	if (CurrentInfectionRate <= 0) CurrentInfectionRate = 0;
-	
+	CurrentInfectionRate = FMath::Clamp(CurrentInfectionRate - Amount, 0.0f, MaxInfection);
 	OnInfectionChanged.Broadcast();
 }
 

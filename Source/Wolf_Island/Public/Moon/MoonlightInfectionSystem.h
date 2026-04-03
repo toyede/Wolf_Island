@@ -48,7 +48,7 @@ public:
 	float CheckInterval = 0.1f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Moonlight Settings")
-	float InfectionPerCheck = 0.1f;
+	float InfectionPerCheck = 10.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Moonlight Settings")
 	float CapsuleRadius = 30.0f;
@@ -77,23 +77,29 @@ public:
 	UFUNCTION()
 	void HandleInfectionStarted(UStatusComponent* StatusComp);
 
-	UPROPERTY(EditAnywhere, Category = "Infection|Single")
-	float TransformThreshold = 0.15f; // 감염률이 이 값 이상이면 변신
+	// 하루 밤 동안의 감염 누적량 (밤 시작 시 0으로 초기화)
+	UPROPERTY()
+	TMap<AMainPlayer*, float> NightlyExposure;
 
-	UPROPERTY(EditAnywhere, Category = "Infection|Single")
-	float PostSequenceInfectionBonus = 0.2f; // 시퀀스 후 추가 감염률
+	// 이번 밤에 이미 트리거된 플레이어 (밤당 1회 제한)
+	UPROPERTY()
+	TSet<TWeakObjectPtr<AMainPlayer>> TriggeredThisNight;
 
-	// 플레이어별 밤 누적 노출량
-	TMap<AMainPlayer*, float> NightExposureAccumulated;
+	UPROPERTY(EditAnywhere, Category = "Infection")
+	float NightlyTransformThreshold = 15.0f; // 하루 밤 누적 15% 넘으면 트리거
 
-	// 밤당 1회만 발동하고 싶으면 사용
-	TSet<TWeakObjectPtr<class AMainPlayer>> TriggeredThisNight;
+	UPROPERTY(EditAnywhere, Category = "Infection")
+	float PostSequenceInfectionBonus = 20.0f; // 트리거 후 다음날 아침에 +20%
 
 	UFUNCTION()
 	void StartSingleInfectionSequence(AMainPlayer* Player);
 
-	UFUNCTION()
+	// BP에서 호출할 함수
+	UFUNCTION(BlueprintCallable, Category = "Moonlight System")
 	void OnNightStarted();
+
+	UFUNCTION(BlueprintCallable, Category = "Moonlight System")
+	void OnDayStarted();
 
 	// 멀티 전용: 늑대인간 세션 데이터
 	UFUNCTION()
@@ -108,6 +114,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Moonlight System|Debug")
 	void Debug_ForceRestoreAll();
 
+	// 멀티 전용: 활성 늑대인간 세션 데이터
+	UPROPERTY()
+	TMap<APlayerController*, FWerewolfSessionData> ActiveWerewolfSessions;
 private:
 	UPROPERTY()
 	TArray<TObjectPtr<UStatusComponent>> InfectedStatusList;
@@ -129,8 +138,7 @@ private:
 	void SpawnAndPossessWerewolf(APlayerController* PC, FVector Location);
 	void StoreOriginalCharacter(APlayerController* PC, AMainPlayer* Player);
 
-	UPROPERTY()
-	TMap<APlayerController*, FWerewolfSessionData> ActiveWerewolfSessions;
+	
 
 	UPROPERTY(EditAnywhere, Category = "Infection|Multi")
 	TSubclassOf<ACharacter> WerewolfClass;
@@ -139,4 +147,12 @@ private:
 	// 멀티 전용: 관전 모드로 전환
 private:
 	void SetSpectateTarget(APlayerController* PC);
+
+public:
+	void SwitchSpectateTarget(APlayerController* PC);
+
+
+	// 멀티 전용: 관전 모드에서 원래 캐릭터로 복귀
+public:
+	void NotifyWerewolfDown(ACharacter* Werewolf);
 };

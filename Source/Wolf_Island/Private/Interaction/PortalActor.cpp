@@ -7,10 +7,12 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DataTable.h"
 #include "Engine/World.h"
+#include "Net/UnrealNetwork.h"
 #include "Games/MainGameState.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerState.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "AI/Enemy_Character/EnemyAIBoss.h"
 
 APortalActor::APortalActor()
 {
@@ -37,6 +39,13 @@ APortalActor::APortalActor()
 	MultiReadyVolume->SetGenerateOverlapEvents(true);
 }
 
+void APortalActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(APortalActor, bBossDefeated);
+}
+
 void APortalActor::BeginPlay()
 {
 	Super::BeginPlay();
@@ -47,6 +56,11 @@ void APortalActor::BeginPlay()
 	if (AMainGameState* GS = GetWorld()->GetGameState<AMainGameState>())
 	{
 		GS->OnUnlockedRecordsChanged.AddDynamic(this, &APortalActor::HandleUnlockedRecordsChanged);
+	}
+
+	if (IsValid(LinkedBoss))
+	{
+		LinkedBoss->OnBossCombatEnd.AddDynamic(this, &APortalActor::OnBossDefeated);
 	}
 
 	if (HasAuthority())
@@ -126,6 +140,17 @@ TArray<FString> APortalActor::GetRecordIDOptions() const
 	return Options;
 }
 
+void APortalActor::OnRep_BossDefeated()
+{
+	UpdatePortalState();
+}
+
+void APortalActor::OnBossDefeated()
+{
+	bBossDefeated = true;
+	OnRep_BossDefeated();
+}
+
 void APortalActor::HandleUnlockedRecordsChanged()
 {
 	UpdatePortalState();
@@ -176,7 +201,12 @@ bool APortalActor::IsRecordUnlocked() const
 
 void APortalActor::UpdatePortalState()
 {
-	const bool bUnlocked = IsRecordUnlocked();
+	bool bUnlocked = IsRecordUnlocked();
+
+	if (bUnlocked && bRequiresBossDefeat)
+	{
+		bUnlocked = bBossDefeated;
+	}
 
 	if (HasAuthority())
 	{
@@ -271,6 +301,9 @@ void APortalActor::TeleportAllPlayers()
 			PlayerPawn->TeleportTo(TargetLocation + Offset, TargetRotation);
 		}
 	}
+
+	OnPortalTriggered.Broadcast();
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Portal Triggered"));
 }
 
 void APortalActor::TeleportPlayer(AActor* Interactor)

@@ -30,6 +30,14 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputMappingContext* InputMappingContext;
 
+	// 관전 모드
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Input|Spectate")
+	UInputMappingContext* SpectateInputMappingContext;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Input|Spectate")
+	UInputAction* SpectateNextAction;
+	//
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputAction* ChatAction;
 
@@ -92,6 +100,29 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	bool IsPause = false;
+
+	// 관전
+	void EnterSpectateMode();
+	void ExitSpectateMode();
+	void SwitchSpectateTarget();
+
+	UFUNCTION(Server, Reliable)
+	void Server_RequestNextSpectateTarget();
+
+	bool bIsSpectating = false;
+	
+	UFUNCTION(Client, Reliable)
+	void Client_EnterSpectateMode();
+
+	UFUNCTION(Client, Reliable)
+	void Client_ExitSpectateMode();
+
+	UFUNCTION(Client, Reliable)
+	void Client_SetSpectateTarget(AActor* TargetPlayer);
+
+	UPROPERTY()
+	class ASpectatorCameraActor* SpectatorCamera;
+	//
 
 	virtual void BeginPlay() override;
 
