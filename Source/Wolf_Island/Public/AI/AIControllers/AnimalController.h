@@ -78,8 +78,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|Perception")
 	TObjectPtr<UAISenseConfig_Damage> DamageConfig;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|Perception")
-	TObjectPtr<UAISenseConfig_Scent> ScentConfig;
+	/*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|Perception")
+	TObjectPtr<UAISenseConfig_Scent> ScentConfig;*/
 
 	void HandleSight(AActor* Actor, const FAIStimulus& Stimulus);
 	void HandleDamage(AActor* Actor, const FAIStimulus& Stimulus);
