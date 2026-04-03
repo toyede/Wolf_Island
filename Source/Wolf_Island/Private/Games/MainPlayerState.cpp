@@ -15,6 +15,7 @@ AMainPlayerState::AMainPlayerState()
 
 void AMainPlayerState::CopyProperties(APlayerState* PlayerState)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[MAIN PLAYER STATE] Copy PlayerState Properties"));
 	Super::CopyProperties(PlayerState);
 	
 	AMainPlayerState* NewPS = Cast<AMainPlayerState>(PlayerState);
@@ -29,6 +30,7 @@ void AMainPlayerState::CopyProperties(APlayerState* PlayerState)
 
 void AMainPlayerState::OverrideWith(APlayerState* PlayerState)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[MAIN PLAYER STATE] Overriding with PlayerState"));
 	Super::OverrideWith(PlayerState);
 	
 	AMainPlayerState* OldPS = Cast<AMainPlayerState>(PlayerState);

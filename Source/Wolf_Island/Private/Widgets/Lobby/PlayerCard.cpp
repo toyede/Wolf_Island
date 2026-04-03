@@ -46,3 +46,14 @@ void UPlayerCard::OnKickButtonClicked()
 		LGM->GameSession->KickPlayer(PlayerController, FText::FromString("Oops"));
 	}
 }
+
+void UPlayerCard::SetKickButton(bool IsVisible)
+{
+	if (IsVisible)
+	{
+		KickButton->SetVisibility(ESlateVisibility::Visible);
+	} else
+	{
+		KickButton->SetVisibility(ESlateVisibility::Hidden);
+	}
+}

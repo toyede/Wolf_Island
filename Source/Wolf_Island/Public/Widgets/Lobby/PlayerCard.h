@@ -43,5 +43,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void OnKickButtonClicked();
 	
+	UFUNCTION(BlueprintCallable)
+	void SetKickButton(bool IsVisible);
+	
 	virtual void NativeConstruct() override;
 };
