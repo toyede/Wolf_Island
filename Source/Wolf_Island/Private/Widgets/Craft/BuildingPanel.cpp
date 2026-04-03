@@ -19,29 +19,37 @@ void UBuildingPanel::RefreshBuildingList()
 {
 	if (!RecipeList || !RecipeTable) return;
 
+	// 플레이어 참조 가져오기
+	AMainPlayer* Player = Cast<AMainPlayer>(GetOwningPlayerPawn());
+	if (!Player) return;
+
 	RecipeList->ClearChildren();
 
 	int32 Index = 0;
 	RecipeTable->ForeachRow<FRecipeData>(TEXT("BuildingContext"),
 	[&](const FName& RowName, const FRecipeData& Recipe)
 	{
+		// 플레이어가 해금한 레시피가 아니라면 건너뜀
+		if (!Player->HasRecipe(RowName)) return;
+
 		bool bTypeMatch = (Recipe.ItemType == EItemType::BUILDING);
-        
 		bool bMethodMatch = (Recipe.Method == TargetBuildMethod);
 		
 		if (bTypeMatch && bMethodMatch)
 		{
+			URecipeBlock* NewBlock = AddBuildingRecipe(Recipe);
+			
 			if (Index == 0)
 			{
 				CurrentRecipeData = Recipe;
+				CurrentRecipeBlock = NewBlock;
+				
+				SetBuildingInfo(NewBlock, CurrentRecipeData);
 			}
 			
-			AddBuildingRecipe(Recipe);
 			Index++;
 		}
 	});
-	
-	SetBuildingInfo(CurrentRecipeData);
 }
 
 void UBuildingPanel::SetBuildingMethod(ECraftMethod NewMethod)
@@ -60,6 +68,11 @@ void UBuildingPanel::NativeConstruct()
 	{
 		OwnerInventory = Pawn->GetComponentByClass<UInventoryComponent>();
 		OwnerBuildingComponent = Pawn->GetComponentByClass<UBuildingComponent>();
+	}
+
+	if (AMainGameState* GS = GetWorld() ? GetWorld()->GetGameState<AMainGameState>() : nullptr)
+	{
+		GS->OnSharedRecipesChanged.AddDynamic(this, &UBuildingPanel::RefreshBuildingList);
 	}
 
 	if (BuildButton)
@@ -106,8 +119,16 @@ void UBuildingPanel::OnBuildButtonClicked()
 	}
 }
 
-void UBuildingPanel::SetBuildingInfo(FRecipeData RecipeData)
+void UBuildingPanel::SetBuildingInfo(URecipeBlock* NewBlock, FRecipeData RecipeData)
 {
+	//선택된 버튼 강조 변경
+	//원래 선택 됐던 거 강조 해제
+	CurrentRecipeBlock->SetSelected(false);
+	//선택된 버튼을 최신 거로 변경
+	CurrentRecipeBlock = NewBlock;
+	//최신 선택된 거 강조
+	CurrentRecipeBlock->SetSelected(true);
+	
 	CurrentRecipeData = RecipeData;
 	IngredientList->ClearChildren();
 
@@ -133,7 +154,7 @@ void UBuildingPanel::SetBuildingInfo(FRecipeData RecipeData)
 	}
 }
 
-void UBuildingPanel::AddBuildingRecipe(FRecipeData Recipe)
+URecipeBlock* UBuildingPanel::AddBuildingRecipe(FRecipeData Recipe)
 {
 	if (RecipeBlockClass)
 	{
@@ -148,7 +169,11 @@ void UBuildingPanel::AddBuildingRecipe(FRecipeData Recipe)
 			Block->OnRecipeClicked.AddDynamic(this, &UBuildingPanel::SetBuildingInfo);
 			RecipeList->AddChild(Block);
 		}
+		
+		return Block;
 	}
+	
+	return nullptr;
 }
 
 void UBuildingPanel::SendDebugChat(FString Message)

@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Widgets/Craft/CraftPanel.h"
@@ -11,6 +11,7 @@
 #include "Components/TextBlock.h"
 #include "Components/WrapBox.h"
 #include "Data/ItemDataStruct.h"
+#include "Games/MainGameState.h"
 #include "Widgets/Craft/RecipeBlock.h"
 #include "Widgets/Craft//CraftSlot.h"
 
@@ -25,12 +26,18 @@ void UCraftPanel::NativeConstruct()
 {
 	Super::NativeConstruct();
 
+	OwnerInventory = GetOwningPlayerPawn()
+		? GetOwningPlayerPawn()->GetComponentByClass<UInventoryComponent>()
+		: nullptr;
 	if (OwnerInventory)
 	{
 		OwnerInventory->OnInventoryUpdated.AddUObject(this, &UCraftPanel::RefreshRecipeList);
 	}
 
-	OwnerInventory = GetOwningPlayerPawn()->GetComponentByClass<UInventoryComponent>();
+	if (AMainGameState* GS = GetWorld() ? GetWorld()->GetGameState<AMainGameState>() : nullptr)
+	{
+		GS->OnSharedRecipesChanged.AddDynamic(this, &UCraftPanel::RefreshRecipeList);
+	}
 	CraftButton->OnClicked.AddDynamic(this, &UCraftPanel::OnCraftButtonClicked);
 
 	RefreshRecipeList();
@@ -49,7 +56,7 @@ void UCraftPanel::OnCraftButtonClicked()
 	}
 }
 
-void UCraftPanel::AddRecipe(FRecipeData Recipe)
+URecipeBlock* UCraftPanel::AddRecipe(FRecipeData Recipe)
 {
 	if (RecipeBlockClass)
 	{
@@ -72,12 +79,19 @@ void UCraftPanel::AddRecipe(FRecipeData Recipe)
 		}
 
 		RecipeList->AddChild(Block);
+		return Block;
 	}
+	
+	return nullptr;
 }
 
 inline void UCraftPanel::RefreshRecipeList()
 {
-	if (!RecipeList || !RecipeTable) return;
+	if (!RecipeList || !RecipeTable || !OwnerInventory) return;
+
+	// 플레이어 참조 가져오기
+	AMainPlayer* Player = Cast<AMainPlayer>(OwnerInventory->GetOwner());
+	if (!Player) return;
 
 	RecipeList->ClearChildren();
 
@@ -85,28 +99,42 @@ inline void UCraftPanel::RefreshRecipeList()
 	RecipeTable->ForeachRow<FRecipeData>(TEXT("RecipeTableContext"),
 	[&](const FName& RowName, const FRecipeData& Recipe)
 	{
-		if (Index == 0)
+		// 플레이어가 해금한 레시피가 아니라면 건너뜀
+		if (!Player->HasRecipe(RowName)) return;
+
+		// 1. 아이템 타입 필터
+		bool bTypeMatch = RecipeTypeList.Contains(Recipe.ItemType) && (Recipe.ItemType != EItemType::BUILDING);
+		bool bMethodMatch = (Recipe.Method == TargetCraftMethod);
+
+		// 두 조건 다 맞으면 목록에 추가
+		if (bTypeMatch && bMethodMatch)
 		{
-			CurrentRecipeData = Recipe;
+			URecipeBlock* NewBlock = AddRecipe(Recipe);
+			
+			//첫번째 레시피로 업데이트
+			if (Index == 0)
+			{
+				CurrentRecipeData = Recipe;
+				CurrentRecipeBlock = NewBlock;
+				
+				SetRecipeInfo(NewBlock, CurrentRecipeData);
+			}
+			
+			Index++;
 		}
-	   // 1. 아이템 타입 필터 (기존 로직)
-	   bool bTypeMatch = RecipeTypeList.Contains(Recipe.ItemType);
-       
-	   bool bMethodMatch = (Recipe.Method == TargetCraftMethod);
-
-	   // 두 조건 다 맞으면 목록에 추가
-	   if (bTypeMatch && bMethodMatch)
-	   {
-	   		AddRecipe(Recipe);
-	   		Index++;
-	   }
 	});
-
-	SetRecipeInfo(CurrentRecipeData);
 }
 
-void UCraftPanel::SetRecipeInfo(FRecipeData RecipeData)
+void UCraftPanel::SetRecipeInfo(URecipeBlock* ClickedBlock, FRecipeData RecipeData)
 {
+	//선택된 버튼 강조 변경
+	//원래 선택 됐던 거 강조 해제
+	CurrentRecipeBlock->SetSelected(false);
+	//선택된 버튼을 최신 거로 변경
+	CurrentRecipeBlock = ClickedBlock;
+	//최신 선택된 거 강조
+	CurrentRecipeBlock->SetSelected(true);
+	
 	//재료 슬롯 초기화
 	IngredientList->ClearChildren();
 

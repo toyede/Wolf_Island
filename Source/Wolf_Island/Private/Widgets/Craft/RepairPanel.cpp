@@ -8,22 +8,40 @@
 #include "Data/ItemDataStruct.h"
 #include "Widgets/Craft/RepairBlock.h"
 #include "Widgets/Craft/CraftSlot.h"
+#include "Widgets/Craft/RepairMiniGameWidget.h"
+#include "Widgets/Craft/RepairUI.h"
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundBase.h"
 #include "Interaction/Repair_Actor.h"
+#include "Components/ScrollBoxSlot.h"
+#include "GameFramework/PlayerController.h"
+
+namespace
+{
+    FText GetSortDisplayName(FName SortKey)
+    {
+        if (SortKey == FName("BD")) return FText::FromString(TEXT("Body"));
+        if (SortKey == FName("EG")) return FText::FromString(TEXT("Engine"));
+        if (SortKey == FName("CT")) return FText::FromString(TEXT("Control"));
+        if (SortKey == FName("RD")) return FText::FromString(TEXT("Radar"));
+        if (SortKey == FName("AC")) return FText::FromString(TEXT("Anchor"));
+
+        return FText::FromName(SortKey);
+    }
+}
 
 void URepairPanel::NativeConstruct()
 {
     Super::NativeConstruct();
 
-    if (OwnerInventory)
-    {
-        OwnerInventory->OnInventoryUpdated.AddUObject(this, &URepairPanel::RefreshRecipeList);
-    }
-    
     if (GetOwningPlayerPawn())
     {
         OwnerInventory = GetOwningPlayerPawn()->GetComponentByClass<UInventoryComponent>();
+    }
+    
+    if (OwnerInventory)
+    {
+        OwnerInventory->OnInventoryUpdated.AddUObject(this, &URepairPanel::RefreshRecipeList);
     }
 
     if (RepairButton)
@@ -31,8 +49,8 @@ void URepairPanel::NativeConstruct()
         RepairButton->OnClicked.AddDynamic(this, &URepairPanel::OnRepairButtonClicked);
     }
 
-
-    RefreshRecipeList();
+    FTimerHandle TimerHandle;
+    GetWorld()->GetTimerManager().SetTimer(TimerHandle, this, &URepairPanel::RefreshRecipeList, 0.1f, false);
 }
 
 void URepairPanel::InitRepairPanel(class ARepair_Actor* InRepairActor)
@@ -50,22 +68,80 @@ void URepairPanel::InitRepairPanel(class ARepair_Actor* InRepairActor)
 void URepairPanel::RefreshRecipeList()
 {
     if (!RecipeList || !RepairRecipeTable) return;
-
-    RecipeList->ClearChildren();
     
-    RepairRecipeTable->ForeachRow<FRepairRecipeData>(TEXT("RepairTableContext"),
-    [&](const FName& RowName, const FRepairRecipeData& Recipe)
+    CurrentBlock = nullptr;
+    RecipeList->ClearChildren();
+
+    TArray<FName> RowNames = RepairRecipeTable->GetRowNames();
+    TMap<FName, TArray<FName>> SortToRows;
+    TMap<FName, FRepairRecipeData> RowDataMap;
+    TArray<FName> SortOrder;
+    
+    for (const FName& RowName : RowNames)
     {
-        AddRecipe(RowName, Recipe);
-    });
+        FRepairRecipeData* Recipe = RepairRecipeTable->FindRow<FRepairRecipeData>(RowName, TEXT("RepairTableContext"));
+        if (!Recipe) continue;
+
+        RowDataMap.Add(RowName, *Recipe);
+
+        FName SortKey = Recipe->Sort.IsNone() ? FName("UNKNOWN") : Recipe->Sort;
+        if (!SortToRows.Contains(SortKey))
+        {
+            SortOrder.Add(SortKey);
+        }
+        SortToRows.FindOrAdd(SortKey).Add(RowName);
+    }
+
+    for (int32 SortIndex = 0; SortIndex < SortOrder.Num(); ++SortIndex)
+    {
+        const FName SortKey = SortOrder[SortIndex];
+        AddSortHeader(SortKey);
+
+        const TArray<FName>& Rows = SortToRows[SortKey];
+        for (const FName& RowName : Rows)
+        {
+            const FRepairRecipeData* RecipeData = RowDataMap.Find(RowName);
+            if (!RecipeData) continue;
+
+            URepairBlock* NewBlock = AddRecipe(RowName, *RecipeData);
+
+            if (!CurrentBlock)
+            {
+                UE_LOG(LogTemp, Warning, TEXT("[REPAIR PANEL] Set First Repair Info"))
+                CurrentBlock = NewBlock;
+                
+                SetRepairInfo(NewBlock, RowName, *RecipeData);
+                SetRepairButtonState(*RecipeData);
+            }
+        }
+    }
 }
 
-void URepairPanel::AddRecipe(FName RowName, FRepairRecipeData Recipe)
+void URepairPanel::AddSortHeader(FName SortKey)
 {
-    if (!RepairBlockClass || !RecipeList) return;
+    if (!RecipeList) return;
+
+    UTextBlock* Header = NewObject<UTextBlock>(this, UTextBlock::StaticClass());
+    if (!Header) return;
+
+    Header->SetText(GetSortDisplayName(SortKey));
+    Header->SetAutoWrapText(true);
+    Header->SetJustification(ETextJustify::Center);
+
+    if (UScrollBoxSlot* ScrollSlot = Cast<UScrollBoxSlot>(RecipeList->AddChild(Header)))
+    {
+        ScrollSlot->SetHorizontalAlignment(HAlign_Center);
+        ScrollSlot->SetPadding(FMargin(0.0f, 5.0f, 0.0f, 5.0f));
+    }
+
+}
+
+URepairBlock* URepairPanel::AddRecipe(FName RowName, FRepairRecipeData Recipe)
+{
+    if (!RepairBlockClass || !RecipeList) return nullptr;
 
     URepairBlock* Block = CreateWidget<URepairBlock>(this, RepairBlockClass);
-    if (!Block) return;
+    if (!Block) return nullptr;
     
     Block->RowName = RowName;
     Block->RepairRecipeData = Recipe; 
@@ -85,10 +161,16 @@ void URepairPanel::AddRecipe(FName RowName, FRepairRecipeData Recipe)
     Block->RefreshBlockStatus();
     
     RecipeList->AddChild(Block);
+    
+    return Block;
 }
 
-void URepairPanel::SetRepairInfo(FName RowName, FRepairRecipeData RecipeData)
+void URepairPanel::SetRepairInfo(URepairBlock* NewBlock, FName RowName, FRepairRecipeData RecipeData)
 {
+    CurrentBlock->SetSelected(false);
+    CurrentBlock = NewBlock;
+    CurrentBlock->SetSelected(true);
+    
     CurrentRepairData = RecipeData;
     CurrentRowName = RowName; 
 
@@ -116,7 +198,7 @@ void URepairPanel::SetRepairInfo(FName RowName, FRepairRecipeData RecipeData)
     
     if (RecipeNameText) RecipeNameText->SetText(FText::FromName(RecipeData.RecipeName));
     if (DescriptionText) DescriptionText->SetText(FText::FromString(TEXT("수리하려면 재료를 모으세요.")));
-    if (DurationText) DurationText->SetText(FText::FromString(FString::Printf(TEXT("%.1f s"), RecipeData.Duration)));
+    //if (DurationText) DurationText->SetText(FText::FromString(FString::Printf(TEXT("%.1f s"), RecipeData.Duration)));
 
     SetRepairButtonState(RecipeData);
 }
@@ -134,10 +216,10 @@ void URepairPanel::SetRepairButtonState(FRepairRecipeData RecipeData)
         return; 
     }
 
-    if (RepairCheckSound)
+    /*if (RepairCheckSound)
     {
         UGameplayStatics::PlaySound2D(this, RepairCheckSound);
-    }
+    }*/
 
     FRecipeData TempRecipe;
     TempRecipe.Ingredient1ID = RecipeData.Ingredient1ID;
@@ -161,14 +243,88 @@ void URepairPanel::OnRepairButtonClicked()
 
     if (OwnerInventory && TargetRepairActor && !CurrentRowName.IsNone())
     {
-        OwnerInventory->Request_RepairShip(CurrentRowName, CurrentRepairData, TargetRepairActor);
+        if (!MiniGameClass) return;
 
-        if (RepairSound)
+        if (ActiveMiniGame)
         {
-            UGameplayStatics::PlaySound2D(this, RepairSound);
+            ActiveMiniGame->RemoveFromParent();
+            ActiveMiniGame = nullptr;
         }
 
-        SetRepairButtonState(CurrentRepairData);
-        
+        ActiveMiniGame = CreateWidget<URepairMiniGameWidget>(GetWorld(), MiniGameClass);
+        if (!ActiveMiniGame) return;
+
+        ActiveMiniGame->OnMiniGameFinished.AddDynamic(this, &URepairPanel::HandleMiniGameFinished);
+        ActiveMiniGame->AddToViewport();
+        ActiveMiniGame->StartMiniGame(CurrentRepairData);
+
+        if (URepairUI* RepairUI = GetTypedOuter<URepairUI>())
+        {
+            RepairUI->SetVisibility(ESlateVisibility::Hidden);
+        }
+        else
+        {
+            SetVisibility(ESlateVisibility::Hidden);
+        }
+
+        if (APlayerController* PC = GetOwningPlayer())
+        {
+            FInputModeUIOnly InputMode;
+            InputMode.SetWidgetToFocus(ActiveMiniGame->TakeWidget());
+            PC->SetInputMode(InputMode);
+            PC->bShowMouseCursor = true;
+            PC->SetIgnoreLookInput(false);
+            ActiveMiniGame->SetKeyboardFocus();
+        }
     }
+}
+
+void URepairPanel::HandleMiniGameFinished(bool bSuccess)
+{
+    if (ActiveMiniGame)
+    {
+        ActiveMiniGame->RemoveFromParent();
+        ActiveMiniGame = nullptr;
+    }
+
+    if (URepairUI* RepairUI = GetTypedOuter<URepairUI>())
+    {
+        RepairUI->SetVisibility(ESlateVisibility::Visible);
+    }
+    else
+    {
+        SetVisibility(ESlateVisibility::Visible);
+    }
+
+    if (APlayerController* PC = GetOwningPlayer())
+    {
+        if (URepairUI* RepairUI = GetTypedOuter<URepairUI>())
+        {
+            FInputModeUIOnly InputMode;
+            InputMode.SetWidgetToFocus(RepairUI->TakeWidget());
+            PC->SetInputMode(InputMode);
+            PC->bShowMouseCursor = true;
+        }
+        else
+        {
+            FInputModeUIOnly InputMode;
+            PC->SetInputMode(InputMode);
+            PC->bShowMouseCursor = true;
+        }
+        PC->SetIgnoreLookInput(false);
+    }
+
+    if (!bSuccess) return;
+
+    if (OwnerInventory && TargetRepairActor && !CurrentRowName.IsNone())
+    {
+        OwnerInventory->Request_RepairShip(CurrentRowName, CurrentRepairData, TargetRepairActor);
+    }
+
+    if (RepairSound)
+    {
+        UGameplayStatics::PlaySound2D(this, RepairSound);
+    }
+
+    SetRepairButtonState(CurrentRepairData);
 }

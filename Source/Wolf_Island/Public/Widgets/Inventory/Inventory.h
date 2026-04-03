@@ -10,6 +10,7 @@
  * 
  */
 
+class UTextButton;
 DECLARE_DELEGATE(FOnInventoryClicked);
 DECLARE_DELEGATE(FOnCraftClicked);
 DECLARE_DELEGATE(FOnUnknownRecordClicked);
@@ -25,7 +26,9 @@ class WOLF_ISLAND_API UInventory : public UUserWidget
 
 	FOnUnknownRecordClicked OnUnknownRecordClicked;
 
-	UPROPERTY()
+public:
+	
+	UPROPERTY(BlueprintReadWrite)
 	class AMainPlayer* PlayerRef;
 
 	UPROPERTY(meta=(BindWidget))
@@ -57,21 +60,21 @@ class WOLF_ISLAND_API UInventory : public UUserWidget
 
 	UPROPERTY(meta=(BindWidget))
 	class UUnknownRecordPanel* UnknownRecordPanel;
+	
+	UPROPERTY(meta=(BindWidget))
+	UTextButton* FoodRecipeButton;
 
 	UPROPERTY(meta=(BindWidget))
-	class UBaseButton* InventoryButton;
+	UTextButton* CraftRecipeButton;
 
 	UPROPERTY(meta=(BindWidget))
-	UBaseButton* FoodRecipeButton;
+	UTextButton* UnknownRecordButton;
 
 	UPROPERTY(meta=(BindWidget))
-	UBaseButton* CraftRecipeButton;
-
-	UPROPERTY(meta=(BindWidget))
-	UBaseButton* UnknownRecordButton;
-
-	UPROPERTY(meta=(BindWidget))
-	UBaseButton* BuildingRecipeButton;
+	UTextButton* BuildingRecipeButton;
+	
+	UPROPERTY(BlueprintReadWrite)
+	UTextButton* CurrentPanelButton;
 
 protected:
 	virtual void NativeOnInitialized() override;
@@ -81,13 +84,11 @@ protected:
 	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 
 	UFUNCTION()
-	void HandleInventoryClicked();
+	void HandleFoodRecipeClicked(UTextButton* ClickedButton);
 	UFUNCTION()
-	void HandleFoodRecipeClicked();
+	void HandleCraftRecipeClicked(UTextButton* ClickedButton);
 	UFUNCTION()
-	void HandleCraftRecipeClicked();
+	void HandleUnknownRecordClicked(UTextButton* ClickedButton);
 	UFUNCTION()
-	void HandleUnknownRecordClicked();
-	UFUNCTION()
-	void HandleBuildingRecipeClicked();
+	void HandleBuildingRecipeClicked(UTextButton* ClickedButton);
 };

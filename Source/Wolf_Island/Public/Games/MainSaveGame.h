@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Character/MainPlayer.h"
+#include "Components/StatusComponent.h"
 #include "Games/SaveInterface.h"
 #include "GameFramework/SaveGame.h"
 #include "MainSaveGame.generated.h"
@@ -55,6 +56,17 @@ struct FPlayerSaveData
 	
 	UPROPERTY(SaveGame)
 	TArray<uint8> SubBinaryData3;
+
+	// StatusBinaryData(컴포넌트 Serialize) 대신 구조체 기반 저장을 사용할 때 true.
+	// 기존 세이브 호환을 위해 별도 플래그로 유효 여부를 구분한다.
+	UPROPERTY(SaveGame)
+	bool HasStatusData = false;
+
+	UPROPERTY(SaveGame)
+	FStatusSaveData StatusData;
+
+	UPROPERTY(SaveGame)
+	TArray<FName> SavedPersonalRecipes;
 };
 
 USTRUCT(BlueprintType)
@@ -105,4 +117,10 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void PrintSaveInfo();
+	
+	UFUNCTION(Blueprintable, BlueprintPure)
+	FString GetSlotName() const { return SlotName; };
+
+	UPROPERTY(BlueprintReadWrite, Category = "SaveData")
+	TArray<FName> SavedSharedRecipes;
 };

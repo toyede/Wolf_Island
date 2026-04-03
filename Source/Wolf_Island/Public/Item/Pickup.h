@@ -23,6 +23,8 @@ public:
 	UStaticMeshComponent* PickupMesh;
 	//최대 스택 개수를 초과하면 최대 스택 개수로 초기화됨.
 	UPROPERTY(EditDefaultsOnly, Category = "Item Data")
+	TSoftObjectPtr<UDataTable> ItemDataTableAsset;
+	UPROPERTY(Transient)
 	UDataTable* ItemDataTable;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Data", Meta = (ExposeOnSpawn = "true"))
 	int32 ItemAmount = 1;

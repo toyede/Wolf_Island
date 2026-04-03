@@ -17,13 +17,13 @@ APickup::APickup()
     PickupMesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
     SetRootComponent(PickupMesh);
     
-    static ConstructorHelpers::FObjectFinder<UDataTable>
+    /*static ConstructorHelpers::FObjectFinder<UDataTable>
         DT_ItemData(TEXT("/Game/item/DT_ItemData.DT_ItemData"));
 
     if (DT_ItemData.Succeeded())
     {
         ItemDataTable = DT_ItemData.Object;
-    }
+    }*/
 }
 
 void APickup::BeginPlay()
@@ -84,6 +84,7 @@ void APickup::InitializeDrop(FItemBaseData ItemToDrop, const int32 InAmount)
         SetInteractionDuration(ItemData->NumericData.InteractionDuration);
         InAmount <= 0 ? ItemReference.SetAmount(1) : ItemReference.SetAmount(InAmount);
         PickupMesh->SetStaticMesh(ItemData->AssetData.Mesh);
+        PickupMesh->SetSimulatePhysics(IsPhysics);
     } else
     {
         UE_LOG(LogTemp, Warning, TEXT("Item Data Table is not valid"));

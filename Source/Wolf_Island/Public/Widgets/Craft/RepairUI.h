@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Data/ItemDataStruct.h"
 #include "RepairUI.generated.h"
 
 /**
@@ -21,9 +20,6 @@ public:
 	// WBP의 CraftPanel 위젯
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
 	class URepairPanel* WBP_RepairPanel;
-
-	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
-	class UButton* CloseButton;
 	
 	UFUNCTION(BlueprintCallable, Category = "Repair System")
     void InitRepairWindow(ARepair_Actor* InActor);
@@ -36,8 +32,5 @@ protected:
 	virtual void NativeDestruct() override;
 
 	virtual FReply NativeOnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent) override;
-
-	UFUNCTION()
-	void HandleCloseClicked();
-	
+		
 };

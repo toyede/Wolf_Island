@@ -19,6 +19,8 @@
 #include "Widgets/MainMenu/PauseMenu.h"
 #include "Widgets/RoleSelection/RoleSelection.h"
 #include "Widgets/DeathScreen.h"
+#include "Moon/MoonlightInfectionSystem.h"
+#include "Actors/SpectatorCameraActor.h"
 
 void AMainPlayerController::BeginPlay()
 {
@@ -49,7 +51,7 @@ void AMainPlayerController::BeginPlay()
 	MainPlayerState = GetPlayerState<AMainPlayerState>();
 	MainGameState = Cast<AMainGameState>(GetWorld()->GetGameState());
 	
-	if (HasAuthority()&&MainPlayerState&&MainGameState->IsMulti)
+	if (HasAuthority() && MainPlayerState && MainGameState->IsMulti)
 	{
 		if (MainPlayerState->GetPlayerRole() == ECharacterRole::NONE)
 		{
@@ -71,6 +73,12 @@ void AMainPlayerController::SetupInputComponent()
 	{
 		EnhancedInputComponent->BindAction(ChatAction, ETriggerEvent::Started, this, &AMainPlayerController::ToggleChatMode);
 		EnhancedInputComponent->BindAction(ESCAction, ETriggerEvent::Started, this, &AMainPlayerController::TogglePause);
+	
+		// 관전 가능한 상태
+		if (SpectateNextAction)
+		{
+			EnhancedInputComponent->BindAction(SpectateNextAction, ETriggerEvent::Started, this, &AMainPlayerController::SwitchSpectateTarget);
+		}
 	}
 	
 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
@@ -79,14 +87,20 @@ void AMainPlayerController::SetupInputComponent()
 	}
 }
 
+void AMainPlayerController::InitPlayerState()
+{
+	Super::InitPlayerState();
+}
+
 void AMainPlayerController::OnPossess(APawn* InPawn)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER CONTROLLER] ON POSSESSED"));
 	Super::OnPossess(InPawn);
 }
 
 void AMainPlayerController::OnUnPossess()
 {
-	UE_LOG(LogTemp, Warning, TEXT("UNPOSSESSED"));
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER CONTROLLER] UNPOSSESSED"));
 	if (IsLocalController() && PlayerHUD)
 	{
 		PlayerHUD->RemoveFromParent();
@@ -98,7 +112,7 @@ void AMainPlayerController::OnUnPossess()
 
 void AMainPlayerController::SetPlayerHUD(AMainPlayer* OwnerPlayer)
 {
-	if (PlayerHUD)
+	/*if (PlayerHUD)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[PLAYER CONTROLLER] Player HUD is already exist."));
 		return;
@@ -111,6 +125,29 @@ void AMainPlayerController::SetPlayerHUD(AMainPlayer* OwnerPlayer)
 		UE_LOG(LogTemp, Warning, TEXT("[%hs]Set Player HUD"), HasAuthority()?"SERVER":"CLIENT")
 		PlayerHUD = CreateWidget<UPlayerHUD>(this, HUDClass);
 		PlayerHUD->AddToViewport();
+		PlayerHUD->SetPlayerRef(OwnerPlayer);
+		OwnerPlayer->SetHUDWidget(PlayerHUD);
+	}*/
+
+	if (!OwnerPlayer || !IsLocalController()) return;
+
+	if (!HUDClass)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[PC] HUDClass is NOT assigned in Blueprint!"));
+		return;
+	}
+
+	if (!PlayerHUD)
+	{
+		PlayerHUD = CreateWidget<UPlayerHUD>(this, HUDClass);
+		if (PlayerHUD)
+		{
+			PlayerHUD->AddToViewport();
+		}
+	}
+
+	if (PlayerHUD)
+	{
 		PlayerHUD->SetPlayerRef(OwnerPlayer);
 		OwnerPlayer->SetHUDWidget(PlayerHUD);
 	}
@@ -201,7 +238,7 @@ void AMainPlayerController::Client_OpenFishTrapUI_Implementation(class AFishTrap
 			FishTrapScreen->SetIsFocusable(true);
 			FishTrapScreen->AddToViewport();
 
-			FInputModeGameAndUI InputMode;
+			FInputModeUIOnly InputMode;
 			InputMode.SetWidgetToFocus(FishTrapScreen->TakeWidget());
 			
 			SetInputMode(InputMode);
@@ -247,19 +284,19 @@ void AMainPlayerController::OnRep_PlayerState()
 	
 	MainPlayerState = GetPlayerState<AMainPlayerState>();
 	
-	if (MainPlayerState)
+	if (MainPlayerState && MainGameState->IsMulti)
 	{
 		if (MainPlayerState->GetPlayerRole() == ECharacterRole::NONE)
 		{
-			//UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Open Selection UI in Player Controller"), *GetPlayerState<AMainPlayerState>()->GetPersistantId())
+			UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Open Selection UI in Player Controller"), *MainPlayerState->GetPersistantId())
 			Client_OpenSelectionUI();
 		} else
 		{
-			//UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Can't open Selection UI. Player role is %d"), *GetPlayerState<AMainPlayerState>()->GetPersistantId(), MainPlayerState->GetPlayerRole())
+			UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Can't open Selection UI. Player role is %d"), *MainPlayerState->GetPersistantId(), MainPlayerState->GetPlayerRole())
 		}
 	} else
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Can't open Selection UI. Player State is INVALID"), *GetPlayerState<AMainPlayerState>()->GetPersistantId())
+		//UE_LOG(LogTemp, Warning, TEXT("[PC|%s] Can't open Selection UI. Player State is INVALID"), *MainPlayerState->GetPersistantId())
 	}
 }
 
@@ -272,6 +309,24 @@ void AMainPlayerController::Request_Respawn()
 	{
 		Server_Respawn();
 	}
+}
+
+void AMainPlayerController::Client_SetViewTargetWithBlend_Implementation(AActor* NewTarget, float BlendTime)
+{
+	if (!IsValid(NewTarget))
+	{
+		FTimerHandle RetryHandle;
+		GetWorldTimerManager().SetTimer(RetryHandle, [this, NewTarget, BlendTime]()
+			{
+				Client_SetViewTargetWithBlend(NewTarget, BlendTime);
+			}, 0.1f, false);
+		return;
+	}
+
+	this->bAutoManageActiveCameraTarget = false;
+	this->SetViewTargetWithBlend(NewTarget, BlendTime);
+
+	EnterSpectateMode();
 }
 
 void AMainPlayerController::Server_Respawn_Implementation()
@@ -299,11 +354,18 @@ void AMainPlayerController::Server_ConfirmRole_Implementation(ECharacterRole New
 {
 	AMultiGameMode* GM = Cast<AMultiGameMode>(GetWorld()->GetAuthGameMode());
 	AMainPlayerState* PS = Cast<AMainPlayerState>(PlayerState);
+	AMainGameState* GS = Cast<AMainGameState>(GetWorld()->GetGameState());
 	
 	if (GM->CheckRoleAvailable(NewRole))
 	{
 		PS->SetPlayerRole(NewRole);
 		UE_LOG(LogTemp, Warning, TEXT("Check Role %d in Server"), PS->GetPlayerRole());
+		
+		if (GS)
+		{
+			GS->RefreshSelectedRoles();
+		}
+		
 		GM->RestartPlayer(this);
 		Client_EndSelection();
 		
@@ -377,6 +439,133 @@ void AMainPlayerController::OnQuit()
 
 void AMainPlayerController::Respawn()
 {
-	AMainGameMode* GM = GetWorld()->GetAuthGameMode<AMainGameMode>();
-	GM->HandlePlayerDeath(this);
+	if (AMultiGameMode* MGM = GetWorld()->GetAuthGameMode<AMultiGameMode>())
+	{
+		MGM->HandlePlayerDeath(this);
+		return;
+	}
+	
+	if (AMainGameMode* SGM = GetWorld()->GetAuthGameMode<AMainGameMode>())
+	{
+		SGM->HandlePlayerDeath(this);
+	}
+}
+
+void AMainPlayerController::EnterSpectateMode()
+{
+	bIsSpectating = true;
+
+	if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
+		ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+	{
+		Subsystem->AddMappingContext(SpectateInputMappingContext, 2);
+	}
+}
+
+void AMainPlayerController::ExitSpectateMode()
+{
+	bIsSpectating = false;
+
+	if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
+		ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+	{
+		Subsystem->RemoveMappingContext(SpectateInputMappingContext);
+	}
+	this->bAutoManageActiveCameraTarget = true; // 카메라 자동 관리 다시 활성화
+
+	if (APawn* MyPawn = GetPawn())
+	{
+		SetViewTargetWithBlend(MyPawn, 0.5f);
+	}
+
+	// 관전용 카메라 액터 제거
+	if (SpectatorCamera)
+	{
+		SpectatorCamera->Destroy();
+		SpectatorCamera = nullptr;
+	}
+}
+
+void AMainPlayerController::SwitchSpectateTarget()
+{
+	if (!bIsSpectating) return;
+	Server_RequestNextSpectateTarget();
+}
+
+void AMainPlayerController::Server_RequestNextSpectateTarget_Implementation()
+{
+	// MoonlightInfectionSystem에서 다음 타겟 찾기
+	AMoonlightInfectionSystem* System = Cast<AMoonlightInfectionSystem>(
+		UGameplayStatics::GetActorOfClass(GetWorld(), AMoonlightInfectionSystem::StaticClass()));
+
+	if (System)
+	{
+		System->SwitchSpectateTarget(this);
+	}
+}
+
+void AMainPlayerController::Client_EnterSpectateMode_Implementation()
+{
+	EnterSpectateMode();
+}
+
+void AMainPlayerController::Client_ExitSpectateMode_Implementation()
+{
+	ExitSpectateMode();
+}
+
+void AMainPlayerController::Client_SetSpectateTarget_Implementation(AActor* TargetPlayer)
+{
+	if (!IsValid(TargetPlayer))
+	{
+		// 리플리케이션 대기 후 재시도
+		FTimerHandle RetryHandle;
+		TWeakObjectPtr<AActor> WeakTarget = TargetPlayer;
+		GetWorldTimerManager().SetTimer(RetryHandle, [this, WeakTarget]()
+			{
+				if (WeakTarget.IsValid())
+				{
+					Client_SetSpectateTarget(WeakTarget.Get());
+				}
+			}, 0.1f, false);
+		return;
+	}
+
+	FVector SpawnLoc = TargetPlayer->GetActorLocation();
+
+	if (ACharacter* TargetChar = Cast<ACharacter>(TargetPlayer))
+	{
+		if (USkeletalMeshComponent* Mesh = TargetChar->GetMesh())
+		{
+			if (Mesh->DoesSocketExist(TEXT("headSocket")))
+			{
+				SpawnLoc = Mesh->GetSocketLocation(TEXT("headSocket"));
+			}
+		}
+	}
+
+	if (!SpectatorCamera)
+	{
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		SpectatorCamera = GetWorld()->SpawnActor<ASpectatorCameraActor>(
+			ASpectatorCameraActor::StaticClass(),
+			SpawnLoc,
+			TargetPlayer->GetActorRotation(),
+			Params
+		);
+	}
+
+	if (SpectatorCamera)
+	{
+		SpectatorCamera->TargetActor = TargetPlayer;
+
+		SpectatorCamera->SetActorLocation(SpawnLocation);
+
+		this->bAutoManageActiveCameraTarget = false;
+		this->SetViewTargetWithBlend(SpectatorCamera, 0.2f);
+	}
+
+	EnterSpectateMode();
 }

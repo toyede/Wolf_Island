@@ -19,6 +19,14 @@ public:
 
 	ARepair_Actor();
 
+	virtual void Interact_Implementation(AActor* Interactor) override;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<class URepairUI> RepairUIClass;
+
+	UFUNCTION(Client, Reliable)
+	void Client_OpenRepairUI(class APlayerController* PC);
+
 	UPROPERTY(ReplicatedUsing = OnRep_CompletedRecipes, BlueprintReadOnly, Category = "Repair", SaveGame)
 	TArray<FName> CompletedRecipeNames;
 
@@ -64,12 +72,18 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Repair|State", SaveGame)
 	TMap<FName, FName> RecipeIDMap;
+	
+	// Runtime-only cache (not a UPROPERTY because TMap<..., TArray<...>> is not supported by UPROPERTY)
+	TMap<FName, TArray<FName>> SortToRecipeRows;
 
 	UFUNCTION(BlueprintCallable, Category = "Repair")
 	void MarkRecipeAsComplete(FName RecipeName);
 
 	UFUNCTION(BlueprintCallable, Category = "Repair")
 	bool IsRecipeComplete(FName TargetRecipeName);
+	
+	UFUNCTION(BlueprintCallable, Category = "Repair")
+	bool IsSortComplete(FName SortKey);
 
 	UFUNCTION(BlueprintCallable, Category = "Repair")
 	void RestoreStateFromGameInstance();
@@ -86,7 +100,7 @@ public:
 	virtual void SaveData_Implementation(FActorSaveData& OutData) override;
 	virtual void LoadData_Implementation(const FActorSaveData& InData) override;
 
-public:
+	
 	// 싱글 전용 늑대인간으로 변했을 때 수리된 것들 중 랜덤으로 파괴되는 기능
 	// 현재 파괴 가능한 수리 항목 목록 반환
 	UFUNCTION(BlueprintCallable, Category = "Repair")
@@ -103,4 +117,44 @@ public:
 	// 부위별 bool과 비주얼을 다시 맞춤
 	UFUNCTION(BlueprintCallable, Category = "Repair")
 	void RefreshRepairProgressState();
+
+	// ******게임 클리어 관련******
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Escape")
+	class UBoxComponent* EscapeReadyVolume;
+
+	// 탈출 시도
+	UFUNCTION(BlueprintCallable, Category = "Escape")
+	void TryEscape(AActor* Interactor);
+
+protected:
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	// 대기 구역 오버랩 이벤트
+	UFUNCTION()
+	void OnEscapeVolumeBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void OnEscapeVolumeEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+	// 페이드 아웃 및 시네마틱 연출 
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayEscapeCinematic();
+
+	// 실제 맵 이동 로직
+	void ExecuteMapTransition();
+
+private:
+	bool AreAllPlayersInVolume() const;
+
+	bool IsAnyPlayerInfected() const;
+	
+	// 현재 대기 구역에 있는 플레이어 목록
+	UPROPERTY()
+	TSet<class AMainPlayer*> PlayersInVolume;
+
+	// 시네마틱 재생을 위한 타이머 핸들
+	FTimerHandle CinematicTimerHandle;
+
+	bool bIsEscaping = false;
 };

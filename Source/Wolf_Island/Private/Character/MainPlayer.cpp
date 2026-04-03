@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Wolf_Island/Public/Character/MainPlayer.h"
@@ -27,28 +27,24 @@
 #include "Components/AudioComponent.h"
 #include "Components/BillboardComponent.h"
 #include "WaterBodyComponent.h"
+#include "Actors/RespawnableFoliage.h"
 #include "Character/MainPlayerController.h"
+#include "Character/Torch.h"
 #include "Components/BuildingComponent.h"
-#include "Components/CapsuleComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Games/MainSaveGame.h"
 #include "Games/GameModes/MainGameMode.h"
+#include "Moon/MoonlightInfectionSystem.h"
+#include "Games/MainPlayerState.h"
+#include "Games/MainGameState.h"
+#include "WaterBodyActor.h"
+
 
 void AMainPlayer::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 	
-	if (AMainPlayerController* MainController = Cast<AMainPlayerController>(GetController()))
-	{
-		if (AMainGameMode* GM = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode()))
-		{
-			AMainPlayerState* PS = Cast<AMainPlayerState>(MainController->PlayerState);
-			GM->LoadPlayer(PS);
-			UE_LOG(LogTemp, Warning, TEXT("[%s] LOAD PLAYER DATA"), *PS->GetPersistantId());
-			GM->SavePlayer(PS);
-			UE_LOG(LogTemp, Warning, TEXT("[%s] SAVE PLAYER DATA FOR NOOB"), *PS->GetPersistantId());
-		}
-	} 
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] POSSESSED BY"));
 }
 
 void AMainPlayer::PawnClientRestart()
@@ -58,6 +54,7 @@ void AMainPlayer::PawnClientRestart()
 	
 	if (IsLocallyControlled())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Restore Color Saturation"))
 		FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
 		FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(1, 1,1,1);
 		
@@ -75,9 +72,53 @@ void AMainPlayer::PawnClientRestart()
 	}
 }
 
+void AMainPlayer::Restart()
+{
+	Super::Restart();
+}
+
+void AMainPlayer::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+	
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] OnRep_PlayerState : %s"), *GetName());
+}
+
+void AMainPlayer::OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] On PlayerState Changed : %s"), *GetName());
+	Super::OnPlayerStateChanged(NewPlayerState, OldPlayerState);
+	
+	if (AMainGameMode* GM = GetWorld()->GetAuthGameMode<AMainGameMode>())
+	{
+		GM->AfterRestartPlayer(GetController(), false);
+	}
+	
+	if (NickName)
+	{
+		if (UNickName* NickNameWidget = Cast<UNickName>(NickName->GetWidget()))
+		{
+			//NickNameWidget->UpdateName(NewPlayerState);
+		}
+	}
+
+	if (AMainPlayerState* PS = GetPlayerState<AMainPlayerState>())
+	{
+		for (const FName& RecipeID : DefaultRecipes)
+		{
+			if (RecipeID != NAME_None && RecipeID.ToString() != TEXT("None"))
+			{
+				PS->UnlockPersonalRecipe(RecipeID);
+			}
+		}
+	}
+	//UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Player State Changed. OLD[%s] -> NEW[%s]"), *OldPlayerState->GetName(), *NewPlayerState->GetName())
+}
+
 // Sets default values
 AMainPlayer::AMainPlayer()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Construct"))
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -135,6 +176,7 @@ AMainPlayer::AMainPlayer()
 	BuoyancyComponent->AddCustomPontoon(25.0f, WaterLevelCheckPoint->GetRelativeLocation());
 	
 	NickName->SetupAttachment(GetMesh());
+	//NickName->bOwnerNoSee = true;
 	
 	GetCharacterMovement()->MaxFlySpeed = SwimmingSpeed;
 }
@@ -142,9 +184,31 @@ AMainPlayer::AMainPlayer()
 // Called when the game starts or when spawned
 void AMainPlayer::BeginPlay()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] BeginPlay"))
 	Super::BeginPlay();
 	
+	if (HasAuthority())
+	{
+		
+		TArray<AActor*> Found;
+		UGameplayStatics::GetAllActorsOfClass(
+			GetWorld(), AMoonlightInfectionSystem::StaticClass(), Found);
+		if (Found.Num() > 0)
+		{
+			AMoonlightInfectionSystem* System =
+				Cast<AMoonlightInfectionSystem>(Found[0]);
+			TArray<AActor*> Self;
+			Self.Add(this);
+			System->BindPlayers(Self);
+		}
+	}
+
 	InteractableData.InteractionDuration = InteractionDuration;
+	
+	if (IsLocallyControlled())
+	{
+		NickName->SetVisibility(false);
+	}
 	
 	if(StatusComponent){
 		if (HasAuthority())
@@ -188,6 +252,15 @@ void AMainPlayer::BeginPlay()
 	
 	MainPlayerController = Cast<AMainPlayerController>(GetController());
 	InteractableData.CanInteract = false;
+	
+	FActorSpawnParameters SpawnParams;
+		
+	Torch = GetWorld()->SpawnActor<ATorch>(TorchClass, SpawnParams);
+	Torch->AttachToComponent(
+		GetMesh(), 
+		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+		FName("hand_r"));
+	Torch->SetActorHiddenInGame(true);
 }
 
 void AMainPlayer::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -200,24 +273,6 @@ void AMainPlayer::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void AMainPlayer::Destroyed()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] DESTROYED"));
-	
-	if (HasAuthority())
-	{
-		AMainGameMode* GM = GetWorld()->GetAuthGameMode<AMainGameMode>();
-		AMainPlayerController* PC = GetController<AMainPlayerController>();
-		if (!PC)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Player Controller is NULL"));
-			return;
-		}
-		AMainPlayerState* PS = PC->GetPlayerState<AMainPlayerState>();
-		if (!PS)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Player State is NULL"));
-			return;
-		}
-		GM->SavePlayer(PS);
-	}
 	
 	Super::Destroyed();
 }
@@ -362,6 +417,8 @@ void AMainPlayer::OnCurrentWeightChanged()
 
 void AMainPlayer::StartJump()
 {
+	if (IsBuildingInputBlocked()) return;
+
 	//스태미나가 0이면 점프 불가
 	if (StatusComponent->CurrentStamina <= JumpConsumeAmount) return;
 
@@ -446,6 +503,8 @@ void AMainPlayer::Landed(const FHitResult& Hit)
 //시야 함수
 void AMainPlayer::Look(const FInputActionValue& Value)
 {
+	if (IsBuildingInputBlocked()) return;
+
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 	//UE_LOG(LogTemp, Warning, TEXT("LOOK X: %f, Y: %f"), LookAxisVector.X, LookAxisVector.Y);
 	float sen = 1;
@@ -460,6 +519,8 @@ void AMainPlayer::Look(const FInputActionValue& Value)
 //이동 함수
 void AMainPlayer::Move(const FInputActionValue& Value)
 {
+	if (IsBuildingInputBlocked()) return;
+
 	FVector2D MovementVector = Value.Get<FVector2D>();
 	//UE_LOG(LogTemp, Warning, TEXT("MOVE X: %f, Y: %f"), MovementVector.X, MovementVector.Y);
 
@@ -486,6 +547,8 @@ void AMainPlayer::Move(const FInputActionValue& Value)
 //특정 시간 후 스태미나 회복 -> Shift 떼면 스태미나 소진
 void AMainPlayer::Run()
 {	
+	if (IsBuildingInputBlocked()) return;
+
 	//속도가 있는가? -> 뛰는 중인가?
 	if (GetVelocity().Size() > 0){
 
@@ -554,6 +617,8 @@ void AMainPlayer::StopRun()
 
 void AMainPlayer::ToggleCrouch()
 {
+	if (IsBuildingInputBlocked()) return;
+
 	//기절 중이면 못함
 	if (IsInability) return;
 	
@@ -577,6 +642,8 @@ void AMainPlayer::ToggleCrouch()
 
 void AMainPlayer::ToggleInventory()
 {
+	if (IsBuildingInputBlocked()) return;
+
 	//인벤토리가 열려 있으면
 	if (IsInventoryOpen)
 	{
@@ -586,6 +653,16 @@ void AMainPlayer::ToggleInventory()
 	else
 	{
 		IsInventoryOpen = true;
+	}
+}
+
+void AMainPlayer::SetBuildingInputBlocked(bool bBlocked)
+{
+	bBuildingInputBlocked = bBlocked;
+
+	if (bBuildingInputBlocked && IsLocallyControlled())
+	{
+		GetCharacterMovement()->StopMovementImmediately();
 	}
 }
 
@@ -663,6 +740,8 @@ void AMainPlayer::StopUseItem()
 
 void AMainPlayer::HandleHotBar(const FInputActionValue& Value)
 {
+	if (IsBuildingInputBlocked()) return;
+
 	APlayerController* PlayerController = Cast<APlayerController>(GetController());
 	if (PlayerController)
 	{
@@ -688,6 +767,17 @@ void AMainPlayer::HandleHotBar(const FInputActionValue& Value)
 
 void AMainPlayer::HandleHotBarWithWheel(const FInputActionValue& Value)
 {
+	if (IsBuildingInputBlocked()) return;
+
+	if (UBuildingComponent* BuildComp = FindComponentByClass<UBuildingComponent>())
+	{
+		if (BuildComp->GetCurrentState() == EBuildingState::Placing)
+		{
+			BuildComp->RotatePreview(Value.Get<float>());
+			return;
+		}
+	}
+
 	if (Value.Get<float>() > 0)
 	{
 		Request_SetHotbarIndex((HotBarIndex + 1) % 6);
@@ -725,6 +815,7 @@ void AMainPlayer::OnDeath_Implementation()
 //손에 든 아이템 업데이트 함수
 void AMainPlayer::RefreshHand()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Refresh Hand"));
 	//핫바 인덱스의 아이템 정보 가져오기.
 	FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
 	
@@ -734,24 +825,51 @@ void AMainPlayer::RefreshHand()
 		//데이터 베이스에서 아이템 데이터 가져오기
 		FItemData* ItemData = InventoryComponent->GetItemData(Item);
 		
-		IsHoldingItem = true;
-		ItemMesh->SetStaticMesh(ItemData->AssetData.Mesh);
-		ItemMesh->AttachToComponent(
-		GetMesh(),
-		FAttachmentTransformRules::KeepRelativeTransform,
-		TEXT("hand_r"));
-		ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		if (ItemData->Type == EItemType::EQUIPMENT || ItemData->Type == EItemType::FOOD)
+		{
+			IsHoldingItem = true;
+			
+			//토치 들기
+			if (ItemData->ID == TEXT("EQ006"))
+			{
+				ItemMesh->SetStaticMesh(nullptr);
+				WeaponComponent->CheckWeapon(Item);
+				
+				if (Torch)
+				{
+					Torch->SetActorHiddenInGame(false);
+				}
+				
+				return;
+			}
+			
+			ItemMesh->SetStaticMesh(ItemData->AssetData.Mesh);
+			ItemMesh->AttachToComponent(
+			GetMesh(),
+			FAttachmentTransformRules::KeepRelativeTransform,
+			TEXT("hand_r"));
+			ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 		
-		FTransform SocketTransform = ItemMesh->GetSocketTransform(TEXT("HandSocket"), RTS_Component);
-		ItemMesh->SetRelativeTransform(SocketTransform.Inverse());
-
-		//ItemMesh->SetRelativeScale3D(FVector(0.1f, 0.1f, 0.1f));
-		WeaponComponent->CheckWeapon(Item);
+			FTransform SocketTransform = ItemMesh->GetSocketTransform(TEXT("HandSocket"), RTS_Component);
+			ItemMesh->SetRelativeTransform(SocketTransform.Inverse());
+			WeaponComponent->CheckWeapon(Item);
+		} 
+		else
+		{
+			WeaponComponent->CheckWeapon(Item);
+			IsHoldingItem = false;
+			ItemMesh->SetStaticMesh(nullptr);
+		}
 	} else
 	{
 		WeaponComponent->CheckWeapon(Item);
 		IsHoldingItem = false;
 		ItemMesh->SetStaticMesh(nullptr);
+	}
+	
+	if (Torch)
+	{
+		Torch->SetActorHiddenInGame(true);
 	}
 }
 
@@ -761,9 +879,9 @@ void AMainPlayer::Attack()
 	
 	if (UBuildingComponent* BuildComp = FindComponentByClass<UBuildingComponent>())
 	{
-		int32 StateInt = (int32)BuildComp->GetCurrentState();
+		/*int32 StateInt = (int32)BuildComp->GetCurrentState();
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, 
-			FString::Printf(TEXT("클라이언트 Attack 호출됨! 현재 상태: %d"), StateInt));
+			FString::Printf(TEXT("클라이언트 Attack 호출됨! 현재 상태: %d"), StateInt));*/
 
 		if (BuildComp->GetCurrentState() == EBuildingState::Placing)
 		{
@@ -789,8 +907,10 @@ void AMainPlayer::KnockOut()
 		KnockOutTimer,
 		[this]()
 		{
+			UE_LOG(LogTemp, Warning, TEXT("[PLAYER] KNOCK OUT TIMER ACTIAVTED"));
 			if (HasAuthority())
 			{
+				UE_LOG(LogTemp, Warning, TEXT("[PLAYER] SERVER PLAYER"));
 				if (IsLocallyControlled())
 				{
 					FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
@@ -800,10 +920,10 @@ void AMainPlayer::KnockOut()
 					{
 						PC->OpenDeathScreen();
 					}
+				} else
+				{
+					Client_ShowDeathScreen();
 				}
-			} else
-			{
-				Client_ShowDeathScreen();
 			}
 		},
 		KnockOutToDeathTime,
@@ -824,6 +944,38 @@ void AMainPlayer::Revive()
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	CanInteract = false;
 	InteractableData.CanInteract = CanInteract;
+
+	// 만약 변신했다가 기절해서 돌아온 상태라면, 세션 데이터 삭제 필요
+	if (HasAuthority())
+	{
+		AMoonlightInfectionSystem* System = Cast<AMoonlightInfectionSystem>(
+			UGameplayStatics::GetActorOfClass(GetWorld(), AMoonlightInfectionSystem::StaticClass()));
+		if (System && GetController())
+		{
+			// 부활했으므로 늑대인간 세션 아님
+			System->ActiveWerewolfSessions.Remove(Cast<APlayerController>(GetController()));
+		}
+	}
+}
+
+void AMainPlayer::OnRespawn()
+{
+	StatusComponent->IncreaseHP(20.0f);
+	
+	//안 기절 상태로 전환
+	IsInability = false;
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+	CanInteract = false;
+	InteractableData.CanInteract = CanInteract;
+		
+	RestoreCamera();
+}
+
+void AMainPlayer::RestoreCamera_Implementation()
+{
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] RESTORE CAMERA"));
+	FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
+	FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(1, 1,1,1);
 }
 
 void AMainPlayer::CheckInteraction()
@@ -886,20 +1038,25 @@ void AMainPlayer::CheckInteraction()
 			// 물 체크
 			AActor* HitActor = HitResult.GetActor();
 			UPrimitiveComponent* HitComp = HitResult.GetComponent();
-
+			
+			
+			
 			if (HitActor)
 			{
-				FString ActorName = HitActor->GetName();
-
-				// 1. 이름에 "Ocean"(바다), "River"(강), "Lake"(호수)가 포함되어 있는지 확인
-				if (ActorName.Contains(TEXT("Ocean")) || ActorName.Contains(TEXT("River")) || ActorName.Contains(TEXT("Lake")))
+				FString ClassName = HitActor->GetClass()->GetName();
+				if (ClassName.Contains(TEXT("WaterBodyOcean")) || 
+					ClassName.Contains(TEXT("WaterBodyRiver")) || 
+					ClassName.Contains(TEXT("WaterBodyLake")))
 				{
-					// 상호작용 대상으로 저장
-					if (InteractionData.CurrentWaterComponent != HitComp)
+					if (GetWorld()->GetTimeSeconds() >= LastDrinkTime + DrinkCooldown)
 					{
-						FoundInteractableWater(HitComp);
+						if (InteractionData.CurrentWaterComponent != HitComp)
+						{
+							FoundInteractableWater(HitComp);
+						}
+						return;
 					}
-					return; // 물을 찾았으니 트레이스 종료
+					return;
 				}
 			}
 		}
@@ -1026,6 +1183,8 @@ void AMainPlayer::Client_InteractionExecuted_Implementation()
 //인터랙션 시작 함수 (인터랙션 키 눌렀을 때)
 void AMainPlayer::BeginInteract()
 {
+	if (IsBuildingInputBlocked()) return;
+
 	//인터랙션이 시작됐을 때부터 인터렉션 상태가 변하지 않는 것을 체크
 	CheckInteraction();
 
@@ -1080,6 +1239,8 @@ void AMainPlayer::BeginInteract()
 
 void AMainPlayer::EndInteract()
 {
+	if (IsBuildingInputBlocked()) return;
+
 	if (HUD)
 	{
 		HUD->HideInteraction();
@@ -1134,7 +1295,7 @@ void AMainPlayer::DropItem(UInventoryComponent* SourceInventory, int32 SourceInd
 	FItemBaseData ItemData = SourceInventory->GetInventory()[SourceIndex].ItemData;
 	
 	//아이템 데이터가 있으면
-	if (ItemData.IsValid())
+	if (ItemData.IsValid() && ItemClass)
 	{
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.Owner = this;
@@ -1150,9 +1311,9 @@ void AMainPlayer::DropItem(UInventoryComponent* SourceInventory, int32 SourceInd
 			SourceInventory->InventoryChanged();
 		}
 		
-		APickup* Pickup = GetWorld()->SpawnActor<APickup>(APickup::StaticClass(), SpawnTransform, SpawnParams);
+		APickup* Pickup = GetWorld()->SpawnActor<APickup>(ItemClass, SpawnTransform, SpawnParams);
 		Pickup->InitializeDrop(ItemData, AmountToDrop);
-
+		
 		if (ItemGettingSound)
 		{
 			Client_PlaySound2D(ItemGettingSound);
@@ -1212,8 +1373,8 @@ void AMainPlayer::WeaponTrace(const FVector& StartPos, const FVector& EndPos)
 		TraceTypeQuery,
 		true,
 		IgnoreActors,
-		//EDrawDebugTrace::None,
-		EDrawDebugTrace::ForDuration,
+		EDrawDebugTrace::None,
+		//EDrawDebugTrace::ForDuration,
 		Hit,
 		true))
 	{
@@ -1304,6 +1465,8 @@ void AMainPlayer::EndWeaponAttack()
 
 void AMainPlayer::DropItemOnHotBar()
 {
+	if (IsBuildingInputBlocked()) return;
+
 	FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
 	if (Item.IsValid())
 	{
@@ -1313,6 +1476,8 @@ void AMainPlayer::DropItemOnHotBar()
 
 void AMainPlayer::WaterElevation(const FInputActionValue& Value)
 {
+	if (IsBuildingInputBlocked()) return;
+
 	if (IsSwimming)
 	{
 		float Elevation = Value.Get<float>();
@@ -1548,7 +1713,12 @@ void AMainPlayer::Server_InteractFoliage_Implementation(UInstancedStaticMeshComp
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-		GetWorld()->SpawnActor<AActor>(Reward.SpawnBP, InstanceTransform, SpawnParams);
+		AActor* SpawnedActor = GetWorld()->SpawnActor<AActor>(Reward.SpawnBP, InstanceTransform, SpawnParams);
+
+		if (ARespawnableFoliage* RespawnableFoliage = Cast<ARespawnableFoliage>(SpawnedActor))
+		{
+			RespawnableFoliage->InitializeFoliage(ISMC, InstanceTransform);
+		}
 	}
 
 	if (AMainGameMode* GM = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode()))
@@ -1627,7 +1797,7 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 	// 폴리지가 아니면 종료
 	if (!ISMC) 
 	{
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("맞은 건 폴리지가 아님"));
+		//if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("맞은 건 폴리지가 아님"));
 		return; 
 	}
 
@@ -1686,7 +1856,7 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 		FDamageEvent DamageEvent;
 		NewTree->TakeDamage(DamageAmount, DamageEvent, GetController(), this);
         
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, TEXT("나무 변환 성공!"));
+		//if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, TEXT("나무 변환 성공!"));
 	}
 }
 
@@ -1714,6 +1884,42 @@ void AMainPlayer::ProcessAttackHit(const FHitResult& HitResult, float DamageAmou
 
 	// 2. 폴리지 변환 시도
 	TryConvertFoliageToActor(HitResult, DamageAmount);
+}
+
+TArray<FString> AMainPlayer::GetRecipeNames() const
+{
+	TArray<FString> Options;
+	Options.Add(TEXT("None"));
+
+	if (RecipeDataTable)
+	{
+		TArray<FName> RowNames = RecipeDataTable->GetRowNames();
+		for (const FName& RowName : RowNames)
+		{
+			Options.Add(RowName.ToString());
+		}
+	}
+
+	return Options;
+}
+
+bool AMainPlayer::HasRecipe(const FName& RecipeID) const
+{
+	if (RecipeID.IsNone()) return false;
+
+	// 1. 개인 레시피 확인
+	if (AMainPlayerState* PS = GetPlayerState<AMainPlayerState>())
+	{
+		if (PS->PersonalRecipes.Contains(RecipeID)) return true;
+	}
+
+	// 2. 공유 레시피 확인
+	if (AMainGameState* GS = GetWorld()->GetGameState<AMainGameState>())
+	{
+		if (GS->SharedRecipes.Contains(RecipeID)) return true;
+	}
+
+	return false;
 }
 
 void AMainPlayer::StartCraft(FRecipeData RecipeData)
@@ -1760,6 +1966,8 @@ void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 
 void AMainPlayer::Request_Run()
 {
+	if (IsBuildingInputBlocked()) return;
+
 	if (HasAuthority())
 	{
 		Run();
@@ -1782,6 +1990,8 @@ void AMainPlayer::Request_StopRun()
 
 void AMainPlayer::Request_ToggleCrouch()
 {
+	if (IsBuildingInputBlocked()) return;
+
 	if (HasAuthority())
 	{
 		ToggleCrouch();
@@ -1815,6 +2025,8 @@ void AMainPlayer::OnRep_IsRunning()
 
 void AMainPlayer::Request_Attack()
 {
+	if (IsBuildingInputBlocked()) return;
+
 	if (UBuildingComponent* BuildComp = FindComponentByClass<UBuildingComponent>())
 	{
 		if (BuildComp->GetCurrentState() == EBuildingState::Placing)
@@ -1850,8 +2062,6 @@ void AMainPlayer::Request_SetHotbarIndex(int32 Index)
 		SetHotbarIndex(Index);
 		HUD->UpdateHotBar();
 		RefreshHand();
-		FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
-		WeaponComponent->CheckWeapon(Item);
 	} else
 	{
 		Server_SetHotbarIndex(Index);
@@ -1862,17 +2072,18 @@ void AMainPlayer::Server_SetHotbarIndex_Implementation(int32 Index)
 {
 	SetHotbarIndex(Index);
 	RefreshHand();
-	FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
-	WeaponComponent->CheckWeapon(Item);
 }
 
 void AMainPlayer::OnRep_HotBarIndex()
 {
 	if (IsLocallyControlled())
 	{
-		HUD->UpdateHotBar();
-		RefreshHand();
+		if (HUD)
+		{
+			HUD->UpdateHotBar();
+		}
 	}
+	RefreshHand();
 }
 
 void AMainPlayer::OnRep_HandedItem()
@@ -1895,13 +2106,16 @@ void AMainPlayer::Request_StartUseItem()
 {
 	if (UBuildingComponent* BuildComp = FindComponentByClass<UBuildingComponent>())
 	{
-		if (BuildComp->GetCurrentState() == EBuildingState::Placing)
+		const EBuildingState State = BuildComp->GetCurrentState();
+		if (State == EBuildingState::Placing || State == EBuildingState::Building)
 		{
 			BuildComp->CancelBuild();
 			
 			return; 
 		}
 	}
+
+	if (IsBuildingInputBlocked()) return;
 	
 	if (HasAuthority())
 	{
@@ -1968,31 +2182,37 @@ void AMainPlayer::FoundInteractableWater(UPrimitiveComponent* WaterComp)
 void AMainPlayer::Server_DrinkWater_Implementation(UPrimitiveComponent* WaterComp)
 {
 	if (!WaterComp || !StatusComponent) return;
-	
+
+	float CurrentTime = GetWorld()->GetTimeSeconds();
+	if (CurrentTime < LastDrinkTime + DrinkCooldown) return;
+    
 	AActor* WaterActor = WaterComp->GetOwner();
 	if (!WaterActor) return;
 
-	FString ActorName = WaterActor->GetName();
+	FString ClassName = WaterActor->GetClass()->GetName();
 
-	if (ActorName.Contains(TEXT("River")) || ActorName.Contains(TEXT("Lake")))
+	if (ClassName.Contains(TEXT("WaterBodyRiver")) || ClassName.Contains(TEXT("WaterBodyLake")))
 	{
-		StatusComponent->IncreaseHydration(10.0f);
+		StatusComponent->IncreaseHydration(5.0f);
         
 		if (EatingSound) 
 		{
 			Multi_PlaySound(EatingSound, GetActorLocation());
 		}
+
+		LastDrinkTime = CurrentTime;
 	}
-	else if (ActorName.Contains(TEXT("Ocean")))
+	else if (ClassName.Contains(TEXT("WaterBodyOcean")))
 	{
-		StatusComponent->DecreaseHydration(10.0f);
+		StatusComponent->DecreaseHydration(5.0f);
         
 		if (EatingSound) 
 		{
 			Multi_PlaySound(EatingSound, GetActorLocation());
 		}
-	}
 
+		LastDrinkTime = CurrentTime;
+	}
 }
 
 void AMainPlayer::Client_ShowDeathScreen_Implementation()
@@ -2003,9 +2223,9 @@ void AMainPlayer::Client_ShowDeathScreen_Implementation()
 		FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
 		FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(0,0,0,0);
 		
-		if (MainPlayerController)
+		if (AMainPlayerController* MPC = GetController<AMainPlayerController>())
 		{
-			MainPlayerController->OpenDeathScreen();
+			MPC->OpenDeathScreen();
 		} else
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Main Player Controller Not Connected"));	
@@ -2050,7 +2270,7 @@ void AMainPlayer::Client_OpenBonfireUI_Implementation()
 		{
 			BonfireWidget->AddToViewport();
 
-			FInputModeGameAndUI InputMode;
+			FInputModeUIOnly InputMode;
 			InputMode.SetWidgetToFocus(BonfireWidget->TakeWidget());
 			PC->SetInputMode(InputMode);
 			PC->bShowMouseCursor = true;
@@ -2110,7 +2330,7 @@ void AMainPlayer::Client_OpenRepairUI_Implementation(class ARepair_Actor* Target
 			RepairWidget->InitRepairWindow(TargetActor);
 			RepairWidget->AddToViewport();
 
-			FInputModeGameAndUI InputMode;
+			FInputModeUIOnly InputMode;
 			InputMode.SetWidgetToFocus(RepairWidget->TakeWidget());
 			PC->SetInputMode(InputMode);
 			PC->bShowMouseCursor = true;

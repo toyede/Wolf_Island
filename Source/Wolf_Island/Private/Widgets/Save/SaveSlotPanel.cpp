@@ -8,6 +8,7 @@
 #include "Games/MainGameInstance.h"
 #include "Games/MainSaveGame.h"
 #include "Kismet/GameplayStatics.h"
+#include "Widgets/BaseButton.h"
 #include "Widgets/Save/SaveSlot.h"
 #include "Widgets/TextCommitPanel.h"
 
@@ -62,7 +63,7 @@ void USaveSlotPanel::LoadSingleSlots()
 			USaveSlot* SaveSlot = CreateWidget<USaveSlot>(GetWorld(), SlotClass);
 			SaveSlot->SetSlotInfo(Pair.Value);
 			SaveSlot->SetSlotPanelRef(this);
-			SaveSlot->SetPadding(FMargin(0.0, 0.0, 16.0, 0.0));
+			SaveSlot->SetPadding(FMargin(0.0, 0.0, 0.0, 16.0));
 
 			SlotBox->AddChild(SaveSlot);
 		}
@@ -118,7 +119,7 @@ void USaveSlotPanel::LoadMultiSlots()
 			USaveSlot* SaveSlot = CreateWidget<USaveSlot>(GetWorld(), SlotClass);
 			SaveSlot->SetSlotInfo(Pair.Value);
 			SaveSlot->SetSlotPanelRef(this);
-			SaveSlot->SetPadding(FMargin(0.0, 0.0, 16.0, 0.0));
+			SaveSlot->SetPadding(FMargin(0.0, 0.0, 0.0, 16.0));
 
 			SlotBox->AddChild(SaveSlot);
 		}
@@ -143,24 +144,25 @@ void USaveSlotPanel::OnAddButtonClicked()
 	TCP->AddToViewport();
 }
 
+//새 게임 시작 저장 시퀀스 수정해야 함
 void USaveSlotPanel::OnCreateCommited(const FString& Text)
 {
 	if (MainGameInstance)
 	{
-		UMainSaveGame* NewSave = MainGameInstance->CreateSaveSlot(Text, MainGameInstance->FindEmptySaveSlotIndex(IsMultiPanel), IsMultiPanel);
 		IsMultiPanel ? LoadMultiSlots() : LoadSingleSlots();
 		TCP->RemoveFromParent();
 		
-		MainGameInstance->SetCurrentSave(NewSave);
-	
-		//멀티 게임 시작
-		if (NewSave->IsMulti)
+		//멀티 새 게임 시작
+		if (IsMultiPanel)
 		{
-			UGameplayStatics::OpenLevelBySoftObjectPtr(GetWorld(), MainGameInstance->MultiPlayWorld);
+			MainGameInstance->CurrentServerName = Text;
+			MainGameInstance->CreateLobbySession();
 		}
-		//싱글 게임 시작
+		//싱글 새 게임 시작
 		else
 		{
+			UMainSaveGame* NewSave = MainGameInstance->CreateSaveSlot(Text, MainGameInstance->FindEmptySaveSlotIndex(IsMultiPanel), IsMultiPanel);
+			MainGameInstance->SetCurrentSave(NewSave);
 			UGameplayStatics::OpenLevelBySoftObjectPtr(GetWorld(), MainGameInstance->SinglePlayWorld);
 		}
 	}

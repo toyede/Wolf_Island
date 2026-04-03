@@ -44,7 +44,7 @@ void USaveSlot::OnButtonClicked()
 	//멀티 게임 시작
 	if (SlotSave->IsMulti)
 	{
-		UGameplayStatics::OpenLevelBySoftObjectPtr(GetWorld(), MainGameInstance->MultiPlayWorld);
+		MainGameInstance->CreateGameSession();
 	}
 	//싱글 게임 시작
 	else

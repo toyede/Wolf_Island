@@ -14,6 +14,7 @@
 struct FPlayerSaveData;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnUnlockedRecordsChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSelectedRolesChanged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSharedRecipesChanged);
 
 UENUM(BlueprintType)
 enum class EMessageType : uint8
@@ -86,6 +87,14 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void RefreshSelectedRoles();
 	
+	//역할 중복 확인 함수
+	UFUNCTION(BlueprintCallable)
+	bool CheckAvailableRole(ECharacterRole NewRole);
+	
+	//사용 가능한 역할 리스트 반환 함수
+	UFUNCTION(BlueprintCallable)
+	TArray<ECharacterRole> GetAvailableRoles();
+	
 	UFUNCTION(BlueprintCallable)
 	void AddChattingMessage(FChattingData NewChattingData);
 	
@@ -115,4 +124,20 @@ public:
 	
 	UFUNCTION()
 	void OnRep_SelectedRoles();
+
+	// 공유 레시피
+	UPROPERTY(ReplicatedUsing = OnRep_SharedRecipes, BlueprintReadOnly, Category = "Crafting")
+	TArray<FName> SharedRecipes;
+
+	// UI 업데이트용 델리게이트
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnSharedRecipesChanged OnSharedRecipesChanged;
+
+	// 공유 레시피 해금
+	UFUNCTION(BlueprintCallable, Category = "Crafting")
+	void UnlockSharedRecipe(const FName& RecipeID);
+
+	// 클라이언트 동기화 함수
+	UFUNCTION()
+	void OnRep_SharedRecipes();
 };

@@ -38,6 +38,8 @@ void URoleSelection::NativeConstruct()
 	ConfirmButton->Button->SetIsEnabled(false);
 	
 	CheckOccupied();
+	
+	SetRandomRole();
 }
 
 void URoleSelection::CheckOccupied()
@@ -50,6 +52,7 @@ void URoleSelection::CheckOccupied()
 		return;
 	}
 	
+	UE_LOG(LogTemp, Warning, TEXT("[ROLE SELECTION UI] Occupied Check"))
 	for (UWidget* Child : RoleList->GetAllChildren())
 	{
 		URoleButton* Button = Cast<URoleButton>(Child);
@@ -58,7 +61,11 @@ void URoleSelection::CheckOccupied()
 		{
 			if (OccupiedRole == Button->Role)
 			{
-				Button->SetOccupied(true);
+				//Button->SetOccupied(true);
+				Button->Button->SetIsEnabled(false);
+			} else
+			{
+				Button->Button->SetIsEnabled(true);
 			}
 		}
 	}
@@ -96,5 +103,22 @@ void URoleSelection::PlayDenyAlarm()
 	if (DenyAlarm)
 	{
 		PlayAnimation(DenyAlarm);
+	}
+}
+
+void URoleSelection::SetRandomRole()
+{
+	MainGameState = Cast<AMainGameState>(GetWorld()->GetGameState());
+	
+	for (UWidget* Child : RoleList->GetAllChildren())
+	{
+		if (URoleButton* Button = Cast<URoleButton>(Child))
+		{
+			if (MainGameState->CheckAvailableRole(Button->Role))
+			{
+				Button->OnClicked.Broadcast(Button->Role);
+				return;
+			}
+		}
 	}
 }

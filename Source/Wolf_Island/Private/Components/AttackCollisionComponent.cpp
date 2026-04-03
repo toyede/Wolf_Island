@@ -94,7 +94,7 @@ void UAttackCollisionComponent::PerformTrace(const FVector& Start, const FVector
 		TraceObjectTypes,
 		false,
 		IgnoredActors,
-		DrawDebugType,
+		bShowDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
 		Hits,
 		true);
 

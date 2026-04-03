@@ -66,4 +66,7 @@ public:
 	
 	UFUNCTION()
 	void PlayDenyAlarm();
+	
+	UFUNCTION()
+	void SetRandomRole();
 };

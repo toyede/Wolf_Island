@@ -25,15 +25,12 @@ void URepairUI::NativeConstruct()
 		WBP_RepairPanel->InitRepairPanel(TargetActor);
 		UE_LOG(LogTemp, Log, TEXT("RepairUI: NativeConstruct에서 자동으로 Actor 연결 완료!"));
 	}
-	
-	if (CloseButton)
-	{
-		CloseButton->OnClicked.AddDynamic(this, &URepairUI::HandleCloseClicked);
-	}
 
 	if (APlayerController* PC = GetOwningPlayer())
 	{
 		PC->SetShowMouseCursor(true);
+		PC->SetIgnoreLookInput(true);
+		PC->SetIgnoreMoveInput(true);
 		
 		FInputModeUIOnly InputMode;
 		InputMode.SetWidgetToFocus(this->TakeWidget());
@@ -53,6 +50,8 @@ void URepairUI::NativeDestruct()
 	if (APlayerController* PC = GetOwningPlayer())
 	{
 		PC->SetShowMouseCursor(false);
+		PC->SetIgnoreLookInput(false);
+		PC->SetIgnoreMoveInput(false);
 		PC->SetInputMode(FInputModeGameOnly());
 	}
 }
@@ -61,14 +60,8 @@ FReply URepairUI::NativeOnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& 
 {
 	if (InKeyEvent.GetKey() == EKeys::Tab || InKeyEvent.GetKey() == EKeys::Escape)
 	{
-		HandleCloseClicked();
 		return FReply::Handled();
 	}
 
 	return Super::NativeOnKeyDown(MyGeometry, InKeyEvent);
-}
-
-void URepairUI::HandleCloseClicked()
-{
-	RemoveFromParent();
 }

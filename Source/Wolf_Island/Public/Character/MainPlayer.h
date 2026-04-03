@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -8,9 +8,12 @@
 #include "InputAction.h"
 #include "Interaction/InteractionInterface.h"
 #include "Data/ItemDataStruct.h"
+#include "Components/BillboardComponent.h"
 #include "Widgets/NickName.h"
+#include "Engine/DataTable.h"
 #include "MainPlayer.generated.h"
 
+class ATorch;
 class UWidgetComponent;
 class UWaterBodyComponent;
 class APickup;
@@ -106,6 +109,12 @@ public:
 	
 	virtual void PawnClientRestart() override;
 	
+	virtual void Restart() override;
+	
+	virtual void OnRep_PlayerState() override;
+	
+	virtual void OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState) override;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
 	class AMainPlayerController* MainPlayerController;
 	//HUD=============================================================================
@@ -127,6 +136,12 @@ public:
 	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
 	class UBuildingComponent* BuildingComponent;
+	
+	//횃불
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Torch")
+	ATorch* Torch;
+	UPROPERTY(EditDefaultsOnly, Category = "Torch")
+	TSubclassOf<ATorch> TorchClass;
 	
 	//부력 컴포넌트 - 수영을 위한 것
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
@@ -308,6 +323,9 @@ public:
 	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsUsingItem = false;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="State")
+	bool bBuildingInputBlocked = false;
+
 	//핫바 관련 변수==================================================================
 	//핫바 슬롯 인덱스
 	UPROPERTY(ReplicatedUsing=OnRep_HotBarIndex, VisibleAnywhere, BlueprintReadOnly, Category="HotBar", SaveGame)
@@ -399,6 +417,9 @@ public:
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	TSubclassOf<class AActor> OutlineActorClass;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Interaction")
+	TSubclassOf<APickup> ItemClass;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction")
@@ -427,6 +448,21 @@ public:
 	void Multi_RemoveFoliageInstance(UInstancedStaticMeshComponent* ISMC, int32 InstanceIndex);
 	
 	//제작===================================================================================================
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crafting")
+	UDataTable* RecipeDataTable;
+
+	// 레시피 드롭다운 목록 생성 함수
+	UFUNCTION(CallInEditor)
+	TArray<FString> GetRecipeNames() const;
+
+	// 시작 지급 레시피
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Crafting", meta = (GetOptions = "GetRecipeNames"))
+	TArray<FName> DefaultRecipes;
+	
+	// 이 플레이어가 특정 레시피를 제작할 수 있는지 (개인 + 공유) 종합 확인하는 함수
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Crafting")
+	bool HasRecipe(const FName& RecipeID) const;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	FTimerHandle CraftTimer;
 	
@@ -544,6 +580,14 @@ public:
 	//소생 함수
 	UFUNCTION(BlueprintCallable)
 	void Revive();
+	
+	//리스폰 처리 함수
+	UFUNCTION(BlueprintCallable)
+	void OnRespawn();
+	
+	//카메라 복구 함수
+	UFUNCTION(Client, Reliable, BlueprintCallable)
+	void RestoreCamera();
 
 	//인터랙션 관련 함수===================================================
 	//인터랙션 체크 함수 - 라인트레이스로 인터랙션 액터 체크
@@ -719,6 +763,12 @@ public:
 	void Request_StopCraft();
 	UFUNCTION(Server, Reliable)
 	void Server_StopCraft();
+
+	UFUNCTION(BlueprintCallable)
+	void SetBuildingInputBlocked(bool bBlocked);
+
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE bool IsBuildingInputBlocked() const { return bBuildingInputBlocked; }
 	
 	
 	//아이템 정보 저장
@@ -747,4 +797,12 @@ public:
 	// 물 마시기 서버 실행 함수
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category="Interaction")
 	void Server_DrinkWater(UPrimitiveComponent* WaterComp);
+
+	// 물 마시기 쿨타임 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Survival|Interaction")
+	float DrinkCooldown = 1.0f;
+
+private:
+	// 마지막으로 물을 마신 시간
+	float LastDrinkTime = -999.0f;
 };
