@@ -167,9 +167,12 @@ bool ALobbyGameMode::CheckAllPlayerReady()
 		}
 	}
 	
-	if (ULobby* Lobby = Cast<ULobby>(LLPC->LobbyWidget))
+	if (LLPC && LLPC->LobbyWidget)
 	{
-		Lobby->SwitchPlayButton(IsAllReady);
+		if (ULobby* Lobby = Cast<ULobby>(LLPC->LobbyWidget))
+		{
+			Lobby->SwitchPlayButton(IsAllReady);
+		}
 	}
 	
 	return IsAllReady;

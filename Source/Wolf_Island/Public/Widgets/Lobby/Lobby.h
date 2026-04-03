@@ -36,6 +36,9 @@ public:
 	UBaseButton* StartButton;
 	
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
+	UButton* QuitButton;
+	
+	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
 	UTextBlock* RoleName;
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
 	UTextBlock* RoleDescription;
@@ -48,6 +51,8 @@ public:
 	void OnReady();
 	UFUNCTION(BlueprintCallable)
 	void OnStart();
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
+	void OnQuit();
 	
 	UFUNCTION(BlueprintCallable)
 	void RefreshInfo();

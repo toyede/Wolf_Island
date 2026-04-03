@@ -97,6 +97,7 @@ void ALobbyPlayerController::ChangeRole(ECharacterRole NewRole)
 {
 	if (AMainPlayerState* PS = GetPlayerState<AMainPlayerState>())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[LOBBY PC] Change Role to %d on Server"), NewRole);
 		PS->SetPlayerRole(NewRole);
 		if (ALobbyGameMode* GM = GetWorld()->GetAuthGameMode<ALobbyGameMode>())
 		{

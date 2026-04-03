@@ -6,6 +6,7 @@
 #include "Components/ArrowComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Games/MainPlayerState.h"
+#include "Games/GameModes/LobbyGameMode.h"
 #include "Net/UnrealNetwork.h"
 #include "Widgets/Lobby/PlayerCard.h"
 
@@ -63,12 +64,9 @@ void APlayerSlot::AddPlayer(APlayerController* NewPlayer)
 		ArrowComponent->GetComponentTransform(),
 		SpawnInfo);
 	
-	if (PlayerVisual)
+	if (ALobbyGameMode* LGM = GetWorld()->GetAuthGameMode<ALobbyGameMode>())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[PLAYER SLOT] Character Spawned"));
-	} else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[PLAYER SLOT] Character Not Spawned"));
+		LGM->CheckAllPlayerReady();
 	}
 }
 
@@ -80,6 +78,11 @@ void APlayerSlot::RemovePlayer()
 	if (PlayerVisual)
 	{
 		PlayerVisual->Destroy();
+	}
+	
+	if (ALobbyGameMode* LGM = GetWorld()->GetAuthGameMode<ALobbyGameMode>())
+	{
+		LGM->CheckAllPlayerReady();
 	}
 }
 
