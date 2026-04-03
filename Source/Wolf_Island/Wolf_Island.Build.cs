@@ -33,10 +33,10 @@ public class Wolf_Island : ModuleRules
 		{
 			"Slate", 
 			"SlateCore", 
-			"AdvancedSessions", 
-			"AdvancedSteamSessions",
-			"OnlineSubsystem", 
-			"OnlineSubsystemUtils",
+			//"AdvancedSessions", 
+			//"AdvancedSteamSessions",
+			//"OnlineSubsystem", 
+			//"OnlineSubsystemUtils",
 		});
 		
 		if (Target.Platform == UnrealTargetPlatform.Win64)

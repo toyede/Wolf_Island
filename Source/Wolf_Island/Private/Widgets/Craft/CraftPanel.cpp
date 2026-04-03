@@ -49,7 +49,7 @@ void UCraftPanel::OnCraftButtonClicked()
 	{
 		if (AMainPlayer* Player = Cast<AMainPlayer>(OwnerInventory->GetOwner()))
 		{
-			Player->Request_StartCraft(CurrentRecipeData);
+			Player->StartCraft(CurrentRecipeData);
 		}
 
 		SetCraftButton(CurrentRecipeData);

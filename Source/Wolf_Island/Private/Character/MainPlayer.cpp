@@ -1918,7 +1918,8 @@ bool AMainPlayer::HasRecipe(const FName& RecipeID) const
 	{
 		if (GS->SharedRecipes.Contains(RecipeID)) return true;
 	}
-
+	
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Player doesn't has Recipe %s"), *RecipeID.ToString())
 	return false;
 }
 
