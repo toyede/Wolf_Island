@@ -42,13 +42,7 @@ void ULobby::NativeConstruct()
 	
 	if (QuitButton)
 	{
-		if (GetOwningPlayer()->HasAuthority())
-		{
-			QuitButton->OnClicked.AddDynamic(this, &ULobby::OnQuit);
-		} else
-		{
-			QuitButton->SetVisibility(ESlateVisibility::Collapsed);	
-		}
+		QuitButton->OnClicked.AddDynamic(this, &ULobby::OnQuit);
 	}
 	
 	SwitchPlayButton(false);

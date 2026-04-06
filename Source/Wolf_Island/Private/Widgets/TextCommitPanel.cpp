@@ -10,6 +10,8 @@ void UTextCommitPanel::NativeConstruct()
 {
 	Super::NativeConstruct();
 	
+	UE_LOG(LogTemp, Warning, TEXT("[TCP] TPC CREATED"));
+	
 	CommitButton->OnClicked.AddDynamic(this, &UTextCommitPanel::OnCommitClickedEvent);
 	
 	CancelButton->OnClicked.AddDynamic(this, &UTextCommitPanel::OnCancelClickedEvent);
