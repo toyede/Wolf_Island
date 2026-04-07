@@ -18,6 +18,7 @@ class APatrolRoute;
 class UAnimMontage;
 class UAttackCollisionComponent;
 class UDamageType;
+class APickup;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHitResponse); // 맞을 때 피격 모션 바인딩용
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnThrowEnd); // 투척 공격 끝났음을 알리는 용도
@@ -296,6 +297,20 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	void ApplyDeadState();
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dead|DropItem")
+	TSubclassOf<APickup> DropItemClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Dead|DropItem")
+	FDataTableRowHandle DropItemHandle;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Dead|DropItem")
+	int32 MinDropAmount = 1;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Dead|DropItem")
+	int32 MaxDropAmount = 1;
+
+	void DropItem();
 
 public:
 	virtual USkeletalMeshComponent* GetAttackMesh() const override

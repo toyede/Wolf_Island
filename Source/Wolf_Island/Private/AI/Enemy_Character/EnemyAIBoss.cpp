@@ -68,6 +68,16 @@ void AEnemyAIBoss::BeginPlay()
 		AttackCollisionComponent->OnHitActor.AddUObject(this, &AEnemyAIBoss::OnAttackHit);
 		AttackCollisionComponent->AddIgnoredActor(this);
 	}
+
+	if (StatueSpawnPoints.IsEmpty())
+	{
+		TArray<AActor*> Found;
+		UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("StatueSpawn"), Found);
+		for (AActor* A : Found)
+		{
+			StatueSpawnPoints.Add(A);
+		}
+	}
 }
 
 void AEnemyAIBoss::EndPlay(const EEndPlayReason::Type EndPlayReason)
