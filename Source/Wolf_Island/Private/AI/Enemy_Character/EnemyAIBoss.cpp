@@ -40,13 +40,14 @@ AEnemyAIBoss::AEnemyAIBoss()
 
 void AEnemyAIBoss::StartBossCombat()
 {
+	if (!HasAuthority()) return;
 	if (bIsCombatActive) return;
 
 	bIsCombatActive = true;
 
-	if (AEnemyAIBossController* AIC = Cast<AEnemyAIBossController>(GetController()))
+	if (AEnemyAIBossController* BossAIC = Cast<AEnemyAIBossController>(GetController()))
 	{
-		AIC->StartBehaviorTree();
+		BossAIC->StartBehaviorTree();
 	}
 
 	OnBossCombatStart.Broadcast(this);
@@ -67,6 +68,41 @@ void AEnemyAIBoss::BeginPlay()
 		AttackCollisionComponent->OnHitActor.AddUObject(this, &AEnemyAIBoss::OnAttackHit);
 		AttackCollisionComponent->AddIgnoredActor(this);
 	}
+}
+
+void AEnemyAIBoss::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// 타이머 클리어
+	GetWorldTimerManager().ClearTimer(GroggyTimerHandle);
+	GetWorldTimerManager().ClearTimer(SpawnRetryTimerHandle);
+
+	// 석상 제거
+	TArray<AActor*> Statues;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABossStatue::StaticClass(), Statues);
+	for (AActor* Statue : Statues)
+	{
+		Statue->Destroy();
+	}
+
+	// 전조 이펙트 제거
+	TArray<AActor*> Forewarnings;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AStatueForewarning::StaticClass(), Forewarnings);
+	for (AActor* FW : Forewarnings)
+	{
+		FW->Destroy();
+	}
+
+	// 소환된 늑대 제거
+	for (auto& WolfWeak : AliveSummonedWolves)
+	{
+		if (ASummonedWolf* Wolf = WolfWeak.Get())
+		{
+			Wolf->Destroy();
+		}
+	}
+	AliveSummonedWolves.Empty();
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void AEnemyAIBoss::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
