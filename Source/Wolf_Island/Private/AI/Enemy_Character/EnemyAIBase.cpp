@@ -548,6 +548,8 @@ float AEnemyAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
             if (UAnimInstance* WolfAnim = WolfMesh->GetAnimInstance())
                 WolfAnim->Montage_SetEndDelegate(EmptyDelegate, nullptr);
         }
+
+		DropItem();
     }
     else
     {
