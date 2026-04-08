@@ -10,7 +10,6 @@ class UBoxComponent;
 class UStaticMeshComponent;
 class AMainPlayer;
 
-// 포탈 타서 이동했을 때의 이벤트 델리게이트	
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPortalTriggered);
 
 UCLASS()
@@ -38,6 +37,9 @@ public:
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Portal")
 	AActor* TargetPortal;
 
+	// Saved ID of the target portal (used to re-link after load)
+	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Portal", SaveGame)
+	FString TargetPortalID;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal", meta = (GetOptions = "GetRecordIDOptions"), SaveGame)
 	FString RequiredRecordID;
 
@@ -52,15 +54,14 @@ public:
 
 	UFUNCTION()
 	TArray<FString> GetRecordIDOptions() const;
-
 	virtual void BeginPlay() override;
 
+	virtual void LoadData_Implementation(const FActorSaveData& InData) override;
 	virtual void Interact_Implementation(AActor* Interactor) override;
 
 	UPROPERTY(BlueprintAssignable, Category = "Delegate")
 	FOnPortalTriggered OnPortalTriggered;
 
-	// 포탈마다 다름. 인스턴수 변수
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Portal")
 	bool bRequiresBossDefeat = false;
 
@@ -94,7 +95,9 @@ private:
 	bool AreAllPlayersInVolume() const;
 	void TeleportAllPlayers();
 	void TeleportPlayer(AActor* Interactor);
-
+	FString ReadPortalIDFromActor(const AActor* Actor) const;
+	FString GetPortalID() const;
+	void ResolveTargetPortal();
 	UPROPERTY()
 	TSet<TWeakObjectPtr<AMainPlayer>> PlayersInVolume;
 };
