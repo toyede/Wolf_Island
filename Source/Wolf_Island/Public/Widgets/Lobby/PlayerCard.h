@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "PlayerCard.generated.h"
 
+class UIconButton;
 class UButton;
 class AMainPlayerState;
 class UTextBlock;
@@ -26,10 +27,15 @@ public:
 	UTextBlock* PlayerReady;
 	
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
-	UButton* KickButton;
+	UIconButton* KickButton;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	APlayerController* PlayerController;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FSlateColor DefaultNicknameColor;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FSlateColor ReadyNicknameColor;
 	
 	UFUNCTION(BlueprintCallable)
 	void SetReady(bool IsReady);

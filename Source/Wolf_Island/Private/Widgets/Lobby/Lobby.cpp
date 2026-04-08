@@ -5,6 +5,7 @@
 
 #include "Character/MainPlayer.h"
 #include "Components/Button.h"
+#include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Games/LobbyPlayerController.h"
 #include "Games/MainGameInstance.h"
@@ -12,6 +13,7 @@
 #include "Games/MainPlayerState.h"
 #include "Games/GameModes/LobbyGameMode.h"
 #include "Widgets/BaseButton.h"
+#include "Widgets/IconButton.h"
 #include "Widgets/RoleSelection/RoleButton.h"
 
 void ULobby::NativeConstruct()
@@ -168,9 +170,9 @@ void ULobby::RefreshInfo()
 		
 			if (FoundRoleData)
 			{
+				RoleThumbnail->SetBrushFromTexture(FoundRoleData->RoleThumbnail);
 				RoleName->SetText(FoundRoleData->RoleName);
 				RoleDescription->SetText(FoundRoleData->RoleDescription);
-				
 			}
 		}
 	} else
