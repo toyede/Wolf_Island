@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Games/GameModes/MainGameMode.h"
@@ -198,11 +198,12 @@ void AMainGameMode::SaveWorld()
 	
 	Save->SavedActors.Empty();
 
-	// 레시피 저장 코드 실행
+	// 레시피 저장 코드 실행 && 알 수 없는 기록 저장 코드 실행
 	if (AMainGameState* GS = GetGameState<AMainGameState>())
-	{
-		Save->SavedSharedRecipes = GS->SharedRecipes;
-	}
+{
+	Save->SavedSharedRecipes = GS->SharedRecipes;
+	Save->SavedUnlockedRecordIDs = GS->UnlockedRecordIDs;
+}
 	
 	//각 액터의 저장 코드 실행
 	for (AActor* Actor : SaveActors)
@@ -355,14 +356,15 @@ void AMainGameMode::LoadWorldFromSave(UMainSaveGame* Save)
 	// 공유 레시피 로드
 	if (AMainGameState* GS = GetWorld()->GetGameState<AMainGameState>())
 	{
-		// 1. 공유 레시피 초기화
+		// 레시피
 		GS->SharedRecipes.Empty();
-
-		// 2. 세이브 데이터 로드
 		GS->SharedRecipes = Save->SavedSharedRecipes;
-
-		// 3. UI 갱신
 		GS->OnSharedRecipesChanged.Broadcast();
+
+		// 알 수 없는 기록
+		GS->UnlockedRecordIDs.Empty();
+		GS->UnlockedRecordIDs = Save->SavedUnlockedRecordIDs;
+		GS->OnUnlockedRecordsChanged.Broadcast();
 	}
 }
 
