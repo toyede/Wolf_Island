@@ -8,6 +8,7 @@
 #include "Data/ItemDataStruct.h"
 #include "InventorySlot.generated.h"
 
+
 class AMainPlayer;
 class UInventoryComponent;
 /**
@@ -19,6 +20,7 @@ class UInventoryToolTip;
 class UTextBlock;
 class UBorder;
 class UImage;
+class UProgressBar;
 
 UCLASS()
 class WOLF_ISLAND_API UInventorySlot : public UUserWidget
@@ -76,6 +78,9 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
 	UTextBlock* ItemAmount;
+
+	UPROPERTY(VisibleAnywhere, meta=(BindWidget))
+	UProgressBar* DurabilityBar = nullptr;
 
 	UPROPERTY(VisibleAnywhere)
 	bool CanDragDrop = true;
