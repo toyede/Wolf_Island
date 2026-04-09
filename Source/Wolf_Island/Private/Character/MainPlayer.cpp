@@ -1878,6 +1878,37 @@ void AMainPlayer::ProcessAttackHit(const FHitResult& HitResult, float DamageAmou
 			GetController(), 
 			this, 
 			UDamageType::StaticClass());
+
+		FItemBaseData HoldingItem = GetHoldingItemReference();
+
+		if (HoldingItem.IsValid())
+		{
+			FItemData* ItemData = InventoryComponent->GetItemData(HoldingItem);
+
+			if (ItemData)
+			{
+				const bool bIsEquipment =
+					(ItemData->Type == EItemType::EQUIPMENT) ||
+					(ItemData->Type == EItemType::FOOD_EQUIPMENT);
+
+				if (bIsEquipment)
+				{
+					// 현재 핫바 슬롯 기준으로 내구도 감소
+					FItemBaseData SlotItem = InventoryComponent->GetItemAtIndex(HotBarIndex);
+					SlotItem.CurrentDurability = FMath::Max(0.0f, SlotItem.CurrentDurability - 1.0f);
+
+					if (SlotItem.CurrentDurability <= 0.0f)
+					{
+						InventoryComponent->Request_RemoveItemAmountAtSlot(HotBarIndex, 1);
+					}
+					else
+					{
+						// 내구도만 갱신
+						InventoryComponent->Request_SetItemAtSlot(HotBarIndex, SlotItem);
+					}
+				}
+			}
+		}
                 
 		UE_LOG(LogTemp, Warning, TEXT("Hit Actor: %s"), *HitActor->GetName());
 	}
