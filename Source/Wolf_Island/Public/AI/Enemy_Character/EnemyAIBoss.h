@@ -15,6 +15,7 @@ class UStatusComponent;
 class AStatueForewarning;
 class ABossStatue;
 class ASummonedWolf;
+class AMainPlayer;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBossAttackEnd);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBossRushEnd);
@@ -74,6 +75,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void EndBossCombat();
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	TArray<TObjectPtr<AMainPlayer>> BossParticipants;
 
 protected:
 	virtual void BeginPlay() override;

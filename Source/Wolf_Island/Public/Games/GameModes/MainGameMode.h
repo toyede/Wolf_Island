@@ -9,6 +9,9 @@
 
 class AMainPlayerState;
 class UMainGameInstance;
+class APortalActor;
+class AEnemyAIBoss;
+class AMainPlayer;
 /**
  * 
  */
@@ -59,6 +62,8 @@ public:
 	virtual void StartPlay() override;
 	
 	virtual void BeginPlay() override;
+
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	
@@ -122,5 +127,20 @@ public:
 	//이건 플레이어가 죽었을 때 할 동작들. 여기선 싱글에서 죽었을 때를 구현하고, MultiGameMode에서 멀티에서 죽얼을 때 구현.
 	UFUNCTION(BlueprintCallable)
 	virtual void HandlePlayerDeath(AController* DeadPlayerController);
+
+	UFUNCTION()
+	void HandlePortalTriggered(APortalActor* TriggeredPortal);
+
+	UFUNCTION()
+	void HandleManagedBossDestroyed(AActor* DestroyedActor);
+
+protected:
+	void BindPortalDelegates();
+	void UnbindPortalDelegates();
+	void SpawnBossForPortal(APortalActor* TriggeredPortal, const TArray<AMainPlayer*>& PartyMembers);
+
+private:
+	TSet<TWeakObjectPtr<APortalActor>> BoundPortals;
+	TMap<TWeakObjectPtr<APortalActor>, TWeakObjectPtr<AEnemyAIBoss>> ActiveBossByPortal;
 
 };

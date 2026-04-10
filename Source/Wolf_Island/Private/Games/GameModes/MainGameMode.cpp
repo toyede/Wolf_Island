@@ -17,8 +17,10 @@
 #include "Games/MainSaveGame.h"
 #include "Games/SaveInterface.h"
 #include "Games/GameModes/MultiGameMode.h"
+#include "Interaction/PortalActor.h"
 #include "Kismet/GameplayStatics.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
+#include "AI/Enemy_Character/EnemyAIBoss.h"
 
 void AMainGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
 {
@@ -84,13 +86,151 @@ void AMainGameMode::StartPlay()
 		AutoSaveInterval * 60.0f,
 		true);
 	}
+
+	BindPortalDelegates();
 }
 
 void AMainGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+
+}
+
+void AMainGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	UnbindPortalDelegates();
+	ActiveBossByPortal.Empty();
+
+	Super::EndPlay(EndPlayReason);
+}
+
+void AMainGameMode::BindPortalDelegates()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (UWorld* World = GetWorld())
+	{
+		for (TActorIterator<APortalActor> It(World); It; ++It)
+		{
+			APortalActor* Portal = *It;
+			if (!IsValid(Portal) || BoundPortals.Contains(Portal))
+			{
+				continue;
+			}
+
+			Portal->OnPortalTriggered.AddDynamic(this, &AMainGameMode::HandlePortalTriggered);
+			BoundPortals.Add(Portal);
+		}
+	}
+}
+
+void AMainGameMode::UnbindPortalDelegates()
+{
+	for (const TWeakObjectPtr<APortalActor>& PortalPtr : BoundPortals)
+	{
+		if (APortalActor* Portal = PortalPtr.Get())
+		{
+			Portal->OnPortalTriggered.RemoveDynamic(this, &AMainGameMode::HandlePortalTriggered);
+		}
+	}
+
+	BoundPortals.Empty();
+}
+
+void AMainGameMode::HandlePortalTriggered(APortalActor* TriggeredPortal)
+{
+	if (!HasAuthority() || !IsValid(TriggeredPortal))
+	{
+		return;
+	}
+
+	SpawnBossForPortal(TriggeredPortal, TriggeredPortal->GetLastTriggeredPartyMembers());
+}
+
+void AMainGameMode::SpawnBossForPortal(APortalActor* TriggeredPortal, const TArray<AMainPlayer*>& PartyMembers)
+{
+	if (!IsValid(TriggeredPortal) || !TriggeredPortal->BossClassToSpawn)
+	{
+		return;
+	}
+
+	if (TWeakObjectPtr<AEnemyAIBoss>* ExistingBossPtr = ActiveBossByPortal.Find(TriggeredPortal))
+	{
+		if (ExistingBossPtr->IsValid())
+		{
+			return;
+		}
+
+		ActiveBossByPortal.Remove(TriggeredPortal);
+	}
+
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	FVector SpawnLocation;
+	FRotator SpawnRotation;
 	
-	
+	if (TriggeredPortal->BossSpawnPoint)
+	{
+		SpawnLocation = TriggeredPortal->BossSpawnPoint->GetActorLocation();
+		SpawnRotation = TriggeredPortal->BossSpawnPoint->GetActorRotation();
+	}
+	else
+	{
+		SpawnLocation = TriggeredPortal->BossSpawnTransform.GetLocation();
+		SpawnRotation = TriggeredPortal->BossSpawnTransform.GetRotation().Rotator();
+	}
+	AEnemyAIBoss* SpawnedBoss = GetWorld()->SpawnActor<AEnemyAIBoss>(
+		TriggeredPortal->BossClassToSpawn,
+		SpawnLocation,
+		SpawnRotation,
+		Params
+	);
+
+	if (!IsValid(SpawnedBoss))
+	{
+		return;
+	}
+
+	ActiveBossByPortal.Add(TriggeredPortal, SpawnedBoss);
+	SpawnedBoss->OnDestroyed.AddDynamic(this, &AMainGameMode::HandleManagedBossDestroyed);
+
+	if (IsValid(TriggeredPortal->ExitPortal))
+	{
+		SpawnedBoss->OnBossCombatEnd.AddDynamic(TriggeredPortal->ExitPortal, &APortalActor::OnBossDefeated);
+	}
+
+	SpawnedBoss->BossParticipants.Reset();
+	for (AMainPlayer* PartyMember : PartyMembers)
+	{
+		if (IsValid(PartyMember))
+		{
+			SpawnedBoss->BossParticipants.AddUnique(PartyMember);
+		}
+	}
+
+	SpawnedBoss->StartBossCombat();
+}
+
+void AMainGameMode::HandleManagedBossDestroyed(AActor* DestroyedActor)
+{
+	const AEnemyAIBoss* DestroyedBoss = Cast<AEnemyAIBoss>(DestroyedActor);
+	if (!DestroyedBoss)
+	{
+		return;
+	}
+
+	for (auto It = ActiveBossByPortal.CreateIterator(); It; ++It)
+	{
+		if (It.Value().Get() == DestroyedBoss)
+		{
+			It.RemoveCurrent();
+			break;
+		}
+	}
 }
 
 void AMainGameMode::PostLogin(APlayerController* NewPlayer)
