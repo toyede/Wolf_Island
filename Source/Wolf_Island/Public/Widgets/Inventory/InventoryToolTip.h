@@ -34,6 +34,9 @@ public:
 	UPROPERTY(meta=(BindWidget))
 	UTextBlock* ItemWeight;
 
+	UPROPERTY(meta=(BindWidget))
+	UTextBlock* ItemDurability;
+
 protected:
 
 	virtual void NativeConstruct() override;

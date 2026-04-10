@@ -28,7 +28,7 @@ public:
 	class UInventoryComponent* OwnerInventory;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FRecipeData CurrentRecipeData;
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FTimerHandle CraftingTimer;
 	
 	UPROPERTY(BlueprintReadWrite)
@@ -67,7 +67,15 @@ public:
 
 protected:
 	virtual void NativeConstruct() override;
+	
+	virtual void NativeDestruct() override;
 
 	UFUNCTION()
 	void OnCraftButtonClicked();
+	
+	bool StartCraft(FRecipeData RecipeData);
+	
+	void StopCraft();
+	
+	void MakeItem(FRecipeData RecipeData);
 };

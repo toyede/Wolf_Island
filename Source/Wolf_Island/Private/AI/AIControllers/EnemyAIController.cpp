@@ -10,12 +10,12 @@
 #include "Perception/AISenseConfig_Sight.h"
 #include "Perception/AISenseConfig_Hearing.h"
 #include "Perception/AISenseConfig_Damage.h"
-#include "AI/Senses/AISenseConfig_Scent.h"
+//#include "AI/Senses/AISenseConfig_Scent.h"
 
 #include "Perception/AISense_Sight.h"
 #include "Perception/AISense_Hearing.h"
 #include "Perception/AISense_Damage.h"
-#include "AI/Senses/AISense_Scent.h"
+//#include "AI/Senses/AISense_Scent.h"
 
 #include "Kismet/GameplayStatics.h"
 #include "Actors/PatrolRoute.h"
@@ -46,14 +46,14 @@ AEnemyAIController::AEnemyAIController()
 	DamageConfig->SetMaxAge(1.0f);
 
 	// Scent Config
-	ScentConfig = CreateDefaultSubobject<UAISenseConfig_Scent>(TEXT("ScentConfig"));
-	ScentConfig->SetMaxAge(5.0f);
+	/*ScentConfig = CreateDefaultSubobject<UAISenseConfig_Scent>(TEXT("ScentConfig"));
+	ScentConfig->SetMaxAge(5.0f);*/
 
 	// Perception에 등록
 	AIPerceptionComp->ConfigureSense(*SightConfig);
 	AIPerceptionComp->ConfigureSense(*HearingConfig);
 	AIPerceptionComp->ConfigureSense(*DamageConfig);
-	AIPerceptionComp->ConfigureSense(*ScentConfig);
+	/*AIPerceptionComp->ConfigureSense(*ScentConfig);*/
 
 	AIPerceptionComp->SetDominantSense(SightConfig->GetSenseImplementation());
 }
@@ -115,10 +115,10 @@ void AEnemyAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus St
 	{
 		HandleHearing(Actor, Stimulus);
 	}
-	else if (SensedClass == UAISense_Scent::StaticClass())
+	/*else if (SensedClass == UAISense_Scent::StaticClass())
 	{
 		HandleScent(Stimulus);
-	}
+	}*/
 }
 
 void AEnemyAIController::HandleSight(AActor* Actor, const FAIStimulus& Stimulus)
@@ -271,21 +271,21 @@ bool AEnemyAIController::IsFriendlyAggroSource(AActor* SourceActor) const
 	return false;
 }
 
-void AEnemyAIController::HandleScent(const FAIStimulus& Stimulus)
-{
-	if (!Stimulus.WasSuccessfullySensed()) return;
-
-	// 평화롭거나 조사 중일 때만 냄새 반응
-	if (EnemyState == EEnemyState::Passive || EnemyState == EEnemyState::Investigating)
-	{
-		// 냄새 위치 저장
-		if (UBlackboardComponent* BB = GetBlackboardComponent())
-		{
-			BB->SetValueAsVector(PointOfInterestKey, Stimulus.StimulusLocation);
-		}
-		SetEnemyState(EEnemyState::Investigating);
-	}
-}
+//void AEnemyAIController::HandleScent(const FAIStimulus& Stimulus)
+//{
+//	if (!Stimulus.WasSuccessfullySensed()) return;
+//
+//	// 평화롭거나 조사 중일 때만 냄새 반응
+//	if (EnemyState == EEnemyState::Passive || EnemyState == EEnemyState::Investigating)
+//	{
+//		// 냄새 위치 저장
+//		if (UBlackboardComponent* BB = GetBlackboardComponent())
+//		{
+//			BB->SetValueAsVector(PointOfInterestKey, Stimulus.StimulusLocation);
+//		}
+//		SetEnemyState(EEnemyState::Investigating);
+//	}
+//}
 
 bool AEnemyAIController::ShouldSwitchTarget(AActor* NewTarget) const
 {

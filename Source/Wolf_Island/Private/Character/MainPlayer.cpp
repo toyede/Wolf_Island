@@ -1878,9 +1878,44 @@ void AMainPlayer::ProcessAttackHit(const FHitResult& HitResult, float DamageAmou
 			GetController(), 
 			this, 
 			UDamageType::StaticClass());
+
+		FItemBaseData HoldingItem = GetHoldingItemReference();
+
+		if (HoldingItem.IsValid())
+		{
+			FItemData* ItemData = InventoryComponent->GetItemData(HoldingItem);
+
+			if (ItemData)
+			{
+				const bool bIsEquipment =
+					(ItemData->Type == EItemType::EQUIPMENT);
+
+				if (bIsEquipment)
+				{
+					FItemBaseData SlotItem = InventoryComponent->GetItemAtIndex(HotBarIndex);
+
+					SlotItem.CurrentDurability = FMath::Clamp(
+						SlotItem.CurrentDurability - 1.0f,
+						0.0f,
+						SlotItem.MaxDurability
+					);
+
+					if (SlotItem.CurrentDurability <= 0.0f)
+					{
+						InventoryComponent->Request_RemoveItemAmountAtSlot(HotBarIndex, 1);
+					}
+					else
+					{
+						InventoryComponent->Request_SetItemAtSlot(HotBarIndex, SlotItem);
+					}
+				}
+			}
+		}
                 
 		UE_LOG(LogTemp, Warning, TEXT("Hit Actor: %s"), *HitActor->GetName());
 	}
+
+	
 
 	// 2. 폴리지 변환 시도
 	TryConvertFoliageToActor(HitResult, DamageAmount);
@@ -1918,7 +1953,8 @@ bool AMainPlayer::HasRecipe(const FName& RecipeID) const
 	{
 		if (GS->SharedRecipes.Contains(RecipeID)) return true;
 	}
-
+	
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Player doesn't has Recipe %s"), *RecipeID.ToString())
 	return false;
 }
 

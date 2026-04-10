@@ -25,7 +25,7 @@ public:
 	UMainSaveGame* CurrenSaveGame;
 	
 	UPROPERTY(BlueprintReadWrite)
-	int32 MaxSlotIndex = 5;
+	int32 MaxSlotIndex = 10;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	TSoftObjectPtr<UWorld> SinglePlayWorld;

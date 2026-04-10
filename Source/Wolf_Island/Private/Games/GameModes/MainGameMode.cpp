@@ -1,9 +1,10 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Games/GameModes/MainGameMode.h"
 
 #include "EngineUtils.h"
+#include "Actors/BossEntryPlayerStart.h"
 #include "Character/MainPlayer.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/InventoryComponent.h"
@@ -198,11 +199,12 @@ void AMainGameMode::SaveWorld()
 	
 	Save->SavedActors.Empty();
 
-	// 레시피 저장 코드 실행
+	// 레시피 저장 코드 실행 && 알 수 없는 기록 저장 코드 실행
 	if (AMainGameState* GS = GetGameState<AMainGameState>())
-	{
-		Save->SavedSharedRecipes = GS->SharedRecipes;
-	}
+{
+	Save->SavedSharedRecipes = GS->SharedRecipes;
+	Save->SavedUnlockedRecordIDs = GS->UnlockedRecordIDs;
+}
 	
 	//각 액터의 저장 코드 실행
 	for (AActor* Actor : SaveActors)
@@ -355,14 +357,15 @@ void AMainGameMode::LoadWorldFromSave(UMainSaveGame* Save)
 	// 공유 레시피 로드
 	if (AMainGameState* GS = GetWorld()->GetGameState<AMainGameState>())
 	{
-		// 1. 공유 레시피 초기화
+		// 레시피
 		GS->SharedRecipes.Empty();
-
-		// 2. 세이브 데이터 로드
 		GS->SharedRecipes = Save->SavedSharedRecipes;
-
-		// 3. UI 갱신
 		GS->OnSharedRecipesChanged.Broadcast();
+
+		// 알 수 없는 기록
+		GS->UnlockedRecordIDs.Empty();
+		GS->UnlockedRecordIDs = Save->SavedUnlockedRecordIDs;
+		GS->OnUnlockedRecordsChanged.Broadcast();
 	}
 }
 
@@ -385,9 +388,16 @@ void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 	
 	if (PlayerCharacter)
 	{
-		PlayerSaveData.Transform = PlayerCharacter->GetActorTransform();
-		PlayerSaveData.Velocity = PlayerCharacter->GetVelocity();
-		PlayerSaveData.ControlRotation = PlayerCharacter->GetControlRotation();
+		//보스전 중이라면? - 보스전 입구에서 리스폰
+		if (PlayerState->GetIsBossStage())
+		{
+			PlayerSaveData.Transform = GetBossStageEnterPoint(PlayerState->GetOwningController());
+		} else
+		{
+			PlayerSaveData.Transform = PlayerCharacter->GetActorTransform();
+			PlayerSaveData.Velocity = PlayerCharacter->GetVelocity();
+			PlayerSaveData.ControlRotation = PlayerCharacter->GetControlRotation();
+		}
 	}
 	
 	//플레이어가 인간인 상태에서 MainPlayer 액터 데이터를 저장.
@@ -497,6 +507,8 @@ bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState, bool IsDead)
 		PlayerCharacter->GetCharacterMovement()->Velocity = PlayerSaveData.Velocity;
 		PlayerCharacter->GetController()->SetControlRotation(PlayerSaveData.ControlRotation);
 	}
+	
+	PlayerState->SetIsBossStage(false);
 	
 	if (AMainPlayer* TargetPlayer = Cast<AMainPlayer>(PlayerCharacter))
 	{
@@ -651,6 +663,23 @@ void AMainGameMode::LoadCurrentSave()
 	LoadPlayers();
 }
 
+FTransform AMainGameMode::GetBossStageEnterPoint(AController* Controller)
+{
+	TArray<AActor*> Actors;
+	
+	//월드에서 보스전 입구 스폰 포인트 찾기
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABossEntryPlayerStart::StaticClass(), Actors);
+	
+	//없으면 기본 리스폰 포인트로
+	if (Actors.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] NO ACTORS"));
+		return FindPlayerStart(Controller)->GetActorTransform();
+	}
+	
+	return Actors[FMath::RandRange(0, Actors.Num() - 1)]->GetActorTransform();
+}
+
 //싱글에서 죽었을 때
 void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 {
@@ -684,7 +713,6 @@ void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] NO MORNING SAVE EXIST"));
 	}
-
 }
 
 

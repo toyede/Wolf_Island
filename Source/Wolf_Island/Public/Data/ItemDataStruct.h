@@ -119,6 +119,9 @@ struct FItemBaseData
 	
 	UPROPERTY(BlueprintReadWrite, SaveGame)
 	float CurrentDurability = 0.0f;
+
+	UPROPERTY(BlueprintReadWrite, SaveGame)
+	float MaxDurability = 0.0f;
 	
 	void SetAmount(const int32 NewAmount) { Amount = NewAmount; };
 	

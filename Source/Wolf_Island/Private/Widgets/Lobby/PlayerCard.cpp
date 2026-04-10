@@ -3,11 +3,11 @@
 
 #include "Widgets/Lobby/PlayerCard.h"
 
-#include "Components/Button.h"
 #include "Components/TextBlock.h"
 #include "GameFramework/GameSession.h"
 #include "Games/MainPlayerState.h"
 #include "Games/GameModes/LobbyGameMode.h"
+#include "Widgets/IconButton.h"
 
 void UPlayerCard::NativeConstruct()
 {
@@ -30,6 +30,7 @@ void UPlayerCard::NativeConstruct()
 void UPlayerCard::SetReady(bool IsReady)
 {
 	PlayerReady->SetOpacity(IsReady ? 1.0f : 0.0f);
+	PlayerName->SetColorAndOpacity(IsReady ? ReadyNicknameColor : DefaultNicknameColor);
 }
 
 void UPlayerCard::UpdateCard(AMainPlayerState* PlayerState)

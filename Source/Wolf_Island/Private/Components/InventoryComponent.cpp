@@ -579,6 +579,23 @@ FItemBaseData UInventoryComponent::CreateItemByID(FName ItemID, int32 Amount)
 	NewItem.ItemID = ItemData->ID;
 	NewItem.SetAmount(Amount);
 
+	if (ItemData)
+	{
+		const bool bIsEquipment =
+			(ItemData->Type == EItemType::EQUIPMENT);
+
+		if (bIsEquipment)
+		{
+			NewItem.MaxDurability = ItemData->NumericData.Durability;
+			NewItem.CurrentDurability = NewItem.MaxDurability;
+		}
+		else
+		{
+			NewItem.MaxDurability = 0.0f;
+			NewItem.CurrentDurability = 0.0f;
+		}
+	}
+
 	//아이템 데이터 반환
 	return NewItem;
 }

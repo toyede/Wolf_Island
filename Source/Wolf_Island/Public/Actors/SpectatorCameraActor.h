@@ -20,7 +20,7 @@ public:
 	AActor* TargetActor;
 
 	float InterpSpeed = 15.0f;
-	FVector Offset = FVector(0.0f, 0.0f, 75.f); // 카메라 높이
+	FVector Offset = FVector(-50.0f, 0.0f, 110.f); // 카메라 높이
 
 protected:
 	virtual void BeginPlay() override;

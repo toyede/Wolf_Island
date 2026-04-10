@@ -177,9 +177,6 @@ void AMultiGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE][MULTI] HANDLE PLAYER DEATH"));
 	
-	//RestartPlayer(DeadPlayerController);
-	//AfterRestartPlayer(DeadPlayerController, true);
-	
 	//기절 안풀어줘서 죽어버린다면?
 	//1. 스탯 30씩만 준다. - 감염상태 유지. 
 	if (AMainPlayer* Player = Cast<AMainPlayer>(DeadPlayerController->GetPawn()))
@@ -188,7 +185,16 @@ void AMultiGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 	}
 	
 	//2. 리스폰 지점으로 스폰
-	AActor* StartSpot = FindPlayerStart(DeadPlayerController);
-	DeadPlayerController->GetPawn()->SetActorTransform(StartSpot->GetActorTransform());
-	
+	//보스 전 중 죽음 -> 보스전 입구에서 리스폰
+	AMainPlayerState* PS = Cast<AMainPlayerState>(DeadPlayerController->PlayerState);
+	if (PS->GetIsBossStage())
+	{
+		PS->SetIsBossStage(false);
+		FTransform SpawnTransform = GetBossStageEnterPoint(DeadPlayerController);
+		DeadPlayerController->GetPawn()->SetActorTransform(SpawnTransform);
+	} else
+	{
+		AActor* StartSpot = FindPlayerStart(DeadPlayerController);
+		DeadPlayerController->GetPawn()->SetActorTransform(StartSpot->GetActorTransform());
+	}
 }
