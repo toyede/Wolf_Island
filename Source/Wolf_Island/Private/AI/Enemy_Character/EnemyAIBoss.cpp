@@ -78,6 +78,11 @@ void AEnemyAIBoss::BeginPlay()
 			StatueSpawnPoints.Add(A);
 		}
 	}
+	
+	if (StatusComponent)
+	{
+		StatusComponent->CurrentHP = StatusComponent->MaxHP;
+	}
 }
 
 void AEnemyAIBoss::EndPlay(const EEndPlayReason::Type EndPlayReason)

@@ -2,10 +2,11 @@
 
 
 #include "AI/Services/UBTService_UpdateTargetInfo.h"
+#include "AI/Enemy_Character/EnemyAIBoss.h"
 #include "AIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Character/MainPlayer.h"
-#include "Kismet/GameplayStatics.h"
+#include "Components/StatusComponent.h"
 
 UUBTService_UpdateTargetInfo::UUBTService_UpdateTargetInfo()
 {
@@ -24,30 +25,77 @@ void UUBTService_UpdateTargetInfo::TickNode(UBehaviorTreeComponent& OwnerComp, u
 	APawn* BossPawn = AIC->GetPawn();
 	if (!BossPawn) return;
 
+	AEnemyAIBoss* Boss = Cast<AEnemyAIBoss>(BossPawn);
+	if (!Boss) return;
+
 	UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent();
 	if (!BB) return;
 
-	AActor* CurrentTarget = Cast<AActor>(BB->GetValueAsObject(TargetKey.SelectedKeyName));
-
-	if (!CurrentTarget)
+	TArray<AMainPlayer*> ValidParticipants;
+	for (AMainPlayer* Participant : Boss->BossParticipants)
 	{
-		TArray<AActor*> Players;
-		UGameplayStatics::GetAllActorsOfClass(BossPawn->GetWorld(), AMainPlayer::StaticClass(), Players);
-	
-		if (Players.Num() > 0)
+		if (!IsValid(Participant) || !IsValid(Participant->StatusComponent))
 		{
-			int32 RandomIndex = FMath::RandRange(0, Players.Num() - 1);
-
-			CurrentTarget = Players[RandomIndex];
-			BB->SetValueAsObject(TargetKey.SelectedKeyName, CurrentTarget);
-
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Green, FString::Printf(TEXT("New Target: %s"), *CurrentTarget->GetName()));
+			continue;
 		}
+
+		if (Participant->StatusComponent->IsDead || Participant->StatusComponent->CurrentHP <= 0.0f)
+		{
+			continue;
+		}
+
+		ValidParticipants.Add(Participant);
 	}
 
-	if (CurrentTarget)
+	if (ValidParticipants.Num() == 0)
 	{
-		float Distance = FVector::Dist(BossPawn->GetActorLocation(), CurrentTarget->GetActorLocation());
+		BB->ClearValue(TargetKey.SelectedKeyName);
+		BB->SetValueAsFloat(DistanceKey.SelectedKeyName, TNumericLimits<float>::Max());
+		return;
+	}
+
+	AActor* CurrentTarget = Cast<AActor>(BB->GetValueAsObject(TargetKey.SelectedKeyName));
+	const bool bHasValidCurrentTarget = CurrentTarget && ValidParticipants.Contains(Cast<AMainPlayer>(CurrentTarget));
+
+	AActor* SelectedTarget = CurrentTarget;
+	if (!bHasValidCurrentTarget || bRetargetEveryTick)
+	{
+		switch (SelectionMode)
+		{
+		case EBossTargetSelectionMode::LowestHPParticipant:
+			{
+				AMainPlayer* LowestHPPlayer = nullptr;
+				float LowestHP = TNumericLimits<float>::Max();
+
+				for (AMainPlayer* Candidate : ValidParticipants)
+				{
+					const float CandidateHP = Candidate->StatusComponent->CurrentHP;
+					if (!LowestHPPlayer || CandidateHP < LowestHP)
+					{
+						LowestHP = CandidateHP;
+						LowestHPPlayer = Candidate;
+					}
+				}
+
+				SelectedTarget = LowestHPPlayer;
+			}
+			break;
+
+		case EBossTargetSelectionMode::RandomParticipant:
+		default:
+			{
+				const int32 RandomIndex = FMath::RandRange(0, ValidParticipants.Num() - 1);
+				SelectedTarget = ValidParticipants[RandomIndex];
+			}
+			break;
+		}
+
+		BB->SetValueAsObject(TargetKey.SelectedKeyName, SelectedTarget);
+	}
+
+	if (SelectedTarget)
+	{
+		const float Distance = FVector::Dist(BossPawn->GetActorLocation(), SelectedTarget->GetActorLocation());
 		BB->SetValueAsFloat(DistanceKey.SelectedKeyName, Distance);
 	}
 }
