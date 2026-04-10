@@ -41,6 +41,8 @@ public:
 	UPROPERTY(BlueprintReadWrite)
 	bool IsMultiPanel = false;
 	
+	virtual void NativeOnInitialized() override;
+	
 	virtual void NativeConstruct() override;
 	
 	UFUNCTION(BlueprintCallable)

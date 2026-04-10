@@ -19,6 +19,10 @@ class WOLF_ISLAND_API AMainPlayerState : public APlayerState
 	UPROPERTY(Replicated)
 	bool IsReady = false;
 	
+	//보스전 중인지 체크하는 함수수수수퍼노바
+	UPROPERTY(Replicated)
+	bool IsBossStage = false;
+	
 	UPROPERTY(Replicated)
 	ECharacterRole PlayerRole = ECharacterRole::NONE;
 	
@@ -59,6 +63,12 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool GetIsReady() const { return IsReady; };
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	bool GetIsBossStage() const { return IsBossStage; };
+	
+	UFUNCTION(BlueprintCallable)
+	void SetIsBossStage(bool NewState) { IsBossStage = NewState; };
 	
 	UFUNCTION(BlueprintCallable)
 	void PrintItems(float DeltaTime);

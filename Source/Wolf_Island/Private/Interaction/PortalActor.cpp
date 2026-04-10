@@ -13,6 +13,7 @@
 #include "GameFramework/PlayerState.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "AI/Enemy_Character/EnemyAIBoss.h"
+#include "Games/MainPlayerState.h"
 
 APortalActor::APortalActor()
 {
@@ -83,16 +84,19 @@ void APortalActor::Interact_Implementation(AActor* Interactor)
 {
 	if (!HasAuthority())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PORTAL] DOESN'T HAVE AUTHORITY"))
 		return;
 	}
 
 	if (!CanInteract)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PORTAL] CAN'T INTERACT"))
 		return;
 	}
 
 	if (!IsValid(TargetPortal))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PORTAL] TARGET PORTAL IS NOT VALID"))
 		return;
 	}
 
@@ -112,6 +116,9 @@ void APortalActor::Interact_Implementation(AActor* Interactor)
 				GS->AddChattingMessage(Notice);
 			}
 			return;
+		} else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PORTAL] ALL PLAYER READY"))
 		}
 
 		TeleportAllPlayers();
@@ -276,6 +283,11 @@ void APortalActor::TeleportAllPlayers()
 
 	for (APlayerState* PS : GS->PlayerArray)
 	{
+		if (AMainPlayerState* MPS = Cast<AMainPlayerState>(PS))
+		{
+			MPS->SetIsBossStage(true);
+		}
+		
 		if (!PS)
 		{
 			continue;
@@ -317,6 +329,11 @@ void APortalActor::TeleportPlayer(AActor* Interactor)
 	if (!Pawn)
 	{
 		return;
+	}
+	
+	if (AMainPlayerState* MPS = Cast<AMainPlayerState>(Pawn->GetPlayerState()))
+	{
+		MPS->SetIsBossStage(true);
 	}
 
 	const FVector TargetLocation = TargetPortal->GetActorLocation();

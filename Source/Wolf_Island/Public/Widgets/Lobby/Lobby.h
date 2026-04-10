@@ -6,6 +6,8 @@
 #include "Blueprint/UserWidget.h"
 #include "Lobby.generated.h"
 
+class UImage;
+class UIconButton;
 class UBaseButton;
 class ALobbyPlayerController;
 class UTextBlock;
@@ -36,8 +38,10 @@ public:
 	UBaseButton* StartButton;
 	
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
-	UButton* QuitButton;
+	UIconButton* QuitButton;
 	
+	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
+	UImage* RoleThumbnail;
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
 	UTextBlock* RoleName;
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)

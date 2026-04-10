@@ -14,11 +14,20 @@
 
 //귀찮으니 최대 슬롯은 5개로 제한함.
 
+void USaveSlotPanel::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+	
+	if (AddSlotButton)
+	{
+		AddSlotButton->OnClicked.RemoveAll(this);
+		AddSlotButton->OnClicked.AddUniqueDynamic(this, &USaveSlotPanel::OnAddButtonClicked);
+	}
+}
+
 void USaveSlotPanel::NativeConstruct()
 {
 	Super::NativeConstruct();
-	
-	AddSlotButton->OnClicked.AddDynamic(this, &USaveSlotPanel::OnAddButtonClicked);
 	
 	MainGameInstance = Cast<UMainGameInstance>(GetGameInstance());
 }
@@ -74,7 +83,13 @@ void USaveSlotPanel::LoadSingleSlots()
 	{
 		if (AddSlotButton)
 		{
-			SlotBox->AddChild(AddSlotButton);
+			AddSlotButton->SetVisibility(ESlateVisibility::Visible);
+		}
+	} else
+	{
+		if (AddSlotButton)
+		{
+			AddSlotButton->SetVisibility(ESlateVisibility::Collapsed);
 		}
 	}
 }
@@ -130,18 +145,25 @@ void USaveSlotPanel::LoadMultiSlots()
 	{
 		if (AddSlotButton)
 		{
-			SlotBox->AddChild(AddSlotButton);
+			AddSlotButton->SetVisibility(ESlateVisibility::Visible);
+		}
+	} else
+	{
+		if (AddSlotButton)
+		{
+			AddSlotButton->SetVisibility(ESlateVisibility::Collapsed);
 		}
 	}
 }
 
 void USaveSlotPanel::OnAddButtonClicked()
 {
+	UE_LOG(LogTemp, Warning, TEXT("NEW GAME CLICKED"))
 	UTextCommitPanel* TextCommitPanel = CreateWidget<UTextCommitPanel>(GetWorld(), TextCommitPanelClass);
+	TextCommitPanel->OnCommitClicked.AddDynamic(this, &USaveSlotPanel::OnCreateCommited);
+	TextCommitPanel->OnCancelClicked.AddDynamic(this, &USaveSlotPanel::OnCancelClicked);
+	TextCommitPanel->AddToViewport();
 	TCP = TextCommitPanel;
-	TCP->OnCommitClicked.AddDynamic(this, &USaveSlotPanel::OnCreateCommited);
-	TCP->OnCancelClicked.AddDynamic(this, &USaveSlotPanel::OnCancelClicked);
-	TCP->AddToViewport();
 }
 
 //새 게임 시작 저장 시퀀스 수정해야 함

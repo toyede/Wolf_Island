@@ -4,6 +4,7 @@
 #include "Games/GameModes/MainGameMode.h"
 
 #include "EngineUtils.h"
+#include "Actors/BossEntryPlayerStart.h"
 #include "Character/MainPlayer.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/InventoryComponent.h"
@@ -385,9 +386,16 @@ void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 	
 	if (PlayerCharacter)
 	{
-		PlayerSaveData.Transform = PlayerCharacter->GetActorTransform();
-		PlayerSaveData.Velocity = PlayerCharacter->GetVelocity();
-		PlayerSaveData.ControlRotation = PlayerCharacter->GetControlRotation();
+		//보스전 중이라면? - 보스전 입구에서 리스폰
+		if (PlayerState->GetIsBossStage())
+		{
+			PlayerSaveData.Transform = GetBossStageEnterPoint(PlayerState->GetOwningController());
+		} else
+		{
+			PlayerSaveData.Transform = PlayerCharacter->GetActorTransform();
+			PlayerSaveData.Velocity = PlayerCharacter->GetVelocity();
+			PlayerSaveData.ControlRotation = PlayerCharacter->GetControlRotation();
+		}
 	}
 	
 	//플레이어가 인간인 상태에서 MainPlayer 액터 데이터를 저장.
@@ -497,6 +505,8 @@ bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState, bool IsDead)
 		PlayerCharacter->GetCharacterMovement()->Velocity = PlayerSaveData.Velocity;
 		PlayerCharacter->GetController()->SetControlRotation(PlayerSaveData.ControlRotation);
 	}
+	
+	PlayerState->SetIsBossStage(false);
 	
 	if (AMainPlayer* TargetPlayer = Cast<AMainPlayer>(PlayerCharacter))
 	{
@@ -651,6 +661,23 @@ void AMainGameMode::LoadCurrentSave()
 	LoadPlayers();
 }
 
+FTransform AMainGameMode::GetBossStageEnterPoint(AController* Controller)
+{
+	TArray<AActor*> Actors;
+	
+	//월드에서 보스전 입구 스폰 포인트 찾기
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABossEntryPlayerStart::StaticClass(), Actors);
+	
+	//없으면 기본 리스폰 포인트로
+	if (Actors.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] NO ACTORS"));
+		return FindPlayerStart(Controller)->GetActorTransform();
+	}
+	
+	return Actors[FMath::RandRange(0, Actors.Num() - 1)]->GetActorTransform();
+}
+
 //싱글에서 죽었을 때
 void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 {
@@ -684,7 +711,6 @@ void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] NO MORNING SAVE EXIST"));
 	}
-
 }
 
 
