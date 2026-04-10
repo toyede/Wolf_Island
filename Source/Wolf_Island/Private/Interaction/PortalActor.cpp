@@ -61,11 +61,6 @@ void APortalActor::BeginPlay()
 		GS->OnUnlockedRecordsChanged.AddDynamic(this, &APortalActor::HandleUnlockedRecordsChanged);
 	}
 
-	if (IsValid(LinkedBoss))
-	{
-		LinkedBoss->OnBossCombatEnd.AddDynamic(this, &APortalActor::OnBossDefeated);
-	}
-
 	if (HasAuthority())
 	{
 		TArray<AActor*> Overlaps;
@@ -175,6 +170,45 @@ TArray<FString> APortalActor::GetRecordIDOptions() const
 	}
 
 	return Options;
+}
+
+void APortalActor::SpawnAndStartBoss()
+{
+	if (!HasAuthority()) return;
+	if (bBossSpawned) return;
+	if (!BossClassToSpawn) return;
+
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	SpawnedBoss = GetWorld()->SpawnActor<AEnemyAIBoss>(
+		BossClassToSpawn,
+		BossSpawnTransform.GetLocation(),
+		BossSpawnTransform.GetRotation().Rotator(),
+		Params
+	);
+
+	if (!SpawnedBoss) return;
+
+	bBossSpawned = true;
+
+	// 출구 포탈에 보스 사망 바인딩
+	if (IsValid(ExitPortal))
+	{
+		SpawnedBoss->OnBossCombatEnd.AddDynamic(ExitPortal, &APortalActor::OnBossDefeated);
+	}
+
+	// 보스 Destroy 시 재도전 가능하도록 리셋
+	SpawnedBoss->OnDestroyed.AddDynamic(this, &APortalActor::OnBossDestroyed);
+
+	// 보스 전투 시작
+	SpawnedBoss->StartBossCombat();
+}
+
+void APortalActor::OnBossDestroyed(AActor* DestroyedActor)
+{
+	SpawnedBoss = nullptr;
+	bBossSpawned = false;
 }
 
 void APortalActor::OnRep_BossDefeated()
@@ -360,6 +394,8 @@ void APortalActor::TeleportAllPlayers()
 	}
 
 	OnPortalTriggered.Broadcast();
+	SpawnAndStartBoss();
+
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Portal Triggered"));
 }
 
@@ -395,6 +431,8 @@ void APortalActor::TeleportPlayer(AActor* Interactor)
 	Offset.Z += SpawnZOffset;
 
 	Pawn->TeleportTo(TargetLocation + Offset, TargetRotation);
+
+	SpawnAndStartBoss();
 }
 
 FString APortalActor::ReadPortalIDFromActor(const AActor* Actor) const

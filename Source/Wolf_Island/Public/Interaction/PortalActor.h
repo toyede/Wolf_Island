@@ -9,6 +9,7 @@
 class UBoxComponent;
 class UStaticMeshComponent;
 class AMainPlayer;
+class AEnemyAIBoss;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPortalTriggered);
 
@@ -68,8 +69,25 @@ public:
 	UPROPERTY(ReplicatedUsing = OnRep_BossDefeated)
 	bool bBossDefeated = false;
 
-	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Portal")
-	class AEnemyAIBoss* LinkedBoss;
+	// 보스 스폰
+	UPROPERTY(EditInstanceOnly, Category = "Boss")
+	TSubclassOf<AEnemyAIBoss> BossClassToSpawn;
+
+	UPROPERTY(EditInstanceOnly, Category = "Boss")
+	FTransform BossSpawnTransform;
+
+	UPROPERTY(EditInstanceOnly, Category = "Boss")
+	TObjectPtr<APortalActor> ExitPortal;
+
+	UPROPERTY()
+	TObjectPtr<AEnemyAIBoss> SpawnedBoss;
+
+	bool bBossSpawned = false;
+
+	void SpawnAndStartBoss();
+
+	UFUNCTION()
+	void OnBossDestroyed(AActor* DestroyedActor);
 
 	UFUNCTION()
 	void OnRep_BossDefeated();
