@@ -50,6 +50,7 @@ void AWerewolfInfected::GetLifetimeReplicatedProps(
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
     DOREPLIFETIME(AWerewolfInfected, CurrentHealth);
+	DOREPLIFETIME(AWerewolfInfected, bIsIncapacitated);
 }
 
 void AWerewolfInfected::Die_Implementation()
@@ -75,6 +76,11 @@ float AWerewolfInfected::TakeDamage(float DamageAmount,
     if (CurrentHealth <= MaxHealth * IncapacitateThreshold)
     {
         HandleIncapacitated();
+    }
+    else
+    {
+        // 살아있다면 피격 리액션 실행
+        HitResponse();
     }
 
     return ActualDamage;
@@ -128,7 +134,10 @@ void AWerewolfInfected::OnRep_Incapacitated()
             DisableInput(PC);
         }
 
-        // TODO: 기절 몽타주 재생
+        if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+        {
+            AnimInstance->Montage_Stop(0.1f);
+        }
     }
 }
 
@@ -272,5 +281,72 @@ void AWerewolfInfected::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterr
     if (!bInterrupted)
     {
         OnAttackEnd.Broadcast();
+    }
+}
+
+void AWerewolfInfected::HitResponse()
+{
+    if (!HasAuthority()) return;
+
+    if (AAIController* AIC = Cast<AAIController>(GetController()))
+    {
+        AIC->StopMovement();
+
+        // Behavior Tree에서 공격이나 추적을 멈추게 할 Blackboard Key 설정 (예: bIsHit)
+        if (UBlackboardComponent* BB = AIC->GetBlackboardComponent())
+        {
+            BB->SetValueAsBool(FName("bIsHit"), true);
+        }
+    }
+
+    Multicast_HitResponse();
+}
+
+void AWerewolfInfected::Multicast_HitResponse_Implementation()
+{
+    // 진행 중인 애니메이션(공격 등) 강제 종료
+    if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+    {
+        AnimInstance->Montage_Stop(0.1f);
+    }
+
+    GetCharacterMovement()->StopMovementImmediately();
+    bIsAttacking = false; // 공격 상태 강제 해제 (공격 콜리전 무효화)
+
+    // 피격 몽타주 재생
+    if (HitMontage)
+    {
+        UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+        if (AnimInstance)
+        {
+            AnimInstance->Montage_Play(HitMontage);
+
+            if (HasAuthority())
+            {
+                FOnMontageEnded EndDelegate;
+                EndDelegate.BindUObject(this, &AWerewolfInfected::OnHitMontageEnded);
+                AnimInstance->Montage_SetEndDelegate(EndDelegate, HitMontage);
+            }
+        }
+    }
+    else
+    {
+        if (HasAuthority())
+        {
+            OnHitMontageEnded(nullptr, false);
+        }
+    }
+}
+
+void AWerewolfInfected::OnHitMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+    if (bIsIncapacitated) return;
+
+    if (AAIController* AIC = Cast<AAIController>(GetController()))
+    {
+        if (UBlackboardComponent* BB = AIC->GetBlackboardComponent())
+        {
+            BB->SetValueAsBool(FName("bIsHit"), false);
+        }
     }
 }

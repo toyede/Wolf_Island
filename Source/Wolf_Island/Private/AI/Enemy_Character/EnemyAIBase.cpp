@@ -20,6 +20,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Perception/AISense_Hearing.h"
 #include "Perception/AISense_Damage.h"
+#include "Item/Pickup.h"
 
 AEnemyAIBase::AEnemyAIBase()
 {
@@ -547,6 +548,8 @@ float AEnemyAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
             if (UAnimInstance* WolfAnim = WolfMesh->GetAnimInstance())
                 WolfAnim->Montage_SetEndDelegate(EmptyDelegate, nullptr);
         }
+
+		DropItem();
     }
     else
     {
@@ -700,5 +703,24 @@ void AEnemyAIBase::OnStateChanged(EEnemyState NewState)
     }
 }
 
+void AEnemyAIBase::DropItem()
+{
+    if (!HasAuthority()) return;
+    if (!DropItemClass) return;
+	if (EnemyForm != EEnemyForm::Wolf) return; // 아이템 드랍은 늑대 형태에서만
 
+    FVector SpawnLocation = GetActorLocation() + FVector(0.f, 0.f, 50.f);
+    FRotator SpawnRotation = FRotator::ZeroRotator;
+
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+    APickup* DroppedItem = GetWorld()->SpawnActor<APickup>(DropItemClass, SpawnLocation, SpawnRotation, SpawnParams);
+
+    if (DroppedItem)
+    {
+        DroppedItem->ItemHandle = DropItemHandle;
+        DroppedItem->InitializePickUp(FMath::RandRange(MinDropAmount, MaxDropAmount));
+    }
+}
 
