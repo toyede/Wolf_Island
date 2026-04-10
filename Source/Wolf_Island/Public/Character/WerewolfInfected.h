@@ -131,4 +131,25 @@ public:
 public:
     virtual USkeletalMeshComponent* GetAttackMesh() const override;
 	virtual UAttackCollisionComponent* GetAttackCollisionComponent() const override;
+
+	// === 피격 처리 ===
+public:
+    // 피격 시 재생할 애니메이션 몽타주
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+    UAnimMontage* HitMontage;
+
+protected:
+    // 피격 처리 (서버 전용)
+    void HitResponse();
+
+    // 피격 연출 (모든 클라이언트)
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_HitResponse();
+
+    // 피격 몽타주 종료 콜백
+    void OnHitMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+    // 기절 시 재생할 애니메이션 몽타주
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+    UAnimMontage* IncapacitatedMontage;
 };

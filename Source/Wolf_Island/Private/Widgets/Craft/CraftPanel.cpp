@@ -25,7 +25,7 @@ void UCraftPanel::SetCraftingMethod(ECraftMethod NewMethod)
 void UCraftPanel::NativeConstruct()
 {
 	Super::NativeConstruct();
-
+	UE_LOG(LogTemp, Warning, TEXT("[CraftPanel] UCraftPanel::NativeConstruct()"));
 	OwnerInventory = GetOwningPlayerPawn()
 		? GetOwningPlayerPawn()->GetComponentByClass<UInventoryComponent>()
 		: nullptr;
@@ -43,18 +43,57 @@ void UCraftPanel::NativeConstruct()
 	RefreshRecipeList();
 }
 
+void UCraftPanel::NativeDestruct()
+{
+	StopCraft();
+	
+	Super::NativeDestruct();
+}
+
 void UCraftPanel::OnCraftButtonClicked()
 {
 	if (OwnerInventory && CurrentRecipeData.ResultID != NAME_None)
 	{
-		if (AMainPlayer* Player = Cast<AMainPlayer>(OwnerInventory->GetOwner()))
-		{
-			Player->Request_StartCraft(CurrentRecipeData);
-		}
-
-		SetCraftButton(CurrentRecipeData);
+		StartCraft(CurrentRecipeData);
+		CraftButton->SetIsEnabled(false);
 	}
 }
+
+bool UCraftPanel::StartCraft(FRecipeData RecipeData)
+{
+	if (OwnerInventory && CurrentRecipeData.ResultID != NAME_None)
+	{
+		GetWorld()->GetTimerManager().SetTimer(
+		CraftingTimer,
+		[this, RecipeData]()
+		{
+			MakeItem(RecipeData);
+		},
+		RecipeData.Duration,
+		false);
+	}
+	
+	return true;
+}
+
+void UCraftPanel::StopCraft()
+{
+	if (GetWorld()->GetTimerManager().IsTimerActive(CraftingTimer))
+	{
+		GetWorld()->GetTimerManager().ClearTimer(CraftingTimer);
+	}
+}
+
+void UCraftPanel::MakeItem(FRecipeData RecipeData)
+{
+	if (AMainPlayer* Player = Cast<AMainPlayer>(OwnerInventory->GetOwner()))
+	{
+		Player->InventoryComponent->Request_MakeItem(CurrentRecipeData);
+	}
+	CraftButton->SetIsEnabled(true);
+	SetCraftButton(CurrentRecipeData);
+}
+
 
 URecipeBlock* UCraftPanel::AddRecipe(FRecipeData Recipe)
 {
@@ -167,6 +206,12 @@ void UCraftPanel::SetRecipeInfo(URecipeBlock* ClickedBlock, FRecipeData RecipeDa
 
 void UCraftPanel::SetCraftButton(FRecipeData RecipeData)
 {
+	if (GetWorld()->GetTimerManager().IsTimerActive(CraftingTimer))
+	{
+		CraftButton->SetIsEnabled(false);
+		return;
+	}
+	
 	if (OwnerInventory->CheckCanMakeRecipe(RecipeData))
 	{
 		CraftButton->SetIsEnabled(true);

@@ -7,12 +7,15 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DataTable.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
+#include "UObject/UnrealType.h"
 #include "Net/UnrealNetwork.h"
 #include "Games/MainGameState.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerState.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "AI/Enemy_Character/EnemyAIBoss.h"
+#include "Games/MainPlayerState.h"
 
 APortalActor::APortalActor()
 {
@@ -58,11 +61,6 @@ void APortalActor::BeginPlay()
 		GS->OnUnlockedRecordsChanged.AddDynamic(this, &APortalActor::HandleUnlockedRecordsChanged);
 	}
 
-	if (IsValid(LinkedBoss))
-	{
-		LinkedBoss->OnBossCombatEnd.AddDynamic(this, &APortalActor::OnBossDefeated);
-	}
-
 	if (HasAuthority())
 	{
 		TArray<AActor*> Overlaps;
@@ -76,23 +74,54 @@ void APortalActor::BeginPlay()
 		}
 	}
 
+	if (TargetPortalID.IsEmpty() && IsValid(TargetPortal))
+	{
+		TargetPortalID = ReadPortalIDFromActor(TargetPortal);
+	}
+
+	ResolveTargetPortal();
+
 	UpdatePortalState();
 }
+
+void APortalActor::LoadData_Implementation(const FActorSaveData& InData)
+{
+	Super::LoadData_Implementation(InData);
+
+	if (TargetPortalID.IsEmpty() && IsValid(TargetPortal))
+	{
+		TargetPortalID = ReadPortalIDFromActor(TargetPortal);
+	}
+
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimerForNextTick(this, &APortalActor::ResolveTargetPortal);
+	}
+	else
+	{
+		ResolveTargetPortal();
+	}
+}
+
 
 void APortalActor::Interact_Implementation(AActor* Interactor)
 {
 	if (!HasAuthority())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PORTAL] DOESN'T HAVE AUTHORITY"))
 		return;
 	}
 
 	if (!CanInteract)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PORTAL] CAN'T INTERACT"))
 		return;
 	}
 
+	ResolveTargetPortal();
 	if (!IsValid(TargetPortal))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PORTAL] TARGET PORTAL IS NOT VALID"))
 		return;
 	}
 
@@ -112,6 +141,9 @@ void APortalActor::Interact_Implementation(AActor* Interactor)
 				GS->AddChattingMessage(Notice);
 			}
 			return;
+		} else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PORTAL] ALL PLAYER READY"))
 		}
 
 		TeleportAllPlayers();
@@ -140,8 +172,54 @@ TArray<FString> APortalActor::GetRecordIDOptions() const
 	return Options;
 }
 
+void APortalActor::SpawnAndStartBoss()
+{
+	if (!HasAuthority()) return;
+	if (bBossSpawned) return;
+	if (!BossClassToSpawn) return;
+
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	SpawnedBoss = GetWorld()->SpawnActor<AEnemyAIBoss>(
+		BossClassToSpawn,
+		BossSpawnTransform.GetLocation(),
+		BossSpawnTransform.GetRotation().Rotator(),
+		Params
+	);
+
+	if (!SpawnedBoss) return;
+
+	bBossSpawned = true;
+
+	// 출구 포탈에 보스 사망 바인딩
+	if (IsValid(ExitPortal))
+	{
+		SpawnedBoss->OnBossCombatEnd.AddDynamic(ExitPortal, &APortalActor::OnBossDefeated);
+	}
+
+	// 보스 Destroy 시 재도전 가능하도록 리셋
+	SpawnedBoss->OnDestroyed.AddDynamic(this, &APortalActor::OnBossDestroyed);
+
+	// 보스 전투 시작
+	SpawnedBoss->StartBossCombat();
+}
+
+void APortalActor::OnBossDestroyed(AActor* DestroyedActor)
+{
+	SpawnedBoss = nullptr;
+	bBossSpawned = false;
+}
+
 void APortalActor::OnRep_BossDefeated()
 {
+	if (TargetPortalID.IsEmpty() && IsValid(TargetPortal))
+	{
+		TargetPortalID = ReadPortalIDFromActor(TargetPortal);
+	}
+
+	ResolveTargetPortal();
+
 	UpdatePortalState();
 }
 
@@ -153,6 +231,13 @@ void APortalActor::OnBossDefeated()
 
 void APortalActor::HandleUnlockedRecordsChanged()
 {
+	if (TargetPortalID.IsEmpty() && IsValid(TargetPortal))
+	{
+		TargetPortalID = ReadPortalIDFromActor(TargetPortal);
+	}
+
+	ResolveTargetPortal();
+
 	UpdatePortalState();
 }
 
@@ -266,6 +351,7 @@ bool APortalActor::AreAllPlayersInVolume() const
 void APortalActor::TeleportAllPlayers()
 {
 	const AMainGameState* GS = GetWorld()->GetGameState<AMainGameState>();
+	ResolveTargetPortal();
 	if (!GS || !IsValid(TargetPortal))
 	{
 		return;
@@ -276,6 +362,11 @@ void APortalActor::TeleportAllPlayers()
 
 	for (APlayerState* PS : GS->PlayerArray)
 	{
+		if (AMainPlayerState* MPS = Cast<AMainPlayerState>(PS))
+		{
+			MPS->SetIsBossStage(true);
+		}
+		
 		if (!PS)
 		{
 			continue;
@@ -303,11 +394,15 @@ void APortalActor::TeleportAllPlayers()
 	}
 
 	OnPortalTriggered.Broadcast();
+	SpawnAndStartBoss();
+
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Portal Triggered"));
 }
 
 void APortalActor::TeleportPlayer(AActor* Interactor)
 {
+
+	ResolveTargetPortal();
 	if (!IsValid(TargetPortal))
 	{
 		return;
@@ -317,6 +412,11 @@ void APortalActor::TeleportPlayer(AActor* Interactor)
 	if (!Pawn)
 	{
 		return;
+	}
+	
+	if (AMainPlayerState* MPS = Cast<AMainPlayerState>(Pawn->GetPlayerState()))
+	{
+		MPS->SetIsBossStage(true);
 	}
 
 	const FVector TargetLocation = TargetPortal->GetActorLocation();
@@ -331,4 +431,75 @@ void APortalActor::TeleportPlayer(AActor* Interactor)
 	Offset.Z += SpawnZOffset;
 
 	Pawn->TeleportTo(TargetLocation + Offset, TargetRotation);
+
+	SpawnAndStartBoss();
+}
+
+FString APortalActor::ReadPortalIDFromActor(const AActor* Actor) const
+{
+	if (!Actor)
+	{
+		return FString();
+	}
+
+	const FProperty* Prop = Actor->GetClass()->FindPropertyByName(TEXT("PortalID"));
+	if (!Prop)
+	{
+		Prop = Actor->GetClass()->FindPropertyByName(TEXT("ID"));
+	}
+
+	if (const FStrProperty* StrProp = CastField<FStrProperty>(Prop))
+	{
+		return StrProp->GetPropertyValue_InContainer(Actor);
+	}
+
+	if (const FNameProperty* NameProp = CastField<FNameProperty>(Prop))
+	{
+		return NameProp->GetPropertyValue_InContainer(Actor).ToString();
+	}
+
+	return FString();
+}
+
+FString APortalActor::GetPortalID() const
+{
+	return ReadPortalIDFromActor(this);
+}
+
+void APortalActor::ResolveTargetPortal()
+{
+	if (TargetPortalID.IsEmpty())
+	{
+		return;
+	}
+
+	if (IsValid(TargetPortal))
+	{
+		const FString CurrentID = ReadPortalIDFromActor(TargetPortal);
+		if (!CurrentID.IsEmpty() && CurrentID.Equals(TargetPortalID, ESearchCase::IgnoreCase))
+		{
+			return;
+		}
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	for (TActorIterator<APortalActor> It(World); It; ++It)
+	{
+		if (*It == this)
+		{
+			continue;
+		}
+
+		const FString OtherID = It->GetPortalID();
+		if (!OtherID.IsEmpty() && OtherID.Equals(TargetPortalID, ESearchCase::IgnoreCase))
+		{
+			TargetPortal = *It;
+			return;
+		}
+	}
 }

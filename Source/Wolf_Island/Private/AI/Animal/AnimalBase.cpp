@@ -24,6 +24,8 @@ AAnimalBase::AAnimalBase()
     GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     GetMesh()->SetCollisionObjectType(ECC_Pawn);
     GetMesh()->SetGenerateOverlapEvents(true);
+
+	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 }
 
 void AAnimalBase::BeginPlay()

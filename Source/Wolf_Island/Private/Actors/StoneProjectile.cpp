@@ -25,8 +25,8 @@ AStoneProjectile::AStoneProjectile()
     SetReplicateMovement(true);
     bAlwaysRelevant = false;
     bNetLoadOnClient = false;
-    NetUpdateFrequency = 30.f;
-    MinNetUpdateFrequency = 15.f;
+    SetNetUpdateFrequency(30.0f);
+    SetMinNetUpdateFrequency(15.0f);
 }
 
 void AStoneProjectile::BeginPlay()

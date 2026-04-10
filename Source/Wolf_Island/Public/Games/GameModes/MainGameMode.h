@@ -115,6 +115,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void LoadCurrentSave();
 	
+	//보스전 입구 리스폰 지점 찾기
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FTransform GetBossStageEnterPoint(AController* Controller);
+	
 	//이건 플레이어가 죽었을 때 할 동작들. 여기선 싱글에서 죽었을 때를 구현하고, MultiGameMode에서 멀티에서 죽얼을 때 구현.
 	UFUNCTION(BlueprintCallable)
 	virtual void HandlePlayerDeath(AController* DeadPlayerController);

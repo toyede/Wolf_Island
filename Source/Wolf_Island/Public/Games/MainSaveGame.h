@@ -123,4 +123,7 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, Category = "SaveData")
 	TArray<FName> SavedSharedRecipes;
+
+	UPROPERTY(SaveGame)
+	TArray<FString> SavedUnlockedRecordIDs;
 };

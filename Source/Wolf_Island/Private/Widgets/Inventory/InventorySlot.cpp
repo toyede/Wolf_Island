@@ -8,6 +8,7 @@
 #include "Components/Border.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
+#include "Components/ProgressBar.h"
 #include "Widgets/Inventory/DragItemVisual.h"
 #include "Widgets/Inventory/InventoryToolTip.h"
 #include "Widgets/Inventory/ItemDragDropOperation.h"
@@ -46,6 +47,11 @@ void UInventorySlot::SetEmptySlot()
 {
 	ItemIcon->SetVisibility(ESlateVisibility::Collapsed);
 	ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
+	if (DurabilityBar)
+	{
+		DurabilityBar->SetVisibility(ESlateVisibility::Collapsed);
+		DurabilityBar->SetPercent(0.0f);
+	}
 }
 
 void UInventorySlot::RefreshSlot()
@@ -77,6 +83,40 @@ void UInventorySlot::RefreshSlot()
 	{
 		//UE_LOG(LogTemp, Warning, TEXT(">> NO ITEM DATA IN SLOT <<"));
 		SetEmptySlot();
+	}
+
+	if (DurabilityBar)
+	{
+		bool bShowDurability = false;
+		float Percent = 0.0f;
+
+		if (ItemData)
+		{
+			const bool bIsEquipment =
+				(ItemData->Type == EItemType::EQUIPMENT);
+
+			if (bIsEquipment && ItemRef.MaxDurability > 0.0f)
+			{
+				Percent = FMath::Clamp(ItemRef.CurrentDurability / ItemRef.MaxDurability, 0.0f, 1.0f);
+
+				bShowDurability = (ItemRef.CurrentDurability < ItemRef.MaxDurability);
+
+				FLinearColor FillColor = FLinearColor(0.1f, 0.85f, 0.2f, 1.0f);
+				if (Percent <= 0.10f)
+				{
+					FillColor = FLinearColor(0.9f, 0.1f, 0.1f, 1.0f);
+				}
+				else if (Percent <= 0.30f)
+				{
+					FillColor = FLinearColor(0.95f, 0.8f, 0.1f, 1.0f);
+				}
+
+				DurabilityBar->SetFillColorAndOpacity(FillColor);
+			}
+		}
+
+		DurabilityBar->SetVisibility(bShowDurability ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+		DurabilityBar->SetPercent(Percent);
 	}
 	
 	if (CanDragDrop && ToolTipClass && ItemRef.IsValid())

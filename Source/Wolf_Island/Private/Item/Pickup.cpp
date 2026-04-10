@@ -55,7 +55,8 @@ void APickup::InitializePickUp(const int32 InAmount)
         
         ItemReference.ItemID = ItemData->ID;
         ItemReference.ItemName = ItemData->TextData.Name;
-        ItemReference.CurrentDurability = ItemData->NumericData.Durability;
+        ItemReference.MaxDurability = ItemData->NumericData.Durability;
+        ItemReference.CurrentDurability = ItemReference.MaxDurability;
         SetInteractionDuration(ItemData->NumericData.InteractionDuration);
 
         InAmount <= 0 ? ItemReference.SetAmount(1) : ItemReference.SetAmount(InAmount);
