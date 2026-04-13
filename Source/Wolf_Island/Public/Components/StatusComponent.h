@@ -232,10 +232,10 @@ public:
 	float AirAmount = 0.33f;
 	//산소 회복량
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
-	float AirRecoverAmount = 0.01f;
+	float AirRecoverAmount = 1.0f;
 	//산소 회복 주기
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
-	float AirRecoverRate = 1.0f;
+	float AirRecoverRate = 0.1f;
 	//산소 부족으로 받는 대미지량
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float SuffocatedDamage = 10.0f;

@@ -3,7 +3,6 @@
 
 #include "Widgets/IconButton.h"
 
-#include "IAutomationReport.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
 #include "Components/Image.h"
