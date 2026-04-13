@@ -54,6 +54,9 @@ protected:
 	
 	URecipeBlock* AddBuildingRecipe(FRecipeData Recipe);
 
+	UFUNCTION()
+	void OnBuildingFinished();
+
 protected:
 	UPROPERTY(meta = (BindWidget))
 	class UScrollBox* RecipeList;

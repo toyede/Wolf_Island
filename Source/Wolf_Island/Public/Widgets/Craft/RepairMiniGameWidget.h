@@ -109,13 +109,13 @@ public:
     float DifficultyRespawnMultiplierMin = 0.5f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
-    FLinearColor FailFlashColor = FLinearColor(1.0f, 0.2f, 0.2f, 1.0f);
+    FLinearColor FailFlashColor = FLinearColor(0.92f, 0.58f, 0.58f, 1.0f);
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
     float FailFlashDuration = 0.2f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
-    FLinearColor SuccessFlashColor = FLinearColor(0.2f, 1.0f, 0.4f, 1.0f);
+    FLinearColor SuccessFlashColor = FLinearColor(0.64f, 0.92f, 0.69f, 1.0f);
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
     float SuccessFlashDuration = 0.15f;
