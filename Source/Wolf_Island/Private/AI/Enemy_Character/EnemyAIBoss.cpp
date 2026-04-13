@@ -20,6 +20,9 @@
 #include "AI/Enemy_Character/SummonedWolf.h"
 #include "Character/MainPlayer.h"
 #include "NavigationSystem.h"
+#include "Actors/PrayerAltar.h"
+#include "Actors/PrayerStatue.h"
+#include "Actors/PrayerForewarning.h"
 
 AEnemyAIBoss::AEnemyAIBoss()
 {
@@ -523,6 +526,41 @@ void AEnemyAIBoss::SpawnWolvesSequence()
 	}
 }
 
+void AEnemyAIBoss::ExecuteSummonPrayer()
+{
+	if (!HasAuthority()) return;
+
+	if (AEnemyAIBossController* AIC = Cast<AEnemyAIBossController>(GetController()))
+	{
+		AIC->SetNewState(EBossState::Prayer);
+	}
+
+	// 기존 늑대 제거
+	for (auto& WolfWeak : AliveSummonedWolves)
+	{
+		if (ASummonedWolf* Wolf = WolfWeak.Get())
+		{
+			Wolf->Destroy();
+		}
+	}
+	AliveSummonedWolves.Empty();
+
+	// 다른 타이머 중단 (돌진, 늑대 소환 등)
+	GetWorldTimerManager().ClearTimer(GroggyTimerHandle);
+	GetWorldTimerManager().ClearTimer(SpawnRetryTimerHandle);
+
+	// 애니메이션 중단 및 기도 애니메이션(임시) 재생
+	Multicast_StopMontage(0.2f);
+	Multicast_PlaySummonMontage();
+
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, TEXT("[Boss] Prayer Pattern Started - Invincible & Idle"));
+	}
+
+	// 2단계 액터 소환 로직은 여기서 호출될 예정
+}
+
 void AEnemyAIBoss::OnAttackHit(const FHitResult& HitResult)
 {
 	AActor* HitActor = HitResult.GetActor();
@@ -857,6 +895,14 @@ void AEnemyAIBoss::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimit
 
 float AEnemyAIBoss::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	if (AEnemyAIBossController* AIC = Cast<AEnemyAIBossController>(GetController()))
+	{
+		if (AIC->GetCurrentState() == EBossState::Prayer)
+		{
+			return 0.f;
+		}
+	}
+
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
 	if (DamageCauser && DamageCauser->IsA<AEnemyAIBoss>())

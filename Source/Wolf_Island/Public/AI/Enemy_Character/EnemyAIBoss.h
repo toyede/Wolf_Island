@@ -58,6 +58,9 @@ public:
 	FOnSpecialAttackEnd OnSpecialAttackEnd;
 
 	UPROPERTY(BlueprintAssignable, Category = "Delegate")
+	FOnSummonWolvesEnd OnSummonPrayerEnd;
+
+	UPROPERTY(BlueprintAssignable, Category = "Delegate")
 	FOnPhaseChanged OnPhaseChanged;
 
 	UPROPERTY(BlueprintAssignable, Category = "Delegate")
@@ -157,6 +160,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Combat")
 	UAnimMontage* SummonWolvesMontage;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Combat")
+	UAnimMontage* HowlingMontage;
+
 	// 실행 함수
 
 	UFUNCTION()
@@ -182,6 +188,9 @@ public:
 
 	UFUNCTION()
 	void ExecuteSummonWolves();
+
+	UFUNCTION()
+	void ExecuteSummonPrayer();
 
 	virtual void Die_Implementation() override;
 
@@ -333,6 +342,18 @@ public:
 	{
 		return GetMesh();
 	}
+
+	virtual UAttackCollisionComponent* GetAttackCollisionComponent() const override
+	{
+		return AttackCollisionComponent;
+	}
+
+protected:
+	virtual void NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit) override;
+
+	float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+};
+
 
 	virtual UAttackCollisionComponent* GetAttackCollisionComponent() const override
 	{
