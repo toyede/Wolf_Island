@@ -62,6 +62,22 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
+	if (InPawn)
+	{
+		// Possess 직후 + 약간의 딜레이 후 두 번 밀어줌
+		InPawn->ForceNetUpdate();
+		ForceNetUpdate();
+        
+		FTimerHandle DelayHandle;
+		GetWorldTimerManager().SetTimer(DelayHandle, [WeakPawn = TWeakObjectPtr<APawn>(InPawn)]()
+		{
+			if (WeakPawn.IsValid())
+			{
+				WeakPawn->ForceNetUpdate();
+			}
+		}, 0.5f, false);
+	}
+	
 	if (BehaviorComp)
 	{
 		RunBehaviorTree(BehaviorTreeAsset);

@@ -129,6 +129,30 @@ void AEnemyAIBase::BeginPlay()
     }
 }
 
+void AEnemyAIBase::OnRep_Controller()
+{
+    Super::OnRep_Controller();
+    
+    // 클라이언트에서 Controller가 도착한 시점에 Movement 상태를 리셋
+    if (GetController())
+    {
+        if (UCharacterMovementComponent* CMC = GetCharacterMovement())
+        {
+            // Simulated Proxy의 Movement 상태를 강제로 갱신
+            CMC->SetUpdatedComponent(GetRootComponent());
+            
+            // 현재 서버 위치로 스냅
+            if (GetRootComponent())
+            {
+                GetRootComponent()->UpdateComponentToWorld();
+            }
+        }
+
+        UE_LOG(LogTemp, Warning, TEXT("[Client] %s Controller replicated: %s"),
+            *GetName(), *GetController()->GetName());
+    }
+}
+
 void AEnemyAIBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
