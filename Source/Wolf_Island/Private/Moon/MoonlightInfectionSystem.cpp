@@ -89,15 +89,32 @@ void AMoonlightInfectionSystem::ActivateInfectionCheck()
 		return;
 	}
 
+	if (NightlyTransformThreshold <= 0.0f)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] NightlyTransformThreshold must be > 0. Current: %f"), NightlyTransformThreshold);
+		return;
+	}
+
+	if (InfectionPerCheck <= 0.0f)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] InfectionPerCheck must be > 0. Current: %f"), InfectionPerCheck);
+		return;
+	}
+
 	if (GetWorldTimerManager().IsTimerActive(CheckTimerHandle))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] Already active, skipping"));
 		return;
 	}
 
+	// 외부에서 OnNightStarted 호출이 누락되어도, 매 활성화 시 이번 밤 누적값은 항상 0부터 시작한다.
+	NightlyExposure.Empty();
+	TriggeredThisNight.Empty();
+
 	if (bShowDebugMessages)
 	{
 		UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] ACTIVATED - Check Interval: %.2fs"), CheckInterval);
+		UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] SETTINGS - PerCheck: %.6f, Threshold: %.6f"), InfectionPerCheck, NightlyTransformThreshold);
 	}
 
 	// 타이머 시작 (CheckInterval 간격으로 CheckAllPlayers 반복 호출)
@@ -328,6 +345,10 @@ void AMoonlightInfectionSystem::CheckAllPlayers()
 {
 	if (GetLocalRole() != ROLE_Authority) return;
 
+	// 실제 사용 중인 런타임 값 확인용 로그 (이상 동작 시 이 값을 먼저 확인)
+	UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem][TICK] InfectionPerCheck=%.6f | Threshold=%.4f"),
+		InfectionPerCheck, NightlyTransformThreshold);
+
 	for (int32 Index = InfectedStatusList.Num() - 1; Index >= 0; --Index)
 	{
 		UStatusComponent* StatusComp = InfectedStatusList[Index];
@@ -407,53 +428,31 @@ bool AMoonlightInfectionSystem::IsPlayerExposedToMoonlight(AActor* Player)
 		return false;
 	}
 
-	// 1. 플레이어 체크 위치 (머리 위)
-	FVector StartLocation = GetMoonlightCheckLocation(Player);
+	// 지면/장애물과 시작 지점이 겹치면 정지 상태에서만 차폐로 오검출될 수 있어, 라인트레이스로 단순화.
+	FVector StartLocation = GetMoonlightCheckLocation(Player) + FVector(0.0f, 0.0f, 15.0f);
 
-	// 2. 달 방향 벡터 (달빛이 내려오는 방향의 반대 = 플레이어에서 달로)
+	// 달빛이 내려오는 방향의 반대 = 플레이어에서 달로
 	FVector MoonDirection = MoonLight->GetForwardVector() * -1.0f;
 	FVector EndLocation = StartLocation + (MoonDirection * TraceDistance);
 
-	// 3. 캡슐 트레이스 설정
-	FCollisionShape CapsuleShape = FCollisionShape::MakeCapsule(CapsuleRadius, CapsuleHalfHeight);
-
 	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(Player); // 자기 자신은 무시
-	QueryParams.bTraceComplex = false; // 단순 콜리전 사용 (성능 최적화)
+	QueryParams.AddIgnoredActor(Player);
+	QueryParams.bTraceComplex = false;
 
-	// 4. 캡슐 트레이스 실행
+	// 정지 상태에서도 안정적으로 동작하도록 라인트레이스로 차폐 여부만 판정.
 	FHitResult HitResult;
-	bool bHit = GetWorld()->SweepSingleByChannel(
+	const bool bHit = GetWorld()->LineTraceSingleByChannel(
 		HitResult,
 		StartLocation,
 		EndLocation,
-		FQuat::Identity, // 회전 없음
-		ECC_Visibility,  // Visibility 채널
-		CapsuleShape,
-		QueryParams
-	);
+		ECC_Visibility,
+		QueryParams);
 
-	// 5. 디버그 드로우
+	// 디버그 드로우
 	if (bDrawDebugTrace)
 	{
-		// 노출되면 빨강, 가려지면 초록
-		FColor DebugColor = bHit ? FColor::Green : FColor::Red;
+		const FColor DebugColor = bHit ? FColor::Green : FColor::Red;
 
-		// 캡슐 그리기
-		DrawDebugCapsule(
-			GetWorld(),
-			StartLocation,
-			CapsuleHalfHeight,
-			CapsuleRadius,
-			FQuat::Identity,
-			DebugColor,
-			false,
-			CheckInterval, // 다음 체크까지 표시
-			0,
-			2.0f // 선 두께
-		);
-
-		// 레이 라인 그리기
 		DrawDebugLine(
 			GetWorld(),
 			StartLocation,
@@ -465,7 +464,6 @@ bool AMoonlightInfectionSystem::IsPlayerExposedToMoonlight(AActor* Player)
 			1.0f
 		);
 
-		// Hit 지점에 포인트 그리기
 		if (bHit)
 		{
 			DrawDebugPoint(
@@ -479,7 +477,7 @@ bool AMoonlightInfectionSystem::IsPlayerExposedToMoonlight(AActor* Player)
 		}
 	}
 
-	// 6. 막힌 게 없으면 노출됨
+	// 막힌 게 없으면 노출됨
 	return !bHit;
 }
 

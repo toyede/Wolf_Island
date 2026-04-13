@@ -13,7 +13,7 @@ class AMainPlayer;
 class APlayerController;
 class AEnemyAIBase;
 
-// ¸ÖÆ¼ Àü¿ë ´Á´ëÀÎ°£ ºùÀÇ µ¥ÀÌÅÍ
+// ï¿½ï¿½Æ¼ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Î°ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 USTRUCT()
 struct FWerewolfSessionData
 {
@@ -48,7 +48,7 @@ public:
 	float CheckInterval = 0.1f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Moonlight Settings")
-	float InfectionPerCheck = 10.0f;
+	float InfectionPerCheck = 0.1f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Moonlight Settings")
 	float CapsuleRadius = 30.0f;
@@ -77,31 +77,31 @@ public:
 	UFUNCTION()
 	void HandleInfectionStarted(UStatusComponent* StatusComp);
 
-	// ÇÏ·ç ¹ã µ¿¾ÈÀÇ °¨¿° ´©Àû·® (¹ã ½ÃÀÛ ½Ã 0À¸·Î ÃÊ±âÈ­)
+	// ï¿½Ï·ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ 0ï¿½ï¿½ï¿½ï¿½ ï¿½Ê±ï¿½È­)
 	UPROPERTY()
 	TMap<AMainPlayer*, float> NightlyExposure;
 
-	// ÀÌ¹ø ¹ã¿¡ ÀÌ¹Ì Æ®¸®°ÅµÈ ÇÃ·¹ÀÌ¾î (¹ã´ç 1È¸ Á¦ÇÑ)
+	// ï¿½Ì¹ï¿½ ï¿½ã¿¡ ï¿½Ì¹ï¿½ Æ®ï¿½ï¿½ï¿½Åµï¿½ ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ (ï¿½ï¿½ï¿½ 1È¸ ï¿½ï¿½ï¿½ï¿½)
 	UPROPERTY()
 	TSet<TWeakObjectPtr<AMainPlayer>> TriggeredThisNight;
 
 	UPROPERTY(EditAnywhere, Category = "Infection")
-	float NightlyTransformThreshold = 15.0f; // ÇÏ·ç ¹ã ´©Àû 15% ³ÑÀ¸¸é Æ®¸®°Å
+	float NightlyTransformThreshold = 15.0f; // ï¿½Ï·ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ 15% ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Æ®ï¿½ï¿½ï¿½ï¿½
 
 	UPROPERTY(EditAnywhere, Category = "Infection")
-	float PostSequenceInfectionBonus = 20.0f; // Æ®¸®°Å ÈÄ ´ÙÀ½³¯ ¾ÆÄ§¿¡ +20%
+	float PostSequenceInfectionBonus = 20.0f; // Æ®ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä§ï¿½ï¿½ +20%
 
 	UFUNCTION()
 	void StartSingleInfectionSequence(AMainPlayer* Player);
 
-	// BP¿¡¼­ È£ÃâÇÒ ÇÔ¼ö
+	// BPï¿½ï¿½ï¿½ï¿½ È£ï¿½ï¿½ï¿½ï¿½ ï¿½Ô¼ï¿½
 	UFUNCTION(BlueprintCallable, Category = "Moonlight System")
 	void OnNightStarted();
 
 	UFUNCTION(BlueprintCallable, Category = "Moonlight System")
 	void OnDayStarted();
 
-	// ¸ÖÆ¼ Àü¿ë: ´Á´ëÀÎ°£ ¼¼¼Ç µ¥ÀÌÅÍ
+	// ï¿½ï¿½Æ¼ ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ï¿½Î°ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	UFUNCTION()
 	void StartMultiInfectionSequence(AMainPlayer* Player);
 
@@ -110,11 +110,11 @@ public:
 
 	void RestorePlayerAtDawn(APlayerController* PC);
 
-	// µð¹ö±×¿ë - ¿¡µðÅÍ¿¡¼­ È£ÃâÇÏ°Å³ª Å° ¹ÙÀÎµù
+	// ï¿½ï¿½ï¿½ï¿½×¿ï¿½ - ï¿½ï¿½ï¿½ï¿½ï¿½Í¿ï¿½ï¿½ï¿½ È£ï¿½ï¿½ï¿½Ï°Å³ï¿½ Å° ï¿½ï¿½ï¿½Îµï¿½
 	UFUNCTION(BlueprintCallable, Category = "Moonlight System|Debug")
 	void Debug_ForceRestoreAll();
 
-	// ¸ÖÆ¼ Àü¿ë: È°¼º ´Á´ëÀÎ°£ ¼¼¼Ç µ¥ÀÌÅÍ
+	// ï¿½ï¿½Æ¼ ï¿½ï¿½ï¿½ï¿½: È°ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Î°ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	UPROPERTY()
 	TMap<APlayerController*, FWerewolfSessionData> ActiveWerewolfSessions;
 private:
@@ -134,7 +134,7 @@ private:
 	void ApplyInfection(AActor* Player, float Amount);
 	FVector GetMoonlightCheckLocation(AActor* Player);
 
-	// ¸ÖÆ¼ Àü¿ë: ´Á´ëÀÎ°£ ºùÀÇ Ã³¸®
+	// ï¿½ï¿½Æ¼ ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ï¿½Î°ï¿½ ï¿½ï¿½ï¿½ï¿½ Ã³ï¿½ï¿½
 	void SpawnAndPossessWerewolf(APlayerController* PC, FVector Location);
 	void StoreOriginalCharacter(APlayerController* PC, AMainPlayer* Player);
 
@@ -144,7 +144,7 @@ private:
 	TSubclassOf<ACharacter> WerewolfClass;
 
 
-	// ¸ÖÆ¼ Àü¿ë: °üÀü ¸ðµå·Î ÀüÈ¯
+	// ï¿½ï¿½Æ¼ ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È¯
 private:
 	void SetSpectateTarget(APlayerController* PC);
 
@@ -152,7 +152,7 @@ public:
 	void SwitchSpectateTarget(APlayerController* PC);
 
 
-	// ¸ÖÆ¼ Àü¿ë: °üÀü ¸ðµå¿¡¼­ ¿ø·¡ Ä³¸¯ÅÍ·Î º¹±Í
+	// ï¿½ï¿½Æ¼ ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½å¿¡ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Ä³ï¿½ï¿½ï¿½Í·ï¿½ ï¿½ï¿½ï¿½ï¿½
 public:
 	void NotifyWerewolfDown(ACharacter* Werewolf);
 };
