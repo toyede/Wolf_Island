@@ -28,6 +28,23 @@ struct FWerewolfSessionData
 	UPROPERTY()
 	TWeakObjectPtr<APlayerController> OwningPC;
 
+	// 늑대 액터가 먼저 사라져도 복귀 위치를 잃지 않기 위한 백업 Transform
+	UPROPERTY()
+	FTransform LastKnownWerewolfTransform = FTransform::Identity;
+
+	// 변신 전 스탯 백업
+	UPROPERTY()
+	float BackupHP = 0.0f;
+
+	UPROPERTY()
+	float BackupStamina = 0.0f;
+
+	UPROPERTY()
+	float BackupHunger = 0.0f;
+
+	UPROPERTY()
+	float BackupHydration = 0.0f;
+
 	bool bIsSpectating = false;
 	bool bIsIncapacitated = false;
 };
@@ -84,6 +101,10 @@ public:
 	// �̹� �㿡 �̹� Ʈ���ŵ� �÷��̾� (��� 1ȸ ����)
 	UPROPERTY()
 	TSet<TWeakObjectPtr<AMainPlayer>> TriggeredThisNight;
+
+	// 밤 임계치 트리거 시점의 감염값 스냅샷 (아침 보너스 누적 기준)
+	UPROPERTY()
+	TMap<TWeakObjectPtr<AMainPlayer>, float> TriggeredInfectionSnapshot;
 
 	UPROPERTY(EditAnywhere, Category = "Infection")
 	float NightlyTransformThreshold = 15.0f; // �Ϸ� �� ���� 15% ������ Ʈ����

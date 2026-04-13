@@ -104,6 +104,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AI|Patrol")
 	void MoveToNextRoute();
 
+	UPROPERTY(EditDefaultsOnly, Category = "AI|Perception")
+	float SightTime = 5.0f;
+	
 private:
 	FTimerHandle LineOfSightTimer;
 };
