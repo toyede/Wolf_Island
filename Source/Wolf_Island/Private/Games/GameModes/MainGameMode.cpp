@@ -21,6 +21,9 @@
 #include "Kismet/GameplayStatics.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 #include "AI/Enemy_Character/EnemyAIBoss.h"
+#include "AI/Animal/AnimalBase.h"
+#include "Actors/AnimalSpawnPoint.h"
+#include "EngineUtils.h"
 
 void AMainGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
 {
@@ -94,6 +97,27 @@ void AMainGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// 동물 스폰 서브시스템 초기화 및 시작
+	if (UAnimalSpawnSubsystem* SpawnSubsystem = GetWorld()->GetSubsystem<UAnimalSpawnSubsystem>())
+	{
+		for (TActorIterator<AAnimalSpawnPoint> It(GetWorld()); It; ++It)
+		{
+			AAnimalSpawnPoint* SpawnPoint = *It;
+			if (IsValid(SpawnPoint) && SpawnPoint->AnimalClass)
+			{
+				SpawnSubsystem->AddSpawnInfo(
+					SpawnPoint->AnimalClass,
+					SpawnPoint->GetActorLocation(),
+					SpawnPoint->SpawnRadius,
+					SpawnPoint->InnerRadius,
+					SpawnPoint->MaxCount,
+					SpawnPoint->RespawnDelay
+				);
+			}
+		}
+		
+		SpawnSubsystem->StartSpawning();
+	}
 }
 
 void AMainGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)

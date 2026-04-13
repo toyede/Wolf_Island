@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameMode.h"
 #include "Games/MainSaveGame.h"
+#include "Subsystem/AnimalSpawnSubsystem.h" // 구조체 써야해서 헤더에 포함
 #include "MainGameMode.generated.h"
 
 class AMainPlayerState;
@@ -12,6 +13,7 @@ class UMainGameInstance;
 class APortalActor;
 class AEnemyAIBoss;
 class AMainPlayer;
+
 /**
  * 
  */
