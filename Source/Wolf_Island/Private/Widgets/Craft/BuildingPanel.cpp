@@ -145,8 +145,12 @@ void UBuildingPanel::SetBuildingInfo(URecipeBlock* NewBlock, FRecipeData RecipeD
 	}
 
 	FItemData* ResultData = ItemDataTable->FindRow<FItemData>(RecipeData.ResultID, "");
+
+	ResultSlot->SetCraftSlot(ResultData, RecipeData.ResultAmount);
 	ItemName->SetText(ResultData->TextData.Name);
 	ItemDescription->SetText(ResultData->TextData.Description);
+	//제작 소요 시간
+	DurationText->SetText(FText::FromString(FString::Printf(TEXT("%.1fs"), RecipeData.Duration)));
 
 	if (OwnerInventory && OwnerInventory->CheckCanMakeRecipe(RecipeData))
 	{

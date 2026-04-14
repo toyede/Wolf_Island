@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "CraftSlot.h"
 #include "Blueprint/UserWidget.h"
 #include "Data/ItemDataStruct.h"
 #include "BuildingPanel.generated.h"
@@ -69,6 +70,12 @@ protected:
 
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock* ItemName;
+
+	UPROPERTY(meta = (BindWidget))
+	class UCraftSlot* ResultSlot;
+
+	UPROPERTY(EditAnywhere, meta=(BindWidget), BlueprintReadWrite)
+	UTextBlock* DurationText;
 
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock* ItemDescription;
