@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -10,6 +10,7 @@
 #include "EnemyAIBoss.generated.h"
 
 class UAnimMontage;
+class USoundBase;
 class UAttackCollisionComponent;
 class UStatusComponent;
 class AStatueForewarning;
@@ -17,6 +18,7 @@ class ABossStatue;
 class ASummonedWolf;
 class AMainPlayer;
 
+// --- Delegates ---
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBossAttackEnd);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBossRushEnd);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBossGroggyEnd);
@@ -36,262 +38,261 @@ class WOLF_ISLAND_API AEnemyAIBoss : public ACharacter, public IAttackMeshProvid
 public:
 	AEnemyAIBoss();
 
-	UPROPERTY(BlueprintAssignable, Category = "Delegate")
-	FOnBossAttackEnd OnBossAttackEnd;
-
-	UPROPERTY(BlueprintAssignable, Category = "Delegate")
-	FOnBossRushEnd OnBossRushEnd;
-
-	UPROPERTY(BlueprintAssignable, Category = "Delegate")
-	FOnBossGroggyEnd OnBossGroggyEnd;
-
-	UPROPERTY(BlueprintAssignable, Category = "Delegate")
-	FOnSummonStatueEnd OnSummonStatueEnd;
-
-	UPROPERTY(BlueprintAssignable, Category = "Delegate")
-	FOnSummonWolvesEnd OnSummonWolvesEnd;
-
-	UPROPERTY(BlueprintAssignable, Category = "Delegate")
-	FOnThrustEnd OnThrustEnd;
-
-	UPROPERTY(BlueprintAssignable, Category = "Delegate")
-	FOnSpecialAttackEnd OnSpecialAttackEnd;
-
-	UPROPERTY(BlueprintAssignable, Category = "Delegate")
-	FOnSummonWolvesEnd OnSummonPrayerEnd;
-
-	UPROPERTY(BlueprintAssignable, Category = "Delegate")
-	FOnPhaseChanged OnPhaseChanged;
-
-	UPROPERTY(BlueprintAssignable, Category = "Delegate")
-	FOnBossCombatStart OnBossCombatStart;
-
-	UPROPERTY(BlueprintAssignable, Category = "Delegate")
-	FOnBossCombatEnd OnBossCombatEnd;
-
-public:
-	UPROPERTY(BlueprintReadOnly)
-	bool bIsCombatActive = false;
-
-	UFUNCTION(BlueprintCallable)
-	void StartBossCombat();
-
-	UFUNCTION(BlueprintCallable)
-	void EndBossCombat();
-
-	UPROPERTY(BlueprintReadOnly, Category = "Combat")
-	TArray<TObjectPtr<AMainPlayer>> BossParticipants;
-
-protected:
-	virtual void BeginPlay() override;
-
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-public:
-	virtual void Tick(float DeltaTime) override;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Comp")
+	// --- Components ---
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Boss|Components")
 	TObjectPtr<UStatusComponent> StatusComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Comp")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Boss|Components")
 	TObjectPtr<UAttackCollisionComponent> AttackCollisionComponent;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Combat")
-	TArray<float> AttackDamages;
+	// --- Delegates ---
+	UPROPERTY(BlueprintAssignable, Category = "Boss|Delegates")
+	FOnBossAttackEnd OnBossAttackEnd;
 
-	UPROPERTY(EditAnywhere, Category = "Combat")
-	float RushDamage = 20.f;
+	UPROPERTY(BlueprintAssignable, Category = "Boss|Delegates")
+	FOnBossRushEnd OnBossRushEnd;
 
-	UPROPERTY()
-	float CurrentDamage = 0.f;
+	UPROPERTY(BlueprintAssignable, Category = "Boss|Delegates")
+	FOnBossGroggyEnd OnBossGroggyEnd;
+
+	UPROPERTY(BlueprintAssignable, Category = "Boss|Delegates")
+	FOnSummonStatueEnd OnSummonStatueEnd;
+
+	UPROPERTY(BlueprintAssignable, Category = "Boss|Delegates")
+	FOnSummonWolvesEnd OnSummonWolvesEnd;
+
+	UPROPERTY(BlueprintAssignable, Category = "Boss|Delegates")
+	FOnThrustEnd OnThrustEnd;
+
+	UPROPERTY(BlueprintAssignable, Category = "Boss|Delegates")
+	FOnSpecialAttackEnd OnSpecialAttackEnd;
+
+	UPROPERTY(BlueprintAssignable, Category = "Boss|Delegates")
+	FOnSummonWolvesEnd OnSummonPrayerEnd;
+
+	UPROPERTY(BlueprintAssignable, Category = "Boss|Delegates")
+	FOnPhaseChanged OnPhaseChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Boss|Delegates")
+	FOnBossCombatStart OnBossCombatStart;
+
+	UPROPERTY(BlueprintAssignable, Category = "Boss|Delegates")
+	FOnBossCombatEnd OnBossCombatEnd;
+
+	// --- Basic Combat State ---
+	UPROPERTY(BlueprintReadOnly, Category = "Boss|Combat")
+	bool bIsCombatActive = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Combat", ReplicatedUsing = OnRep_IsDead)
+	bool bIsDead = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Boss|Combat")
+	TArray<TObjectPtr<AMainPlayer>> BossParticipants;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Phase")
+	int32 CurrentPhase = 1;
+
+	// --- Execute Pattern Functions (AI Tasks need public access) ---
+	UFUNCTION(BlueprintCallable, Category = "Boss|Combat")
+	void StartBossCombat();
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|Combat")
+	void EndBossCombat();
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern|Attack")
+	void ExecuteAttack(int32 AttackIndex);
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern|Rush")
+	void ExecuteRush();
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern|Groggy")
+	void ExecuteGroggy();
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern|Groggy")
+	void EndGroggy();
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern|Phase2")
+	void ExecuteSummonStatue();
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern|Phase2")
+	void ExecuteSummonPrayer();
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern|SummonWolves")
+	void ExecuteSummonWolves();
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern|Special")
+	void ExecuteThrust();
+
+	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern|Special")
+	void ExecuteSpecialAttack();
 
 	void SetCurrentDamage(float Damage) { CurrentDamage = Damage; }
 
-	// 콜리전 소켓 및 반경
-
-	UPROPERTY(EditDefaultsOnly, Category = "Collision")
-	TArray<FName> AttackStartSockets;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Collision")
-	TArray<FName> AttackEndSockets;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Collision")
-	FName RushStartSocket;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Collision")
-	FName RushEndSocket;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Collision")
-	TArray<FName> SpecialAttackStartSockets;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Collision")
-	TArray<FName> SpecialAttackEndSockets;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Collision")
-	TArray<float> AttackRadiuses;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Collision")
-	float RushRadius = 50.f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Collision")
-	TArray<float> SpecialAttackRadiuses;
-
-	// 몽타주
-	UPROPERTY(EditDefaultsOnly, Category = "Combat")
-	TArray<UAnimMontage*> AttackMontages;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Combat")
-	UAnimMontage* RushMontage;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Combat")
-	UAnimMontage* GroggyMontage;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Combat")
-	UAnimMontage* SummonStatueMontage;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Combat")
-	UAnimMontage* ThrustMontage;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Combat")
-	UAnimMontage* SpecialAttackMontage;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Combat")
-	UAnimMontage* SummonWolvesMontage;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Combat")
-	UAnimMontage* HowlingMontage;
-
-	// 실행 함수
-
-	UFUNCTION()
-	void ExecuteAttack(int32 AttackIndex);
-
-	UFUNCTION()
-	void ExecuteRush();
-
-	UFUNCTION()
-	void ExecuteGroggy();
-
-	UFUNCTION()
-	void EndGroggy();
-
-	UFUNCTION()
-	void ExecuteSummonStatue();
-
-	UFUNCTION()
-	void ExecuteThrust();
-
-	UFUNCTION()
-	void ExecuteSpecialAttack();
-
-	UFUNCTION()
-	void ExecuteSummonWolves();
-
-	UFUNCTION()
-	void ExecuteSummonPrayer();
-
+	// --- Interface Implementations ---
+	virtual USkeletalMeshComponent* GetAttackMesh() const override { return GetMesh(); }
+	virtual UAttackCollisionComponent* GetAttackCollisionComponent() const override { return AttackCollisionComponent; }
 	virtual void Die_Implementation() override;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Phase")
-	int32 CurrentPhase = 1;
+protected:
+	// --- AActor & ACharacter Overrides ---
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void Tick(float DeltaTime) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit) override;
+	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
-	bool bPhase2Triggered = false;
+	// --- [Pattern Settings: Basic Attack] ---
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Attack")
+	TArray<UAnimMontage*> AttackMontages;
 
-	UPROPERTY(EditAnywhere, Category = "Boss|Phase2")
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Attack")
+	TArray<float> AttackDamages;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Attack")
+	TArray<FName> AttackStartSockets;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Attack")
+	TArray<FName> AttackEndSockets;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Attack")
+	TArray<float> AttackRadiuses;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Attack")
+	TArray<USoundBase*> AttackSounds;
+
+	// --- [Pattern Settings: Rush] ---
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Rush")
+	UAnimMontage* RushMontage;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Rush")
+	float RushDamage = 20.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Rush")
+	FName RushStartSocket;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Rush")
+	FName RushEndSocket;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Rush")
+	float RushRadius = 50.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Rush")
+	USoundBase* RushSound;
+
+	// --- [Pattern Settings: Groggy] ---
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Groggy")
+	UAnimMontage* GroggyMontage;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|Groggy")
+	float GroggyDuration = 1.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Groggy")
+	USoundBase* GroggySound;
+
+	// --- [Pattern Settings: Phase 2 / Statue] ---
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Phase2")
+	UAnimMontage* SummonStatueMontage;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|Phase2")
 	TSubclassOf<AStatueForewarning> ForewarningClass;
 
-		UPROPERTY(EditAnywhere, Category = "Boss|Phase2")
+	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|Phase2")
 	TSubclassOf<ABossStatue> StatueClass;
 
-	// Preferred fixed spawn points configured in editor.
-	UPROPERTY(EditInstanceOnly, Category = "Boss|Phase2")
+	UPROPERTY(EditInstanceOnly, Category = "Boss|Pattern|Phase2")
 	TArray<TObjectPtr<AActor>> StatueSpawnPoints;
 
-	// Backward compatibility fallback.
-	UPROPERTY(EditInstanceOnly, Category = "Boss|Phase2")
+	UPROPERTY(EditInstanceOnly, Category = "Boss|Pattern|Phase2")
 	AActor* StatueSpawnPoint;
 
-	UPROPERTY(EditAnywhere, Category = "Boss|Phase2|Spawn")
+	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|Phase2|Spawn")
 	int32 MaxSpawnRetries = 3;
 
-	UPROPERTY(EditAnywhere, Category = "Boss|Phase2|Spawn")
+	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|Phase2|Spawn")
 	float SpawnRetryDelay = 0.25f;
 
-	UPROPERTY(EditAnywhere, Category = "Boss|Phase2|Spawn")
+	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|Phase2|Spawn")
 	float SpawnSafetyRadius = 150.0f;
 
-	void SpawnStatueSequence();
-	void OnForewarningComplete();
-	void OnForewarningResolved(bool bAreaClear);
-	void TrySpawnStatueWithRetry();
-	bool IsSpawnAreaOccupied(const FVector& Location) const;
-	AActor* SelectSpawnPoint();
-	void ClearSpawnState();
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Phase2")
+	USoundBase* SummonStatueSound;
 
-	TWeakObjectPtr<AActor> PendingSpawnPoint;
-	FTimerHandle SpawnRetryTimerHandle;
-	int32 SpawnRetryCount = 0;
-	int32 SpawnPointCursor = 0;
+	// --- [Pattern Settings: Summon Wolves] ---
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|SummonWolves")
+	UAnimMontage* SummonWolvesMontage;
 
-	UPROPERTY(EditAnywhere, Category = "Boss|SummonWolves")
+	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|SummonWolves")
 	TSubclassOf<ASummonedWolf> SummonedWolfClass;
 
-	UPROPERTY(EditInstanceOnly, Category = "Boss|SummonWolves")
+	UPROPERTY(EditInstanceOnly, Category = "Boss|Pattern|SummonWolves")
 	TArray<TObjectPtr<AActor>> SummonedWolfSpawnPoints;
 
-	UPROPERTY(EditAnywhere, Category = "Boss|SummonWolves")
+	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|SummonWolves")
 	bool bUseFixedWolfSpawnPoints = false;
 
-	UPROPERTY(EditAnywhere, Category = "Boss|SummonWolves")
+	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|SummonWolves")
 	int32 MinSummonWolfCount = 1;
 
-	UPROPERTY(EditAnywhere, Category = "Boss|SummonWolves")
+	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|SummonWolves")
 	int32 MaxSummonWolfCount = 4;
 
-	UPROPERTY(EditAnywhere, Category = "Boss|SummonWolves")
+	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|SummonWolves")
 	int32 BaseSummonWolfCount = 2;
 
-	UPROPERTY(EditAnywhere, Category = "Boss|SummonWolves")
+	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|SummonWolves")
 	int32 MaxAliveSummonedWolves = 8;
 
-	UPROPERTY(EditAnywhere, Category = "Boss|SummonWolves")
+	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|SummonWolves")
 	float WolfSpawnMinRadius = 250.f;
 
-	UPROPERTY(EditAnywhere, Category = "Boss|SummonWolves")
+	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|SummonWolves")
 	float WolfSpawnMaxRadius = 900.f;
 
-	UPROPERTY(EditAnywhere, Category = "Boss|SummonWolves")
+	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|SummonWolves")
 	float WolfSpawnBlockRadius = 80.f;
 
-	UPROPERTY(EditAnywhere, Category = "Boss|SummonWolves")
+	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|SummonWolves")
 	int32 WolfSpawnSearchAttempts = 12;
 
-	void SpawnWolvesSequence();
-	int32 ComputeDesiredWolfSpawnCount() const;
-	void CleanupSummonedWolves();
-	bool IsWolfSpawnBlocked(const FVector& Location) const;
-	bool FindWolfSpawnLocation(FVector& OutLocation) const;
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|SummonWolves")
+	USoundBase* SummonWolvesSound;
 
-	TArray<TWeakObjectPtr<ASummonedWolf>> AliveSummonedWolves;
+	// --- [Pattern Settings: Special Attacks] ---
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Special")
+	UAnimMontage* ThrustMontage;
 
-public:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat|Dead", ReplicatedUsing = OnRep_IsDead)
-	bool bIsDead = false;
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Special")
+	UAnimMontage* SpecialAttackMontage;
 
-protected:
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Special")
+	UAnimMontage* HowlingMontage;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Special")
+	TArray<FName> SpecialAttackStartSockets;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Special")
+	TArray<FName> SpecialAttackEndSockets;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Special")
+	TArray<float> SpecialAttackRadiuses;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Special")
+	USoundBase* SpecialAttackSound;
+
+	// --- Common Combat Helpers ---
+	UFUNCTION()
+	void OnAttackHit(const FHitResult& HitResult);
+
 	UFUNCTION()
 	void OnRep_IsDead();
 
 	void ApplyDeadState();
 
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Combat|Sound")
 	USoundBase* DieSound;
 
-protected:
-	UFUNCTION()
-	void OnAttackHit(const FHitResult& HitResult);
-
+	// --- Montage Callback Helpers ---
 	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 	void OnRushMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 	void OnGroggyMontageEnded(UAnimMontage* Montage, bool bInterrupted);
@@ -300,57 +301,66 @@ protected:
 	void OnThrustMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 	void OnSpecialAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
-protected:
-	UPROPERTY(EditAnywhere, Category = "Groggy")
-	float GroggyDuration = 1.f;
-
 private:
+	// --- Internal Pattern Logic (Phase 2) ---
+	void SpawnStatueSequence();
+	void OnForewarningComplete();
+	void OnForewarningResolved(bool bAreaClear);
+	void TrySpawnStatueWithRetry();
+	bool IsSpawnAreaOccupied(const FVector& Location) const;
+	AActor* SelectSpawnPoint();
+	void ClearSpawnState();
+
+	// --- Internal Pattern Logic (Wolves) ---
+	void SpawnWolvesSequence();
+	int32 ComputeDesiredWolfSpawnCount() const;
+	void CleanupSummonedWolves();
+	bool IsWolfSpawnBlocked(const FVector& Location) const;
+	bool FindWolfSpawnLocation(FVector& OutLocation) const;
+
+	// --- Internal State ---
+	UPROPERTY()
+	float CurrentDamage = 0.f;
+
+	bool bPhase2Triggered = false;
+
+	TWeakObjectPtr<AActor> PendingSpawnPoint;
+	FTimerHandle SpawnRetryTimerHandle;
+	int32 SpawnRetryCount = 0;
+	int32 SpawnPointCursor = 0;
+
 	FTimerHandle GroggyTimerHandle;
 
 	UPROPERTY(Replicated)
 	bool bIsRushing = false;
 
-	UFUNCTION(NetMulticast, Reliable)
+	TArray<TWeakObjectPtr<ASummonedWolf>> AliveSummonedWolves;
+
+	// --- Networking: Unreliable Multicasts for Cosmetics ---
+	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlayAttackMontage(int32 AttackIndex);
 
-	UFUNCTION(NetMulticast, Reliable)
+	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlayRushMontage();
 
-	UFUNCTION(NetMulticast, Reliable)
+	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlayGroggyMontage();
 
-	UFUNCTION(NetMulticast, Reliable)
+	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlayGroggyGetUp();
 
-	UFUNCTION(NetMulticast, Reliable)
+	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlaySummonMontage();
 
-	UFUNCTION(NetMulticast, Reliable)
+	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlaySummonWolvesMontage();
 
-	UFUNCTION(NetMulticast, Reliable)
+	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_StopMontage(float BlendOut);
 
-	UFUNCTION(NetMulticast, Reliable)
+	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlayThrustMontage();
 
-	UFUNCTION(NetMulticast, Reliable)
+	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlaySpecialAttackMontage();
-
-public:
-	virtual USkeletalMeshComponent* GetAttackMesh() const override
-	{
-		return GetMesh();
-	}
-
-	virtual UAttackCollisionComponent* GetAttackCollisionComponent() const override
-	{
-		return AttackCollisionComponent;
-	}
-
-protected:
-	virtual void NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit) override;
-
-	float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
-
 };

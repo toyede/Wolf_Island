@@ -805,4 +805,20 @@ public:
 private:
 	// 마지막으로 물을 마신 시간
 	float LastDrinkTime = -999.0f;
+
+protected:
+	// 냄새 관련 변수
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Scent")
+	float ScentReportInterval = 0.5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Scent")
+	float ScentIntensity = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Scent")
+	float ScentMaxRange = 1500.f;
+
+	FTimerHandle ScentTimerHandle;
+
+	// 실제 이벤트를 보내는 함수
+	void ReportScent();
 };

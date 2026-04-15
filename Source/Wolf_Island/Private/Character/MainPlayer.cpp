@@ -38,6 +38,7 @@
 #include "Games/MainPlayerState.h"
 #include "Games/MainGameState.h"
 #include "WaterBodyActor.h"
+#include "AI/Sense/AISense_Scent.h"
 
 
 void AMainPlayer::PossessedBy(AController* NewController)
@@ -261,6 +262,20 @@ void AMainPlayer::BeginPlay()
 		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
 		FName("hand_r"));
 	Torch->SetActorHiddenInGame(true);
+
+	// 냄새 보고 타이머 설정
+	GetWorldTimerManager().SetTimer(ScentTimerHandle, this, &AMainPlayer::ReportScent, ScentReportInterval, true);
+}
+
+void AMainPlayer::ReportScent()
+{
+	UAISense_Scent::ReportScentEvent(
+		this,
+		GetActorLocation(),
+		ScentIntensity,
+		ScentMaxRange,
+		this // Instigator (나 자신)
+	);
 }
 
 void AMainPlayer::EndPlay(const EEndPlayReason::Type EndPlayReason)

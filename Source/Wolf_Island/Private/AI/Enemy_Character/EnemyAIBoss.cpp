@@ -587,6 +587,12 @@ void AEnemyAIBoss::Multicast_PlayAttackMontage_Implementation(int32 AttackIndex)
 {
 	if (!AttackMontages.IsValidIndex(AttackIndex)) return;
 
+	// 사운드 재생
+	if (AttackSounds.IsValidIndex(AttackIndex) && AttackSounds[AttackIndex])
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, AttackSounds[AttackIndex], GetActorLocation());
+	}
+
 	if (AttackStartSockets.IsValidIndex(AttackIndex) && AttackEndSockets.IsValidIndex(AttackIndex))
 	{
 		AttackCollisionComponent->TraceStartSocketName = AttackStartSockets[AttackIndex];
@@ -626,6 +632,12 @@ void AEnemyAIBoss::ExecuteRush()
 
 void AEnemyAIBoss::Multicast_PlayRushMontage_Implementation()
 {
+	// 사운드 재생
+	if (RushSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, RushSound, GetActorLocation());
+	}
+
 	if (RushStartSocket != NAME_None)
 	{
 		AttackCollisionComponent->TraceStartSocketName = RushStartSocket;
@@ -670,6 +682,12 @@ void AEnemyAIBoss::ExecuteGroggy()
 
 void AEnemyAIBoss::Multicast_PlayGroggyMontage_Implementation()
 {
+	// 사운드 재생
+	if (GroggySound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, GroggySound, GetActorLocation());
+	}
+
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
 	if (AnimInstance && GroggyMontage)
@@ -718,6 +736,12 @@ void AEnemyAIBoss::ExecuteSummonWolves()
 
 void AEnemyAIBoss::Multicast_PlaySummonMontage_Implementation()
 {
+	// 사운드 재생
+	if (SummonStatueSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, SummonStatueSound, GetActorLocation());
+	}
+
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
 	if (AnimInstance && SummonStatueMontage)
@@ -735,6 +759,12 @@ void AEnemyAIBoss::Multicast_PlaySummonMontage_Implementation()
 
 void AEnemyAIBoss::Multicast_PlaySummonWolvesMontage_Implementation()
 {
+	// 사운드 재생
+	if (SummonWolvesSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, SummonWolvesSound, GetActorLocation());
+	}
+
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	UAnimMontage* MontageToPlay = SummonWolvesMontage ? SummonWolvesMontage : SummonStatueMontage;
 
@@ -788,6 +818,12 @@ void AEnemyAIBoss::ExecuteSpecialAttack()
 
 void AEnemyAIBoss::Multicast_PlaySpecialAttackMontage_Implementation()
 {
+	// 사운드 재생
+	if (SpecialAttackSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, SpecialAttackSound, GetActorLocation());
+	}
+
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && SpecialAttackMontage)
 	{
