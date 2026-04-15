@@ -54,6 +54,9 @@ public:
 	UProgressBar* HydrationBar;
 	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
 	UProgressBar* AirBar;
+	
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidgetAnim), Transient)
+	UWidgetAnimation* Infected;
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<class UInventorySlot> SlotClass;
@@ -67,7 +70,7 @@ public:
 	bool ShowInteraction = true;
 	
 	UFUNCTION(BlueprintCallable)
-	void SetPlayerRef(AMainPlayer* OwnerPlayer) { PlayerRef = OwnerPlayer; };
+	void SetPlayerRef(AMainPlayer* OwnerPlayer);
 
 	UFUNCTION(BlueprintCallable)
 	void DisplayInteraction();
@@ -94,6 +97,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void UpdateStatusBars();
+	
+	UFUNCTION(BlueprintCallable)
+	void OnInfectionChanged();
 
 protected:
 	

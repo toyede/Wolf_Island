@@ -21,6 +21,7 @@ void UTextCommitPanel::NativeConstruct()
 
 void UTextCommitPanel::OnCommitClickedEvent()
 {
+	CommitButton->SetIsEnabled(false);
 	OnCommitClicked.Broadcast(TextEditBox->GetText().ToString());
 }
 

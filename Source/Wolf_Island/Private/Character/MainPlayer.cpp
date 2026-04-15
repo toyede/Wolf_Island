@@ -37,7 +37,6 @@
 #include "Moon/MoonlightInfectionSystem.h"
 #include "Games/MainPlayerState.h"
 #include "Games/MainGameState.h"
-#include "WaterBodyActor.h"
 
 
 void AMainPlayer::PossessedBy(AController* NewController)
@@ -189,7 +188,6 @@ void AMainPlayer::BeginPlay()
 	
 	if (HasAuthority())
 	{
-		
 		TArray<AActor*> Found;
 		UGameplayStatics::GetAllActorsOfClass(
 			GetWorld(), AMoonlightInfectionSystem::StaticClass(), Found);
@@ -282,7 +280,9 @@ void AMainPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
-	if (IsLocallyControlled()&&
+	//기절이 상태가 아니고, 로컬 플레이어고, 진행 중인 인터랙션이 없으면 인터랙션 레이 트레이싱 실시
+	if (!IsInability&&
+		IsLocallyControlled()&&
 		GetWorld()->TimeSince(InteractionData.LastInteractionCheckTime) > InteractionCheckFrequency)
 	{
 		CheckInteraction();
@@ -902,6 +902,12 @@ void AMainPlayer::KnockOut()
 	if (IsCrouching) ToggleCrouch();
 	if (IsRunning) Request_StopRun();
 	
+	//기절 상태로 전환
+	IsInability = true;
+	GetCharacterMovement()->MaxWalkSpeed = KnockOutSpeed;
+	CanInteract = true;
+	InteractableData.CanInteract = CanInteract;
+	
 	//기절 타이머 실행 - 누가 소생시켜주지 않으면 10초 뒤 사망
 	GetWorld()->GetTimerManager().SetTimer(
 		KnockOutTimer,
@@ -928,12 +934,6 @@ void AMainPlayer::KnockOut()
 		},
 		KnockOutToDeathTime,
 		false);
-	
-	//기절 상태로 전환
-	IsInability = true;
-	GetCharacterMovement()->MaxWalkSpeed = KnockOutSpeed;
-	CanInteract = true;
-	InteractableData.CanInteract = CanInteract;
 }
 
 void AMainPlayer::Revive()
@@ -1183,7 +1183,7 @@ void AMainPlayer::Client_InteractionExecuted_Implementation()
 //인터랙션 시작 함수 (인터랙션 키 눌렀을 때)
 void AMainPlayer::BeginInteract()
 {
-	if (IsBuildingInputBlocked()) return;
+	if (IsBuildingInputBlocked() || IsInability) return;
 
 	//인터랙션이 시작됐을 때부터 인터렉션 상태가 변하지 않는 것을 체크
 	CheckInteraction();

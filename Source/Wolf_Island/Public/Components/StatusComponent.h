@@ -89,7 +89,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection", SaveGame)
 	float MaxInfection = 100.0f;
 	//감염 여부
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection", SaveGame)
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Infection", SaveGame)
 	bool IsInfected = false;
 	//감염 속도
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Infection", SaveGame)

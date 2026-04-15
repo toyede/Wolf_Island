@@ -597,7 +597,9 @@ void UStatusComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
 	DOREPLIFETIME(UStatusComponent, CurrentStamina);
 	DOREPLIFETIME(UStatusComponent, CurrentHunger);
 	DOREPLIFETIME(UStatusComponent, CurrentHydration);
+	DOREPLIFETIME(UStatusComponent, CurrentAir);
 	DOREPLIFETIME(UStatusComponent, CurrentInfectionRate);
+	DOREPLIFETIME(UStatusComponent, IsInfected);
 }
 
 void UStatusComponent::OnRep_CurrentHunger()
