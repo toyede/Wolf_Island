@@ -678,6 +678,41 @@ void AMainPlayer::UseItem(int32 SlotIndex)
 		if (ItemData->IsNotEmpty())
 		{
 			UE_LOG(LogTemp, Warning, TEXT("TRY TO USE THIS : [ %s ]"), *ItemData->TextData.Name.ToString());
+
+			
+			if (ItemData->ID == FName("FO019"))
+			{
+				if (StatusComponent)
+				{
+					if (EatingSound)
+					{
+						Multi_PlaySound(EatingSound, GetActorLocation());
+					}
+					StatusComponent->ApplyItem(*ItemData);
+				}
+
+				FItemBaseData SlotItem = InventoryComponent->GetItemAtIndex(SlotIndex);
+				
+				SlotItem.CurrentDurability -= 1.0f;
+
+				if (SlotItem.CurrentDurability <= 0.0f)
+				{
+					InventoryComponent->Request_RemoveItemAmountAtSlot(SlotIndex, 1);
+					
+					FItemBaseData RewardItem = InventoryComponent->CreateItemByID(FName("FQ005"), 1);
+					if (RewardItem.IsValid())
+					{
+						InventoryComponent->Request_HandleAddItem(RewardItem);
+					}
+				}
+				else
+				{
+					InventoryComponent->Request_SetItemAtSlot(SlotIndex, SlotItem);
+				}
+				
+				return; 
+			}
+			
 			
 			if (StatusComponent && ItemData->Type == EItemType::FOOD)
 			{
@@ -1379,7 +1414,7 @@ void AMainPlayer::WeaponTrace(const FVector& StartPos, const FVector& EndPos)
 		true))
 	{
 		// 기본 대미지
-		float DamageAmount = 10.0f;
+		float DamageAmount = 0.0f;
 		FItemBaseData HoldingItem = GetHoldingItemReference();
 
 		//무기 장착 시 무기 대미지로 설정
@@ -1853,10 +1888,30 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 			DamagedActors.Add(NewTree);
 		}
 		
-		FDamageEvent DamageEvent;
-		NewTree->TakeDamage(DamageAmount, DamageEvent, GetController(), this);
+		float FinalDamage = 0.0f;
+		FItemBaseData HoldingItem = GetHoldingItemReference();
+
+		FinalDamage = UStatusComponent::CalculateFinalDamage(this, NewTree, DamageAmount);
+		
+		if (HoldingItem.IsValid())
+		{
+			if (FItemData* ItemData = InventoryComponent->GetItemData(HoldingItem))
+			{
+				if (ItemData->ID == FName(TEXT("EQ004")))
+				{
+					FinalDamage = UStatusComponent::CalculateTrueDamage(this, NewTree, DamageAmount);
+					UE_LOG(LogTemp, Warning, TEXT("TrueDamage"));
+				}
+			}
+		}
+		
+		UGameplayStatics::ApplyDamage(
+			NewTree, 
+			FinalDamage, 
+			GetController(), 
+			this, 
+			UDamageType::StaticClass());
         
-		//if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, TEXT("나무 변환 성공!"));
 	}
 }
 
@@ -1872,14 +1927,40 @@ void AMainPlayer::ProcessAttackHit(const FHitResult& HitResult, float DamageAmou
 	// 1. 일반 액터 대미지 처리
 	if (HitActor)
 	{
+		float FinalDamage = 0.0f;
+		FItemBaseData HoldingItem = GetHoldingItemReference();
+		
+		FinalDamage = UStatusComponent::CalculateFinalDamage(this, HitActor, DamageAmount);
+		UE_LOG(LogTemp, Warning, TEXT("FinalDamage"));
+		if (HoldingItem.IsValid())
+		{
+			if (InventoryComponent->GetItemData(HoldingItem)->ID == FName(TEXT("EQ004")) && HitActor->IsA(ATree::StaticClass()))
+			{
+				FinalDamage = UStatusComponent::CalculateTrueDamage(this, HitActor, DamageAmount);
+				UE_LOG(LogTemp, Warning, TEXT("TrueDamage"));
+			}
+		}
+		
+		
 		UGameplayStatics::ApplyDamage(
 			HitActor, 
-			DamageAmount, 
+			FinalDamage, 
 			GetController(), 
 			this, 
 			UDamageType::StaticClass());
 
-		FItemBaseData HoldingItem = GetHoldingItemReference();
+		if (UStatusComponent* HitStatus = HitActor->FindComponentByClass<UStatusComponent>())
+		{
+			float RemainingHP = HitStatus->CurrentHP; 
+
+			if (GEngine)
+			{
+				FString DebugMsg = FString::Printf(TEXT("[%s] 남은 체력: %.1f"), *HitActor->GetName(), RemainingHP);
+				GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, DebugMsg);
+				FString DebugMsgs = FString::Printf(TEXT("최종데미지: %.1f"), FinalDamage);
+				GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, DebugMsgs);
+			}
+		}
 
 		if (HoldingItem.IsValid())
 		{
@@ -1887,8 +1968,7 @@ void AMainPlayer::ProcessAttackHit(const FHitResult& HitResult, float DamageAmou
 
 			if (ItemData)
 			{
-				const bool bIsEquipment =
-					(ItemData->Type == EItemType::EQUIPMENT);
+				const bool bIsEquipment = (ItemData->Type == EItemType::EQUIPMENT);
 
 				if (bIsEquipment)
 				{
@@ -2229,13 +2309,35 @@ void AMainPlayer::Server_DrinkWater_Implementation(UPrimitiveComponent* WaterCom
 
 	if (ClassName.Contains(TEXT("WaterBodyRiver")) || ClassName.Contains(TEXT("WaterBodyLake")))
 	{
-		StatusComponent->IncreaseHydration(5.0f);
-        
+		bool bFilledBottle = false;
+
+		FItemBaseData HoldingItem = GetHoldingItemReference();
+		
+		if (HoldingItem.IsValid() && HoldingItem.ItemID == FName("FQ005"))
+		{
+			if (InventoryComponent)
+			{
+				InventoryComponent->Request_RemoveItemAmountAtSlot(HotBarIndex, 1);
+				
+				FItemBaseData FilledWaterBottle = InventoryComponent->CreateItemByID(FName("FO019"), 1);
+				if (FilledWaterBottle.IsValid())
+				{
+					InventoryComponent->Request_HandleAddItem(FilledWaterBottle);
+				}
+				
+				bFilledBottle = true;
+			}
+		}
+		
+		if (bFilledBottle == false)
+		{
+			StatusComponent->IncreaseHydration(5.0f);
+		}
+		
 		if (EatingSound) 
 		{
 			Multi_PlaySound(EatingSound, GetActorLocation());
 		}
-
 		LastDrinkTime = CurrentTime;
 	}
 	else if (ClassName.Contains(TEXT("WaterBodyOcean")))
