@@ -72,20 +72,37 @@ void AEnemyAIBoss::BeginPlay()
 		AttackCollisionComponent->AddIgnoredActor(this);
 	}
 
-	if (StatueSpawnPoints.IsEmpty())
-	{
-		TArray<AActor*> Found;
-		UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("StatueSpawn"), Found);
-		for (AActor* A : Found)
-		{
-			StatueSpawnPoints.Add(A);
-		}
-	}
+	RefreshStatueSpawnPointsFromTag();
 	
 	if (StatusComponent)
 	{
 		StatusComponent->CurrentHP = StatusComponent->MaxHP;
 	}
+}
+
+void AEnemyAIBoss::RefreshStatueSpawnPointsFromTag()
+{
+	if (!GetWorld() || StatueSpawnTag.IsNone())
+	{
+		return;
+	}
+
+	if (!StatueSpawnPoints.IsEmpty())
+	{
+		return;
+	}
+
+	TArray<AActor*> Found;
+	UGameplayStatics::GetAllActorsWithTag(GetWorld(), StatueSpawnTag, Found);
+	for (AActor* A : Found)
+	{
+		if (IsValid(A))
+		{
+			StatueSpawnPoints.Add(A);
+		}
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[Boss] Statue spawn discovery tag='%s', found=%d"), *StatueSpawnTag.ToString(), StatueSpawnPoints.Num());
 }
 
 void AEnemyAIBoss::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -143,7 +160,7 @@ void AEnemyAIBoss::SpawnStatueSequence()
 	{
 		if (GEngine)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("[Boss] No valid statue spawn point."));
+			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("[Boss] No valid statue spawn point - set StatueSpawnPoints or StatueSpawnPoint in editor."));
 		}
 		return;
 	}
@@ -340,6 +357,11 @@ bool AEnemyAIBoss::IsSpawnAreaOccupied(const FVector& Location) const
 
 AActor* AEnemyAIBoss::SelectSpawnPoint()
 {
+	if (StatueSpawnPoints.IsEmpty())
+	{
+		RefreshStatueSpawnPointsFromTag();
+	}
+
 	TArray<AActor*> ValidPoints;
 	for (AActor* Point : StatueSpawnPoints)
 	{
@@ -354,6 +376,11 @@ AActor* AEnemyAIBoss::SelectSpawnPoint()
 		const int32 Index = SpawnPointCursor % ValidPoints.Num();
 		SpawnPointCursor++;
 		return ValidPoints[Index];
+	}
+
+	if (!IsValid(StatueSpawnPoint))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Boss] No statue spawn point set. Tag='%s', array=%d"), *StatueSpawnTag.ToString(), StatueSpawnPoints.Num());
 	}
 
 	return IsValid(StatueSpawnPoint) ? StatueSpawnPoint : nullptr;

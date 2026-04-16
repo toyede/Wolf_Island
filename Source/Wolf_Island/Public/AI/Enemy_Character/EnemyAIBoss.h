@@ -200,11 +200,15 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|Phase2")
 	TSubclassOf<ABossStatue> StatueClass;
 
-	UPROPERTY(EditInstanceOnly, Category = "Boss|Pattern|Phase2")
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Phase2")
 	TArray<TObjectPtr<AActor>> StatueSpawnPoints;
 
-	UPROPERTY(EditInstanceOnly, Category = "Boss|Pattern|Phase2")
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Phase2")
 	AActor* StatueSpawnPoint;
+
+	// Used by dynamic-spawned boss to discover level target points.
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Phase2")
+	FName StatueSpawnTag = TEXT("StatueSpawn");
 
 	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|Phase2|Spawn")
 	int32 MaxSpawnRetries = 3;
@@ -225,7 +229,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|SummonWolves")
 	TSubclassOf<ASummonedWolf> SummonedWolfClass;
 
-	UPROPERTY(EditInstanceOnly, Category = "Boss|Pattern|SummonWolves")
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|SummonWolves")
 	TArray<TObjectPtr<AActor>> SummonedWolfSpawnPoints;
 
 	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|SummonWolves")
@@ -309,6 +313,7 @@ private:
 	void TrySpawnStatueWithRetry();
 	bool IsSpawnAreaOccupied(const FVector& Location) const;
 	AActor* SelectSpawnPoint();
+	void RefreshStatueSpawnPointsFromTag();
 	void ClearSpawnState();
 
 	// --- Internal Pattern Logic (Wolves) ---
