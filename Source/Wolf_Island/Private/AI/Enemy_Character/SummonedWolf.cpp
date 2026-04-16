@@ -24,14 +24,6 @@ ASummonedWolf::ASummonedWolf()
 	StatusComponent = CreateDefaultSubobject<UStatusComponent>(TEXT("StatusComponent"));
 	AttackCollisionComponent = CreateDefaultSubobject<UAttackCollisionComponent>(TEXT("AttackCollisionComponent"));
 
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Overlap);
-	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
-
-	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	GetMesh()->SetCollisionObjectType(ECC_Pawn);
-	GetMesh()->SetGenerateOverlapEvents(true);
-
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 	AIControllerClass = AAIController::StaticClass();
 
@@ -217,13 +209,6 @@ void ASummonedWolf::NormalAttack_Implementation()
 
 void ASummonedWolf::Multicast_PlayAttackMontage_Implementation()
 {
-	/*if (AttackCollisionComponent)
-	{
-		AttackCollisionComponent->TraceStartSocketName = AttackStartSocket;
-		AttackCollisionComponent->TraceEndSocketName = AttackEndSocket;
-		AttackCollisionComponent->TraceRadius = AttackTraceRadius;
-	}*/
-
 	UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
 	if (!AnimInstance || !AttackMontage)
 	{
@@ -252,14 +237,18 @@ void ASummonedWolf::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupte
 
 void ASummonedWolf::OnAttackHit(const FHitResult& HitResult)
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	AActor* HitActor = HitResult.GetActor();
 	if (!HitActor)
 	{
 		return;
 	}
 
-	FDamageEvent DamageEvent;
-	HitActor->TakeDamage(AttackDamage, DamageEvent, GetController(), this);
+	UGameplayStatics::ApplyDamage(HitActor, AttackDamage, GetController(), this, UDamageType::StaticClass());
 }
 
 void ASummonedWolf::HandleHPZero()

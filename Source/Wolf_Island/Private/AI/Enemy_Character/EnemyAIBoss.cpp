@@ -326,9 +326,11 @@ bool AEnemyAIBoss::IsSpawnAreaOccupied(const FVector& Location) const
 
 	for (const FOverlapResult& OverlapResult : Overlaps)
 	{
+		// 플레이어만 체크 (소환된 늑대끼리는 막지 않음)
 		const APawn* Pawn = Cast<APawn>(OverlapResult.GetActor());
 		if (Pawn && Pawn->IsPlayerControlled())
 		{
+			UE_LOG(LogTemp, Log, TEXT("[Boss] WolfSpawn blocked by player: %s"), *Pawn->GetName());
 			return true;
 		}
 	}
@@ -487,6 +489,8 @@ void AEnemyAIBoss::SpawnWolvesSequence()
 {
 	if (!HasAuthority() || !SummonedWolfClass)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[Boss] SpawnWolvesSequence: HasAuthority=%d, SummonedWolfClass=%d"),
+			HasAuthority(), SummonedWolfClass != nullptr);
 		return;
 	}
 
@@ -496,21 +500,27 @@ void AEnemyAIBoss::SpawnWolvesSequence()
 	const int32 Slots = FMath::Max(0, MaxAliveSummonedWolves - AliveCount);
 	if (Slots <= 0)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[Boss] SpawnWolvesSequence: Slots=0, MaxAlive=%d, Alive=%d"), MaxAliveSummonedWolves, AliveCount);
 		return;
 	}
 
 	const int32 SpawnCount = FMath::Min(ComputeDesiredWolfSpawnCount(), Slots);
+	UE_LOG(LogTemp, Log, TEXT("[Boss] SpawnWolvesSequence: Trying to spawn %d wolves"), SpawnCount);
+
 	for (int32 i = 0; i < SpawnCount; ++i)
 	{
 		FVector SpawnLocation = FVector::ZeroVector;
 		if (!FindWolfSpawnLocation(SpawnLocation))
 		{
+			UE_LOG(LogTemp, Warning, TEXT("[Boss] SpawnWolvesSequence: FindWolfSpawnLocation failed for wolf %d"), i);
 			break;
 		}
 
+		UE_LOG(LogTemp, Log, TEXT("[Boss] SpawnWolvesSequence: SpawnLocation[%d] = X=%.1f Y=%.1f Z=%.1f"), i, SpawnLocation.X, SpawnLocation.Y, SpawnLocation.Z);
+
 		FActorSpawnParameters Params;
 		Params.Owner = this;
-		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 		ASummonedWolf* Spawned = GetWorld()->SpawnActor<ASummonedWolf>(
 			SummonedWolfClass,
@@ -521,7 +531,12 @@ void AEnemyAIBoss::SpawnWolvesSequence()
 
 		if (Spawned)
 		{
+			UE_LOG(LogTemp, Log, TEXT("[Boss] SpawnWolvesSequence: Wolf %d spawned successfully"), i);
 			AliveSummonedWolves.Add(Spawned);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("[Boss] SpawnWolvesSequence: SpawnActor returned null for wolf %d"), i);
 		}
 	}
 }
