@@ -90,6 +90,20 @@ void UPlayerHUD::AddItemMessage(FItemAddResult Result)
 	}
 }
 
+void UPlayerHUD::SetPlayerRef(AMainPlayer* OwnerPlayer)
+{
+	PlayerRef = OwnerPlayer;
+	
+	if (PlayerRef)
+	{
+		if (PlayerRef->StatusComponent)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PLAYER HUD] INFECTION BINDING COMPLETED"))
+			//PlayerRef->StatusComponent->OnInfectionChanged.AddDynamic(this, &UPlayerHUD::OnInfectionChanged);
+		}
+	}
+}
+
 void UPlayerHUD::DisplayInteraction()
 {
 	//UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] DisplayInteraction | %s"), *GetName())
@@ -259,5 +273,30 @@ void UPlayerHUD::UpdateStatusBars()
 			HydrationBar->SetPercent(Status->GetHydrationPercent());
 			AirBar->SetPercent(Status->GetAirPercent());
 		}
+	}
+}
+
+void UPlayerHUD::OnInfectionChanged()
+{
+	if (PlayerRef->StatusComponent)
+	{
+		if (PlayerRef->StatusComponent->IsInfected)
+		{	
+			UE_LOG(LogTemp, Warning, TEXT("[PLAYER HUD] Infection changed : true"));
+			if (Infected)
+			{
+				PlayAnimation(Infected, 0, 0);
+			}
+		} else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PLAYER HUD] Infection changed : false"));
+			if (Infected)
+			{
+				PlayAnimation(Infected, 0, 1);
+			}	
+		}
+	} else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER HUD] NO STATUS ON PLAYER"));
 	}
 }
