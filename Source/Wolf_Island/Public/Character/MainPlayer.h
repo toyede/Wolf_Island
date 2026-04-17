@@ -17,6 +17,7 @@ class UWidgetComponent;
 class UWaterBodyComponent;
 class APickup;
 class UPlayerHUD;
+class UBillboardComponent;
 struct FInputActionValue;
 
 USTRUCT(BlueprintType)
