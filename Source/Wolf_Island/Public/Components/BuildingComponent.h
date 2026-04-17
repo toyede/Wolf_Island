@@ -7,6 +7,8 @@
 #include "Data/ItemDataStruct.h"
 #include "BuildingComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBuildingModeEnded);
+
 UENUM(BlueprintType)
 enum class EBuildingState : uint8
 {
@@ -20,7 +22,10 @@ class WOLF_ISLAND_API UBuildingComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
-public:	
+public:
+	UPROPERTY(BlueprintAssignable, Category = "Building")
+	FOnBuildingModeEnded OnBuildingModeEnded;
+	
 	// Sets default values for this component's properties
 	UBuildingComponent();
 

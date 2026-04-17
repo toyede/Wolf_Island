@@ -604,3 +604,48 @@ void UStatusComponent::OnRep_CurrentHunger()
 {
 	//UE_LOG(LogTemp, Warning, TEXT("OnRep_CurrentHunger : %f"), CurrentHunger);
 }
+
+float UStatusComponent::CalculateFinalDamage(AActor* Attacker, AActor* Target, float DamageAmount)
+{
+	UStatusComponent* AttackerStatus = Attacker->FindComponentByClass<UStatusComponent>();
+	UStatusComponent* TargetStatus = Target->FindComponentByClass<UStatusComponent>();
+
+	float Damage = DamageAmount;
+	float TotalArmorPenetration = 0.0f;
+	if (AttackerStatus != nullptr) 
+	{
+		Damage += AttackerStatus->Attack;
+		TotalArmorPenetration += AttackerStatus->ArmorPenetration;
+	}
+
+	float TargetDefense = 0.0f;
+	if (TargetStatus != nullptr) 
+	{
+		TargetDefense = TargetStatus->Armor; 
+	}
+	
+	float FinalArmor = TargetDefense * ((100.0f - TotalArmorPenetration) / 100);
+	float FinalDamage = Damage * ((100.0f - FinalArmor) / 100);
+
+	FinalDamage = FMath::Max(0.0f, FinalDamage);
+	FinalDamage = FMath::RoundToFloat(FinalDamage * 10.0f) / 10.0f;
+	
+	return FinalDamage;
+}
+
+float UStatusComponent::CalculateTrueDamage(AActor* Attacker, AActor* Target, float DamageAmount)
+{
+	UStatusComponent* AttackerStatus = Attacker->FindComponentByClass<UStatusComponent>();
+	UStatusComponent* TargetStatus = Target->FindComponentByClass<UStatusComponent>();
+
+	float TrueDamage = DamageAmount;
+	if (AttackerStatus != nullptr) 
+	{
+		TrueDamage += AttackerStatus->Attack;
+	}
+
+	TrueDamage = FMath::Max(0.0f, TrueDamage);
+	TrueDamage = FMath::RoundToFloat(TrueDamage * 10.0f) / 10.0f;
+	
+	return TrueDamage;
+}

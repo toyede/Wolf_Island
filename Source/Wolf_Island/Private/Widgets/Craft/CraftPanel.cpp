@@ -196,7 +196,6 @@ void UCraftPanel::SetRecipeInfo(URecipeBlock* ClickedBlock, FRecipeData RecipeDa
 	ResultSlot->SetCraftSlot(ResultData, RecipeData.ResultAmount);
 	ItemName->SetText(ResultData->TextData.Name);
 	ItemDescription->SetText(ResultData->TextData.Description);
-
 	//제작 소요 시간
 	DurationText->SetText(FText::FromString(FString::Printf(TEXT("%.1fs"), RecipeData.Duration)));
 

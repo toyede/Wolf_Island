@@ -3,6 +3,7 @@
 
 #include "Widgets/Craft/BuildingPanel.h"
 
+#include "Character/MainPlayerController.h"
 #include "Components/BuildingComponent.h"
 #include "Components/Button.h"
 #include "Components/Image.h"
@@ -10,7 +11,10 @@
 #include "Components/ScrollBox.h"
 #include "Components/TextBlock.h"
 #include "Components/WrapBox.h"
+#include "Character/MainPlayer.h"
+#include "GameFramework/HUD.h"
 #include "Games/MainGameState.h"
+#include "Widgets/PlayerHUD.h"
 #include "Widgets/Craft/CraftSlot.h"
 #include "Widgets/Craft/RecipeBlock.h"
 #include "Widgets/Inventory/Inventory.h"
@@ -68,6 +72,10 @@ void UBuildingPanel::NativeConstruct()
 	{
 		OwnerInventory = Pawn->GetComponentByClass<UInventoryComponent>();
 		OwnerBuildingComponent = Pawn->GetComponentByClass<UBuildingComponent>();
+		if (OwnerBuildingComponent)
+		{
+			OwnerBuildingComponent->OnBuildingModeEnded.AddDynamic(this, &UBuildingPanel::OnBuildingFinished);
+		}
 	}
 
 	if (AMainGameState* GS = GetWorld() ? GetWorld()->GetGameState<AMainGameState>() : nullptr)
@@ -121,12 +129,8 @@ void UBuildingPanel::OnBuildButtonClicked()
 
 void UBuildingPanel::SetBuildingInfo(URecipeBlock* NewBlock, FRecipeData RecipeData)
 {
-	//선택된 버튼 강조 변경
-	//원래 선택 됐던 거 강조 해제
 	CurrentRecipeBlock->SetSelected(false);
-	//선택된 버튼을 최신 거로 변경
 	CurrentRecipeBlock = NewBlock;
-	//최신 선택된 거 강조
 	CurrentRecipeBlock->SetSelected(true);
 	
 	CurrentRecipeData = RecipeData;
@@ -141,8 +145,12 @@ void UBuildingPanel::SetBuildingInfo(URecipeBlock* NewBlock, FRecipeData RecipeD
 	}
 
 	FItemData* ResultData = ItemDataTable->FindRow<FItemData>(RecipeData.ResultID, "");
+
+	ResultSlot->SetCraftSlot(ResultData, RecipeData.ResultAmount);
 	ItemName->SetText(ResultData->TextData.Name);
 	ItemDescription->SetText(ResultData->TextData.Description);
+	//제작 소요 시간
+	DurationText->SetText(FText::FromString(FString::Printf(TEXT("%.1fs"), RecipeData.Duration)));
 
 	if (OwnerInventory && OwnerInventory->CheckCanMakeRecipe(RecipeData))
 	{
@@ -174,6 +182,26 @@ URecipeBlock* UBuildingPanel::AddBuildingRecipe(FRecipeData Recipe)
 	}
 	
 	return nullptr;
+}
+
+void UBuildingPanel::OnBuildingFinished()
+{
+	APlayerController* PC = GetOwningPlayer();
+	if (PC)
+	{
+		// 인풋 모드 복구
+		FInputModeGameOnly InputMode;
+		PC->SetInputMode(InputMode);
+		PC->bShowMouseCursor = false;
+	}
+
+	if (AMainPlayer* Player = Cast<AMainPlayer>(GetOwningPlayerPawn()))
+	{
+		if (Player->HUD)
+		{
+			Player->HUD->SetVisibility(ESlateVisibility::HitTestInvisible); 
+		}
+	}
 }
 
 void UBuildingPanel::SendDebugChat(FString Message)

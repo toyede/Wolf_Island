@@ -92,17 +92,16 @@ void UInventorySlot::RefreshSlot()
 
 		if (ItemData)
 		{
-			const bool bIsEquipment =
-				(ItemData->Type == EItemType::EQUIPMENT);
+			const bool bUseBar = (ItemData->Type == EItemType::EQUIPMENT) || ItemData->ID == FName("FO019");
 
-			if (bIsEquipment && ItemRef.MaxDurability > 0.0f)
+			if (bUseBar && ItemRef.MaxDurability > 0.0f)
 			{
 				Percent = FMath::Clamp(ItemRef.CurrentDurability / ItemRef.MaxDurability, 0.0f, 1.0f);
 
 				bShowDurability = (ItemRef.CurrentDurability < ItemRef.MaxDurability);
 
 				FLinearColor FillColor = FLinearColor(0.1f, 0.85f, 0.2f, 1.0f);
-				if (Percent <= 0.10f)
+				if (Percent <= 0.10f || ItemRef.CurrentDurability == 1.0f)
 				{
 					FillColor = FLinearColor(0.9f, 0.1f, 0.1f, 1.0f);
 				}

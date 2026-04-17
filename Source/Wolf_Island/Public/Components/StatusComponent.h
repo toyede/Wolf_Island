@@ -142,8 +142,20 @@ public:
 	float CurrentAir = 100.0f;
 	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	float MaxAir = 100.0f;
-	
 
+	/*----Ability----*/
+	//공격력
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
+	float Attack = 5.0f;
+	//방어력
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
+	float Armor = 10.0f;
+	//방어력 관통
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
+	float ArmorPenetration = 0.0f;
+
+
+	
 	//타이머
 	//스태미나 타이머
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Timer", SaveGame)
@@ -242,11 +254,12 @@ public:
 	//산소 부족으로 받는 대미지 주기
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
 	float SuffocatedRate = 1.0f;
-
+	
 	// 테스트용
 	UPROPERTY(BlueprintReadWrite, Category = "Status", SaveGame)
 	bool bIsIncapacitated = false;  // 쓰러진 상태
 
+	
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -407,4 +420,12 @@ public:
 
 	UFUNCTION()
 	void OnRep_CurrentHunger();
+
+
+	// 최종데미지 계산 함수
+	UFUNCTION()
+	static float CalculateFinalDamage(AActor* Attacker, AActor* Target, float DamageAmount);
+
+	UFUNCTION()
+	static float CalculateTrueDamage(AActor* Attacker, AActor* Target, float DamageAmount);
 };

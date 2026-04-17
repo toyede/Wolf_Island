@@ -584,7 +584,7 @@ FItemBaseData UInventoryComponent::CreateItemByID(FName ItemID, int32 Amount)
 		const bool bIsEquipment =
 			(ItemData->Type == EItemType::EQUIPMENT);
 
-		if (bIsEquipment)
+		if (bIsEquipment || ItemData->ID == FName("FO019")) // 
 		{
 			NewItem.MaxDurability = ItemData->NumericData.Durability;
 			NewItem.CurrentDurability = NewItem.MaxDurability;

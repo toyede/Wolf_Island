@@ -1,3 +1,4 @@
+
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
@@ -215,6 +216,11 @@ void UBuildingComponent::CleanupBuildMode()
 	BuildStartTime = 0.0f;
 	BuildDuration = 0.0f;
 	CurrentState = EBuildingState::Idle;
+
+	if (OnBuildingModeEnded.IsBound())
+	{
+		OnBuildingModeEnded.Broadcast();
+	}
 }
 
 void UBuildingComponent::Server_RequestBuild_Implementation(FRecipeData Recipe, FBuildingData BuildData,
