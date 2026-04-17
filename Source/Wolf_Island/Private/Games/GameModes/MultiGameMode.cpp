@@ -8,6 +8,9 @@
 #include "Widgets/RoleSelection/RoleButton.h"
 #include "Moon/MoonlightInfectionSystem.h"
 #include "Kismet/GameplayStatics.h"
+#include "BehaviorTree/BlackboardComponent.h"
+#include "AIController.h"
+#include "AI/Enemy_Character/EnemyAIBoss.h"
 
 AMultiGameMode::AMultiGameMode()
 {
@@ -212,6 +215,29 @@ void AMultiGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 	// 1. 스탯 30씩만 준다. - 감염상태 유지.
 	if (AMainPlayer* Player = Cast<AMainPlayer>(DeadPC->GetPawn()))
 	{
+		// 보스 참가자 명단에서 제거 및 블랙보드 타겟 클리어
+		if (AMainGameMode* GM = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode()))
+		{
+			if (IsValid(GM->BossRef))
+			{
+				GM->BossRef->BossParticipants.Remove(Player);
+
+				// 보스 AI의 블랙보드에서 현재 죽은 플레이어를 타겟팅하고 있다면 클리어
+				if (AAIController* AIC = Cast<AAIController>(GM->BossRef->GetController()))
+				{
+					if (UBlackboardComponent* BB = AIC->GetBlackboardComponent())
+					{
+						AActor* CurrentTarget = Cast<AActor>(BB->GetValueAsObject(TEXT("Target")));
+						if (CurrentTarget == Player)
+						{
+							BB->ClearValue(TEXT("Target"));
+							UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] Clear Boss Target Blackboard"));
+						}
+					}
+				}
+			}
+		}
+
 		Player->OnRespawn();
 	}
 
