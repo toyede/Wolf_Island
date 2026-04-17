@@ -10,6 +10,8 @@ AEnemyAIControllerBase::AEnemyAIControllerBase()
 {
 	BehaviorComp = CreateDefaultSubobject<UBehaviorTreeComponent>(TEXT("BehaviorComp"));
 	AIPerceptionComp = CreateDefaultSubobject<UAIPerceptionComponent>(TEXT("AIPerceptionComp"));
+
+	bReplicates = true;
 }
 
 void AEnemyAIControllerBase::BeginPlay()

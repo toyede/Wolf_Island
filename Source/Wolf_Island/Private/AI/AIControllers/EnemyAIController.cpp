@@ -10,12 +10,12 @@
 #include "Perception/AISenseConfig_Sight.h"
 #include "Perception/AISenseConfig_Hearing.h"
 #include "Perception/AISenseConfig_Damage.h"
-//#include "AI/Senses/AISenseConfig_Scent.h"
+#include "AI/Sense/AISenseConfig_Scent.h"
 
 #include "Perception/AISense_Sight.h"
 #include "Perception/AISense_Hearing.h"
 #include "Perception/AISense_Damage.h"
-//#include "AI/Senses/AISense_Scent.h"
+#include "AI/Sense/AISense_Scent.h"
 
 #include "Kismet/GameplayStatics.h"
 #include "Actors/PatrolRoute.h"
@@ -46,14 +46,14 @@ AEnemyAIController::AEnemyAIController()
 	DamageConfig->SetMaxAge(1.0f);
 
 	// Scent Config
-	/*ScentConfig = CreateDefaultSubobject<UAISenseConfig_Scent>(TEXT("ScentConfig"));
-	ScentConfig->SetMaxAge(5.0f);*/
+	ScentConfig = CreateDefaultSubobject<UAISenseConfig_Scent>(TEXT("ScentConfig"));
+	ScentConfig->SetMaxAge(5.0f);
 
 	// Perception에 등록
 	AIPerceptionComp->ConfigureSense(*SightConfig);
 	AIPerceptionComp->ConfigureSense(*HearingConfig);
 	AIPerceptionComp->ConfigureSense(*DamageConfig);
-	/*AIPerceptionComp->ConfigureSense(*ScentConfig);*/
+	AIPerceptionComp->ConfigureSense(*ScentConfig);
 
 	AIPerceptionComp->SetDominantSense(SightConfig->GetSenseImplementation());
 }
@@ -62,6 +62,22 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
+	if (InPawn)
+	{
+		// Possess 직후 + 약간의 딜레이 후 두 번 밀어줌
+		InPawn->ForceNetUpdate();
+		ForceNetUpdate();
+        
+		FTimerHandle DelayHandle;
+		GetWorldTimerManager().SetTimer(DelayHandle, [WeakPawn = TWeakObjectPtr<APawn>(InPawn)]()
+		{
+			if (WeakPawn.IsValid())
+			{
+				WeakPawn->ForceNetUpdate();
+			}
+		}, 0.5f, false);
+	}
+	
 	if (BehaviorComp)
 	{
 		RunBehaviorTree(BehaviorTreeAsset);
@@ -72,11 +88,9 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 	{
 		SetEnemyState(EEnemyState::Passive);
 
-		// [이벤트 바인딩] 캐릭터 델리게이트 (공격 종료 등)
 		BindCharacterEvents();
 	}
 
-	// [핵심 변경] Perception Component의 델리게이트에 바인딩
 	// 배열이 아니라 개별 타겟/자극 단위로 호출됨
 	if (AIPerceptionComp)
 	{
@@ -115,10 +129,10 @@ void AEnemyAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus St
 	{
 		HandleHearing(Actor, Stimulus);
 	}
-	/*else if (SensedClass == UAISense_Scent::StaticClass())
+	else if (SensedClass == UAISense_Scent::StaticClass())
 	{
 		HandleScent(Stimulus);
-	}*/
+	}
 }
 
 void AEnemyAIController::HandleSight(AActor* Actor, const FAIStimulus& Stimulus)
@@ -130,7 +144,7 @@ void AEnemyAIController::HandleSight(AActor* Actor, const FAIStimulus& Stimulus)
 			GetWorld()->GetTimerManager().SetTimer(LineOfSightTimer, [this]()
 				{
 					SetEnemyState(EEnemyState::Passive);
-				}, 3.0f, false);
+				}, SightTime, false);
 		}
 		return;
 	}
@@ -172,15 +186,32 @@ void AEnemyAIController::HandleDamage(AActor* Actor, const FAIStimulus& Stimulus
 
 void AEnemyAIController::HandleHearing(AActor* Actor, const FAIStimulus& Stimulus)
 {
-	if (!Stimulus.WasSuccessfullySensed()) return;
 	if (Stimulus.Tag != FName("Howling")) return;
+
+	if (!Stimulus.WasSuccessfullySensed())
+	{
+		// 아직 전투 진입 전(대기 타이머 중)이면 반응 자체를 취소
+		GetWorld()->GetTimerManager().ClearTimer(HearingReactTimer);
+
+		// 이미 전투 중이면 시각 확인 유예 타이머 설정
+		//  시각으로 플레이어를 보면 LineOfSightTimer가 자동 클리어됨
+		//  시각 확인 없이 만료되면 Passive 전환
+		if (EnemyState == EEnemyState::Combat && IsValid(AttackTarget))
+		{
+			GetWorld()->GetTimerManager().SetTimer(LineOfSightTimer, [this]()
+				{
+					SetEnemyState(EEnemyState::Passive);
+				}, SightTime, false);
+		}
+		return;
+	}
 
 	if (EnemyState == EEnemyState::Combat) return;
 
-	// Howling 연계는 "플레이어 타겟 공유"만 허용한다.
+	// Howling 연계는 플레이어 타겟 공유만 허용
 	AActor* SharedPlayerTarget = nullptr;
 
-	// 1) 소리를 직접 낸 대상이 플레이어면 그대로 사용
+	//소리를 직접 낸 대상이 플레이어면 그대로 사용
 	if (APawn* SensedPawn = Cast<APawn>(Actor))
 	{
 		if (SensedPawn->IsPlayerControlled())
@@ -189,7 +220,7 @@ void AEnemyAIController::HandleHearing(AActor* Actor, const FAIStimulus& Stimulu
 		}
 	}
 
-	// 2) 소리를 낸 대상이 Enemy면, 그 Enemy의 현재 AttackTarget(플레이어)만 공유
+	// 소리를 낸 대상이 Enemy면, 그 Enemy의 현재 AttackTarget(플레이어)만 공유
 	if (!SharedPlayerTarget)
 	{
 		if (AEnemyAIBase* SourceEnemy = Cast<AEnemyAIBase>(Actor))
@@ -271,21 +302,21 @@ bool AEnemyAIController::IsFriendlyAggroSource(AActor* SourceActor) const
 	return false;
 }
 
-//void AEnemyAIController::HandleScent(const FAIStimulus& Stimulus)
-//{
-//	if (!Stimulus.WasSuccessfullySensed()) return;
-//
-//	// 평화롭거나 조사 중일 때만 냄새 반응
-//	if (EnemyState == EEnemyState::Passive || EnemyState == EEnemyState::Investigating)
-//	{
-//		// 냄새 위치 저장
-//		if (UBlackboardComponent* BB = GetBlackboardComponent())
-//		{
-//			BB->SetValueAsVector(PointOfInterestKey, Stimulus.StimulusLocation);
-//		}
-//		SetEnemyState(EEnemyState::Investigating);
-//	}
-//}
+void AEnemyAIController::HandleScent(const FAIStimulus& Stimulus)
+{
+	if (!Stimulus.WasSuccessfullySensed()) return;
+
+	// 평화롭거나 조사 중일 때만 냄새 반응
+	if (EnemyState == EEnemyState::Passive || EnemyState == EEnemyState::Investigating)
+	{
+		// 냄새 위치 저장
+		if (UBlackboardComponent* BB = GetBlackboardComponent())
+		{
+			BB->SetValueAsVector(PointOfInterestKey, Stimulus.StimulusLocation);
+		}
+		SetEnemyState(EEnemyState::Investigating);
+	}
+}
 
 bool AEnemyAIController::ShouldSwitchTarget(AActor* NewTarget) const
 {

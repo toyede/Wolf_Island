@@ -6,6 +6,8 @@
 #include "Character/MainPlayerController.h"
 #include "Games/MainPlayerState.h"
 #include "Widgets/RoleSelection/RoleButton.h"
+#include "Moon/MoonlightInfectionSystem.h"
+#include "Kismet/GameplayStatics.h"
 
 AMultiGameMode::AMultiGameMode()
 {
@@ -176,25 +178,62 @@ UClass* AMultiGameMode::GetDefaultPawnClassForController_Implementation(AControl
 void AMultiGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE][MULTI] HANDLE PLAYER DEATH"));
-	
-	//기절 안풀어줘서 죽어버린다면?
-	//1. 스탯 30씩만 준다. - 감염상태 유지. 
-	if (AMainPlayer* Player = Cast<AMainPlayer>(DeadPlayerController->GetPawn()))
+
+	if (!IsValid(DeadPlayerController))
+	{
+		return;
+	}
+
+	APlayerController* DeadPC = Cast<APlayerController>(DeadPlayerController);
+	if (!IsValid(DeadPC))
+	{
+		return;
+	}
+
+	// 늑대 세션 중인 플레이어는 위치를 강제 재배치하지 않는다.
+	// (아침 복귀 시 RestorePlayerAtDawn에서 늑대 최종 위치로 복귀해야 함)
+	if (AMoonlightInfectionSystem* InfectionSystem = Cast<AMoonlightInfectionSystem>(
+		UGameplayStatics::GetActorOfClass(GetWorld(), AMoonlightInfectionSystem::StaticClass())))
+	{
+		if (InfectionSystem->ActiveWerewolfSessions.Contains(DeadPC))
+		{
+			if (AMainPlayer* Player = Cast<AMainPlayer>(DeadPC->GetPawn()))
+			{
+				Player->OnRespawn();
+			}
+
+			UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE][MULTI] Werewolf session player death: skip StartSpot relocation"));
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Werewolf session player death: skip StartSpot relocation"));
+			return;
+		}
+	}
+
+	// 기절 안풀어줘서 죽어버린다면?
+	// 1. 스탯 30씩만 준다. - 감염상태 유지.
+	if (AMainPlayer* Player = Cast<AMainPlayer>(DeadPC->GetPawn()))
 	{
 		Player->OnRespawn();
 	}
-	
-	//2. 리스폰 지점으로 스폰
-	//보스 전 중 죽음 -> 보스전 입구에서 리스폰
-	AMainPlayerState* PS = Cast<AMainPlayerState>(DeadPlayerController->PlayerState);
+
+	// 2. 리스폰 지점으로 스폰
+	// 보스 전 중 죽음 -> 보스전 입구에서 리스폰
+	AMainPlayerState* PS = Cast<AMainPlayerState>(DeadPC->PlayerState);
+	if (!IsValid(PS) || !IsValid(DeadPC->GetPawn()))
+	{
+		return;
+	}
+
 	if (PS->GetIsBossStage())
 	{
 		PS->SetIsBossStage(false);
-		FTransform SpawnTransform = GetBossStageEnterPoint(DeadPlayerController);
-		DeadPlayerController->GetPawn()->SetActorTransform(SpawnTransform);
-	} else
+		const FTransform SpawnTransform = GetBossStageEnterPoint(DeadPC);
+		DeadPC->GetPawn()->SetActorTransform(SpawnTransform);
+	}
+	else
 	{
-		AActor* StartSpot = FindPlayerStart(DeadPlayerController);
-		DeadPlayerController->GetPawn()->SetActorTransform(StartSpot->GetActorTransform());
+		if (AActor* StartSpot = FindPlayerStart(DeadPC))
+		{
+			DeadPC->GetPawn()->SetActorTransform(StartSpot->GetActorTransform());
+		}
 	}
 }

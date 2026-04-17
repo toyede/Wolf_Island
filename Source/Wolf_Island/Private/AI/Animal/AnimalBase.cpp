@@ -64,6 +64,11 @@ float AAnimalBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEven
 {
     float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
+    if (ActualDamage <= 0.f)
+    {
+        return 0.f;
+    }
+
     float OldHP = StatusComponent->CurrentHP;
     StatusComponent->DecreaseHP(ActualDamage);
     float NewHP = StatusComponent->CurrentHP;
@@ -88,12 +93,22 @@ float AAnimalBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEven
         Die();
         DropItem();
     }
-    // ¹ÝÇÇ ÀÌ»ó ¡æ ¹ÝÇÇ ÀÌÇÏ·Î ¶³¾îÁö´Â ¼ø°£¸¸ µµ¸Á
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½Ì»ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ï·ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     else if (OldHP > HalfHP && NewHP <= HalfHP)
     {
         if (AAnimalController* AIC = Cast<AAnimalController>(GetController()))
         {
             AIC->SetAnimalState(EAnimalState::Escaping);
+        }
+    }
+
+    if (NewHP > 0.f && HasAuthority())
+    {
+        const float CurrentTime = GetWorld()->GetTimeSeconds();
+        if (CurrentTime - LastHitSoundTime >= HitSoundCooldown)
+        {
+            LastHitSoundTime = CurrentTime;
+            MulticastPlayHitSound();
         }
     }
 
@@ -107,6 +122,8 @@ void AAnimalBase::Die()
     if (bIsDead) return;
 
 	bIsDead = true;
+
+  MulticastPlayDieSound();
 
     if (AAnimalController* AIC = Cast<AAnimalController>(GetController()))
     {
@@ -142,15 +159,26 @@ void AAnimalBase::ApplyDeadState()
 
     GetMesh()->GetAnimInstance()->Montage_Stop(0.2f);
 
-    // Ä¸½¶: ¹Ù´Ú¸¸ Block, ³ª¸ÓÁö Ignore
+    // Ä¸ï¿½ï¿½: ï¿½Ù´Ú¸ï¿½ Block, ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ignore
     GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
     GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
     GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
 
     GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+}
 
+void AAnimalBase::MulticastPlayHitSound_Implementation()
+{
+    if (HitSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, HitSound, GetActorLocation(), FRotator::ZeroRotator, HitSoundVolumeMultiplier);
+    }
+}
+
+void AAnimalBase::MulticastPlayDieSound_Implementation()
+{
     if (DieSound)
     {
-        UGameplayStatics::PlaySoundAtLocation(this, DieSound, GetActorLocation());
+        UGameplayStatics::PlaySoundAtLocation(this, DieSound, GetActorLocation(), FRotator::ZeroRotator, DieSoundVolumeMultiplier);
     }
 }

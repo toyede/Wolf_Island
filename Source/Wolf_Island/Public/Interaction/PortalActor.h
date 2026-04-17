@@ -10,8 +10,9 @@ class UBoxComponent;
 class UStaticMeshComponent;
 class AMainPlayer;
 class AEnemyAIBoss;
+class APortalActor;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPortalTriggered);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPortalTriggered, APortalActor*, TriggeredPortal);
 
 UCLASS()
 class WOLF_ISLAND_API APortalActor : public AInteractableActor
@@ -68,8 +69,7 @@ public:
 
 	UPROPERTY(ReplicatedUsing = OnRep_BossDefeated)
 	bool bBossDefeated = false;
-
-	// 보스 스폰
+	
 	UPROPERTY(EditInstanceOnly, Category = "Boss")
 	TSubclassOf<AEnemyAIBoss> BossClassToSpawn;
 
@@ -79,21 +79,17 @@ public:
 	UPROPERTY(EditInstanceOnly, Category = "Boss")
 	TObjectPtr<APortalActor> ExitPortal;
 
-	UPROPERTY()
-	TObjectPtr<AEnemyAIBoss> SpawnedBoss;
-
-	bool bBossSpawned = false;
-
-	void SpawnAndStartBoss();
-
-	UFUNCTION()
-	void OnBossDestroyed(AActor* DestroyedActor);
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Portal")
+	TArray<AMainPlayer*> GetLastTriggeredPartyMembers() const;
 
 	UFUNCTION()
 	void OnRep_BossDefeated();
 
 	UFUNCTION()
 	void OnBossDefeated();
+	
+	UPROPERTY(EditInstanceOnly, Category = "Boss")
+	AActor* BossSpawnPoint;
 
 protected:
 	UFUNCTION()
@@ -116,6 +112,10 @@ private:
 	FString ReadPortalIDFromActor(const AActor* Actor) const;
 	FString GetPortalID() const;
 	void ResolveTargetPortal();
+
 	UPROPERTY()
 	TSet<TWeakObjectPtr<AMainPlayer>> PlayersInVolume;
+
+	UPROPERTY()
+	TArray<TObjectPtr<AMainPlayer>> LastTriggeredPartyMembers;
 };

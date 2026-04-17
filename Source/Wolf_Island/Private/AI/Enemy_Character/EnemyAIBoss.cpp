@@ -20,6 +20,9 @@
 #include "AI/Enemy_Character/SummonedWolf.h"
 #include "Character/MainPlayer.h"
 #include "NavigationSystem.h"
+#include "Actors/PrayerAltar.h"
+#include "Actors/PrayerStatue.h"
+#include "Actors/PrayerForewarning.h"
 
 AEnemyAIBoss::AEnemyAIBoss()
 {
@@ -69,15 +72,37 @@ void AEnemyAIBoss::BeginPlay()
 		AttackCollisionComponent->AddIgnoredActor(this);
 	}
 
-	if (StatueSpawnPoints.IsEmpty())
+	RefreshStatueSpawnPointsFromTag();
+	
+	if (StatusComponent)
 	{
-		TArray<AActor*> Found;
-		UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("StatueSpawn"), Found);
-		for (AActor* A : Found)
+		StatusComponent->CurrentHP = StatusComponent->MaxHP;
+	}
+}
+
+void AEnemyAIBoss::RefreshStatueSpawnPointsFromTag()
+{
+	if (!GetWorld() || StatueSpawnTag.IsNone())
+	{
+		return;
+	}
+
+	if (!StatueSpawnPoints.IsEmpty())
+	{
+		return;
+	}
+
+	TArray<AActor*> Found;
+	UGameplayStatics::GetAllActorsWithTag(GetWorld(), StatueSpawnTag, Found);
+	for (AActor* A : Found)
+	{
+		if (IsValid(A))
 		{
 			StatueSpawnPoints.Add(A);
 		}
 	}
+
+	UE_LOG(LogTemp, Log, TEXT("[Boss] Statue spawn discovery tag='%s', found=%d"), *StatueSpawnTag.ToString(), StatueSpawnPoints.Num());
 }
 
 void AEnemyAIBoss::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -135,7 +160,7 @@ void AEnemyAIBoss::SpawnStatueSequence()
 	{
 		if (GEngine)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("[Boss] No valid statue spawn point."));
+			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("[Boss] No valid statue spawn point - set StatueSpawnPoints or StatueSpawnPoint in editor."));
 		}
 		return;
 	}
@@ -318,9 +343,11 @@ bool AEnemyAIBoss::IsSpawnAreaOccupied(const FVector& Location) const
 
 	for (const FOverlapResult& OverlapResult : Overlaps)
 	{
+		// 플레이어만 체크 (소환된 늑대끼리는 막지 않음)
 		const APawn* Pawn = Cast<APawn>(OverlapResult.GetActor());
 		if (Pawn && Pawn->IsPlayerControlled())
 		{
+			UE_LOG(LogTemp, Log, TEXT("[Boss] WolfSpawn blocked by player: %s"), *Pawn->GetName());
 			return true;
 		}
 	}
@@ -330,6 +357,11 @@ bool AEnemyAIBoss::IsSpawnAreaOccupied(const FVector& Location) const
 
 AActor* AEnemyAIBoss::SelectSpawnPoint()
 {
+	if (StatueSpawnPoints.IsEmpty())
+	{
+		RefreshStatueSpawnPointsFromTag();
+	}
+
 	TArray<AActor*> ValidPoints;
 	for (AActor* Point : StatueSpawnPoints)
 	{
@@ -344,6 +376,11 @@ AActor* AEnemyAIBoss::SelectSpawnPoint()
 		const int32 Index = SpawnPointCursor % ValidPoints.Num();
 		SpawnPointCursor++;
 		return ValidPoints[Index];
+	}
+
+	if (!IsValid(StatueSpawnPoint))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Boss] No statue spawn point set. Tag='%s', array=%d"), *StatueSpawnTag.ToString(), StatueSpawnPoints.Num());
 	}
 
 	return IsValid(StatueSpawnPoint) ? StatueSpawnPoint : nullptr;
@@ -479,6 +516,8 @@ void AEnemyAIBoss::SpawnWolvesSequence()
 {
 	if (!HasAuthority() || !SummonedWolfClass)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[Boss] SpawnWolvesSequence: HasAuthority=%d, SummonedWolfClass=%d"),
+			HasAuthority(), SummonedWolfClass != nullptr);
 		return;
 	}
 
@@ -488,21 +527,27 @@ void AEnemyAIBoss::SpawnWolvesSequence()
 	const int32 Slots = FMath::Max(0, MaxAliveSummonedWolves - AliveCount);
 	if (Slots <= 0)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[Boss] SpawnWolvesSequence: Slots=0, MaxAlive=%d, Alive=%d"), MaxAliveSummonedWolves, AliveCount);
 		return;
 	}
 
 	const int32 SpawnCount = FMath::Min(ComputeDesiredWolfSpawnCount(), Slots);
+	UE_LOG(LogTemp, Log, TEXT("[Boss] SpawnWolvesSequence: Trying to spawn %d wolves"), SpawnCount);
+
 	for (int32 i = 0; i < SpawnCount; ++i)
 	{
 		FVector SpawnLocation = FVector::ZeroVector;
 		if (!FindWolfSpawnLocation(SpawnLocation))
 		{
+			UE_LOG(LogTemp, Warning, TEXT("[Boss] SpawnWolvesSequence: FindWolfSpawnLocation failed for wolf %d"), i);
 			break;
 		}
 
+		UE_LOG(LogTemp, Log, TEXT("[Boss] SpawnWolvesSequence: SpawnLocation[%d] = X=%.1f Y=%.1f Z=%.1f"), i, SpawnLocation.X, SpawnLocation.Y, SpawnLocation.Z);
+
 		FActorSpawnParameters Params;
 		Params.Owner = this;
-		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 		ASummonedWolf* Spawned = GetWorld()->SpawnActor<ASummonedWolf>(
 			SummonedWolfClass,
@@ -513,9 +558,49 @@ void AEnemyAIBoss::SpawnWolvesSequence()
 
 		if (Spawned)
 		{
+			UE_LOG(LogTemp, Log, TEXT("[Boss] SpawnWolvesSequence: Wolf %d spawned successfully"), i);
 			AliveSummonedWolves.Add(Spawned);
 		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("[Boss] SpawnWolvesSequence: SpawnActor returned null for wolf %d"), i);
+		}
 	}
+}
+
+void AEnemyAIBoss::ExecuteSummonPrayer()
+{
+	if (!HasAuthority()) return;
+
+	if (AEnemyAIBossController* AIC = Cast<AEnemyAIBossController>(GetController()))
+	{
+		AIC->SetNewState(EBossState::Prayer);
+	}
+
+	// 기존 늑대 제거
+	for (auto& WolfWeak : AliveSummonedWolves)
+	{
+		if (ASummonedWolf* Wolf = WolfWeak.Get())
+		{
+			Wolf->Destroy();
+		}
+	}
+	AliveSummonedWolves.Empty();
+
+	// 다른 타이머 중단 (돌진, 늑대 소환 등)
+	GetWorldTimerManager().ClearTimer(GroggyTimerHandle);
+	GetWorldTimerManager().ClearTimer(SpawnRetryTimerHandle);
+
+	// 애니메이션 중단 및 기도 애니메이션(임시) 재생
+	Multicast_StopMontage(0.2f);
+	Multicast_PlaySummonMontage();
+
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, TEXT("[Boss] Prayer Pattern Started - Invincible & Idle"));
+	}
+
+	// 2단계 액터 소환 로직은 여기서 호출될 예정
 }
 
 void AEnemyAIBoss::OnAttackHit(const FHitResult& HitResult)
@@ -543,6 +628,12 @@ void AEnemyAIBoss::ExecuteAttack(int32 AttackIndex)
 void AEnemyAIBoss::Multicast_PlayAttackMontage_Implementation(int32 AttackIndex)
 {
 	if (!AttackMontages.IsValidIndex(AttackIndex)) return;
+
+	// 사운드 재생
+	if (AttackSounds.IsValidIndex(AttackIndex) && AttackSounds[AttackIndex])
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, AttackSounds[AttackIndex], GetActorLocation());
+	}
 
 	if (AttackStartSockets.IsValidIndex(AttackIndex) && AttackEndSockets.IsValidIndex(AttackIndex))
 	{
@@ -583,6 +674,12 @@ void AEnemyAIBoss::ExecuteRush()
 
 void AEnemyAIBoss::Multicast_PlayRushMontage_Implementation()
 {
+	// 사운드 재생
+	if (RushSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, RushSound, GetActorLocation());
+	}
+
 	if (RushStartSocket != NAME_None)
 	{
 		AttackCollisionComponent->TraceStartSocketName = RushStartSocket;
@@ -627,6 +724,12 @@ void AEnemyAIBoss::ExecuteGroggy()
 
 void AEnemyAIBoss::Multicast_PlayGroggyMontage_Implementation()
 {
+	// 사운드 재생
+	if (GroggySound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, GroggySound, GetActorLocation());
+	}
+
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
 	if (AnimInstance && GroggyMontage)
@@ -675,6 +778,12 @@ void AEnemyAIBoss::ExecuteSummonWolves()
 
 void AEnemyAIBoss::Multicast_PlaySummonMontage_Implementation()
 {
+	// 사운드 재생
+	if (SummonStatueSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, SummonStatueSound, GetActorLocation());
+	}
+
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
 	if (AnimInstance && SummonStatueMontage)
@@ -692,6 +801,12 @@ void AEnemyAIBoss::Multicast_PlaySummonMontage_Implementation()
 
 void AEnemyAIBoss::Multicast_PlaySummonWolvesMontage_Implementation()
 {
+	// 사운드 재생
+	if (SummonWolvesSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, SummonWolvesSound, GetActorLocation());
+	}
+
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	UAnimMontage* MontageToPlay = SummonWolvesMontage ? SummonWolvesMontage : SummonStatueMontage;
 
@@ -745,6 +860,12 @@ void AEnemyAIBoss::ExecuteSpecialAttack()
 
 void AEnemyAIBoss::Multicast_PlaySpecialAttackMontage_Implementation()
 {
+	// 사운드 재생
+	if (SpecialAttackSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, SpecialAttackSound, GetActorLocation());
+	}
+
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && SpecialAttackMontage)
 	{
@@ -852,6 +973,14 @@ void AEnemyAIBoss::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimit
 
 float AEnemyAIBoss::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	if (AEnemyAIBossController* AIC = Cast<AEnemyAIBossController>(GetController()))
+	{
+		if (AIC->GetCurrentState() == EBossState::Prayer)
+		{
+			return 0.f;
+		}
+	}
+
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
 	if (DamageCauser && DamageCauser->IsA<AEnemyAIBoss>())

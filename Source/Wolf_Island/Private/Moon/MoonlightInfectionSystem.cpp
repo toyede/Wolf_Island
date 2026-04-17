@@ -89,15 +89,33 @@ void AMoonlightInfectionSystem::ActivateInfectionCheck()
 		return;
 	}
 
+	if (NightlyTransformThreshold <= 0.0f)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] NightlyTransformThreshold must be > 0. Current: %f"), NightlyTransformThreshold);
+		return;
+	}
+
+	if (InfectionPerCheck <= 0.0f)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] InfectionPerCheck must be > 0. Current: %f"), InfectionPerCheck);
+		return;
+	}
+
 	if (GetWorldTimerManager().IsTimerActive(CheckTimerHandle))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] Already active, skipping"));
 		return;
 	}
 
+	// 외부에서 OnNightStarted 호출이 누락되어도, 매 활성화 시 이번 밤 누적값은 항상 0부터 시작한다.
+	NightlyExposure.Empty();
+	TriggeredThisNight.Empty();
+	TriggeredInfectionSnapshot.Empty();
+
 	if (bShowDebugMessages)
 	{
 		UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] ACTIVATED - Check Interval: %.2fs"), CheckInterval);
+		UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] SETTINGS - PerCheck: %.6f, Threshold: %.6f"), InfectionPerCheck, NightlyTransformThreshold);
 	}
 
 	// 타이머 시작 (CheckInterval 간격으로 CheckAllPlayers 반복 호출)
@@ -181,10 +199,13 @@ void AMoonlightInfectionSystem::OnNightStarted()
 	// 밤 시작: 하루 누적량 초기화
 	NightlyExposure.Empty();
 	TriggeredThisNight.Empty();
+	TriggeredInfectionSnapshot.Empty();
 }
 
 void AMoonlightInfectionSystem::OnDayStarted()
 {
+	if (!HasAuthority()) return;
+
 	// 먼저 모든 늑대 세션 복원 (Possess 포함)
 	if (GetNetMode() != NM_Standalone)
 	{
@@ -199,7 +220,17 @@ void AMoonlightInfectionSystem::OnDayStarted()
 
 		if (Player->StatusComponent)
 		{
-			Player->StatusComponent->IncreaseInfectionBy(PostSequenceInfectionBonus);
+			UStatusComponent* StatusComp = Player->StatusComponent;
+			const float CurrentInfection = StatusComp->CurrentInfectionRate;
+			const float SnapshotInfection = TriggeredInfectionSnapshot.FindRef(WeakPlayer);
+			const float BaseInfection = FMath::Max(CurrentInfection, SnapshotInfection);
+			const float TargetInfection = FMath::Clamp(BaseInfection + PostSequenceInfectionBonus, 0.0f, StatusComp->MaxInfection);
+			const float DeltaToAdd = TargetInfection - CurrentInfection;
+
+			if (DeltaToAdd > 0.0f)
+			{
+				StatusComp->IncreaseInfectionBy(DeltaToAdd);
+			}
 		}
 	}
 
@@ -223,6 +254,7 @@ void AMoonlightInfectionSystem::OnDayStarted()
 
 	NightlyExposure.Empty();
 	TriggeredThisNight.Empty();
+	TriggeredInfectionSnapshot.Empty();
 }
 
 void AMoonlightInfectionSystem::StartMultiInfectionSequence(AMainPlayer* Player)
@@ -239,11 +271,11 @@ void AMoonlightInfectionSystem::StartMultiInfectionSequence(AMainPlayer* Player)
 	FVector SpawnLocation = Player->GetActorLocation();
 	FRotator SpawnRotation = Player->GetActorRotation();
 
-	// 1) 원래 캐릭터 백업 + 숨김
-	StoreOriginalCharacter(PC, Player);
-
-	// 2) 늑대인간 스폰 + 빙의
+	// 1) 먼저 늑대인간 스폰해서 Session 생성
 	SpawnAndPossessWerewolf(PC, SpawnLocation);
+
+	// 2) 원래 캐릭터 백업 + 숨김
+	StoreOriginalCharacter(PC, Player);
 
 	if (bShowDebugMessages)
 	{
@@ -279,44 +311,96 @@ void AMoonlightInfectionSystem::RestorePlayerAtDawn(APlayerController* PC)
 	AMainPlayer* OriginalPlayer = Session->OriginalCharacter.Get();
 	ACharacter* Werewolf = Session->WerewolfCharacter.Get();
 
-	if (!OriginalPlayer || !Werewolf) return;
+	if (!OriginalPlayer)
+	{
+		ActiveWerewolfSessions.Remove(PC);
+		return;
+	}
 
-	// 1) 늑대 위치 저장
-	FVector RestoreLocation = Werewolf->GetActorLocation();
-	FRotator RestoreRotation = Werewolf->GetActorRotation();
+	// 늑대가 유효하면 최신 위치를 사용하고, 아니면 세션 백업 Transform을 사용
+	FTransform RestoreTransform = Session->LastKnownWerewolfTransform;
+	if (IsValid(Werewolf))
+	{
+		RestoreTransform = Werewolf->GetActorTransform();
+		Session->LastKnownWerewolfTransform = RestoreTransform;
+	}
 
-	// 2) 늑대에서 Unpossess
+	FVector RestoreLocation = RestoreTransform.GetLocation();
+	FRotator RestoreRotation = RestoreTransform.Rotator();
+
+	UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] RestorePlayerAtDawn START - Target Loc: %.0f, %.0f, %.0f"),
+		RestoreLocation.X, RestoreLocation.Y, RestoreLocation.Z);
+	/*GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, 
+		FString::Printf(TEXT("[Restore START] Target: %.0f, %.0f, %.0f"), RestoreLocation.X, RestoreLocation.Y, RestoreLocation.Z));*/
+
+	// 1) 늑대에서 Unpossess
 	PC->UnPossess();
 
-	// 3) 원래 캐릭터를 늑대 위치로 이동
-	OriginalPlayer->SetActorLocation(RestoreLocation);
-	OriginalPlayer->SetActorRotation(RestoreRotation);
+	// 2) 원래 캐릭터를 늑대 최종 위치로 텔레포트 복원
+	OriginalPlayer->SetActorLocationAndRotation(
+		RestoreLocation,
+		RestoreRotation,
+		false,
+		nullptr,
+		ETeleportType::TeleportPhysics);
 
-	// 4) 원래 캐릭터 복원
+	UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] After SetActorLocation - Actual Loc: %.0f, %.0f, %.0f"),
+		OriginalPlayer->GetActorLocation().X, OriginalPlayer->GetActorLocation().Y, OriginalPlayer->GetActorLocation().Z);
+
+	// 3) 원래 캐릭터 복원
 	OriginalPlayer->SetActorHiddenInGame(false);
 	OriginalPlayer->SetActorEnableCollision(true);
 	OriginalPlayer->SetActorTickEnabled(true);
 
-	// 5) 원래 캐릭터에 다시 Possess
+	// 4) 원래 캐릭터에 다시 Possess
 	PC->Possess(OriginalPlayer);
+
+	UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] After Possess - Actual Loc: %.0f, %.0f, %.0f"),
+		OriginalPlayer->GetActorLocation().X, OriginalPlayer->GetActorLocation().Y, OriginalPlayer->GetActorLocation().Z);
+	/*GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, 
+		FString::Printf(TEXT("[After Possess] Actual: %.0f, %.0f, %.0f"), 
+			OriginalPlayer->GetActorLocation().X, OriginalPlayer->GetActorLocation().Y, OriginalPlayer->GetActorLocation().Z));*/
+
+	// Possess 후 다시 한번 위치 확인 및 강제 설정
+	if (FVector::Dist(OriginalPlayer->GetActorLocation(), RestoreLocation) > 50.f)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[MoonlightSystem] LOCATION MISMATCH! Re-setting location!"));
+		OriginalPlayer->SetActorLocationAndRotation(RestoreLocation, RestoreRotation, false, nullptr, ETeleportType::TeleportPhysics);
+		// GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, TEXT("[RE-SET] Location was overwritten!"));
+	}
 
 	// 복귀 시 관전 모드 해제
 	if (AMainPlayerController* MPC = Cast<AMainPlayerController>(PC))
 	{
 		MPC->Client_ExitSpectateMode();
 	}
+	
+	// 스탯 복구 (백업된 값 사용)
+	if (UStatusComponent* StatusComp = OriginalPlayer->FindComponentByClass<UStatusComponent>())
+	{
+		StatusComp->CurrentHP = Session->BackupHP;
+		StatusComp->CurrentStamina = Session->BackupStamina;
+		StatusComp->CurrentHunger = Session->BackupHunger;
+		StatusComp->CurrentHydration = Session->BackupHydration;
 
-	// 6) 늑대 제거
-	Werewolf->Destroy();
+		UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] Restored stats - HP: %.0f, Stamina: %.0f, Hunger: %.0f, Hydration: %.0f"),
+			Session->BackupHP, Session->BackupStamina, Session->BackupHunger, Session->BackupHydration);
+	}
 
-	// 7) 세션 데이터 제거
+	// 5) 늑대 제거
+	if (IsValid(Werewolf))
+	{
+		Werewolf->Destroy();
+	}
+
+	// 6) 세션 데이터 제거
 	ActiveWerewolfSessions.Remove(PC);
 
-	if (bShowDebugMessages)
-	{
-		UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] %s restored at dawn"),
-			*OriginalPlayer->GetName());
-	}
+	UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] RestorePlayerAtDawn COMPLETE - Final Loc: %.0f, %.0f, %.0f"),
+		OriginalPlayer->GetActorLocation().X, OriginalPlayer->GetActorLocation().Y, OriginalPlayer->GetActorLocation().Z);
+	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Cyan, 
+		FString::Printf(TEXT("[Restore DONE] Final: %.0f, %.0f, %.0f"), 
+			OriginalPlayer->GetActorLocation().X, OriginalPlayer->GetActorLocation().Y, OriginalPlayer->GetActorLocation().Z));
 }
 
 void AMoonlightInfectionSystem::Debug_ForceRestoreAll()
@@ -327,6 +411,10 @@ void AMoonlightInfectionSystem::Debug_ForceRestoreAll()
 void AMoonlightInfectionSystem::CheckAllPlayers()
 {
 	if (GetLocalRole() != ROLE_Authority) return;
+
+	// 실제 사용 중인 런타임 값 확인용 로그 (이상 동작 시 이 값을 먼저 확인)
+	UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem][TICK] InfectionPerCheck=%.6f | Threshold=%.4f"),
+		InfectionPerCheck, NightlyTransformThreshold);
 
 	for (int32 Index = InfectedStatusList.Num() - 1; Index >= 0; --Index)
 	{
@@ -384,6 +472,8 @@ void AMoonlightInfectionSystem::CheckAllPlayers()
 						StatusComp->DecreaseInfection(Overflow);
 					}
 
+					// 임계치 도달 시점의 감염량 스냅샷 저장 (아침 +20 누적 기준값)
+					TriggeredInfectionSnapshot.Add(MainPlayer, StatusComp->CurrentInfectionRate);
 					TriggeredThisNight.Add(MainPlayer);
 
 					if (GetNetMode() == NM_Standalone)
@@ -407,53 +497,31 @@ bool AMoonlightInfectionSystem::IsPlayerExposedToMoonlight(AActor* Player)
 		return false;
 	}
 
-	// 1. 플레이어 체크 위치 (머리 위)
-	FVector StartLocation = GetMoonlightCheckLocation(Player);
+	// 지면/장애물과 시작 지점이 겹치면 정지 상태에서만 차폐로 오검출될 수 있어, 라인트레이스로 단순화.
+	FVector StartLocation = GetMoonlightCheckLocation(Player) + FVector(0.0f, 0.0f, 15.0f);
 
-	// 2. 달 방향 벡터 (달빛이 내려오는 방향의 반대 = 플레이어에서 달로)
+	// 달빛이 내려오는 방향의 반대 = 플레이어에서 달로
 	FVector MoonDirection = MoonLight->GetForwardVector() * -1.0f;
 	FVector EndLocation = StartLocation + (MoonDirection * TraceDistance);
 
-	// 3. 캡슐 트레이스 설정
-	FCollisionShape CapsuleShape = FCollisionShape::MakeCapsule(CapsuleRadius, CapsuleHalfHeight);
-
 	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(Player); // 자기 자신은 무시
-	QueryParams.bTraceComplex = false; // 단순 콜리전 사용 (성능 최적화)
+	QueryParams.AddIgnoredActor(Player);
+	QueryParams.bTraceComplex = false;
 
-	// 4. 캡슐 트레이스 실행
+	// 정지 상태에서도 안정적으로 동작하도록 라인트레이스로 차폐 여부만 판정.
 	FHitResult HitResult;
-	bool bHit = GetWorld()->SweepSingleByChannel(
+	const bool bHit = GetWorld()->LineTraceSingleByChannel(
 		HitResult,
 		StartLocation,
 		EndLocation,
-		FQuat::Identity, // 회전 없음
-		ECC_Visibility,  // Visibility 채널
-		CapsuleShape,
-		QueryParams
-	);
+		ECC_Visibility,
+		QueryParams);
 
-	// 5. 디버그 드로우
+	// 디버그 드로우
 	if (bDrawDebugTrace)
 	{
-		// 노출되면 빨강, 가려지면 초록
-		FColor DebugColor = bHit ? FColor::Green : FColor::Red;
+		const FColor DebugColor = bHit ? FColor::Green : FColor::Red;
 
-		// 캡슐 그리기
-		DrawDebugCapsule(
-			GetWorld(),
-			StartLocation,
-			CapsuleHalfHeight,
-			CapsuleRadius,
-			FQuat::Identity,
-			DebugColor,
-			false,
-			CheckInterval, // 다음 체크까지 표시
-			0,
-			2.0f // 선 두께
-		);
-
-		// 레이 라인 그리기
 		DrawDebugLine(
 			GetWorld(),
 			StartLocation,
@@ -465,7 +533,6 @@ bool AMoonlightInfectionSystem::IsPlayerExposedToMoonlight(AActor* Player)
 			1.0f
 		);
 
-		// Hit 지점에 포인트 그리기
 		if (bHit)
 		{
 			DrawDebugPoint(
@@ -479,7 +546,7 @@ bool AMoonlightInfectionSystem::IsPlayerExposedToMoonlight(AActor* Player)
 		}
 	}
 
-	// 6. 막힌 게 없으면 노출됨
+	// 막힌 게 없으면 노출됨
 	return !bHit;
 }
 
@@ -548,6 +615,7 @@ void AMoonlightInfectionSystem::SpawnAndPossessWerewolf(APlayerController* PC, F
 	FWerewolfSessionData SessionData;
 	SessionData.OriginalCharacter = Cast<AMainPlayer>(PC->GetPawn());
 	SessionData.OwningPC = PC;
+	SessionData.LastKnownWerewolfTransform = FTransform(FRotator::ZeroRotator, Location);
 
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride =
@@ -561,6 +629,8 @@ void AMoonlightInfectionSystem::SpawnAndPossessWerewolf(APlayerController* PC, F
 	);
 
 	if (!Werewolf) return;
+
+	SessionData.LastKnownWerewolfTransform = Werewolf->GetActorTransform();
 
 	// 기존 캐릭터에서 Unpossess만 하고 늑대에는 Possess 안 함
 	PC->UnPossess();
@@ -581,6 +651,22 @@ void AMoonlightInfectionSystem::SpawnAndPossessWerewolf(APlayerController* PC, F
 void AMoonlightInfectionSystem::StoreOriginalCharacter(APlayerController* PC, AMainPlayer* Player)
 {
 	if (!PC || !Player) return;
+
+	// 변신 전 스탯 백업
+	if (UStatusComponent* StatusComp = Player->FindComponentByClass<UStatusComponent>())
+	{
+		FWerewolfSessionData* Session = ActiveWerewolfSessions.Find(PC);
+		if (Session)
+		{
+			Session->BackupHP = StatusComp->CurrentHP;
+			Session->BackupStamina = StatusComp->CurrentStamina;
+			Session->BackupHunger = StatusComp->CurrentHunger;
+			Session->BackupHydration = StatusComp->CurrentHydration;
+
+			UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] Backed up stats - HP: %.0f, Stamina: %.0f, Hunger: %.0f, Hydration: %.0f"),
+				Session->BackupHP, Session->BackupStamina, Session->BackupHunger, Session->BackupHydration);
+		}
+	}
 
 	// 캐릭터 숨기기 + 충돌 비활성화
 	Player->SetActorHiddenInGame(true);

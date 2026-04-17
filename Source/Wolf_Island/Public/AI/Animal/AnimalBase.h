@@ -37,8 +37,28 @@ protected:
 
 	void ApplyDeadState();
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dead")
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastPlayHitSound();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayDieSound();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")
 	TObjectPtr<USoundBase> DieSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound", meta = (ClampMin = "0.0"))
+	float DieSoundVolumeMultiplier = 1.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")
+	TObjectPtr<USoundBase> HitSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound", meta = (ClampMin = "0.0"))
+	float HitSoundVolumeMultiplier = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound", meta = (ClampMin = "0.0"))
+	float HitSoundCooldown = 0.15f;
+
+	float LastHitSoundTime = -10000.f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dead|DropItem")
 	TSubclassOf<APickup> DropItemClass;

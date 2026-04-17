@@ -42,7 +42,7 @@ public:
 	float AttackDamage = 10.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-	float AttackRange = 180.f;
+	float AttackRange = 250.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	float AttackCooldown = 1.2f;
@@ -51,10 +51,10 @@ public:
 	TObjectPtr<UAnimMontage> AttackMontage;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-	FName AttackStartSocket = TEXT("hand_l");
+	FName AttackStartSocket = TEXT("AttackStart");
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-	FName AttackEndSocket = TEXT("hand_r");
+	FName AttackEndSocket = TEXT("AttackEnd");
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	float AttackTraceRadius = 40.f;

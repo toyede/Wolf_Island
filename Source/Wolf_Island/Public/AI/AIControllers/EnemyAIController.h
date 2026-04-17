@@ -11,7 +11,7 @@
 class UAISenseConfig_Sight;
 class UAISenseConfig_Hearing;
 class UAISenseConfig_Damage;
-//class UAISenseConfig_Scent;
+class UAISenseConfig_Scent;
 class AEnemyAIBase;
 
 UENUM(BlueprintType)
@@ -71,7 +71,7 @@ protected:
 	void HandleSight(AActor* Actor, const FAIStimulus& Stimulus);
 	void HandleDamage(AActor* Actor, const FAIStimulus& Stimulus);
 	void HandleHearing(AActor* Actor, const FAIStimulus& Stimulus);
-	//void HandleScent(const FAIStimulus& Stimulus);
+	void HandleScent(const FAIStimulus& Stimulus);
 	bool IsFriendlyAggroSource(AActor* SourceActor) const;
 
 	bool ShouldSwitchTarget(AActor* Newtarget) const;
@@ -94,8 +94,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|Perception")
 	TObjectPtr<UAISenseConfig_Damage> DamageConfig;
 
-	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|Perception")
-	//TObjectPtr<UAISenseConfig_Scent> ScentConfig;	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|Perception")
+	TObjectPtr<UAISenseConfig_Scent> ScentConfig;	
 
 	void BindCharacterEvents();
 
@@ -104,6 +104,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AI|Patrol")
 	void MoveToNextRoute();
 
+	UPROPERTY(EditDefaultsOnly, Category = "AI|Perception")
+	float SightTime = 5.0f;
+	
 private:
 	FTimerHandle LineOfSightTimer;
 };

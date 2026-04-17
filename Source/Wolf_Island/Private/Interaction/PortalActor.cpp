@@ -14,7 +14,6 @@
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerState.h"
 #include "Kismet/KismetMathLibrary.h"
-#include "AI/Enemy_Character/EnemyAIBoss.h"
 #include "Games/MainPlayerState.h"
 
 APortalActor::APortalActor()
@@ -172,45 +171,6 @@ TArray<FString> APortalActor::GetRecordIDOptions() const
 	return Options;
 }
 
-void APortalActor::SpawnAndStartBoss()
-{
-	if (!HasAuthority()) return;
-	if (bBossSpawned) return;
-	if (!BossClassToSpawn) return;
-
-	FActorSpawnParameters Params;
-	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-
-	SpawnedBoss = GetWorld()->SpawnActor<AEnemyAIBoss>(
-		BossClassToSpawn,
-		BossSpawnTransform.GetLocation(),
-		BossSpawnTransform.GetRotation().Rotator(),
-		Params
-	);
-
-	if (!SpawnedBoss) return;
-
-	bBossSpawned = true;
-
-	// 출구 포탈에 보스 사망 바인딩
-	if (IsValid(ExitPortal))
-	{
-		SpawnedBoss->OnBossCombatEnd.AddDynamic(ExitPortal, &APortalActor::OnBossDefeated);
-	}
-
-	// 보스 Destroy 시 재도전 가능하도록 리셋
-	SpawnedBoss->OnDestroyed.AddDynamic(this, &APortalActor::OnBossDestroyed);
-
-	// 보스 전투 시작
-	SpawnedBoss->StartBossCombat();
-}
-
-void APortalActor::OnBossDestroyed(AActor* DestroyedActor)
-{
-	SpawnedBoss = nullptr;
-	bBossSpawned = false;
-}
-
 void APortalActor::OnRep_BossDefeated()
 {
 	if (TargetPortalID.IsEmpty() && IsValid(TargetPortal))
@@ -359,6 +319,7 @@ void APortalActor::TeleportAllPlayers()
 
 	const FVector TargetLocation = TargetPortal->GetActorLocation();
 	const FRotator TargetRotation = TargetPortal->GetActorRotation();
+	LastTriggeredPartyMembers.Reset();
 
 	for (APlayerState* PS : GS->PlayerArray)
 	{
@@ -380,6 +341,8 @@ void APortalActor::TeleportAllPlayers()
 
 		if (AMainPlayer* PlayerPawn = Cast<AMainPlayer>(Controller->GetPawn()))
 		{
+			LastTriggeredPartyMembers.Add(PlayerPawn);
+
 			FVector Offset = FVector::ZeroVector;
 			if (bUseRandomOffset && RandomOffsetRadius > 0.0f)
 			{
@@ -393,10 +356,10 @@ void APortalActor::TeleportAllPlayers()
 		}
 	}
 
-	OnPortalTriggered.Broadcast();
-	SpawnAndStartBoss();
+	OnPortalTriggered.Broadcast(this);
 
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Portal Triggered"));
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("Players Teleported: %d"), LastTriggeredPartyMembers.Num()));
 }
 
 void APortalActor::TeleportPlayer(AActor* Interactor)
@@ -419,6 +382,12 @@ void APortalActor::TeleportPlayer(AActor* Interactor)
 		MPS->SetIsBossStage(true);
 	}
 
+	LastTriggeredPartyMembers.Reset();
+	if (AMainPlayer* PlayerPawn = Cast<AMainPlayer>(Pawn))
+	{
+		LastTriggeredPartyMembers.Add(PlayerPawn);
+	}
+
 	const FVector TargetLocation = TargetPortal->GetActorLocation();
 	const FRotator TargetRotation = TargetPortal->GetActorRotation();
 	FVector Offset = FVector::ZeroVector;
@@ -432,7 +401,23 @@ void APortalActor::TeleportPlayer(AActor* Interactor)
 
 	Pawn->TeleportTo(TargetLocation + Offset, TargetRotation);
 
-	SpawnAndStartBoss();
+	OnPortalTriggered.Broadcast(this);
+}
+
+TArray<AMainPlayer*> APortalActor::GetLastTriggeredPartyMembers() const
+{
+	TArray<AMainPlayer*> Result;
+	Result.Reserve(LastTriggeredPartyMembers.Num());
+
+	for (AMainPlayer* Player : LastTriggeredPartyMembers)
+	{
+		if (IsValid(Player))
+		{
+			Result.Add(Player);
+		}
+	}
+
+	return Result;
 }
 
 FString APortalActor::ReadPortalIDFromActor(const AActor* Actor) const

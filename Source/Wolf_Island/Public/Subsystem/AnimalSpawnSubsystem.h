@@ -3,9 +3,8 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "AI/Animal/AnimalBase.h"
 #include "AnimalSpawnSubsystem.generated.h"
-
-class AAnimalBase;
 
 USTRUCT(BlueprintType)
 struct FAnimalSpawnInfo

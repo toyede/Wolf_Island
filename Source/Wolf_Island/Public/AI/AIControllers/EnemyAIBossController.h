@@ -13,6 +13,7 @@ enum class EBossState : uint8
 	Combat UMETA(DisplayName = "Combat"),
 	Groggy UMETA(DisplayName = "Groggy"),
 	Stun UMETA(DisplayName = "Stun"),
+	Prayer UMETA(DisplayName = "Prayer"),
 	Dead UMETA(DisplayName = "Dead")
 };
 
