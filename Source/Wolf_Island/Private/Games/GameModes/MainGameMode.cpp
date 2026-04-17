@@ -23,6 +23,7 @@
 #include "AI/Enemy_Character/EnemyAIBoss.h"
 #include "AI/Animal/AnimalBase.h"
 #include "Actors/AnimalSpawnPoint.h"
+#include "BehaviorTree/BlackboardComponent.h"
 #include "EngineUtils.h"
 
 void AMainGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
@@ -237,6 +238,8 @@ void AMainGameMode::SpawnBossForPortal(APortalActor* TriggeredPortal, const TArr
 	}
 
 	SpawnedBoss->StartBossCombat();
+
+	BossRef = SpawnedBoss;
 }
 
 void AMainGameMode::HandleManagedBossDestroyed(AActor* DestroyedActor)
@@ -848,6 +851,28 @@ FTransform AMainGameMode::GetBossStageEnterPoint(AController* Controller)
 void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE][SINGLE] HANDLE PLAYER DEATH"));
+
+	// 보스 참가자 명단에서 제거 및 블랙보드 타겟 클리어
+	if (IsValid(BossRef) && DeadPlayerController->GetPawn())
+	{
+		AMainPlayer* DeadPlayer = Cast<AMainPlayer>(DeadPlayerController->GetPawn());
+		BossRef->BossParticipants.Remove(DeadPlayer);
+
+		// 보스 AI의 블랙보드에서 현재 죽은 플레이어를 타겟팅하고 있다면 클리어
+		if (AAIController* AIC = Cast<AAIController>(BossRef->GetController()))
+		{
+			if (UBlackboardComponent* BB = AIC->GetBlackboardComponent())
+			{
+				AActor* CurrentTarget = Cast<AActor>(BB->GetValueAsObject(TEXT("Target")));
+				if (CurrentTarget == DeadPlayer)
+				{
+					BB->ClearValue(TEXT("Target"));
+					UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] Clear Boss Target Blackboard"));
+				}
+			}
+		}
+	}
+
 	//사망한 당일 아침으로 부활(아침으로 월드 롤백)
 	//아침 데이터 슬롯 구하기
 	FString MorningSlotName = CurrentSaveData->SlotName+TEXT("_morning");

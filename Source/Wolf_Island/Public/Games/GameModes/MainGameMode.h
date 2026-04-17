@@ -145,4 +145,8 @@ private:
 	TSet<TWeakObjectPtr<APortalActor>> BoundPortals;
 	TMap<TWeakObjectPtr<APortalActor>, TWeakObjectPtr<AEnemyAIBoss>> ActiveBossByPortal;
 
+public:
+	UPROPERTY()
+	TObjectPtr<AEnemyAIBoss> BossRef;
+
 };
