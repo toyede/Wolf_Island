@@ -16,15 +16,6 @@ AAnimalBase::AAnimalBase()
 {
     PrimaryActorTick.bCanEverTick = true;
     StatusComponent = CreateDefaultSubobject<UStatusComponent>(TEXT("StatusComponent"));
-
-    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-    GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Overlap);
-    GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
-
-    GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-    GetMesh()->SetCollisionObjectType(ECC_Pawn);
-    GetMesh()->SetGenerateOverlapEvents(true);
-
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 }
 
@@ -93,8 +84,7 @@ float AAnimalBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEven
         Die();
         DropItem();
     }
-    // ���� �̻� �� ���� ���Ϸ� �������� ������ ����
-    else if (OldHP > HalfHP && NewHP <= HalfHP)
+    else
     {
         if (AAnimalController* AIC = Cast<AAnimalController>(GetController()))
         {
