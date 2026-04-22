@@ -11,6 +11,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Item/Pickup.h"
+#include "Sound/SoundCue.h"
 
 AAnimalBase::AAnimalBase()
 {
@@ -94,12 +95,7 @@ float AAnimalBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEven
 
     if (NewHP > 0.f && HasAuthority())
     {
-        const float CurrentTime = GetWorld()->GetTimeSeconds();
-        if (CurrentTime - LastHitSoundTime >= HitSoundCooldown)
-        {
-            LastHitSoundTime = CurrentTime;
-            MulticastPlayHitSound();
-        }
+        MulticastPlayHitSound();
     }
 
     return ActualDamage;
@@ -161,7 +157,7 @@ void AAnimalBase::MulticastPlayHitSound_Implementation()
 {
     if (HitSound)
     {
-        UGameplayStatics::PlaySoundAtLocation(this, HitSound, GetActorLocation(), FRotator::ZeroRotator, HitSoundVolumeMultiplier);
+        UGameplayStatics::PlaySoundAtLocation(this, HitSound, GetActorLocation());
     }
 }
 
@@ -169,6 +165,6 @@ void AAnimalBase::MulticastPlayDieSound_Implementation()
 {
     if (DieSound)
     {
-        UGameplayStatics::PlaySoundAtLocation(this, DieSound, GetActorLocation(), FRotator::ZeroRotator, DieSoundVolumeMultiplier);
+        UGameplayStatics::PlaySoundAtLocation(this, DieSound, GetActorLocation());
     }
 }
