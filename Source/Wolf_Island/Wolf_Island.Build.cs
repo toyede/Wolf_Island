@@ -23,8 +23,8 @@ public class Wolf_Island : ModuleRules
 			"Niagara",
 			"Water",
             "GameplayDebugger",
-            "AdvancedSessions", 
-            "AdvancedSteamSessions",
+            //"AdvancedSessions", 
+            //"AdvancedSteamSessions",
             "OnlineSubsystem", 
             "OnlineSubsystemUtils",
         });
@@ -33,8 +33,8 @@ public class Wolf_Island : ModuleRules
 		{
 			"Slate", 
 			"SlateCore", 
-			//"AdvancedSessions", 
-			//"AdvancedSteamSessions",
+			"AdvancedSessions", 
+			"AdvancedSteamSessions",
 			//"OnlineSubsystem", 
 			//"OnlineSubsystemUtils",
 		});
