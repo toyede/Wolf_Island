@@ -745,6 +745,12 @@ void AEnemyAIBoss::EndGroggy()
 
 void AEnemyAIBoss::Multicast_PlayGroggyGetUp_Implementation()
 {
+	// 사운드 재생
+	if (GroggyGetUpSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, GroggyGetUpSound, GetActorLocation());
+	}
+
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
 	if (AnimInstance && GroggyMontage)
@@ -836,6 +842,12 @@ void AEnemyAIBoss::ExecuteThrust()
 
 void AEnemyAIBoss::Multicast_PlayThrustMontage_Implementation()
 {
+	// 사운드 재생
+	if (ThrustSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, ThrustSound, GetActorLocation());
+	}
+
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
 	if (AnimInstance && ThrustMontage)
@@ -990,10 +1002,17 @@ float AEnemyAIBoss::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 
 	StatusComponent->DecreaseHP(ActualDamage);
 
-	if (!bPhase2Triggered && StatusComponent->CurrentHP <= StatusComponent->MaxHP * 0.5f)
+	if (!bPhase2Triggered && StatusComponent->CurrentHP <= StatusComponent->MaxHP * Phase2HPThreshold)
 	{
 		bPhase2Triggered = true;
 		CurrentPhase = 2;
+		OnPhaseChanged.Broadcast(CurrentPhase);
+	}
+
+	if (!bPhase3Triggered && StatusComponent->CurrentHP <= StatusComponent->MaxHP * Phase3HPThreshold)
+	{
+		bPhase3Triggered = true;
+		CurrentPhase = 3;
 		OnPhaseChanged.Broadcast(CurrentPhase);
 	}
 
@@ -1028,7 +1047,7 @@ void AEnemyAIBoss::ApplyDeadState()
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
-
+	
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	OnBossCombatEnd.Broadcast();

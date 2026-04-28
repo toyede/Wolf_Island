@@ -39,6 +39,11 @@ void ASummonedWolf::BeginPlay()
 	{
 		AttackCollisionComponent->OnHitActor.AddUObject(this, &ASummonedWolf::OnAttackHit);
 		AttackCollisionComponent->AddIgnoredActor(this);
+
+		if (AActor* OwnerBoss = GetOwner())
+		{
+			AttackCollisionComponent->AddIgnoredActor(OwnerBoss);
+		}
 	}
 
 	if (StatusComponent)

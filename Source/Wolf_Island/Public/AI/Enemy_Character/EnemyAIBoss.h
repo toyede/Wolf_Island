@@ -190,6 +190,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Groggy")
 	USoundBase* GroggySound;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Groggy")
+	USoundBase* GroggyGetUpSound;
+
 	// --- [Pattern Settings: Phase 2 / Statue] ---
 	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Phase2")
 	UAnimMontage* SummonStatueMontage;
@@ -267,6 +270,9 @@ protected:
 	UAnimMontage* ThrustMontage;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Special")
+	USoundBase* ThrustSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Special")
 	UAnimMontage* SpecialAttackMontage;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Special")
@@ -328,6 +334,13 @@ private:
 	float CurrentDamage = 0.f;
 
 	bool bPhase2Triggered = false;
+	bool bPhase3Triggered = false;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Phase", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float Phase2HPThreshold = 0.5f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Phase", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float Phase3HPThreshold = 0.3f;
 
 	TWeakObjectPtr<AActor> PendingSpawnPoint;
 	FTimerHandle SpawnRetryTimerHandle;
