@@ -311,6 +311,21 @@ void AMainPlayerController::Request_Respawn()
 	}
 }
 
+void AMainPlayerController::ToggleMainUI(bool bShow)
+{
+	ESlateVisibility TargetVisibility = bShow ? ESlateVisibility::Visible : ESlateVisibility::Hidden;
+
+	if (PlayerHUD)
+	{
+		PlayerHUD->SetVisibility(TargetVisibility);
+	}
+
+	if (ChattingPanel)
+	{
+		ChattingPanel->SetVisibility(TargetVisibility);
+	}
+}
+
 void AMainPlayerController::Client_SetViewTargetWithBlend_Implementation(AActor* NewTarget, float BlendTime)
 {
 	if (!IsValid(NewTarget))

@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Interaction/PortalActor.h"
-
+#include "Character/MainPlayerController.h"
 #include "Character/MainPlayer.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -513,6 +513,10 @@ void APortalActor::ResolveTargetPortal()
 
 void APortalActor::OnTeleportSequenceFinished()
 {
+	if (AMainPlayerController* LocalPC = Cast<AMainPlayerController>(GetWorld()->GetFirstPlayerController()))
+	{
+		LocalPC->ToggleMainUI(true);
+	}
 	if (HasAuthority())
 	{
 		OnPortalTriggered.Broadcast(this);
@@ -524,17 +528,24 @@ void APortalActor::Multicast_PlayTeleportSequence_Implementation()
 	if (!TeleportSequence) return;
 
 	FMovieSceneSequencePlaybackSettings PlaybackSettings;
+
+	PlaybackSettings.bDisableMovementInput = true; 
+	PlaybackSettings.bDisableLookAtInput = true;   
+	PlaybackSettings.bHideHud = true;
+	
 	ALevelSequenceActor* OutActor;
 
 	SequencePlayer = ULevelSequencePlayer::CreateLevelSequencePlayer(GetWorld(), TeleportSequence, PlaybackSettings, OutActor);
 
 	if (SequencePlayer)
 	{
-		if (HasAuthority())
+		SequencePlayer->OnFinished.AddDynamic(this, &APortalActor::OnTeleportSequenceFinished);
+
+		if (AMainPlayerController* LocalPC = Cast<AMainPlayerController>(GetWorld()->GetFirstPlayerController()))
 		{
-			SequencePlayer->OnFinished.AddDynamic(this, &APortalActor::OnTeleportSequenceFinished);
+			LocalPC->ToggleMainUI(false);
 		}
-		
+
 		SequencePlayer->Play();
 	}
 }
