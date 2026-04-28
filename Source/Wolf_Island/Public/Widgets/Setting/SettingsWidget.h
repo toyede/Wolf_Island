@@ -221,16 +221,19 @@ private:
 
 	TArray<FSettingsInputKeybindEntry> InputKeybindEntries;
 	FText LastInputKeybindMessage;
+	bool bLegacyMoveProfileMigrationAttempted = false;
 
 	class UEnhancedInputLocalPlayerSubsystem* GetEnhancedInputSubsystem() const;
 	class UEnhancedInputUserSettings* GetInputUserSettings(bool bTryInitialize);
 	class UEnhancedPlayerMappableKeyProfile* GetCurrentKeyProfile(bool bTryInitialize);
 	TArray<const class UInputMappingContext*> CollectRelevantInputMappingContexts() const;
 	void RegisterRelevantInputMappingContexts(class UEnhancedInputUserSettings* UserSettings) const;
+	void MigrateLegacyMoveInputProfile(class UEnhancedInputUserSettings* UserSettings);
 	void BuildInputKeybindEntries(const class UEnhancedPlayerMappableKeyProfile* KeyProfile);
 	FText MakeFallbackDisplayName(FName MappingName) const;
 	FText MakeDisplayLabel(const FText& BaseDisplayName, EPlayerMappableKeySlot KeySlot) const;
 	bool ShouldAllowRebind(const FPlayerKeyMapping& Mapping, FText& OutReason) const;
 	bool IsAxisKey(const FKey& Key) const;
+	bool IsLegacyMoveMappingName(FName MappingName) const;
 	void SetLastInputKeybindMessage(const FText& Message);
 };
