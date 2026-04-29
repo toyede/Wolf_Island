@@ -56,8 +56,8 @@ void AMoonlightInfectionSystem::BeginPlay()
 					MoonLight = Cast<ULightComponent>(Component);
 					if (bShowDebugMessages)
 					{
-						UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] MoonDirectionalLight found: %s"),
-							*Component->GetName());
+						//UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] MoonDirectionalLight found: %s"),
+							//*Component->GetName());
 					}
 					break;
 				}
@@ -68,11 +68,11 @@ void AMoonlightInfectionSystem::BeginPlay()
 
 	if (!MoonLight)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[MoonlightSystem] MoonDirectionalLight not found! Check BP_DynamicSky component names."));
+		//UE_LOG(LogTemp, Error, TEXT("[MoonlightSystem] MoonDirectionalLight not found! Check BP_DynamicSky component names."));
 	}
 	else if (bShowDebugMessages)
 	{
-		UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] System initialized successfully"));
+		//UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] System initialized successfully"));
 	}
 
 	// 감염 시작 이벤트 바인딩 (플레이어만)
@@ -85,25 +85,25 @@ void AMoonlightInfectionSystem::ActivateInfectionCheck()
 {
 	if (!MoonLight)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] Cannot activate: MoonLight is null"));
+		//UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] Cannot activate: MoonLight is null"));
 		return;
 	}
 
 	if (NightlyTransformThreshold <= 0.0f)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] NightlyTransformThreshold must be > 0. Current: %f"), NightlyTransformThreshold);
+		//UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] NightlyTransformThreshold must be > 0. Current: %f"), NightlyTransformThreshold);
 		return;
 	}
 
 	if (InfectionPerCheck <= 0.0f)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] InfectionPerCheck must be > 0. Current: %f"), InfectionPerCheck);
+		//UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] InfectionPerCheck must be > 0. Current: %f"), InfectionPerCheck);
 		return;
 	}
 
 	if (GetWorldTimerManager().IsTimerActive(CheckTimerHandle))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] Already active, skipping"));
+		//UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] Already active, skipping"));
 		return;
 	}
 
@@ -114,8 +114,8 @@ void AMoonlightInfectionSystem::ActivateInfectionCheck()
 
 	if (bShowDebugMessages)
 	{
-		UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] ACTIVATED - Check Interval: %.2fs"), CheckInterval);
-		UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] SETTINGS - PerCheck: %.6f, Threshold: %.6f"), InfectionPerCheck, NightlyTransformThreshold);
+		//UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] ACTIVATED - Check Interval: %.2fs"), CheckInterval);
+		//UE_LOG(LogTemp, Log, TEXT("[MoonlightSystem] SETTINGS - PerCheck: %.6f, Threshold: %.6f"), InfectionPerCheck, NightlyTransformThreshold);
 	}
 
 	// 타이머 시작 (CheckInterval 간격으로 CheckAllPlayers 반복 호출)
