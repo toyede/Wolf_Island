@@ -11,20 +11,12 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Item/Pickup.h"
+#include "Sound/SoundCue.h"
 
 AAnimalBase::AAnimalBase()
 {
     PrimaryActorTick.bCanEverTick = true;
     StatusComponent = CreateDefaultSubobject<UStatusComponent>(TEXT("StatusComponent"));
-
-    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-    GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Overlap);
-    GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
-
-    GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-    GetMesh()->SetCollisionObjectType(ECC_Pawn);
-    GetMesh()->SetGenerateOverlapEvents(true);
-
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 }
 
@@ -93,8 +85,7 @@ float AAnimalBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEven
         Die();
         DropItem();
     }
-    // ���� �̻� �� ���� ���Ϸ� �������� ������ ����
-    else if (OldHP > HalfHP && NewHP <= HalfHP)
+    else
     {
         if (AAnimalController* AIC = Cast<AAnimalController>(GetController()))
         {
@@ -104,12 +95,7 @@ float AAnimalBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEven
 
     if (NewHP > 0.f && HasAuthority())
     {
-        const float CurrentTime = GetWorld()->GetTimeSeconds();
-        if (CurrentTime - LastHitSoundTime >= HitSoundCooldown)
-        {
-            LastHitSoundTime = CurrentTime;
-            MulticastPlayHitSound();
-        }
+        MulticastPlayHitSound();
     }
 
     return ActualDamage;
@@ -171,7 +157,7 @@ void AAnimalBase::MulticastPlayHitSound_Implementation()
 {
     if (HitSound)
     {
-        UGameplayStatics::PlaySoundAtLocation(this, HitSound, GetActorLocation(), FRotator::ZeroRotator, HitSoundVolumeMultiplier);
+        UGameplayStatics::PlaySoundAtLocation(this, HitSound, GetActorLocation());
     }
 }
 
@@ -179,6 +165,6 @@ void AAnimalBase::MulticastPlayDieSound_Implementation()
 {
     if (DieSound)
     {
-        UGameplayStatics::PlaySoundAtLocation(this, DieSound, GetActorLocation(), FRotator::ZeroRotator, DieSoundVolumeMultiplier);
+        UGameplayStatics::PlaySoundAtLocation(this, DieSound, GetActorLocation());
     }
 }
