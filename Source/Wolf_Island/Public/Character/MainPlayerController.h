@@ -217,4 +217,8 @@ public:
 	// 클라이언트에서 실행될 RPC 선언
 	UFUNCTION(Client, Reliable)
 	void Client_SetViewTargetWithBlend(AActor* NewTarget, float BlendTime);
+
+	// 플레이어 UI 끄고 키는 함수
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void ToggleMainUI(bool bShow);
 };

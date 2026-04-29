@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Interaction/PortalActor.h"
-
+#include "Character/MainPlayerController.h"
 #include "Character/MainPlayer.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -15,6 +15,10 @@
 #include "GameFramework/PlayerState.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Games/MainPlayerState.h"
+#include "LevelSequence.h"
+#include "LevelSequenceActor.h"
+#include "LevelSequencePlayer.h"
+#include "MovieSceneSequencePlayer.h"
 
 APortalActor::APortalActor()
 {
@@ -353,13 +357,24 @@ void APortalActor::TeleportAllPlayers()
 			Offset.Z += SpawnZOffset;
 
 			PlayerPawn->TeleportTo(TargetLocation + Offset, TargetRotation);
+
+			if (AController* PC = PlayerPawn->GetController())
+			{
+				PC->SetControlRotation(TargetRotation);
+			}
 		}
 	}
 
-	OnPortalTriggered.Broadcast(this);
-
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Portal Triggered"));
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("Players Teleported: %d"), LastTriggeredPartyMembers.Num()));
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Portal Triggered"));
+	
+	if (TeleportSequence)
+	{
+		Multicast_PlayTeleportSequence();
+	}
+	else if (HasAuthority())
+	{
+		OnPortalTriggered.Broadcast(this);
+	}
 }
 
 void APortalActor::TeleportPlayer(AActor* Interactor)
@@ -401,7 +416,14 @@ void APortalActor::TeleportPlayer(AActor* Interactor)
 
 	Pawn->TeleportTo(TargetLocation + Offset, TargetRotation);
 
-	OnPortalTriggered.Broadcast(this);
+	if (TeleportSequence)
+	{
+		Multicast_PlayTeleportSequence();
+	}
+	else if (HasAuthority())
+	{
+		OnPortalTriggered.Broadcast(this);
+	}
 }
 
 TArray<AMainPlayer*> APortalActor::GetLastTriggeredPartyMembers() const
@@ -486,5 +508,44 @@ void APortalActor::ResolveTargetPortal()
 			TargetPortal = *It;
 			return;
 		}
+	}
+}
+
+void APortalActor::OnTeleportSequenceFinished()
+{
+	if (AMainPlayerController* LocalPC = Cast<AMainPlayerController>(GetWorld()->GetFirstPlayerController()))
+	{
+		LocalPC->ToggleMainUI(true);
+	}
+	if (HasAuthority())
+	{
+		OnPortalTriggered.Broadcast(this);
+	}
+}
+
+void APortalActor::Multicast_PlayTeleportSequence_Implementation()
+{
+	if (!TeleportSequence) return;
+
+	FMovieSceneSequencePlaybackSettings PlaybackSettings;
+
+	PlaybackSettings.bDisableMovementInput = true; 
+	PlaybackSettings.bDisableLookAtInput = true;   
+	PlaybackSettings.bHideHud = true;
+	
+	ALevelSequenceActor* OutActor;
+
+	SequencePlayer = ULevelSequencePlayer::CreateLevelSequencePlayer(GetWorld(), TeleportSequence, PlaybackSettings, OutActor);
+
+	if (SequencePlayer)
+	{
+		SequencePlayer->OnFinished.AddDynamic(this, &APortalActor::OnTeleportSequenceFinished);
+
+		if (AMainPlayerController* LocalPC = Cast<AMainPlayerController>(GetWorld()->GetFirstPlayerController()))
+		{
+			LocalPC->ToggleMainUI(false);
+		}
+
+		SequencePlayer->Play();
 	}
 }

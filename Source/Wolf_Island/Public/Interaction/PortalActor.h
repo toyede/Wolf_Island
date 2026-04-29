@@ -10,6 +10,8 @@ class UBoxComponent;
 class UStaticMeshComponent;
 class AMainPlayer;
 class AEnemyAIBoss;
+class ULevelSequence;
+class ULevelSequencePlayer;
 class APortalActor;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPortalTriggered, APortalActor*, TriggeredPortal);
@@ -118,4 +120,19 @@ private:
 
 	UPROPERTY()
 	TArray<TObjectPtr<AMainPlayer>> LastTriggeredPartyMembers;
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cinematic")
+	ULevelSequence* TeleportSequence;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayTeleportSequence();
+
+protected:
+	UFUNCTION()
+	void OnTeleportSequenceFinished();
+
+private:
+	UPROPERTY()
+	ULevelSequencePlayer* SequencePlayer;
 };

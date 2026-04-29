@@ -25,7 +25,7 @@ AWerewolfInfected::AWerewolfInfected()
     AttackCollisionComp = CreateDefaultSubobject<UAttackCollisionComponent>(
         TEXT("AttackCollision"));
 
-    Tags.Add(FName("Werewolf")); // ´Á´ëµéÀÌ ¶§¸®Áö ¾Êµµ·Ï
+    Tags.Add(FName("Werewolf")); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Êµï¿½ï¿½ï¿½
 }
 
 void AWerewolfInfected::BeginPlay()
@@ -58,13 +58,13 @@ void AWerewolfInfected::Die_Implementation()
 }
 
 
-// === µ¥¹ÌÁö & ±âÀý ===
+// === ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ & ï¿½ï¿½ï¿½ï¿½ ===
 
 float AWerewolfInfected::TakeDamage(float DamageAmount,
     FDamageEvent const& DamageEvent,
     AController* EventInstigator, AActor* DamageCauser)
 {
-    if (bIsIncapacitated) return 0.0f;  // ¹«Àû
+    if (bIsIncapacitated) return 0.0f;  // ï¿½ï¿½ï¿½ï¿½
     if (!HasAuthority()) return 0.0f;
 
     float ActualDamage = Super::TakeDamage(
@@ -72,14 +72,14 @@ float AWerewolfInfected::TakeDamage(float DamageAmount,
 
     CurrentHealth = FMath::Clamp(CurrentHealth - ActualDamage, 0.0f, MaxHealth);
 
-    // 10% ÀÌÇÏ¸é ±âÀý
+    // 10% ï¿½ï¿½ï¿½Ï¸ï¿½ ï¿½ï¿½ï¿½ï¿½
     if (CurrentHealth <= MaxHealth * IncapacitateThreshold)
     {
         HandleIncapacitated();
     }
     else
     {
-        // »ì¾ÆÀÖ´Ù¸é ÇÇ°Ý ¸®¾×¼Ç ½ÇÇà
+        // ï¿½ï¿½ï¿½ï¿½Ö´Ù¸ï¿½ ï¿½Ç°ï¿½ ï¿½ï¿½ï¿½×¼ï¿½ ï¿½ï¿½ï¿½ï¿½
         HitResponse();
     }
 
@@ -90,7 +90,7 @@ void AWerewolfInfected::NormalAttack_Implementation()
 {
     if (HasAuthority())
     {
-        // ¼­¹ö¿¡¼­ ¸ÖÆ¼Ä³½ºÆ® È£Ãâ
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Æ¼Ä³ï¿½ï¿½Æ® È£ï¿½ï¿½
         Multicast_PlayAttack();
     }
 }
@@ -106,14 +106,14 @@ void AWerewolfInfected::HandleIncapacitated()
         }
 		AIC->StopMovement();
 	}
-    // MoonlightInfectionSystemÀ» Ã£¾Æ ±âÀý Ã³¸® ¿äÃ»
+    // MoonlightInfectionSystemï¿½ï¿½ Ã£ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Ã³ï¿½ï¿½ ï¿½ï¿½Ã»
     AMoonlightInfectionSystem* System = Cast<AMoonlightInfectionSystem>(
         UGameplayStatics::GetActorOfClass(GetWorld(), AMoonlightInfectionSystem::StaticClass()));
 
     if (System)
     {
-        // ÀÌ ´Á´ëÀÎ°£À» ¼ÒÀ¯ÇÑ PlayerController¸¦ Ã£¾Æ Àü´Þ
-        // (¼¼¼Ç µ¥ÀÌÅÍ¿¡ µî·ÏµÈ PC¸¦ Ã£±â À§ÇÑ ¿ëµµ)
+        // ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Î°ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ PlayerControllerï¿½ï¿½ Ã£ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+        // (ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Í¿ï¿½ ï¿½ï¿½Ïµï¿½ PCï¿½ï¿½ Ã£ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ëµµ)
         System->NotifyWerewolfDown(this);
     }
 
@@ -124,11 +124,11 @@ void AWerewolfInfected::OnRep_Incapacitated()
 {
     if (bIsIncapacitated)
     {
-        // Ãæµ¹ ¹«Àû Ã³¸®
+        // ï¿½æµ¹ ï¿½ï¿½ï¿½ï¿½ Ã³ï¿½ï¿½
         GetCapsuleComponent()->SetCollisionResponseToChannel(
-            ECC_GameTraceChannel1, ECR_Ignore);  // °ø°Ý Ã¤³Î
+            ECC_GameTraceChannel1, ECR_Ignore);  // ï¿½ï¿½ï¿½ï¿½ Ã¤ï¿½ï¿½
 
-        // ÀÔ·Â ºñÈ°¼ºÈ­
+        // ï¿½Ô·ï¿½ ï¿½ï¿½È°ï¿½ï¿½È­
         if (APlayerController* PC = Cast<APlayerController>(GetController()))
         {
             DisableInput(PC);
@@ -143,10 +143,10 @@ void AWerewolfInfected::OnRep_Incapacitated()
 
 void AWerewolfInfected::OnRep_CurrentHealth()
 {
-    // UI ¾÷µ¥ÀÌÆ® µî Å¬¶óÀÌ¾ðÆ® Ãø ¹ÝÀÀ
+    // UI ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ Å¬ï¿½ï¿½ï¿½Ì¾ï¿½Æ® ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 }
 
-// === °ø°Ý ===
+// === ï¿½ï¿½ï¿½ï¿½ ===
 
 void AWerewolfInfected::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -175,7 +175,7 @@ void AWerewolfInfected::OnAttackInput()
 
 void AWerewolfInfected::Multicast_PlayAttack_Implementation()
 {
-    GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, "z");
+    //GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, "z");
 
     UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
     if (!AnimInstance || !AttackMontage)
@@ -187,19 +187,19 @@ void AWerewolfInfected::Multicast_PlayAttack_Implementation()
         return;
     }
 
-    // °ø°Ý Áß »óÅÂ ¼³Á¤
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     bIsAttacking = true;
 
-    // ¸ùÅ¸ÁÖ Àç»ý
+    // ï¿½ï¿½Å¸ï¿½ï¿½ ï¿½ï¿½ï¿½
     AnimInstance->Montage_Play(AttackMontage);
 
-    // °ø°Ý »ç¿îµå (EnemyAIBase ½ºÅ¸ÀÏ Ãß°¡)
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (EnemyAIBase ï¿½ï¿½Å¸ï¿½ï¿½ ï¿½ß°ï¿½)
     /*if (AttackSound)
     {
         UGameplayStatics::PlaySoundAtLocation(this, AttackSound, GetActorLocation());
     }*/
 
-    // ¼­¹öÀÎ °æ¿ì ¸ùÅ¸ÁÖ Á¾·á µ¨¸®°ÔÀÌÆ® ¹ÙÀÎµù
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½Å¸ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½Îµï¿½
     if (HasAuthority())
     {
         FOnMontageEnded EndDelegate;
@@ -251,7 +251,7 @@ void AWerewolfInfected::Server_RequestAttack_Implementation()
     if (AttackMontage)
     {
         PlayAnimMontage(AttackMontage);
-        // AttackCollisionComp È°¼ºÈ­´Â AnimNotify¿¡¼­ Ã³¸®
+        // AttackCollisionComp È°ï¿½ï¿½È­ï¿½ï¿½ AnimNotifyï¿½ï¿½ï¿½ï¿½ Ã³ï¿½ï¿½
     }
 }
 
@@ -262,8 +262,8 @@ void AWerewolfInfected::OnAttackHit(const FHitResult& HitResult)
     AActor* HitActor = HitResult.GetActor();
     if (!HitActor) return;
 
-    GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red,
-		FString::Printf(TEXT("Hit: %s"), *HitActor->GetName()));
+    //GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red,
+	//	FString::Printf(TEXT("Hit: %s"), *HitActor->GetName()));
 
     TSubclassOf<UDamageType> DamageTypeClass = UDamageType::StaticClass();
     if (InfectedAttackDamageType)
@@ -292,7 +292,7 @@ void AWerewolfInfected::HitResponse()
     {
         AIC->StopMovement();
 
-        // Behavior Tree¿¡¼­ °ø°ÝÀÌ³ª ÃßÀûÀ» ¸ØÃß°Ô ÇÒ Blackboard Key ¼³Á¤ (¿¹: bIsHit)
+        // Behavior Treeï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ì³ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ß°ï¿½ ï¿½ï¿½ Blackboard Key ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½: bIsHit)
         if (UBlackboardComponent* BB = AIC->GetBlackboardComponent())
         {
             BB->SetValueAsBool(FName("bIsHit"), true);
@@ -304,16 +304,16 @@ void AWerewolfInfected::HitResponse()
 
 void AWerewolfInfected::Multicast_HitResponse_Implementation()
 {
-    // ÁøÇà ÁßÀÎ ¾Ö´Ï¸ÞÀÌ¼Ç(°ø°Ý µî) °­Á¦ Á¾·á
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´Ï¸ï¿½ï¿½Ì¼ï¿½(ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½) ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
     {
         AnimInstance->Montage_Stop(0.1f);
     }
 
     GetCharacterMovement()->StopMovementImmediately();
-    bIsAttacking = false; // °ø°Ý »óÅÂ °­Á¦ ÇØÁ¦ (°ø°Ý ÄÝ¸®Àü ¹«È¿È­)
+    bIsAttacking = false; // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ ï¿½Ý¸ï¿½ï¿½ï¿½ ï¿½ï¿½È¿È­)
 
-    // ÇÇ°Ý ¸ùÅ¸ÁÖ Àç»ý
+    // ï¿½Ç°ï¿½ ï¿½ï¿½Å¸ï¿½ï¿½ ï¿½ï¿½ï¿½
     if (HitMontage)
     {
         UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();

@@ -84,6 +84,11 @@ void AEnemyAIBase::BeginPlay()
 {
 	Super::BeginPlay();
 
+    if (StatusComponent)
+    {
+        BaseHumanArmor = StatusComponent->Armor;
+    }
+
     if (HasAuthority())
     {
         TArray<AActor*> Found;
@@ -192,6 +197,7 @@ void AEnemyAIBase::ServerChangeForm_Implementation(EEnemyForm Form)
 void AEnemyAIBase::ApplyFormVisuals()
 {
     bIsHuman = (EnemyForm == EEnemyForm::Human);
+    ApplyFormDefense();
 
     GetMesh()->SetVisibility(bIsHuman);
     GetMesh()->SetCollisionEnabled(bIsHuman ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
@@ -233,6 +239,16 @@ void AEnemyAIBase::ApplyFormVisuals()
     {
         WolfMesh->SetAnimInstanceClass(WolfAnimBP);
     }
+}
+
+void AEnemyAIBase::ApplyFormDefense()
+{
+    if (!StatusComponent)
+    {
+        return;
+    }
+
+    StatusComponent->Armor = bIsHuman ? BaseHumanArmor : (BaseHumanArmor + WolfArmorBonus);
 }
 
 void AEnemyAIBase::ApplySpeedByState(EEnemyState State)

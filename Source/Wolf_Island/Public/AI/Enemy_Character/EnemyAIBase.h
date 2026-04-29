@@ -108,6 +108,13 @@ public:
 	void ServerChangeForm(EEnemyForm Form);
 
 	void ApplyFormVisuals();
+	void ApplyFormDefense();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Form")
+	float WolfArmorBonus = 15.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats|Form")
+	float BaseHumanArmor = 0.0f;
 
 	void ApplySpeedByState(EEnemyState State);
 

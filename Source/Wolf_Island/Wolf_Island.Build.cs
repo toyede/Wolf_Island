@@ -27,6 +27,8 @@ public class Wolf_Island : ModuleRules
             //"AdvancedSteamSessions",
             "OnlineSubsystem", 
             "OnlineSubsystemUtils",
+            "LevelSequence",
+            "MovieScene",
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[]
@@ -34,7 +36,7 @@ public class Wolf_Island : ModuleRules
 			"Slate", 
 			"SlateCore", 
 			"AdvancedSessions", 
-			"AdvancedSteamSessions",
+			"AdvancedSteamSessions", "LevelSequence", "LevelSequence",
 			//"OnlineSubsystem", 
 			//"OnlineSubsystemUtils",
 		});
