@@ -398,9 +398,9 @@ void AMoonlightInfectionSystem::RestorePlayerAtDawn(APlayerController* PC)
 
 	UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] RestorePlayerAtDawn COMPLETE - Final Loc: %.0f, %.0f, %.0f"),
 		OriginalPlayer->GetActorLocation().X, OriginalPlayer->GetActorLocation().Y, OriginalPlayer->GetActorLocation().Z);
-	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Cyan, 
-		FString::Printf(TEXT("[Restore DONE] Final: %.0f, %.0f, %.0f"), 
-			OriginalPlayer->GetActorLocation().X, OriginalPlayer->GetActorLocation().Y, OriginalPlayer->GetActorLocation().Z));
+	//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Cyan, 
+	//	FString::Printf(TEXT("[Restore DONE] Final: %.0f, %.0f, %.0f"), 
+	//		OriginalPlayer->GetActorLocation().X, OriginalPlayer->GetActorLocation().Y, OriginalPlayer->GetActorLocation().Z));
 }
 
 void AMoonlightInfectionSystem::Debug_ForceRestoreAll()
@@ -455,12 +455,12 @@ void AMoonlightInfectionSystem::CheckAllPlayers()
 				if (bShowDebugMessages)
 				{
 					float TotalInfection = StatusComp->CurrentInfectionRate;
-					GEngine->AddOnScreenDebugMessage(-1, CheckInterval, FColor::Cyan,
-						FString::Printf(TEXT("[%s] Total: %.1f%% | Nightly: %.1f%% / %.1f%%"),
-							*MainPlayer->GetName(),
-							TotalInfection,
-							Nightly,
-							NightlyTransformThreshold));
+					//GEngine->AddOnScreenDebugMessage(-1, CheckInterval, FColor::Cyan,
+					//	FString::Printf(TEXT("[%s] Total: %.1f%% | Nightly: %.1f%% / %.1f%%"),
+					//		*MainPlayer->GetName(),
+					//		TotalInfection,
+					//		Nightly,
+					//		NightlyTransformThreshold));
 				}
 
 				if (!TriggeredThisNight.Contains(MainPlayer) && Nightly >= NightlyTransformThreshold)

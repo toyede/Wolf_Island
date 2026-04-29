@@ -54,18 +54,18 @@ void ABossStatue::HealBoss()
 	if (CachedBoss)
 	{
 		CachedBoss->StatusComponent->IncreaseHP(HealAmount);
-		GEngine->AddOnScreenDebugMessage(
-			-1,
-			2.f,
-			FColor::Green,
-			FString::Printf(TEXT("Boss Healed: %.2f   Current HP: %.2f"), HealAmount, CachedBoss->StatusComponent->CurrentHP)
-		);
+		//GEngine->AddOnScreenDebugMessage(
+		//	-1,
+		//	2.f,
+		//	FColor::Green,
+		//	FString::Printf(TEXT("Boss Healed: %.2f   Current HP: %.2f"), HealAmount, CachedBoss->StatusComponent->CurrentHP)
+		///);
 
 		if (HealEffect)
 		{
 			UNiagaraFunctionLibrary::SpawnSystemAttached(
 				HealEffect,
-				CachedBoss->GetMesh(), // º¸½ºÀÇ ¸Ş½¬¿¡ ºÎÂø
+				CachedBoss->GetMesh(), // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ş½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 				HealEffectSocketName,
 				FVector::ZeroVector,
 				FRotator::ZeroRotator,
@@ -83,18 +83,18 @@ float ABossStatue::TakeDamage(float DamageAmount, FDamageEvent const& DamageEven
 
 	if (DamageCauser && DamageCauser->IsA(AEnemyAIBoss::StaticClass()))
 	{
-		// ·¯½¬ °ø°İÀÎ °æ¿ì Ãß°¡ µ¥¹ÌÁö Àû¿ë
+		// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ß°ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 		ActualDamage *= RushDamageMultiplier;
 	}
 
 	StatusComponent->DecreaseHP(ActualDamage);
 
-	GEngine->AddOnScreenDebugMessage(
-		-1,
-		2.f,
-		FColor::Red,
-		FString::Printf(TEXT("Statue HP: %.2f"), StatusComponent->CurrentHP)
-	);
+	//GEngine->AddOnScreenDebugMessage(
+	//	-1,
+	//	2.f,
+	//	FColor::Red,
+	//	FString::Printf(TEXT("Statue HP: %.2f"), StatusComponent->CurrentHP)
+	//);
 
 	if (StatusComponent->CurrentHP <= 0.f)
 	{
@@ -108,7 +108,7 @@ void ABossStatue::Die()
 {
 	GetWorldTimerManager().ClearTimer(HealTimerHandle);
 
-	// ÆÄ±« ÀÌÆåÆ®
+	// ï¿½Ä±ï¿½ ï¿½ï¿½ï¿½ï¿½Æ®
 	if (DestroyEffect)
 	{
 		/*UGameplayStatics::SpawnEmitterAtLocation(
@@ -116,7 +116,7 @@ void ABossStatue::Die()
 			DestroyEffect,
 			GetActorLocation()
 		);*/
-		// ³ªÀÌ¾Æ°¡¶ó ¾µ°ÅÀÓ
+		// ï¿½ï¿½ï¿½Ì¾Æ°ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	}
 
 	OnStatueDestroyed.Broadcast();

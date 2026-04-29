@@ -160,7 +160,7 @@ void AEnemyAIBoss::SpawnStatueSequence()
 	{
 		if (GEngine)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("[Boss] No valid statue spawn point - set StatueSpawnPoints or StatueSpawnPoint in editor."));
+			//GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("[Boss] No valid statue spawn point - set StatueSpawnPoints or StatueSpawnPoint in editor."));
 		}
 		return;
 	}
@@ -171,12 +171,12 @@ void AEnemyAIBoss::SpawnStatueSequence()
 	const FVector SpawnLocation = SelectedPoint->GetActorLocation();
 	if (GEngine)
 	{
-		GEngine->AddOnScreenDebugMessage(
-			-1,
-			2.0f,
-			FColor::Yellow,
-			FString::Printf(TEXT("[Boss] Selected SpawnPoint: %s (X=%.1f Y=%.1f Z=%.1f)"),
-				*SelectedPoint->GetName(), SpawnLocation.X, SpawnLocation.Y, SpawnLocation.Z));
+		//GEngine->AddOnScreenDebugMessage(
+		//	-1,
+		//	2.0f,
+		//	FColor::Yellow,
+		//	FString::Printf(TEXT("[Boss] Selected SpawnPoint: %s (X=%.1f Y=%.1f Z=%.1f)"),
+		//		*SelectedPoint->GetName(), SpawnLocation.X, SpawnLocation.Y, SpawnLocation.Z));
 	}
 	if (ForewarningClass)
 	{
@@ -229,7 +229,7 @@ void AEnemyAIBoss::TrySpawnStatueWithRetry()
 	{
 		if (GEngine)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("[Boss] StatueClass is null."));
+			//GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("[Boss] StatueClass is null."));
 		}
 		ClearSpawnState();
 		return;
@@ -241,18 +241,18 @@ void AEnemyAIBoss::TrySpawnStatueWithRetry()
 	{
 		if (GEngine)
 		{
-			GEngine->AddOnScreenDebugMessage(
-				-1,
-				1.5f,
-				FColor::Orange,
-				FString::Printf(TEXT("[Boss] Spawn area occupied. Retry %d/%d"),
-					SpawnRetryCount + 1, MaxSpawnRetries));
+			//GEngine->AddOnScreenDebugMessage(
+			//	-1,
+			//	1.5f,
+			//	FColor::Orange,
+			//	FString::Printf(TEXT("[Boss] Spawn area occupied. Retry %d/%d"),
+			//		SpawnRetryCount + 1, MaxSpawnRetries));
 		}
 		if (SpawnRetryCount >= MaxSpawnRetries)
 		{
 			if (GEngine)
 			{
-				GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("[Boss] Statue spawn aborted (occupied area)."));
+				//GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("[Boss] Statue spawn aborted (occupied area)."));
 			}
 			ClearSpawnState();
 			return;
@@ -284,12 +284,12 @@ void AEnemyAIBoss::TrySpawnStatueWithRetry()
 	{
 		if (GEngine)
 		{
-			GEngine->AddOnScreenDebugMessage(
-				-1,
-				2.0f,
-				FColor::Green,
-				FString::Printf(TEXT("[Boss] Statue spawned at X=%.1f Y=%.1f Z=%.1f"),
-					SpawnLocation.X, SpawnLocation.Y, SpawnLocation.Z));
+			//GEngine->AddOnScreenDebugMessage(
+			//	-1,
+			//	2.0f,
+			//	FColor::Green,
+			//	FString::Printf(TEXT("[Boss] Statue spawned at X=%.1f Y=%.1f Z=%.1f"),
+			//		SpawnLocation.X, SpawnLocation.Y, SpawnLocation.Z));
 		}
 		ClearSpawnState();
 		return;
@@ -299,7 +299,7 @@ void AEnemyAIBoss::TrySpawnStatueWithRetry()
 	{
 		if (GEngine)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("[Boss] Statue spawn failed after retries."));
+			//GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("[Boss] Statue spawn failed after retries."));
 		}
 		ClearSpawnState();
 		return;

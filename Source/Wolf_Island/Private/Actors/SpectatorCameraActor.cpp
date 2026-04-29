@@ -9,7 +9,7 @@ ASpectatorCameraActor::ASpectatorCameraActor()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
-	PrimaryActorTick.TickGroup = TG_PostUpdateWork; // Ä«¸Þ¶ó°¡ ´Ù¸¥ ¾×ÅÍµéÀÇ À§Ä¡ ¾÷µ¥ÀÌÆ® ÀÌÈÄ¿¡ ¿òÁ÷ÀÌµµ·Ï ¼³Á¤
+	PrimaryActorTick.TickGroup = TG_PostUpdateWork; // Ä«ï¿½Þ¶ï¿½ ï¿½Ù¸ï¿½ ï¿½ï¿½ï¿½Íµï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½Ä¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ìµï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	
 	RootComp = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	SetRootComponent(RootComp);
@@ -33,8 +33,8 @@ void ASpectatorCameraActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 void ASpectatorCameraActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	// TargetActor°¡ À¯È¿ÇÑÁö È®ÀÎ
-	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Green, FString::Printf(TEXT("SpectatorCamera Tick: TargetActor=%s"), *GetNameSafe(TargetActor)));
+	// TargetActorï¿½ï¿½ ï¿½ï¿½È¿ï¿½ï¿½ï¿½ï¿½ È®ï¿½ï¿½
+	//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Green, FString::Printf(TEXT("SpectatorCamera Tick: TargetActor=%s"), *GetNameSafe(TargetActor)));
 
 	if (!IsValid(TargetActor))
 	{
@@ -46,7 +46,7 @@ void ASpectatorCameraActor::Tick(float DeltaTime)
 	FRotator DesiredRot = TargetActor->GetActorRotation();
 	if (APawn* TargetPawn = Cast<APawn>(TargetActor))
 	{
-		DesiredRot = TargetPawn->GetViewRotation(); // ¸¶¿ì½º ½ÃÁ¡ µ¿±âÈ­
+		DesiredRot = TargetPawn->GetViewRotation(); // ï¿½ï¿½ï¿½ì½º ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½È­
 	}
 
 	FVector NewLoc = FMath::VInterpTo(GetActorLocation(), DesiredLoc, DeltaTime, InterpSpeed);

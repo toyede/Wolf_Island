@@ -206,7 +206,7 @@ void AMultiGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 			}
 
 			UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE][MULTI] Werewolf session player death: skip StartSpot relocation"));
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Werewolf session player death: skip StartSpot relocation"));
+			//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Werewolf session player death: skip StartSpot relocation"));
 			return;
 		}
 	}
