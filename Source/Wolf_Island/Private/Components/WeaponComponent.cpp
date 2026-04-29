@@ -44,7 +44,7 @@ void UWeaponComponent::CheckWeapon(FItemBaseData HandedItem)
 		UE_LOG(LogTemp, Warning, TEXT("WeaponDataTable is NULL!!"));
 		return;
 	}
-
+	
 	if (HandedItem.IsValid())
 	{
 		FWeaponData* WeaponData = WeaponDataTable->FindRow<FWeaponData>(HandedItem.ItemID, "FindWeapon");
@@ -52,17 +52,35 @@ void UWeaponComponent::CheckWeapon(FItemBaseData HandedItem)
 		if (WeaponData)
 		{
 			EquipeWeapon(*WeaponData);
+			
+			if (WeaponData->AnimLayerBlueprint)
+			{
+				ACharacter* Owner = Cast<ACharacter>(GetOwner());
+				Owner->GetMesh()->LinkAnimClassLayers(WeaponData->AnimLayerBlueprint);
+			}
 		} else
 		{
 			FWeaponData* DefaultData = WeaponDataTable->FindRow<FWeaponData>(FName("EQ000"), "DefaultWeapon");
 			CurrentWeapon = *DefaultData;
 			UnequipeWeapon();
+			
+			if (DefaultData->AnimLayerBlueprint)
+			{
+				ACharacter* Owner = Cast<ACharacter>(GetOwner());
+				Owner->GetMesh()->LinkAnimClassLayers(DefaultData->AnimLayerBlueprint);
+			}
 		}
 	} else
 	{
 		FWeaponData* DefaultData = WeaponDataTable->FindRow<FWeaponData>(FName("EQ000"), "DefaultWeapon");
 		CurrentWeapon = *DefaultData;
 		UnequipeWeapon();
+		
+		if (DefaultData->AnimLayerBlueprint)
+		{
+			ACharacter* Owner = Cast<ACharacter>(GetOwner());
+			Owner->GetMesh()->LinkAnimClassLayers(DefaultData->AnimLayerBlueprint);
+		}
 	}
 }
 
