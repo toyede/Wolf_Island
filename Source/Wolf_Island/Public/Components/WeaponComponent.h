@@ -25,6 +25,8 @@ struct FWeaponData : public FTableRowBase
 	TArray<TObjectPtr<UAnimMontage>> AttackMontages;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Data")
 	TArray<TObjectPtr<USoundBase>> Sounds;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Weapon Data")
+	TSubclassOf<UAnimInstance> AnimLayerBlueprint;
 };
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )

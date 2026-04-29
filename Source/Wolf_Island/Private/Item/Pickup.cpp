@@ -81,6 +81,12 @@ void APickup::InitializeDrop(FItemBaseData ItemToDrop, const int32 InAmount)
         const FItemData* ItemData = 
         ItemDataTable->FindRow<FItemData>(ItemToDrop.ItemID, ItemToDrop.ItemName.ToString());
         
+        if (!ItemData)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Item Data is not valid"));
+            return;
+        }
+        
         ItemReference = ItemToDrop;
         SetInteractionDuration(ItemData->NumericData.InteractionDuration);
         InAmount <= 0 ? ItemReference.SetAmount(1) : ItemReference.SetAmount(InAmount);
