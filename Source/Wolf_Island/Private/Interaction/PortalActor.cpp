@@ -365,7 +365,7 @@ void APortalActor::TeleportAllPlayers()
 		}
 	}
 
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Portal Triggered"));
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Portal Triggered"));
 	
 	if (TeleportSequence)
 	{

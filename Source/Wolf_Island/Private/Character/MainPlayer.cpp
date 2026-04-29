@@ -1971,9 +1971,9 @@ void AMainPlayer::ProcessAttackHit(const FHitResult& HitResult, float DamageAmou
 			if (GEngine)
 			{
 				FString DebugMsg = FString::Printf(TEXT("[%s] 남은 체력: %.1f"), *HitActor->GetName(), RemainingHP);
-				GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, DebugMsg);
+				//GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, DebugMsg);
 				FString DebugMsgs = FString::Printf(TEXT("최종데미지: %.1f"), FinalDamage);
-				GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, DebugMsgs);
+				//GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, DebugMsgs);
 			}
 		}
 
