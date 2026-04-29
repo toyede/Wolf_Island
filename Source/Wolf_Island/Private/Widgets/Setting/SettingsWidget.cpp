@@ -377,6 +377,13 @@ bool USettingsWidget::ApplyInputKeybind(FName MappingName, EPlayerMappableKeySlo
 		return false;
 	}
 
+	if (IsLegacyMoveMappingName(MappingName))
+	{
+		SetLastInputKeybindMessage(LOCTEXT("LegacyMoveMappingBlocked", "이전 이동 입력 매핑은 더 이상 직접 변경하지 않습니다. 입력 설정을 새로고침하거나 초기화해 주세요."));
+		OnInputKeybindsChanged();
+		return false;
+	}
+
 	UEnhancedInputUserSettings* UserSettings = GetInputUserSettings(true);
 	UEnhancedPlayerMappableKeyProfile* KeyProfile = UserSettings ? UserSettings->GetCurrentKeyProfile() : nullptr;
 	if (!UserSettings || !KeyProfile)
@@ -390,20 +397,27 @@ bool USettingsWidget::ApplyInputKeybind(FName MappingName, EPlayerMappableKeySlo
 	Args.MappingName = MappingName;
 	Args.Slot = KeySlot;
 	Args.NewKey = NewKey;
-	Args.bCreateMatchingSlotIfNeeded = true;
+	Args.bCreateMatchingSlotIfNeeded = false;
 
 	FPlayerKeyMapping ExistingMapping;
 	KeyProfile->K2_FindKeyMapping(ExistingMapping, Args);
 
 	FText LockReason;
-	if (ExistingMapping.IsValid() && !ShouldAllowRebind(ExistingMapping, LockReason))
+	if (!ExistingMapping.IsValid())
+	{
+		SetLastInputKeybindMessage(LOCTEXT("MapPlayerKeyMissingMapping", "입력 매핑을 찾지 못했습니다. 입력 설정을 새로고침해 주세요."));
+		OnInputKeybindsChanged();
+		return false;
+	}
+
+	if (!ShouldAllowRebind(ExistingMapping, LockReason))
 	{
 		SetLastInputKeybindMessage(LockReason);
 		OnInputKeybindsChanged();
 		return false;
 	}
 
-	if (ExistingMapping.IsValid() && ExistingMapping.GetCurrentKey() == NewKey)
+	if (ExistingMapping.GetCurrentKey() == NewKey)
 	{
 		SetLastInputKeybindMessage(LOCTEXT("SameKeySelected", "이미 같은 키로 설정되어 있습니다."));
 		OnInputKeybindsChanged();
@@ -549,6 +563,7 @@ UEnhancedInputUserSettings* USettingsWidget::GetInputUserSettings(bool bTryIniti
 	if (UserSettings && bTryInitialize)
 	{
 		RegisterRelevantInputMappingContexts(UserSettings);
+		MigrateLegacyMoveInputProfile(UserSettings);
 	}
 
 	return UserSettings;
@@ -614,6 +629,66 @@ void USettingsWidget::RegisterRelevantInputMappingContexts(UEnhancedInputUserSet
 	}
 }
 
+void USettingsWidget::MigrateLegacyMoveInputProfile(UEnhancedInputUserSettings* UserSettings)
+{
+	if (bLegacyMoveProfileMigrationAttempted || !UserSettings)
+	{
+		return;
+	}
+
+	bLegacyMoveProfileMigrationAttempted = true;
+
+	UEnhancedPlayerMappableKeyProfile* KeyProfile = UserSettings->GetCurrentKeyProfile();
+	if (!KeyProfile)
+	{
+		return;
+	}
+
+	const TMap<FName, FKeyMappingRow>& Rows = KeyProfile->GetPlayerMappingRows();
+	const bool bHasLegacyMoveRow =
+		Rows.Contains(FName(TEXT("IA_Move"))) ||
+		Rows.Contains(FName(TEXT("Move")));
+	if (!bHasLegacyMoveRow)
+	{
+		return;
+	}
+
+	const bool bHasDirectionalMoveRows =
+		Rows.Contains(FName(TEXT("Move_Forward"))) ||
+		Rows.Contains(FName(TEXT("Move_Backward"))) ||
+		Rows.Contains(FName(TEXT("Move_Left"))) ||
+		Rows.Contains(FName(TEXT("Move_Right")));
+	if (!bHasDirectionalMoveRows)
+	{
+		return;
+	}
+
+	bool bClearedLegacyMoveRows = false;
+	if (FKeyMappingRow* LegacyMoveRow = KeyProfile->FindKeyMappingRowMutable(FName(TEXT("IA_Move"))))
+	{
+		if (LegacyMoveRow->HasAnyMappings())
+		{
+			LegacyMoveRow->Mappings.Reset();
+			bClearedLegacyMoveRows = true;
+		}
+	}
+
+	if (FKeyMappingRow* LegacyMoveRow = KeyProfile->FindKeyMappingRowMutable(FName(TEXT("Move"))))
+	{
+		if (LegacyMoveRow->HasAnyMappings())
+		{
+			LegacyMoveRow->Mappings.Reset();
+			bClearedLegacyMoveRows = true;
+		}
+	}
+
+	if (bClearedLegacyMoveRows)
+	{
+		UserSettings->ApplySettings();
+		UserSettings->SaveSettings();
+	}
+}
+
 void USettingsWidget::BuildInputKeybindEntries(const UEnhancedPlayerMappableKeyProfile* KeyProfile)
 {
 	InputKeybindEntries.Reset();
@@ -626,6 +701,11 @@ void USettingsWidget::BuildInputKeybindEntries(const UEnhancedPlayerMappableKeyP
 	{
 		for (const FPlayerKeyMapping& Mapping : Pair.Value.Mappings)
 		{
+			if (IsLegacyMoveMappingName(Mapping.GetMappingName()))
+			{
+				continue;
+			}
+
 			const FKey CurrentKey = Mapping.GetCurrentKey();
 			const FKey DefaultKey = Mapping.GetDefaultKey();
 
@@ -735,6 +815,11 @@ bool USettingsWidget::IsAxisKey(const FKey& Key) const
 	}
 
 	return Key.IsAxis1D() || Key.IsAxis2D() || Key.IsAxis3D();
+}
+
+bool USettingsWidget::IsLegacyMoveMappingName(FName MappingName) const
+{
+	return MappingName == FName(TEXT("IA_Move")) || MappingName == FName(TEXT("Move"));
 }
 
 void USettingsWidget::SetLastInputKeybindMessage(const FText& Message)
