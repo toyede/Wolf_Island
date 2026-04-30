@@ -455,6 +455,8 @@ void UStatusComponent::StartAir()
 {
 	if (GetWorld()->GetTimerManager().IsTimerActive(AirTimer)) return;
 	
+	StopRecoverAir();
+	
 	GetWorld()->GetTimerManager().SetTimer(
 		AirTimer,
 		[this]()

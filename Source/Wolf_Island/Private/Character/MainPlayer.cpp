@@ -1597,8 +1597,8 @@ void AMainPlayer::SwimCheck()
 	EnteredWater->GetWaveInfoAtPosition(SurfaceLocation, WaterDepth, false, WaveInfo);
 	
 	//디버그 출력
-	UE_LOG(LogTemp, Warning, TEXT("Surface Z : %f"), SurfaceLocation.Z);
-	UE_LOG(LogTemp, Warning, TEXT("WAVE Z : %f"), WaveInfo.Height);
+	//UE_LOG(LogTemp, Warning, TEXT("Surface Z : %f"), SurfaceLocation.Z);
+	//UE_LOG(LogTemp, Warning, TEXT("WAVE Z : %f"), WaveInfo.Height);
 	
 	//플레이어 발 위치
 	FVector FootCheckLocation = FVector(

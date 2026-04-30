@@ -19,7 +19,7 @@ class WOLF_ISLAND_API AMainPlayerState : public APlayerState
 	UPROPERTY(Replicated)
 	bool IsReady = false;
 	
-	//보스전 중인지 체크하는 함수수수수퍼노바
+	//보스전 중인지 체크하는 변수수수수퍼노바
 	UPROPERTY(Replicated)
 	bool IsBossStage = false;
 	
