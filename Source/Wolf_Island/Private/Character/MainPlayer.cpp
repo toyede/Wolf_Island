@@ -610,9 +610,6 @@ void AMainPlayer::Run()
 
 void AMainPlayer::StopRun()
 {
-	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-	GetCharacterMovement()->MaxFlySpeed = SwimmingSpeed;
-	
 	//달리기 중일 때만 달리기 중지 시퀀스 작동
 	if (IsRunning)
 	{
@@ -2097,7 +2094,7 @@ void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 
 void AMainPlayer::Request_Run()
 {
-	if (IsBuildingInputBlocked()) return;
+	if (IsBuildingInputBlocked() || IsInability) return;
 
 	if (HasAuthority())
 	{

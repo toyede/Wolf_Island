@@ -17,6 +17,8 @@ void UTextCommitPanel::NativeConstruct()
 	CancelButton->OnClicked.AddDynamic(this, &UTextCommitPanel::OnCancelClickedEvent);
 	
 	TextEditBox->OnTextCommitted.AddDynamic(this, &UTextCommitPanel::OnTextCommited);
+	
+	TextEditBox->SetHintText(NewHintText);
 }
 
 void UTextCommitPanel::OnCommitClickedEvent()

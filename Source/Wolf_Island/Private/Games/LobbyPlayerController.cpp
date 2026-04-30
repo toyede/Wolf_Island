@@ -43,6 +43,17 @@ void ALobbyPlayerController::OnRep_PlayerState()
 	}
 }
 
+void ALobbyPlayerController::InitPlayerState()
+{
+	Super::InitPlayerState();
+	
+	if (LobbyWidget)
+	{
+		ULobby* Lobby = Cast<ULobby>(LobbyWidget);
+		Lobby->RefreshInfo();
+	}
+}
+
 void ALobbyPlayerController::Request_ToggleReady()
 {
 	if (HasAuthority())

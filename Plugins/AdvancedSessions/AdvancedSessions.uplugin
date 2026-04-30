@@ -11,7 +11,7 @@
 		{
 			"Name": "AdvancedSessions",
 			"Type": "Runtime",
-			"LoadingPhase": "PostDefault"
+			"LoadingPhase": "Default"
 		}
 	],
 	"Plugins": [

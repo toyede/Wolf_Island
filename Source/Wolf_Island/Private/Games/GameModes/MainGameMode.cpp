@@ -555,11 +555,13 @@ void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 	
 	if (PlayerCharacter)
 	{
-		//보스전 중이라면? - 보스전 입구에서 리스폰
+		//보스전 중이라면? - 보스전 입구를 스폰 지점으로
 		if (PlayerState->GetIsBossStage())
 		{
 			PlayerSaveData.Transform = GetBossStageEnterPoint(PlayerState->GetOwningController());
-		} else
+		}
+		//보스전 아니면 마지막 위치를 스폰 지점으로
+		else
 		{
 			PlayerSaveData.Transform = PlayerCharacter->GetActorTransform();
 			PlayerSaveData.Velocity = PlayerCharacter->GetVelocity();
@@ -670,6 +672,7 @@ bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState, bool IsDead)
 	
 	if (PlayerCharacter && !IsDead)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("LOAD PLAYER %s : Transform | %s"), *PlayerID, *PlayerSaveData.Transform.ToString())
 		PlayerCharacter->SetActorTransform(PlayerSaveData.Transform);
 		PlayerCharacter->GetCharacterMovement()->Velocity = PlayerSaveData.Velocity;
 		PlayerCharacter->GetController()->SetControlRotation(PlayerSaveData.ControlRotation);

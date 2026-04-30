@@ -10,7 +10,7 @@
  * 
  */
 UCLASS()
-class WOLF_ISLAND_API ABossEntryPlayerStart : public APlayerStart
+class WOLF_ISLAND_API ABossEntryPlayerStart : public AActor
 {
 	GENERATED_BODY()
 	

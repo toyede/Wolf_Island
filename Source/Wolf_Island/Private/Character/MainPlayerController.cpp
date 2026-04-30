@@ -207,7 +207,7 @@ void AMainPlayerController::DisplayPauseMenu()
 	FInputModeUIOnly Mode;
 	SetInputMode(Mode);
 	
-	UGameplayStatics::SetGamePaused(GetWorld(), true);
+	UGameplayStatics::SetGamePaused(GetWorld(), IsPause);
 	
 	PauseMenu->SetVisibility(ESlateVisibility::Visible);
 }

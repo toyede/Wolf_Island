@@ -32,6 +32,8 @@ public:
 	
 	void OnRep_PlayerState() override;
 	
+	virtual void InitPlayerState() override;
+	
 	UFUNCTION(BlueprintCallable)
 	void Request_ToggleReady();
 	UFUNCTION(Server, Reliable, BlueprintCallable)

@@ -31,11 +31,14 @@ public:
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
 	UEditableTextBox* TextEditBox;
 	
-	UPROPERTY(meta=(BindWidget))
+	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
 	UButton* CommitButton;
 	
 	UPROPERTY(meta=(BindWidget))
 	UButton* CancelButton;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ExposeOnSpawn = true))
+	FText NewHintText;
 	
 	virtual void NativeConstruct() override;
 	

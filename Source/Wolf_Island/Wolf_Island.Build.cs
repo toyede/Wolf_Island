@@ -37,6 +37,7 @@ public class Wolf_Island : ModuleRules
 			"SlateCore", 
 			"AdvancedSessions", 
 			"AdvancedSteamSessions", "LevelSequence", "LevelSequence",
+			"AIModule"
 			//"OnlineSubsystem", 
 			//"OnlineSubsystemUtils",
 		});

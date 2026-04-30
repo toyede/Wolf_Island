@@ -26,6 +26,15 @@ void ALobbyGameMode::BeginPlay()
 		{
 			PlayerControllers.Add(PC);
 			AllocateSlot(PC);
+			
+			if (ALobbyPlayerController* LPC = Cast<ALobbyPlayerController>(PC))
+			{
+				if (LPC->LobbyWidget)
+				{
+					ULobby* Lobby = Cast<ULobby>(LPC->LobbyWidget);
+					Lobby->RefreshInfo();
+				}
+			}
 		}
 	}
 }

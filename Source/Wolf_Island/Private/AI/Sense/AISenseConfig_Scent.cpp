@@ -10,13 +10,11 @@ UAISenseConfig_Scent::UAISenseConfig_Scent(const FObjectInitializer& ObjectIniti
 {
     DebugColor = FColor::Purple;
     ScentDetectionRadius = 1000.f;
-
-    Implementation = UAISense_Scent::StaticClass();
 }
 
 TSubclassOf<UAISense> UAISenseConfig_Scent::GetSenseImplementation() const
 {
-    return Implementation ? *Implementation : UAISense_Scent::StaticClass();
+    return UAISense_Scent::StaticClass();
 }
 
 #if WITH_GAMEPLAY_DEBUGGER
