@@ -11,6 +11,7 @@
 class UStatusComponent;
 class AMainPlayer;
 class APlayerController;
+class AController;
 class AEnemyAIBase;
 
 // ��Ƽ ���� �����ΰ� ���� ������
@@ -122,6 +123,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Moonlight System")
 	void OnDayStarted();
 
+	// 멀티에서 이번 밤 전원 감염(기절 제외) 여부를 재평가하고 필요 시 아침으로 스킵
+	UFUNCTION(BlueprintCallable, Category = "Moonlight System")
+	void EvaluateAllPlayersInfectedAndSkipMorning();
+
+	// 멀티 Logout 시 내부 추적 데이터 정리
+	void HandlePlayerLogout(AController* ExitingController);
+
 	// ��Ƽ ����: �����ΰ� ���� ������
 	UFUNCTION()
 	void StartMultiInfectionSequence(AMainPlayer* Player);
@@ -142,6 +150,9 @@ private:
 	UPROPERTY()
 	TArray<TObjectPtr<UStatusComponent>> InfectedStatusList;
 
+	UPROPERTY(Transient)
+	bool bMorningSkipTriggeredThisNight = false;
+
 	UPROPERTY()
 	AActor* DynamicSkyActor;
 
@@ -151,6 +162,7 @@ private:
 	FTimerHandle CheckTimerHandle;
 
 	void CheckAllPlayers();
+	bool IsPlayerEligibleForNightSkip(AMainPlayer* Player) const;
 	bool IsPlayerExposedToMoonlight(AActor* Player);
 	void ApplyInfection(AActor* Player, float Amount);
 	FVector GetMoonlightCheckLocation(AActor* Player);
