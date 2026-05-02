@@ -111,6 +111,7 @@ void AMoonlightInfectionSystem::ActivateInfectionCheck()
 	NightlyExposure.Empty();
 	TriggeredThisNight.Empty();
 	TriggeredInfectionSnapshot.Empty();
+	bMorningSkipTriggeredThisNight = false;
 
 	if (bShowDebugMessages)
 	{
@@ -200,6 +201,7 @@ void AMoonlightInfectionSystem::OnNightStarted()
 	NightlyExposure.Empty();
 	TriggeredThisNight.Empty();
 	TriggeredInfectionSnapshot.Empty();
+	bMorningSkipTriggeredThisNight = false;
 }
 
 void AMoonlightInfectionSystem::OnDayStarted()
@@ -255,6 +257,24 @@ void AMoonlightInfectionSystem::OnDayStarted()
 	NightlyExposure.Empty();
 	TriggeredThisNight.Empty();
 	TriggeredInfectionSnapshot.Empty();
+	bMorningSkipTriggeredThisNight = false;
+}
+
+bool AMoonlightInfectionSystem::IsPlayerEligibleForNightSkip(AMainPlayer* Player) const
+{
+	if (!IsValid(Player))
+	{
+		return false;
+	}
+
+	const UStatusComponent* StatusComp = Player->FindComponentByClass<UStatusComponent>();
+	if (!IsValid(StatusComp))
+	{
+		return false;
+	}
+
+	// 요구사항: 기절 플레이어는 전원 판정에서 제외
+	return !StatusComp->bIsIncapacitated;
 }
 
 void AMoonlightInfectionSystem::StartMultiInfectionSequence(AMainPlayer* Player)
@@ -476,13 +496,15 @@ void AMoonlightInfectionSystem::CheckAllPlayers()
 					TriggeredInfectionSnapshot.Add(MainPlayer, StatusComp->CurrentInfectionRate);
 					TriggeredThisNight.Add(MainPlayer);
 
-					if (GetNetMode() == NM_Standalone)
+					// 멀티는 임계치 도달 후 변신 처리 뒤 전원 감염 여부를 즉시 재평가
+					if (GetNetMode() != NM_Standalone)
 					{
-						StartSingleInfectionSequence(MainPlayer);
+						StartMultiInfectionSequence(MainPlayer);
+						EvaluateAllPlayersInfectedAndSkipMorning();
 					}
 					else
 					{
-						StartMultiInfectionSequence(MainPlayer);
+						StartSingleInfectionSequence(MainPlayer);
 					}
 				}
 			}
@@ -782,4 +804,98 @@ void AMoonlightInfectionSystem::NotifyWerewolfDown(ACharacter* Werewolf)
 			Werewolf->Destroy();
 		}
 	}*/
+}
+
+void AMoonlightInfectionSystem::EvaluateAllPlayersInfectedAndSkipMorning()
+{
+	if (!HasAuthority()) return;
+	if (GetNetMode() == NM_Standalone) return;
+	if (bMorningSkipTriggeredThisNight) return;
+
+	TSet<TWeakObjectPtr<AMainPlayer>> RequiredPlayers;
+
+	// 현재 접속 중인 플레이어 폰 기준 수집
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		APlayerController* PC = It->Get();
+		if (!IsValid(PC) || !IsValid(PC->PlayerState)) continue;
+
+		if (AMainPlayer* MainPlayer = Cast<AMainPlayer>(PC->GetPawn()))
+		{
+			if (IsPlayerEligibleForNightSkip(MainPlayer))
+			{
+				RequiredPlayers.Add(MainPlayer);
+			}
+		}
+	}
+
+	// 변신 중(관전) 플레이어는 Pawn이 비어있을 수 있어 세션에서 보강 수집
+	for (const auto& Pair : ActiveWerewolfSessions)
+	{
+		if (AMainPlayer* OriginalPlayer = Pair.Value.OriginalCharacter.Get())
+		{
+			if (IsPlayerEligibleForNightSkip(OriginalPlayer))
+			{
+				RequiredPlayers.Add(OriginalPlayer);
+			}
+		}
+	}
+
+	if (RequiredPlayers.Num() == 0)
+	{
+		return;
+	}
+
+	for (const TWeakObjectPtr<AMainPlayer>& WeakPlayer : RequiredPlayers)
+	{
+		AMainPlayer* Player = WeakPlayer.Get();
+		if (!IsValid(Player))
+		{
+			return;
+		}
+
+		const UStatusComponent* StatusComp = Player->FindComponentByClass<UStatusComponent>();
+		if (!IsValid(StatusComp) || !StatusComp->IsInfected)
+		{
+			return;
+		}
+
+		if (!TriggeredThisNight.Contains(Player))
+		{
+			return;
+		}
+	}
+
+	if (IsValid(DynamicSkyActor) && DynamicSkyActor->Implements<USkyInterface>())
+	{
+		bMorningSkipTriggeredThisNight = true;
+		ISkyInterface::Execute_SkipToMorning(DynamicSkyActor);
+	}
+}
+
+void AMoonlightInfectionSystem::HandlePlayerLogout(AController* ExitingController)
+{
+	if (!HasAuthority() || !IsValid(ExitingController)) return;
+
+	APlayerController* ExitingPC = Cast<APlayerController>(ExitingController);
+	if (!IsValid(ExitingPC)) return;
+
+	AMainPlayer* ExitingPlayer = nullptr;
+
+	if (FWerewolfSessionData* Session = ActiveWerewolfSessions.Find(ExitingPC))
+	{
+		ExitingPlayer = Session->OriginalCharacter.Get();
+		ActiveWerewolfSessions.Remove(ExitingPC);
+	}
+	else
+	{
+		ExitingPlayer = Cast<AMainPlayer>(ExitingPC->GetPawn());
+	}
+
+	if (IsValid(ExitingPlayer))
+	{
+		NightlyExposure.Remove(ExitingPlayer);
+		TriggeredThisNight.Remove(ExitingPlayer);
+		TriggeredInfectionSnapshot.Remove(ExitingPlayer);
+	}
 }
