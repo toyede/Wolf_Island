@@ -588,6 +588,10 @@ public:
 	//카메라 복구 함수
 	UFUNCTION(Client, Reliable, BlueprintCallable)
 	void RestoreCamera();
+	
+	//스태미나 0 함수
+	UFUNCTION()
+	void OnStaminaZero();
 
 	//인터랙션 관련 함수===================================================
 	//인터랙션 체크 함수 - 라인트레이스로 인터랙션 액터 체크
@@ -769,7 +773,6 @@ public:
 
 	UFUNCTION(BlueprintPure)
 	FORCEINLINE bool IsBuildingInputBlocked() const { return bBuildingInputBlocked; }
-	
 	
 	//아이템 정보 저장
 	

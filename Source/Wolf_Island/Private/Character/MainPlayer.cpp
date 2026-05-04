@@ -219,7 +219,7 @@ void AMainPlayer::BeginPlay()
 
 			//죽음 바인딩
 			StatusComponent->OnHPZero.AddUniqueDynamic(this, &AMainPlayer::OnDeath);
-
+			
 			//배고픔, 수분 감소 시작
 			StatusComponent->StartHunger();
 			StatusComponent->StartHydration();
@@ -444,25 +444,28 @@ void AMainPlayer::StartJump()
 	if (IsSliding || IsInability) return;
 	
 	//앉아 있으면 일어서기
-	if (IsCrouching)
+	if (HasAuthority())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[JUMP] UNCROUCHED"));
-		Request_ToggleCrouch();
-	}
+		if (IsCrouching)
+		{
+			//UE_LOG(LogTemp, Warning, TEXT("[JUMP] UNCROUCHED"));
+			Request_ToggleCrouch();
+		}
 	
-	//달리는 중 점프하면 스태미나 감소 중단
-	if (IsRunning)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[JUMP] STOP STAMINA"));
-		StatusComponent->StopStamina();
-	}
+		//달리는 중 점프하면 스태미나 감소 중단
+		if (IsRunning)
+		{
+			//UE_LOG(LogTemp, Warning, TEXT("[JUMP] STOP STAMINA"));
+			StatusComponent->StopStamina();
+		}
 
-	//점프 시 스태미나 회복 중단
-	UE_LOG(LogTemp, Warning, TEXT("[JUMP] STOP STAMINA"));
-	StatusComponent->StopRecoverStamina();
-	//점프 스태미나 소모
-	UE_LOG(LogTemp, Warning, TEXT("[JUMP] CONSUME STAMINA"));
-	StatusComponent->DecreaseStamina(JumpConsumeAmount);
+		//점프 시 스태미나 회복 중단
+		//UE_LOG(LogTemp, Warning, TEXT("[JUMP] STOP STAMINA"));
+		StatusComponent->StopRecoverStamina();
+		//점프 스태미나 소모
+		//UE_LOG(LogTemp, Warning, TEXT("[JUMP] CONSUME STAMINA"));
+		StatusComponent->DecreaseStamina(JumpConsumeAmount);
+	}
 	
 	if (JumpSound)
 	{
@@ -504,13 +507,16 @@ void AMainPlayer::Landed(const FHitResult& Hit)
 	}
 
 	//달리는 중이면 스태미나 감소 시작
-	if (IsRunning)
+	if (HasAuthority())
 	{
-		StatusComponent->StartStamina();
-	} else
-	{
-		if(!GetWorld()->GetTimerManager().IsTimerActive(StatusComponent->StaminaRecoverTimer)){
-			StatusComponent->StartRecoverStamina();
+		if (IsRunning)
+		{
+			StatusComponent->StartStamina();
+		} else
+		{
+			if(!GetWorld()->GetTimerManager().IsTimerActive(StatusComponent->StaminaRecoverTimer)){
+				StatusComponent->StartRecoverStamina();
+			}
 		}
 	}
 }
@@ -1023,6 +1029,12 @@ void AMainPlayer::RestoreCamera_Implementation()
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] RESTORE CAMERA"));
 	FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
 	FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(1, 1,1,1);
+}
+
+void AMainPlayer::OnStaminaZero()
+{
+	Request_StopRun();
+	Request_SetInputMode(false);
 }
 
 void AMainPlayer::CheckInteraction()

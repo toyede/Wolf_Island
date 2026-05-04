@@ -417,6 +417,16 @@ public:
 
 	//멀티플레이
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+	
+	//스태미나 0일 때 소유자 입력 컨트롤
+	UFUNCTION()
+	void Request_SetInputMode(bool IsEnable);
+	UFUNCTION(Server, Reliable)
+	void Server_SetInputMode(bool IsEnable);
+	UFUNCTION(Client, Reliable)
+	void Client_SetInputMode(bool IsEnable);
+	UFUNCTION()
+	void SetInputMode(bool IsEnable);
 
 	UFUNCTION()
 	void OnRep_CurrentHunger();

@@ -385,30 +385,12 @@ void UStatusComponent::ForcedRest()
 
 void UStatusComponent::DisableController()
 {
-	APawn* Owner = Cast<APawn>(GetOwner());
-	if (Owner)
-	{
-		APlayerController* Controller = Cast<APlayerController>(Owner->GetController());
-
-		if (Controller)
-		{
-			Owner->DisableInput(Controller);
-		}
-	}
+	Request_SetInputMode(false);
 }
 
 void UStatusComponent::EnableController()
 {
-	APawn* Owner = Cast<APawn>(GetOwner());
-	if (Owner)
-	{
-		APlayerController* Controller = Cast<APlayerController>(Owner->GetController());
-
-		if (Controller)
-		{
-			Owner->EnableInput(Controller);
-		}
-	}
+	Request_SetInputMode(true);
 	
 	RecoverStamina();
 }
@@ -602,6 +584,37 @@ void UStatusComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
 	DOREPLIFETIME(UStatusComponent, CurrentAir);
 	DOREPLIFETIME(UStatusComponent, CurrentInfectionRate);
 	DOREPLIFETIME(UStatusComponent, IsInfected);
+}
+
+void UStatusComponent::Request_SetInputMode(bool IsEnable)
+{
+	if (GetOwner()->HasAuthority())
+	{
+		Client_SetInputMode(IsEnable);
+	} else
+	{
+		Server_SetInputMode(IsEnable);
+	}
+}
+
+void UStatusComponent::Server_SetInputMode_Implementation(bool IsEnable)
+{
+	Client_SetInputMode(IsEnable);
+}
+
+void UStatusComponent::Client_SetInputMode_Implementation(bool IsEnable)
+{
+	SetInputMode(IsEnable);
+}
+
+void UStatusComponent::SetInputMode(bool IsEnable)
+{
+	APawn* Owner = Cast<APawn>(GetOwner());
+	
+	if (APlayerController* PC = Cast<APlayerController>(Owner->GetController()))
+	{
+		IsEnable ? Owner->EnableInput(PC) : Owner->DisableInput(PC);
+	}
 }
 
 void UStatusComponent::OnRep_CurrentHunger()
