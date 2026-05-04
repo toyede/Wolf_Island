@@ -45,6 +45,8 @@ void AMainGameState::RefreshSelectedRoles()
 					SelectedRoles.Add(MPS->GetPlayerRole());
 				}
 			}
+			
+			OnSelectedRolesChanged.Broadcast();
 		}
 	}
 }

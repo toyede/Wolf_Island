@@ -1031,12 +1031,6 @@ void AMainPlayer::RestoreCamera_Implementation()
 	FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(1, 1,1,1);
 }
 
-void AMainPlayer::OnStaminaZero()
-{
-	Request_StopRun();
-	Request_SetInputMode(false);
-}
-
 void AMainPlayer::CheckInteraction()
 {
 	//플레이어 시야 카메라 체크
