@@ -44,16 +44,22 @@ void UStatusComponent::BeginPlay()
 
 void UStatusComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[STATUS] END PLAY - CLEAR ALL TIMERS"));
+	// JWY - 상태 타이머가 월드 종료 후 delegate를 broadcast하지 않도록 EndPlay에서 정리
+	ClearAllTimers();
+	OnStaminaZero.RemoveDynamic(this, &UStatusComponent::ForcedRest);
+	OnHungerZero.RemoveDynamic(this, &UStatusComponent::StartHungerDeath);
+	OnHydrationZero.RemoveDynamic(this, &UStatusComponent::StartHydrationDeath);
+	OnAirZero.RemoveDynamic(this, &UStatusComponent::StartAirDeath);
+
 	Super::EndPlay(EndPlayReason);
 }
 
 void UStatusComponent::DestroyComponent(bool bPromoteChildren)
 {
-	if (GetOwner()->HasAuthority())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[STATUS] CLEAR ALL TIMERS"));
-		ClearAllTimers();
-	}
+	UE_LOG(LogTemp, Warning, TEXT("[STATUS] CLEAR ALL TIMERS"));
+	// JWY - 서버/클라이언트 어느 쪽 컴포넌트든 파괴될 때 남은 타이머를 제거
+	ClearAllTimers();
 	
 	Super::DestroyComponent(bPromoteChildren);
 }
@@ -536,6 +542,13 @@ void UStatusComponent::ApplyItem(FItemData Item)
 
 void UStatusComponent::ClearAllTimers()
 {
+	// JWY - teardown 중 GetWorld가 이미 사라진 경우에는 타이머 매니저 접근 자체를 피함
+	if (!GetWorld())
+	{
+		return;
+	}
+
+	// JWY - 개별 핸들과 객체 기반 타이머를 모두 지워 람다/멤버 함수 예약 호출을 차단
 	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
 	
 	TimerManager.ClearTimer(StaminaTimer);
@@ -549,6 +562,7 @@ void UStatusComponent::ClearAllTimers()
 	TimerManager.ClearTimer(AirDeathTimer);
 	TimerManager.ClearTimer(AirRecoverTimer);
 	TimerManager.ClearTimer(AirTimer);
+	TimerManager.ClearAllTimersForObject(this);
 }
 
 void UStatusComponent::DebugGetStatus(float &HP, float& Stamina, float& Hunger, float& Hydration)

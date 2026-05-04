@@ -281,15 +281,63 @@ void AMainPlayer::ReportScent()
 void AMainPlayer::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] END REASON : %s"), *StaticEnum<EEndPlayReason::Type>()->GetNameStringByValue((int)EndPlayReason));
-	
+
+	// JWY - 맵 전환/게임 종료 시 예약된 콜백이 죽은 플레이어를 다시 만지지 않도록 먼저 정리
+	ClearRuntimeTimers();
+	UnbindRuntimeDelegates();
+
 	Super::EndPlay(EndPlayReason);
 }
 
 void AMainPlayer::Destroyed()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] DESTROYED"));
-	
+
+	// JWY - EndPlay를 놓친 파괴 경로에서도 같은 정리를 한 번 더 수행
+	ClearRuntimeTimers();
+	UnbindRuntimeDelegates();
+
 	Super::Destroyed();
+}
+
+void AMainPlayer::ClearRuntimeTimers()
+{
+	// JWY - KnockOut/상호작용/제작/수영/냄새 타이머가 actor 소멸 뒤 실행되는 것을 차단
+	if (UWorld* World = GetWorld())
+	{
+		FTimerManager& TimerManager = World->GetTimerManager();
+		TimerManager.ClearTimer(SwimCheckHandle);
+		TimerManager.ClearTimer(KnockOutTimer);
+		TimerManager.ClearTimer(ItemUseTimer);
+		TimerManager.ClearTimer(InteractionTimer);
+		TimerManager.ClearTimer(WeaponAttackTimer);
+		TimerManager.ClearTimer(CraftTimer);
+		TimerManager.ClearTimer(ScentTimerHandle);
+		TimerManager.ClearAllTimersForObject(this);
+	}
+}
+
+void AMainPlayer::UnbindRuntimeDelegates()
+{
+	// JWY - 컴포넌트 delegate broadcast가 종료 중인 MainPlayer 함수를 호출하지 않도록 연결 해제
+	if (IsValid(StatusComponent))
+	{
+		StatusComponent->OnStaminaZero.RemoveDynamic(this, &AMainPlayer::Request_StopRun);
+		StatusComponent->OnHPZero.RemoveDynamic(this, &AMainPlayer::OnDeath);
+		StatusComponent->OnAirFull.RemoveDynamic(this, &AMainPlayer::HideAirBar);
+	}
+
+	if (IsValid(InventoryComponent))
+	{
+		InventoryComponent->OnInventoryUpdated.RemoveAll(this);
+		InventoryComponent->OnCurrentWeightChanged.RemoveAll(this);
+	}
+
+	if (IsValid(BuoyancyComponent))
+	{
+		BuoyancyComponent->OnEnteredWaterDelegate.RemoveDynamic(this, &AMainPlayer::EnterWater);
+		BuoyancyComponent->OnExitedWaterDelegate.RemoveDynamic(this, &AMainPlayer::ExitWater);
+	}
 }
 
 // Called every frame
@@ -953,26 +1001,37 @@ void AMainPlayer::KnockOut()
 	if (IsRunning) Request_StopRun();
 	
 	//기절 타이머 실행 - 누가 소생시켜주지 않으면 10초 뒤 사망
+	// JWY - 타이머는 늦게 실행될 수 있으므로 raw this 대신 약한 참조로 생존 여부를 확인
+	TWeakObjectPtr<AMainPlayer> WeakThis(this);
 	GetWorld()->GetTimerManager().SetTimer(
 		KnockOutTimer,
-		[this]()
+		[WeakThis]()
 		{
+			AMainPlayer* Player = WeakThis.Get();
+			if (!IsValid(Player))
+			{
+				return;
+			}
+
 			UE_LOG(LogTemp, Warning, TEXT("[PLAYER] KNOCK OUT TIMER ACTIAVTED"));
-			if (HasAuthority())
+			if (Player->HasAuthority())
 			{
 				UE_LOG(LogTemp, Warning, TEXT("[PLAYER] SERVER PLAYER"));
-				if (IsLocallyControlled())
+				if (Player->IsLocallyControlled())
 				{
-					FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
-					FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(0,0,0,0);
+					if (Player->FirstPersonCamera)
+					{
+						Player->FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
+						Player->FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(0,0,0,0);
+					}
 		
-					if (AMainPlayerController* PC = GetController<AMainPlayerController>())
+					if (AMainPlayerController* PC = Player->GetController<AMainPlayerController>())
 					{
 						PC->OpenDeathScreen();
 					}
 				} else
 				{
-					Client_ShowDeathScreen();
+					Player->Client_ShowDeathScreen();
 				}
 			}
 		},

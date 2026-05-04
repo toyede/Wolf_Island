@@ -123,6 +123,12 @@ void AMainGameMode::BeginPlay()
 
 void AMainGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	// JWY - 맵이 내려가는 중 autosave가 끼어들어 GameState/PlayerState를 만지지 않도록 타이머 해제
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(AutoSaveTimer);
+	}
+
 	UnbindPortalDelegates();
 	ActiveBossByPortal.Empty();
 
@@ -352,6 +358,14 @@ void AMainGameMode::SetActorCache()
 void AMainGameMode::SaveWorld()
 {
 	UMainSaveGame* Save = CurrentSaveData;
+
+	// JWY - 월드 teardown 중에는 actor 검색/저장 루틴을 시작하지 않도록 방어
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] WORLD SAVE FAILED - NO WORLD"));
+		return;
+	}
 	
 	if (!Save)
 	{
@@ -362,7 +376,7 @@ void AMainGameMode::SaveWorld()
 	//저장 가능 액터 데이터 저장
 	//저장 인터페이스를 가진 모든 액터 가져오기
 	TArray<AActor*> SaveActors;
-	UGameplayStatics::GetAllActorsWithInterface(GetWorld(), USaveInterface::StaticClass(), SaveActors);
+	UGameplayStatics::GetAllActorsWithInterface(World, USaveInterface::StaticClass(), SaveActors);
 	
 	Save->SavedActors.Empty();
 
@@ -402,10 +416,12 @@ void AMainGameMode::SaveWorld()
 	UGameplayStatics::SaveGameToSlot(CurrentSaveData, CurrentSaveData->SlotName, 0);
 	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] TEST SAVE SLOT : %s"), *CurrentSaveData->SlotName);
 	
-	AMainGameState* GS = GetGameState<AMainGameState>();
-	FChattingData Chat = FChattingData(
-		TEXT("SYSTEM"),TEXT("저장 완료"), EMessageType::NOTICE);
-	GS->AddChattingMessage(Chat);
+	if (AMainGameState* GS = GetGameState<AMainGameState>())
+	{
+		FChattingData Chat = FChattingData(
+			TEXT("SYSTEM"),TEXT("저장 완료"), EMessageType::NOTICE);
+		GS->AddChattingMessage(Chat);
+	}
 }
 
 void AMainGameMode::LoadWorld()
@@ -538,6 +554,12 @@ void AMainGameMode::LoadWorldFromSave(UMainSaveGame* Save)
 
 void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 {
+	if (!PlayerState)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] SAVE PLAYER FAILED - NO PLAYER STATE"));
+		return;
+	}
+
 	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] SAVE PLAYER [%s]"), *PlayerState->GetPersistantId());
 	
 	//해당 플레이어의 아이디를 키로하는 맵에 데이터를 저장.
@@ -579,26 +601,38 @@ void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 		FMemoryWriter MovementWriter(PlayerSaveData.MovementBinaryData, true);
 		FObjectAndNameAsStringProxyArchive MovementArchive(MovementWriter, true);
 		MovementArchive.ArIsSaveGame = false;
-		TargetPlayer->GetCharacterMovement()->Serialize(MovementArchive);
-		UE_LOG(LogTemp, Warning, TEXT("Serialize Movement"));
+		// JWY - 종료 중 컴포넌트가 먼저 정리된 경우 serialize 접근으로 크래시 나지 않게 확인
+		if (TargetPlayer->GetCharacterMovement())
+		{
+			TargetPlayer->GetCharacterMovement()->Serialize(MovementArchive);
+			UE_LOG(LogTemp, Warning, TEXT("Serialize Movement"));
+		}
 		
-		FMemoryWriter InventoryWriter(PlayerSaveData.InventoryBinaryData, true);
-		FObjectAndNameAsStringProxyArchive InventoryArchive(InventoryWriter, true);
-		InventoryArchive.ArIsSaveGame = true;
-		TargetPlayer->InventoryComponent->Serialize(InventoryArchive);
-		UE_LOG(LogTemp, Warning, TEXT("Serialize Inventory"));
+		// JWY - InventoryComponent가 살아 있을 때만 바이너리 저장과 PlayerState 아이템 동기화 수행
+		if (TargetPlayer->InventoryComponent)
+		{
+			FMemoryWriter InventoryWriter(PlayerSaveData.InventoryBinaryData, true);
+			FObjectAndNameAsStringProxyArchive InventoryArchive(InventoryWriter, true);
+			InventoryArchive.ArIsSaveGame = true;
+			TargetPlayer->InventoryComponent->Serialize(InventoryArchive);
+			UE_LOG(LogTemp, Warning, TEXT("Serialize Inventory"));
+
+			PlayerState->SetItemsData(TargetPlayer->InventoryComponent->GetInventory());
+		}
 		
-		FMemoryWriter StatusWriter(PlayerSaveData.StatusBinaryData, true);
-		FObjectAndNameAsStringProxyArchive StatusArchive(StatusWriter, true);
-		StatusArchive.ArIsSaveGame = true;
-		TargetPlayer->StatusComponent->Serialize(StatusArchive);
-		UE_LOG(LogTemp, Warning, TEXT("Serialize Status"));
+		// JWY - StatusComponent가 파괴된 종료 타이밍이면 상태 serialize를 건너뜀
+		if (TargetPlayer->StatusComponent)
+		{
+			FMemoryWriter StatusWriter(PlayerSaveData.StatusBinaryData, true);
+			FObjectAndNameAsStringProxyArchive StatusArchive(StatusWriter, true);
+			StatusArchive.ArIsSaveGame = true;
+			TargetPlayer->StatusComponent->Serialize(StatusArchive);
+			UE_LOG(LogTemp, Warning, TEXT("Serialize Status"));
 		
-		// 구조체 기반 저장도 같이 유지 (바이너리 Serialize 디버깅/호환 보강용)
-		PlayerSaveData.StatusData = TargetPlayer->StatusComponent->SaveStatus();
-		PlayerSaveData.HasStatusData = true;
-		
-		PlayerState->SetItemsData(TargetPlayer->InventoryComponent->GetInventory());
+			// 구조체 기반 저장도 같이 유지 (바이너리 Serialize 디버깅/호환 보강용)
+			PlayerSaveData.StatusData = TargetPlayer->StatusComponent->SaveStatus();
+			PlayerSaveData.HasStatusData = true;
+		}
 	}
 	
 	//아이템 데이터는 플레이어 스테이트에 있는 것을 저장.
@@ -622,11 +656,23 @@ void AMainGameMode::SavePlayers()
 {
 	//플레이어 데이터 저장
 	AMainGameState* GS = GetGameState<AMainGameState>();
+	// JWY - 종료 중 GameState가 이미 사라졌으면 PlayerArray 접근을 하지 않음
+	if (!GS)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] SAVE PLAYERS FAILED - NO GAME STATE"));
+		return;
+	}
+
 	//월드에 있는 플레이어 순회
 	for (APlayerState* PS : GS->PlayerArray)
 	{
 		//각 플레이어의 저장 코드 실행
 		AMainPlayerState* MPS = Cast<AMainPlayerState>(PS);
+		// JWY - teardown 중 유효하지 않은 PlayerState는 저장 대상에서 제외
+		if (!MPS)
+		{
+			continue;
+		}
 		SavePlayer(MPS);
 	}
 }
