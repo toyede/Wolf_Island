@@ -212,6 +212,7 @@ void AMainPlayer::BeginPlay()
 	}
 	
 	if(StatusComponent){
+		//서버에서 실행
 		if (HasAuthority())
 		{
 			//상태 델리게이트 바인딩
@@ -470,7 +471,7 @@ void AMainPlayer::StartJump()
 	if (JumpSound)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[JUMP] PLAY JUMPSOUND"));
-		Multi_PlaySound(JumpSound, GetActorLocation());
+		Multi_PlaySoundAtLocation(JumpSound, GetActorLocation());
 	}
 
 	Jump();
@@ -704,7 +705,7 @@ void AMainPlayer::UseItem(int32 SlotIndex)
 				{
 					if (EatingSound)
 					{
-						Multi_PlaySound(EatingSound, GetActorLocation());
+						Multi_PlaySoundAtLocation(EatingSound, GetActorLocation());
 					}
 					StatusComponent->ApplyItem(*ItemData);
 				}
@@ -736,7 +737,7 @@ void AMainPlayer::UseItem(int32 SlotIndex)
 			{
 				if (ItemData->Type == EItemType::FOOD && EatingSound)
 				{
-					Multi_PlaySound(EatingSound, GetActorLocation());
+					Multi_PlaySoundAtLocation(EatingSound, GetActorLocation());
 				}
 				StatusComponent->ApplyItem(*ItemData);
 				//TODO: 서버 호출 함수로 변경
@@ -950,9 +951,9 @@ void AMainPlayer::Attack()
 
 void AMainPlayer::KnockOut()
 {
-	UE_LOG(LogTemp, Display, TEXT("[PLAYER] KNOCKOUT"));
+	UE_LOG(LogTemp, Display, TEXT("[%hs][PLAYER] KNOCKOUT"), HasAuthority()?"SERVER":"CLIENT");
 	//일단 기본 스탠드 상태로 전환
-	if (IsCrouching) ToggleCrouch();
+	if (IsCrouching) Request_ToggleCrouch();
 	if (IsRunning) Request_StopRun();
 	
 	//기절 타이머 실행 - 누가 소생시켜주지 않으면 10초 뒤 사망
@@ -960,10 +961,11 @@ void AMainPlayer::KnockOut()
 		KnockOutTimer,
 		[this]()
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[PLAYER] KNOCK OUT TIMER ACTIAVTED"));
+			UE_LOG(LogTemp, Warning, TEXT("[PLAYER] KNOCK OUT TIMER ACTIVATED"));
 			if (HasAuthority())
 			{
 				UE_LOG(LogTemp, Warning, TEXT("[PLAYER] SERVER PLAYER"));
+				//서버 캐릭터면 사망 카메라 세팅
 				if (IsLocallyControlled())
 				{
 					FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
@@ -973,7 +975,9 @@ void AMainPlayer::KnockOut()
 					{
 						PC->OpenDeathScreen();
 					}
-				} else
+				}
+				//클라 캐릭터면 사망 카메라 클라 함수 실행
+				else
 				{
 					Client_ShowDeathScreen();
 				}
@@ -2139,10 +2143,21 @@ void AMainPlayer::OnRep_IsCrouching()
 {
 	if (IsCrouching)
 	{
-		GetCharacterMovement()->MaxWalkSpeed = 150.0f;
+		GetCharacterMovement()->MaxWalkSpeed = CrouchSpeed;
 	} else
 	{
-		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
+		GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+	}
+}
+
+void AMainPlayer::OnRep_IsInability()
+{
+	if (IsInability)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = KnockOutSpeed;
+	} else
+	{
+		GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	}
 }
 
@@ -2150,10 +2165,10 @@ void AMainPlayer::OnRep_IsRunning()
 {
 	if (IsRunning)
 	{
-		GetCharacterMovement()->MaxWalkSpeed = 750.0f;
+		GetCharacterMovement()->MaxWalkSpeed = RunSpeed;
 	} else
 	{
-		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
+		GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	}
 }
 
@@ -2354,7 +2369,7 @@ void AMainPlayer::Server_DrinkWater_Implementation(UPrimitiveComponent* WaterCom
 		
 		if (EatingSound) 
 		{
-			Multi_PlaySound(EatingSound, GetActorLocation());
+			Multi_PlaySoundAtLocation(EatingSound, GetActorLocation());
 		}
 		LastDrinkTime = CurrentTime;
 	}
@@ -2364,7 +2379,7 @@ void AMainPlayer::Server_DrinkWater_Implementation(UPrimitiveComponent* WaterCom
         
 		if (EatingSound) 
 		{
-			Multi_PlaySound(EatingSound, GetActorLocation());
+			Multi_PlaySoundAtLocation(EatingSound, GetActorLocation());
 		}
 
 		LastDrinkTime = CurrentTime;
@@ -2399,7 +2414,7 @@ void AMainPlayer::Multi_PlayAnimMontage_Implementation(UAnimMontage* Anim)
 	PlayAnimMontage(Anim);
 }
 
-void AMainPlayer::Multi_PlaySound_Implementation(USoundBase* Sound, FVector Location)
+void AMainPlayer::Multi_PlaySoundAtLocation_Implementation(USoundBase* Sound, FVector Location)
 {
 	UGameplayStatics::PlaySoundAtLocation(GetWorld(), Sound, Location);
 }

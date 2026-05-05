@@ -268,7 +268,7 @@ public:
 	bool IsRunning = false;
 
 	//웅크리는 중인지
-	UPROPERTY(ReplicatedUsing=OnRep_IsCrouching,EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
+	UPROPERTY(ReplicatedUsing=OnRep_IsCrouching, EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsCrouching = false;
 	
 	//수영 중인지
@@ -288,7 +288,7 @@ public:
 	bool IsFirstPerson = true;
 
 	//행동불능 상태인지
-	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
+	UPROPERTY(ReplicatedUsing=OnRep_IsInability, EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsInability = false;
 
 	//공격 소모 스태미나
@@ -711,6 +711,10 @@ public:
 	void Server_ToggleCrouch();
 	UFUNCTION()
 	void OnRep_IsCrouching();
+	
+	//기절
+	UFUNCTION()
+	void OnRep_IsInability();
 
 	//공격
 	UFUNCTION()
@@ -781,7 +785,7 @@ public:
 	
 	//멀티캐스트 실행 함수
 	UFUNCTION(NetMulticast, Reliable)
-	void Multi_PlaySound(USoundBase* Sound, FVector Location);
+	void Multi_PlaySoundAtLocation(USoundBase* Sound, FVector Location);
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_PlayAnimMontage(UAnimMontage* Anim);
