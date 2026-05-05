@@ -1878,7 +1878,7 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 	// 월드 좌표 기준으로 트랜스폼 가져오기
 	ISMC->GetInstanceTransform(InstanceIndex, InstanceTransform, true);
 	
-	//====>> 2.19 조성윤 추가 <<====
+	//====>> 2.19 조성윤 추가 <<====Start
 	//삭제될 폴리지 정보 저장
 	//이 함수는 서버에서만 실행되니까 GetAuthGameMode이 null이 아님.
 	AMainGameMode* GM = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode());
@@ -1890,7 +1890,7 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 	RemovedData.Mesh = ISMC->GetStaticMesh();
 	
 	GM->RemovedFoliageData.Add(RemovedData);
-	//====>> 2.19 조성윤 추가 <<====
+	//====>> 2.19 조성윤 추가 <<====End
 	
 	// 폴리지 삭제 (서버에서 삭제하면 리플리케이션 설정에 따라 클라이언트에게 전달됩니다)
 	Multi_RemoveFoliageInstance(ISMC, InstanceIndex);
