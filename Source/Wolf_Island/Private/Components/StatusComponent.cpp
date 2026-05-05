@@ -83,6 +83,9 @@ void UStatusComponent::IncreaseHP(float amount)
 //체력 감소 함수
 void UStatusComponent::DecreaseHP(float amount)
 {
+	//이미 0이면 아무것도 ㄴㄴ
+	if (CurrentHP <= 0) return;
+	
 	CurrentHP = FMath::Clamp(CurrentHP-amount, 0.0f, MaxHP);
 	
 	//음수 방지

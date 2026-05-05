@@ -391,7 +391,7 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	float GetHPPercent() { return CurrentHP / MaxHP; };
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	float GetStaminaPercent() { return CurrentStamina / MaxStamina; };
+	float GetStaminaPercent() { return CurrentStamina / 100.0f; };
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	float GetHungerPercent() { return CurrentHunger / MaxHunger; };
 	UFUNCTION(BlueprintCallable, BlueprintPure)
