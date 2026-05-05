@@ -65,6 +65,12 @@ void AMultiGameMode::PostLogin(APlayerController* NewPlayer)
 	}
 	
 	AMainGameState* GS = GetGameState<AMainGameState>();
+	// JWY - 접속 직후 GameState가 아직 준비되지 않은 예외 타이밍이면 채팅 브로드캐스트를 건너뛰어 서버 크래시를 막습니다.
+	if (!GS)
+	{
+		Super::PostLogin(NewPlayer);
+		return;
+	}
 	FChattingData Chat = FChattingData(
 		TEXT("알림"),PS->GetPlayerName()+TEXT(" 님이 접속했습니다."), EMessageType::NOTICE);
 	
@@ -147,9 +153,22 @@ APawn* AMultiGameMode::SpawnDefaultPawnAtTransform_Implementation(AController* N
 
 void AMultiGameMode::Logout(AController* Exiting)
 {
+	// JWY - 클라이언트 연결 정리 중 Controller/PlayerState/GameState가 없으면 기존 Logout 채팅 처리에서 서버가 크래시날 수 있어 먼저 빠져나갑니다.
+	if (!IsValid(Exiting) || !Cast<AMainPlayerState>(Exiting->PlayerState) || !GetGameState<AMainGameState>())
+	{
+		Super::Logout(Exiting);
+		return;
+	}
+
 	 AMainPlayerState* PS = Cast< AMainPlayerState>(Exiting->PlayerState);
 	
 	AMainGameState* GS = GetGameState<AMainGameState>();
+	// JWY - Logout 처리 중 GameState가 없으면 채팅 브로드캐스트를 건너뛰어 서버 크래시를 막습니다.
+	if (!GS)
+	{
+		Super::Logout(Exiting);
+		return;
+	}
 	FChattingData Chat = FChattingData(
 		TEXT("알림"),PS->GetPlayerName()+TEXT(" 님이 나갔습니다."), EMessageType::NOTICE);
 	

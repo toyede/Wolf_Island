@@ -21,6 +21,7 @@
 #include "Widgets/DeathScreen.h"
 #include "Moon/MoonlightInfectionSystem.h"
 #include "Actors/SpectatorCameraActor.h"
+#include "TimerManager.h"
 
 void AMainPlayerController::BeginPlay()
 {
@@ -51,7 +52,8 @@ void AMainPlayerController::BeginPlay()
 	MainPlayerState = GetPlayerState<AMainPlayerState>();
 	MainGameState = Cast<AMainGameState>(GetWorld()->GetGameState());
 	
-	if (HasAuthority() && MainPlayerState && MainGameState->IsMulti)
+	// JWY - 접속/월드 전환 타이밍에는 GameState가 아직 없을 수 있으므로 멀티 여부 확인 전에 유효성을 검사합니다.
+	if (HasAuthority() && MainPlayerState && MainGameState && MainGameState->IsMulti)
 	{
 		if (MainPlayerState->GetPlayerRole() == ECharacterRole::NONE)
 		{
@@ -448,8 +450,127 @@ void AMainPlayerController::OnSetting()
 void AMainPlayerController::OnQuit()
 {
 	UE_LOG(LogTemp, Warning, TEXT("QUIT BUTTON CLICKED"));
-	
-	UGameplayStatics::OpenLevelBySoftObjectPtr(GetWorld(), MainMenuLevel);
+
+	// JWY - 멀티에서 즉시 OpenLevel을 호출하면 Steam NetConnection 정리와 충돌할 수 있어 한 번만 공통 종료 흐름을 시작합니다.
+	if (bIsReturningToMainMenu)
+	{
+		return;
+	}
+
+	bIsReturningToMainMenu = true;
+
+	if (!IsMultiplayerSession())
+	{
+		ReturnToMainMenuLocal();
+		return;
+	}
+
+	if (HasAuthority())
+	{
+		// JWY - 호스트가 나갈 때는 클라이언트들을 먼저 메인 메뉴로 돌려보낸 뒤 호스트 세션을 정리합니다.
+		ReturnConnectedClientsToMainMenu();
+
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().SetTimer(
+				ReturnToMainMenuTimerHandle,
+				this,
+				&AMainPlayerController::ReturnToMainMenuLocal,
+				0.5f,
+				false);
+			return;
+		}
+	}
+
+	if (!HasAuthority())
+	{
+		// JWY - 클라이언트는 로컬에서 바로 맵을 열지 않고 서버가 Client RPC로 복귀를 지시하게 합니다.
+		Server_RequestReturnToMainMenu();
+		return;
+	}
+
+	ReturnToMainMenuLocal();
+}
+
+void AMainPlayerController::Server_RequestReturnToMainMenu_Implementation()
+{
+	// JWY - 서버가 클라이언트의 나가기 요청을 받은 뒤 Client RPC로 복귀를 시작시켜 NetDriver 정리 순서를 안정화합니다.
+	Client_ReturnToMainMenu();
+}
+
+void AMainPlayerController::Client_ReturnToMainMenu_Implementation()
+{
+	// JWY - 클라이언트 강제 복귀와 본인 나가기 모두 같은 로컬 정리 함수를 타도록 통일합니다.
+	ReturnToMainMenuLocal();
+}
+
+void AMainPlayerController::ReturnToMainMenuLocal()
+{
+	// JWY - 세션 Destroy/OpenLevel이 여러 경로에서 중복 호출되지 않도록 실제 이동 시작은 한 번만 허용합니다.
+	if (bHasStartedReturnToMainMenuTravel)
+	{
+		return;
+	}
+
+	bHasStartedReturnToMainMenuTravel = true;
+	bIsReturningToMainMenu = true;
+
+	if (IsPause)
+	{
+		HidePauseMenu();
+	}
+
+	SetPause(false);
+	bShowMouseCursor = false;
+	SetInputMode(FInputModeGameOnly());
+
+	if (UMainGameInstance* CurrentGameInstance = Cast<UMainGameInstance>(GetGameInstance()))
+	{
+		CurrentGameInstance->DestroySessionAndReturnToMainMenu(MainMenuLevel);
+		return;
+	}
+
+	if (UWorld* World = GetWorld())
+	{
+		UGameplayStatics::OpenLevelBySoftObjectPtr(World, MainMenuLevel);
+	}
+}
+
+void AMainPlayerController::ReturnConnectedClientsToMainMenu()
+{
+	// JWY - 호스트 종료 시 서버에 붙어 있는 원격 PlayerController들에게 먼저 메인 메뉴 복귀 RPC를 보냅니다.
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		AMainPlayerController* PlayerController = Cast<AMainPlayerController>(It->Get());
+		if (!IsValid(PlayerController) || PlayerController == this || PlayerController->IsLocalController())
+		{
+			continue;
+		}
+
+		PlayerController->Client_ReturnToMainMenu();
+	}
+}
+
+bool AMainPlayerController::IsMultiplayerSession() const
+{
+	// JWY - GameState의 IsMulti를 우선 사용하고, 복제 전/정리 중에는 NetMode로 멀티 접속 상태를 보조 판단합니다.
+	if (MainGameState && MainGameState->IsMulti)
+	{
+		return true;
+	}
+
+	if (const UWorld* World = GetWorld())
+	{
+		return World->GetNetMode() != NM_Standalone;
+	}
+
+	return false;
 }
 
 void AMainPlayerController::Respawn()
