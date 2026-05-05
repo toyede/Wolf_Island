@@ -21,6 +21,7 @@
 #include "Widgets/DeathScreen.h"
 #include "Moon/MoonlightInfectionSystem.h"
 #include "Actors/SpectatorCameraActor.h"
+#include "Widgets/Setting/SettingsWidget.h"
 
 void AMainPlayerController::BeginPlay()
 {
@@ -426,6 +427,11 @@ void AMainPlayerController::OnResume()
 void AMainPlayerController::OnSetting()
 {
 	UE_LOG(LogTemp, Warning, TEXT("SETTING BUTTON CLICKED"));
+	if (SettingsWidgetClass)
+	{
+		SettingsWidget = CreateWidget<USettingsWidget>(this, SettingsWidgetClass);
+		SettingsWidget->AddToViewport(11);
+	}
 }
 
 void AMainPlayerController::OnQuit()

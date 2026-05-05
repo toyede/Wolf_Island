@@ -14,6 +14,7 @@
  * 
  */
 
+class USettingsWidget;
 class UDeathScreen;
 class URoleSelection;
 class UMainGameInstance;
@@ -55,6 +56,9 @@ public:
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	UPauseMenu* PauseMenu;
+	
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category="Widget")
+	USettingsWidget* SettingsWidget;
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	URoleSelection* RoleSelectionWidget;
@@ -70,6 +74,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category="Widget")
 	TSubclassOf<UPauseMenu> PauseWidgetClass;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Widget")
+	TSubclassOf<USettingsWidget> SettingsWidgetClass;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Widget")
 	TSubclassOf<class UUserWidget> FishTrapScreenClass;
