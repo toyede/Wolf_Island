@@ -49,7 +49,7 @@ void AMultiGameMode::PostLogin(APlayerController* NewPlayer)
 	
 	FString NewName = Adjs[A]+" "+Nouns[N];
 	
-	PS->SetPlayerName(NewName);
+	//PS->SetPlayerName(NewName);
 	
 	//실제 스팀 기반 세션 온라인 환경에서 로그인 시 사용할 ID
 	//테스트 환경에서 이걸 사용할 시 스팀 연동이 안되어있기 때문에 테스트 실행할 때마다 ID가 변경되어 테스트 용은 고정.
