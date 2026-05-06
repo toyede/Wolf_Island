@@ -110,6 +110,7 @@ void AEnemyAIBoss::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	// 타이머 클리어
 	GetWorldTimerManager().ClearTimer(GroggyTimerHandle);
 	GetWorldTimerManager().ClearTimer(SpawnRetryTimerHandle);
+	GetWorldTimerManager().ClearAllTimersForObject(this);
 
 	// 석상 제거
 	TArray<AActor*> Statues;

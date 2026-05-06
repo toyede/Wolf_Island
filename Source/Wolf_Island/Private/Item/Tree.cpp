@@ -31,6 +31,18 @@ void ATree::BeginPlay()
 	}
 }
 
+void ATree::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	
+	if (HasAuthority() && StatusComponent)
+	{
+		StatusComponent->OnHPZero.RemoveDynamic(this, &ATree::OnTreeDestroyed);
+	}
+	
+	Super::EndPlay(EndPlayReason);
+}
+
 float ATree::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	if (!HasAuthority()) return 0.f;

@@ -1,3 +1,4 @@
+
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Components/AttackCollisionComponent.h"
@@ -64,17 +65,17 @@ void UAttackCollisionComponent::CollisionTrace()
 
 	TArray<FHitResult> AllHits;
 
-	// ÇöÀç ÇÁ·¹ÀÓ: ¹«±â ±æÀÌ ¹æÇâ
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	PerformTrace(CurrStart, CurrEnd, AllHits);
 
-	// ÀÌÀü¡æÇöÀç ¿¬°á: ºó °ø°£ Ä¿¹ö
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Ä¿ï¿½ï¿½
 	if (bHasPrevPosition)
 	{
 		PerformTrace(PrevTraceStart, CurrStart, AllHits);
 		PerformTrace(PrevTraceEnd, CurrEnd, AllHits);
 	}
 
-	// À§Ä¡ ÀúÀå
+	// ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½ï¿½
 	PrevTraceStart = CurrStart;
 	PrevTraceEnd = CurrEnd;
 	bHasPrevPosition = true;

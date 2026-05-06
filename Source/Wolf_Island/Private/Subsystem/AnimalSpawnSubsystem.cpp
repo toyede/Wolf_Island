@@ -14,6 +14,7 @@ bool UAnimalSpawnSubsystem::ShouldCreateSubsystem(UObject* Outer) const
 
 void UAnimalSpawnSubsystem::Deinitialize()
 {
+    GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
     SpawnSettings.Empty();
     AnimalToIndexMap.Empty();
     Super::Deinitialize();

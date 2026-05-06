@@ -44,6 +44,20 @@ void UStatusComponent::BeginPlay()
 
 void UStatusComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (GetOwner()->HasAuthority())
+	{
+		GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+		
+		//스태미나 다 쓰면 15초 이동 불가
+		OnStaminaZero.RemoveDynamic(this, &UStatusComponent::ForcedRest);
+		//배고픔 0일 시
+		OnHungerZero.RemoveDynamic(this, &UStatusComponent::StartHungerDeath);
+		//수분 0일 시
+		OnHydrationZero.RemoveDynamic(this, &UStatusComponent::StartHydrationDeath);
+		//산소 0일 시
+		OnAirZero.RemoveDynamic(this, &UStatusComponent::StartAirDeath);
+	}
+	
 	Super::EndPlay(EndPlayReason);
 }
 

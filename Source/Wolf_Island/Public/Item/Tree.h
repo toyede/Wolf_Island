@@ -38,6 +38,8 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 public:
 	// 대미지 전달 및 파괴 판정

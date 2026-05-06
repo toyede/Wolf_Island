@@ -43,6 +43,14 @@ void AStoneProjectile::BeginPlay()
     }
 }
 
+void AStoneProjectile::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+    Mesh->OnComponentBeginOverlap.RemoveDynamic(this, &AStoneProjectile::OnOverlap);
+    
+    Super::EndPlay(EndPlayReason);
+}
+
 void AStoneProjectile::Launch(const FVector& Direction, float Speed)
 {
     if (!HasAuthority()) return;

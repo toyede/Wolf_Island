@@ -12,6 +12,7 @@ UAISense_Scent::UAISense_Scent()
 {
     ScentEventMaxAge = 10.0f;
 
+    //TODO: 얘네도 바인딩 해제 안해도 되나...
     OnNewListenerDelegate.BindUObject(this, &UAISense_Scent::OnNewListenerImpl);
     OnListenerRemovedDelegate.BindUObject(this, &UAISense_Scent::OnListenerRemovedImpl);
 }

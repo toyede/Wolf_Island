@@ -6,7 +6,6 @@
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
 #include "MaterialHLSLTree.h"
-#include "Engine/DamageEvents.h"
 #include "Blueprint/UserWidget.h"
 #include "Widgets/Craft/BonFireUI.h"
 #include "Widgets/Craft/RepairUI.h"
@@ -37,7 +36,6 @@
 #include "Moon/MoonlightInfectionSystem.h"
 #include "Games/MainPlayerState.h"
 #include "Games/MainGameState.h"
-#include "WaterBodyActor.h"
 #include "AI/Sense/AISense_Scent.h"
 
 
@@ -282,6 +280,28 @@ void AMainPlayer::ReportScent()
 void AMainPlayer::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] END REASON : %s"), *StaticEnum<EEndPlayReason::Type>()->GetNameStringByValue((int)EndPlayReason));
+	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	//바인딩 해제 코드
+	if(StatusComponent){
+		//서버에서 실행
+		if (HasAuthority())
+		{
+			//상태 델리게이트 바인딩
+			StatusComponent->OnStaminaZero.RemoveDynamic(this, &AMainPlayer::Request_StopRun);
+
+			//죽음 바인딩
+			StatusComponent->OnHPZero.RemoveDynamic(this, &AMainPlayer::OnDeath);
+		}
+		
+		//산소 게이지 숨기기 바인딩(테스트용)
+		StatusComponent->OnAirFull.RemoveDynamic(this, &AMainPlayer::HideAirBar);
+	}
+	
+	if (BuoyancyComponent)
+	{
+		BuoyancyComponent->OnEnteredWaterDelegate.RemoveDynamic(this, &AMainPlayer::EnterWater);
+		BuoyancyComponent->OnExitedWaterDelegate.RemoveDynamic(this, &AMainPlayer::ExitWater);
+	}
 	
 	Super::EndPlay(EndPlayReason);
 }

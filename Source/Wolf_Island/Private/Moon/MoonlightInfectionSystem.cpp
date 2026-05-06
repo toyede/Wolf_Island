@@ -20,6 +20,7 @@
 #include "Actors/SpectatorCameraActor.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
+//TODO: 얜 일단 바인딩 해제 추가 안해봄...
 // Sets default values
 AMoonlightInfectionSystem::AMoonlightInfectionSystem()
 {
@@ -79,6 +80,13 @@ void AMoonlightInfectionSystem::BeginPlay()
 	TArray<AActor*> PlayerActors;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMainPlayer::StaticClass(), PlayerActors);
 	BindPlayers(PlayerActors);
+}
+
+void AMoonlightInfectionSystem::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	
+	Super::EndPlay(EndPlayReason);
 }
 
 void AMoonlightInfectionSystem::ActivateInfectionCheck()

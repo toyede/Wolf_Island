@@ -23,6 +23,7 @@
 #include "Actors/SpectatorCameraActor.h"
 #include "Widgets/Setting/SettingsWidget.h"
 
+//TODO: 일단 바인딩 해제 코드 안넣어봄.
 void AMainPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
@@ -102,6 +103,8 @@ void AMainPlayerController::OnPossess(APawn* InPawn)
 void AMainPlayerController::OnUnPossess()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER CONTROLLER] UNPOSSESSED"));
+	GetWorldTimerManager().ClearAllTimersForObject(this);
+	
 	if (IsLocalController() && PlayerHUD)
 	{
 		PlayerHUD->RemoveFromParent();

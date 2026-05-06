@@ -40,6 +40,13 @@ void APrayerForewarning::BeginPlay()
 	}
 }
 
+void APrayerForewarning::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorldTimerManager().ClearAllTimersForObject(this);
+	
+	Super::EndPlay(EndPlayReason);
+}
+
 void APrayerForewarning::OnTimerEnd()
 {
 	OnForewarningComplete.Broadcast();

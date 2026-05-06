@@ -57,6 +57,18 @@ void ASummonedWolf::BeginPlay()
 	}
 }
 
+void ASummonedWolf::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	
+	if (StatusComponent)
+	{
+		StatusComponent->OnHPZero.RemoveDynamic(this, &ASummonedWolf::HandleHPZero);
+	}
+	
+	Super::EndPlay(EndPlayReason);
+}
+
 void ASummonedWolf::StartChaseLoop()
 {
 	if (!HasAuthority())

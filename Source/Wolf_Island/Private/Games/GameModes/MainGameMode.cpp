@@ -123,6 +123,7 @@ void AMainGameMode::BeginPlay()
 
 void AMainGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
 	UnbindPortalDelegates();
 	ActiveBossByPortal.Empty();
 

@@ -121,9 +121,17 @@ void ARepair_Actor::BeginPlay()
 
 void ARepair_Actor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+    GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+    
     if (UWorld* World = GetWorld())
     {
         World->GetTimerManager().ClearTimer(CinematicTimerHandle);
+    }
+    
+    if (EscapeReadyVolume)
+    {
+        EscapeReadyVolume->OnComponentBeginOverlap.RemoveDynamic(this, &ARepair_Actor::OnEscapeVolumeBeginOverlap);
+        EscapeReadyVolume->OnComponentEndOverlap.RemoveDynamic(this, &ARepair_Actor::OnEscapeVolumeEndOverlap);
     }
 
     Super::EndPlay(EndPlayReason);

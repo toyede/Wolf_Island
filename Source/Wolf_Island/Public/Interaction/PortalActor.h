@@ -59,6 +59,7 @@ public:
 	UFUNCTION()
 	TArray<FString> GetRecordIDOptions() const;
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	virtual void LoadData_Implementation(const FActorSaveData& InData) override;
 	virtual void Interact_Implementation(AActor* Interactor) override;

@@ -29,6 +29,19 @@ void APrayerAltar::BeginPlay()
 	}
 }
 
+void APrayerAltar::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (HasAuthority())
+	{
+		GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+		
+		AltarZone->OnComponentBeginOverlap.RemoveDynamic(this, &APrayerAltar::OnOverlapBegin);
+		AltarZone->OnComponentEndOverlap.RemoveDynamic(this, &APrayerAltar::OnOverlapEnd);
+	}
+	
+	Super::EndPlay(EndPlayReason);
+}
+
 void APrayerAltar::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	if (AMainPlayer* Player = Cast<AMainPlayer>(OtherActor))
