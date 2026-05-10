@@ -8,7 +8,7 @@
 UWerewolfTargetService::UWerewolfTargetService()
 {
     NodeName = TEXT("Find Closest Player");
-    // ½ÇÇà °£°ÝÀ» Á¶ÀýÇÕ´Ï´Ù (¿¹: 0.5ÃÊ¸¶´Ù Ã¼Å©)
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Õ´Ï´ï¿½ (ï¿½ï¿½: 0.5ï¿½Ê¸ï¿½ï¿½ï¿½ Ã¼Å©)
     Interval = 0.5f;
     RandomDeviation = 0.1f;
 }
@@ -29,10 +29,10 @@ void UWerewolfTargetService::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
     for (AActor* Actor : FoundPlayers)
     {
         AMainPlayer* MP = Cast<AMainPlayer>(Actor);
-        if (!MP || MP->IsHidden()) continue; // º¯½ÅÇÑ º»Ã¼ Á¦¿Ü
+        if (!MP || MP->IsHidden()) continue; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ã¼ ï¿½ï¿½ï¿½ï¿½
 
-        // ±âÀý/»ç¸ÁÀÚ Á¦¿Ü
-        if (MP->StatusComponent && MP->StatusComponent->bIsIncapacitated) continue;
+        // ê¸°ì ˆ/ì“°ëŸ¬ì§„ ìƒíƒœ ì œì™¸
+        if (MP->IsInability) continue;
 
         float Dist = FVector::Dist(ControllingPawn->GetActorLocation(), MP->GetActorLocation());
         if (Dist < ClosestDist)
@@ -42,6 +42,6 @@ void UWerewolfTargetService::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
         }
     }
 
-    // Ã£Àº Å¸°ÙÀ» ºí·¢º¸µå¿¡ ÀúÀåÇÕ´Ï´Ù.
+    // Ã£ï¿½ï¿½ Å¸ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½å¿¡ ï¿½ï¿½ï¿½ï¿½ï¿½Õ´Ï´ï¿½.
     OwnerComp.GetBlackboardComponent()->SetValueAsObject(TargetActorKey.SelectedKeyName, ClosestPlayer);
 }

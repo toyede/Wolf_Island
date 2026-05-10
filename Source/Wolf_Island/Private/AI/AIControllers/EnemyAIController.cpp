@@ -3,6 +3,8 @@
 #include "AI/AIControllers/EnemyAIController.h"
 
 #include "AI/Enemy_Character/EnemyAIBase.h"
+#include "Character/MainPlayer.h"
+#include "Components/StatusComponent.h"
 
 #include "Perception/AIPerceptionComponent.h"
 #include "BehaviorTree/BlackboardComponent.h"
@@ -131,7 +133,7 @@ void AEnemyAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus St
 	}
 	else if (SensedClass == UAISense_Scent::StaticClass())
 	{
-		HandleScent(Stimulus);
+		HandleScent(Actor, Stimulus);
 	}
 }
 
@@ -154,6 +156,10 @@ void AEnemyAIController::HandleSight(AActor* Actor, const FAIStimulus& Stimulus)
 
 	if (Actor->ActorHasTag(FName("Invisible")) || Actor->ActorHasTag(FName("Werewolf")))
 	{
+		if (AIPerceptionComp)
+		{
+			AIPerceptionComp->ForgetActor(Actor);
+		}
 		SetEnemyState(EEnemyState::Passive);
 		return;
 	}
@@ -177,6 +183,10 @@ void AEnemyAIController::HandleDamage(AActor* Actor, const FAIStimulus& Stimulus
 	if (IsFriendlyAggroSource(Actor)) return;
 	if (Actor->ActorHasTag(FName("Invisible")) || Actor->ActorHasTag(FName("Werewolf")))
 	{
+		if (AIPerceptionComp)
+		{
+			AIPerceptionComp->ForgetActor(Actor);
+		}
 		SetEnemyState(EEnemyState::Passive);
 		return;
 	}
@@ -302,14 +312,23 @@ bool AEnemyAIController::IsFriendlyAggroSource(AActor* SourceActor) const
 	return false;
 }
 
-void AEnemyAIController::HandleScent(const FAIStimulus& Stimulus)
+void AEnemyAIController::HandleScent(AActor* Actor, const FAIStimulus& Stimulus)
 {
 	if (!Stimulus.WasSuccessfullySensed()) return;
+
+	// 기절하거나 늑대인간으로 변신한 플레이어의 냄새는 무시 + 퍼셉션에서 제거
+	if (!IsTargetValid(Actor))
+	{
+		if (AIPerceptionComp)
+		{
+			AIPerceptionComp->ForgetActor(Actor);
+		}
+		return;
+	}
 
 	// 평화롭거나 조사 중일 때만 냄새 반응
 	if (EnemyState == EEnemyState::Passive || EnemyState == EEnemyState::Investigating)
 	{
-		// 냄새 위치 저장
 		if (UBlackboardComponent* BB = GetBlackboardComponent())
 		{
 			BB->SetValueAsVector(PointOfInterestKey, Stimulus.StimulusLocation);
@@ -331,7 +350,21 @@ bool AEnemyAIController::ShouldSwitchTarget(AActor* NewTarget) const
 
 bool AEnemyAIController::IsTargetValid(AActor* Target) const
 {
-	return IsValid(Target);
+	if (!IsValid(Target)) return false;
+
+	// 늑대인간으로 변신한 플레이어는 타겟 무효
+	if (Target->ActorHasTag(FName("Werewolf"))) return false;
+
+	// 기절(넉다운) 상태인 플레이어는 타겟 무효
+	if (AMainPlayer* Player = Cast<AMainPlayer>(Target))
+	{
+		if (Player->IsInability)
+		{
+			return false;
+		}
+	}
+
+	return true;
 }
 
 // ============================================================================
@@ -382,6 +415,7 @@ void AEnemyAIController::OnEnterState(EEnemyState NewState)
 	case EEnemyState::Passive:
 		AttackTarget = nullptr;
 		BB->ClearValue(AttackTargetKey);
+		BB->ClearValue(PointOfInterestKey);  // 잔류 Investigating 방지
 		BB->SetValueAsBool(TEXT("bIsHalfHP"), false);
 		break;
 
@@ -389,6 +423,20 @@ void AEnemyAIController::OnEnterState(EEnemyState NewState)
 		if (IsTargetValid(AttackTarget))
 		{
 			BB->SetValueAsObject(AttackTargetKey, AttackTarget);
+
+			// 타겟이 기절/변신했는지 주기적으로 체크 (0.3초마다)
+			GetWorld()->GetTimerManager().SetTimer(TargetValidationTimer, [this]()
+			{
+				if (EnemyState == EEnemyState::Combat && !IsTargetValid(AttackTarget))
+				{
+					// 퍼셉션에서도 제거해 자극 반복을 차단
+					if (AIPerceptionComp && IsValid(AttackTarget))
+					{
+						AIPerceptionComp->ForgetActor(AttackTarget);
+					}
+					SetEnemyState(EEnemyState::Passive);
+				}
+			}, 0.3f, true);
 		}
 		else
 		{
@@ -410,7 +458,11 @@ void AEnemyAIController::OnEnterState(EEnemyState NewState)
 
 void AEnemyAIController::OnExitState(EEnemyState OldState)
 {
-	// 필요 시 구현 (예: 타이머 클리어 등)
+	// Combat 상태를 나갈 때 타겟 검증 타이머 정리
+	if (OldState == EEnemyState::Combat)
+	{
+		GetWorld()->GetTimerManager().ClearTimer(TargetValidationTimer);
+	}
 }
 
 // ============================================================================
