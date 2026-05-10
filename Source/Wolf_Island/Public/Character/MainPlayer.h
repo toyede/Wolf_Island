@@ -142,6 +142,9 @@ public:
 	ATorch* Torch;
 	UPROPERTY(EditDefaultsOnly, Category = "Torch")
 	TSubclassOf<ATorch> TorchClass;
+	// 토치 전용 애님 레이어 (무기 DT 밖에서 별도 관리)
+	UPROPERTY(EditDefaultsOnly, Category = "Torch")
+	TSubclassOf<UAnimInstance> TorchAnimLayerClass;
 	
 	//부력 컴포넌트 - 수영을 위한 것
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
