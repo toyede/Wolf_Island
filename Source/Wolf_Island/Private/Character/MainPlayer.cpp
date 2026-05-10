@@ -883,7 +883,13 @@ void AMainPlayer::RefreshHand()
 			if (ItemData->ID == TEXT("EQ006"))
 			{
 				ItemMesh->SetStaticMesh(nullptr);
-				WeaponComponent->CheckWeapon(Item);
+				WeaponComponent->UnequipeWeapon();
+
+				// 토치 전용 애님 레이어 적용 (무기 DT 독립)
+				if (TorchAnimLayerClass)
+				{
+					GetMesh()->LinkAnimClassLayers(TorchAnimLayerClass);
+				}
 				
 				if (Torch)
 				{
@@ -893,12 +899,15 @@ void AMainPlayer::RefreshHand()
 				return;
 			}
 			
-			ItemMesh->SetStaticMesh(ItemData->AssetData.Mesh);
-			ItemMesh->AttachToComponent(
-			GetMesh(),
-			FAttachmentTransformRules::KeepRelativeTransform,
-			TEXT("hand_r"));
-			ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		ItemMesh->SetStaticMesh(ItemData->AssetData.Mesh);
+		ItemMesh->AttachToComponent(
+		GetMesh(),
+		FAttachmentTransformRules::KeepRelativeTransform,
+		TEXT("hand_r"));
+		// 메시 에셋의 콜리전 응답을 완전히 초기화 후 Weapon 트레이스 채널만 허용
+		ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		ItemMesh->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+		ItemMesh->SetCollisionResponseToChannel(ECC_GameTraceChannel4, ECollisionResponse::ECR_Block); // Weapon 채널
 		
 			FTransform SocketTransform = ItemMesh->GetSocketTransform(TEXT("HandSocket"), RTS_Component);
 			ItemMesh->SetRelativeTransform(SocketTransform.Inverse());
