@@ -154,7 +154,7 @@ void AEnemyAIController::HandleSight(AActor* Actor, const FAIStimulus& Stimulus)
 	APawn* SensedPawn = Cast<APawn>(Actor);
 	if (!SensedPawn || !SensedPawn->IsPlayerControlled()) return;
 
-	if (Actor->ActorHasTag(FName("Invisible")) || Actor->ActorHasTag(FName("Werewolf")))
+	if (Actor->ActorHasTag(FName("Invisible")) || Actor->ActorHasTag(FName("Werewolf")) || Actor->IsHidden())
 	{
 		if (AIPerceptionComp)
 		{
@@ -181,7 +181,7 @@ void AEnemyAIController::HandleDamage(AActor* Actor, const FAIStimulus& Stimulus
 {
 	if (!Stimulus.WasSuccessfullySensed()) return;
 	if (IsFriendlyAggroSource(Actor)) return;
-	if (Actor->ActorHasTag(FName("Invisible")) || Actor->ActorHasTag(FName("Werewolf")))
+	if (Actor->ActorHasTag(FName("Invisible")) || Actor->ActorHasTag(FName("Werewolf")) || Actor->IsHidden())
 	{
 		if (AIPerceptionComp)
 		{
@@ -351,6 +351,9 @@ bool AEnemyAIController::ShouldSwitchTarget(AActor* NewTarget) const
 bool AEnemyAIController::IsTargetValid(AActor* Target) const
 {
 	if (!IsValid(Target)) return false;
+
+	// 숨겨진 액터는 타겟 무효 (감염 시퀀스로 숨겨진 원본 플레이어 포함)
+	if (Target->IsHidden()) return false;
 
 	// 늑대인간으로 변신한 플레이어는 타겟 무효
 	if (Target->ActorHasTag(FName("Werewolf"))) return false;
