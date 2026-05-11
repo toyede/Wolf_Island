@@ -39,10 +39,14 @@ void UUBTService_UpdateTargetInfo::TickNode(UBehaviorTreeComponent& OwnerComp, u
 			continue;
 		}
 
-		if (Participant->StatusComponent->IsDead || Participant->StatusComponent->CurrentHP <= 0.0f)
+		if (Participant->StatusComponent->IsDead || Participant->StatusComponent->CurrentHP <= 0.0f
+			|| Participant->StatusComponent->bIsIncapacitated)
 		{
 			continue;
 		}
+
+		// 늑대인간으로 변신한 플레이어 제외
+		if (Participant->ActorHasTag(FName("Werewolf"))) continue;
 
 		ValidParticipants.Add(Participant);
 	}

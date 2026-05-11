@@ -71,7 +71,7 @@ protected:
 	void HandleSight(AActor* Actor, const FAIStimulus& Stimulus);
 	void HandleDamage(AActor* Actor, const FAIStimulus& Stimulus);
 	void HandleHearing(AActor* Actor, const FAIStimulus& Stimulus);
-	void HandleScent(const FAIStimulus& Stimulus);
+	void HandleScent(AActor* Actor, const FAIStimulus& Stimulus);
 	bool IsFriendlyAggroSource(AActor* SourceActor) const;
 
 	bool ShouldSwitchTarget(AActor* Newtarget) const;
@@ -83,6 +83,7 @@ protected:
 	// 타이머
 	FTimerHandle HearingReactTimer;
 	FTimerHandle ForgottenCheckTimer;
+	FTimerHandle TargetValidationTimer;
 
 	// 퍼셉션
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|Perception")
