@@ -60,6 +60,9 @@ AEnemyAIBase::AEnemyAIBase()
     MoveComp->AirControl = 0.2f;
     MoveComp->MaxWalkSpeed = 600.f;
     MoveComp->BrakingDecelerationWalking = 2048.f;
+    MoveComp->bUseRVOAvoidance = true;
+    MoveComp->AvoidanceConsiderationRadius = 200.0f;
+    MoveComp->AvoidanceWeight = 0.5f;
 
     // NavAgent
     MoveComp->NavAgentProps.AgentRadius = GetCapsuleComponent()->GetUnscaledCapsuleRadius();       
@@ -77,7 +80,6 @@ AEnemyAIBase::AEnemyAIBase()
 
     bReplicates = true;
     SetReplicateMovement(true);
-
 }
 
 void AEnemyAIBase::BeginPlay()
@@ -621,11 +623,6 @@ void AEnemyAIBase::Multicast_PlayThrowMontage_Implementation()
     }
 
     AnimInstance->Montage_Play(ThrowMontage);
-
-    if (ThrowSound)
-    {
-        UGameplayStatics::PlaySoundAtLocation(this, ThrowSound, GetActorLocation());
-    }
 
     if (HasAuthority())
     {
