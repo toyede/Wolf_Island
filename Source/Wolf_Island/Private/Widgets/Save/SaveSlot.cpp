@@ -8,6 +8,7 @@
 #include "Games/MainGameInstance.h"
 #include "Games/MainSaveGame.h"
 #include "Kismet/GameplayStatics.h"
+#include "Widgets/IconButton.h"
 
 void USaveSlot::NativeConstruct()
 {
