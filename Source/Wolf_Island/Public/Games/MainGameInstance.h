@@ -62,10 +62,6 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	void FindSession(const FString& SessionCode);
-
-	// JWY - C++ Quit 흐름에서 BP_MainGameInstance의 DestroySession 노드를 거친 뒤 메인 메뉴로 돌아갈 수 있도록 공통 진입점을 제공합니다.
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void DestroySessionAndReturnToMainMenu(const TSoftObjectPtr<UWorld>& TargetMainMenuLevel);
 	
 	UFUNCTION(BlueprintCallable)
 	FString GenerateSessionCode();

@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "InputMappingContext.h"
-#include "TimerManager.h"
 #include "GameFramework/PlayerController.h"
 #include "Games/MainGameState.h"
 #include "Games/MainPlayerState.h"
@@ -109,14 +108,6 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	bool IsPause = false;
 
-	// JWY - Quit 버튼이 여러 번 눌려 클라이언트/세션 정리가 중복 실행되는 것을 막기 위한 상태값입니다.
-	UPROPERTY(BlueprintReadOnly)
-	bool bIsReturningToMainMenu = false;
-
-	bool bHasStartedReturnToMainMenuTravel = false;
-
-	FTimerHandle ReturnToMainMenuTimerHandle;
-
 	// 관전
 	void EnterSpectateMode();
 	void ExitSpectateMode();
@@ -188,22 +179,6 @@ public:
 	void OnSetting();
 	UFUNCTION(BlueprintCallable)
 	void OnQuit();
-
-	// JWY - 클라이언트가 직접 맵을 열지 않고 서버에게 먼저 나가기 의사를 전달하도록 하는 RPC입니다.
-	UFUNCTION(Server, Reliable)
-	void Server_RequestReturnToMainMenu();
-
-	// JWY - 서버가 클라이언트에게 안전하게 메인 메뉴 복귀를 지시할 때 사용하는 공통 Client RPC입니다.
-	UFUNCTION(Client, Reliable)
-	void Client_ReturnToMainMenu();
-
-	UFUNCTION(BlueprintCallable)
-	void ReturnToMainMenuLocal();
-
-	UFUNCTION(BlueprintCallable)
-	void ReturnConnectedClientsToMainMenu();
-
-	bool IsMultiplayerSession() const;
 
 	//플레이어 사망 후 리스폰 버튼 클릭 시 실행할 리스폰 시퀀스
 	UFUNCTION(BlueprintCallable)

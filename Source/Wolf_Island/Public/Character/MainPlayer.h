@@ -491,10 +491,6 @@ protected:
 	
 	virtual void Destroyed() override;
 
-	// JWY - 종료 중 남은 타이머/델리게이트가 파괴된 플레이어를 다시 호출하지 않도록 한 곳에서 정리
-	void ClearRuntimeTimers();
-	void UnbindRuntimeDelegates();
-
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
