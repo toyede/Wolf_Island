@@ -96,3 +96,12 @@ void UMainGameInstance::CreateSession_Implementation()
 void UMainGameInstance::FindSession_Implementation(const FString& SessionCode)
 {
 }
+
+void UMainGameInstance::DestroySessionAndReturnToMainMenu_Implementation(const TSoftObjectPtr<UWorld>& TargetMainMenuLevel)
+{
+	// JWY - BP에서 아직 DestroySession 연결을 하지 않은 경우에도 최소한 메인 메뉴 복귀가 동작하도록 C++ 기본 동작을 둡니다.
+	if (UWorld* World = GetWorld())
+	{
+		UGameplayStatics::OpenLevelBySoftObjectPtr(World, TargetMainMenuLevel);
+	}
+}
