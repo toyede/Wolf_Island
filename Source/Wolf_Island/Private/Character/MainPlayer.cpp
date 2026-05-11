@@ -6,7 +6,6 @@
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
 #include "MaterialHLSLTree.h"
-#include "Engine/DamageEvents.h"
 #include "Blueprint/UserWidget.h"
 #include "Widgets/Craft/BonFireUI.h"
 #include "Widgets/Craft/RepairUI.h"
@@ -37,7 +36,6 @@
 #include "Moon/MoonlightInfectionSystem.h"
 #include "Games/MainPlayerState.h"
 #include "Games/MainGameState.h"
-#include "WaterBodyActor.h"
 #include "AI/Sense/AISense_Scent.h"
 
 
@@ -212,6 +210,7 @@ void AMainPlayer::BeginPlay()
 	}
 	
 	if(StatusComponent){
+		//서버에서 실행
 		if (HasAuthority())
 		{
 			//상태 델리게이트 바인딩
@@ -219,7 +218,7 @@ void AMainPlayer::BeginPlay()
 
 			//죽음 바인딩
 			StatusComponent->OnHPZero.AddUniqueDynamic(this, &AMainPlayer::OnDeath);
-
+			
 			//배고픔, 수분 감소 시작
 			StatusComponent->StartHunger();
 			StatusComponent->StartHydration();
@@ -281,6 +280,28 @@ void AMainPlayer::ReportScent()
 void AMainPlayer::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] END REASON : %s"), *StaticEnum<EEndPlayReason::Type>()->GetNameStringByValue((int)EndPlayReason));
+	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	//바인딩 해제 코드
+	if(StatusComponent){
+		//서버에서 실행
+		if (HasAuthority())
+		{
+			//상태 델리게이트 바인딩
+			StatusComponent->OnStaminaZero.RemoveDynamic(this, &AMainPlayer::Request_StopRun);
+
+			//죽음 바인딩
+			StatusComponent->OnHPZero.RemoveDynamic(this, &AMainPlayer::OnDeath);
+		}
+		
+		//산소 게이지 숨기기 바인딩(테스트용)
+		StatusComponent->OnAirFull.RemoveDynamic(this, &AMainPlayer::HideAirBar);
+	}
+	
+	if (BuoyancyComponent)
+	{
+		BuoyancyComponent->OnEnteredWaterDelegate.RemoveDynamic(this, &AMainPlayer::EnterWater);
+		BuoyancyComponent->OnExitedWaterDelegate.RemoveDynamic(this, &AMainPlayer::ExitWater);
+	}
 	
 	Super::EndPlay(EndPlayReason);
 }
@@ -444,30 +465,33 @@ void AMainPlayer::StartJump()
 	if (IsSliding || IsInability) return;
 	
 	//앉아 있으면 일어서기
-	if (IsCrouching)
+	if (HasAuthority())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[JUMP] UNCROUCHED"));
-		Request_ToggleCrouch();
-	}
+		if (IsCrouching)
+		{
+			//UE_LOG(LogTemp, Warning, TEXT("[JUMP] UNCROUCHED"));
+			Request_ToggleCrouch();
+		}
 	
-	//달리는 중 점프하면 스태미나 감소 중단
-	if (IsRunning)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[JUMP] STOP STAMINA"));
-		StatusComponent->StopStamina();
-	}
+		//달리는 중 점프하면 스태미나 감소 중단
+		if (IsRunning)
+		{
+			//UE_LOG(LogTemp, Warning, TEXT("[JUMP] STOP STAMINA"));
+			StatusComponent->StopStamina();
+		}
 
-	//점프 시 스태미나 회복 중단
-	UE_LOG(LogTemp, Warning, TEXT("[JUMP] STOP STAMINA"));
-	StatusComponent->StopRecoverStamina();
-	//점프 스태미나 소모
-	UE_LOG(LogTemp, Warning, TEXT("[JUMP] CONSUME STAMINA"));
-	StatusComponent->DecreaseStamina(JumpConsumeAmount);
+		//점프 시 스태미나 회복 중단
+		//UE_LOG(LogTemp, Warning, TEXT("[JUMP] STOP STAMINA"));
+		StatusComponent->StopRecoverStamina();
+		//점프 스태미나 소모
+		//UE_LOG(LogTemp, Warning, TEXT("[JUMP] CONSUME STAMINA"));
+		StatusComponent->DecreaseStamina(JumpConsumeAmount);
+	}
 	
 	if (JumpSound)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[JUMP] PLAY JUMPSOUND"));
-		Multi_PlaySound(JumpSound, GetActorLocation());
+		Multi_PlaySoundAtLocation(JumpSound, GetActorLocation());
 	}
 
 	Jump();
@@ -504,13 +528,16 @@ void AMainPlayer::Landed(const FHitResult& Hit)
 	}
 
 	//달리는 중이면 스태미나 감소 시작
-	if (IsRunning)
+	if (HasAuthority())
 	{
-		StatusComponent->StartStamina();
-	} else
-	{
-		if(!GetWorld()->GetTimerManager().IsTimerActive(StatusComponent->StaminaRecoverTimer)){
-			StatusComponent->StartRecoverStamina();
+		if (IsRunning)
+		{
+			StatusComponent->StartStamina();
+		} else
+		{
+			if(!GetWorld()->GetTimerManager().IsTimerActive(StatusComponent->StaminaRecoverTimer)){
+				StatusComponent->StartRecoverStamina();
+			}
 		}
 	}
 }
@@ -610,9 +637,6 @@ void AMainPlayer::Run()
 
 void AMainPlayer::StopRun()
 {
-	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-	GetCharacterMovement()->MaxFlySpeed = SwimmingSpeed;
-	
 	//달리기 중일 때만 달리기 중지 시퀀스 작동
 	if (IsRunning)
 	{
@@ -701,7 +725,7 @@ void AMainPlayer::UseItem(int32 SlotIndex)
 				{
 					if (EatingSound)
 					{
-						Multi_PlaySound(EatingSound, GetActorLocation());
+						Multi_PlaySoundAtLocation(EatingSound, GetActorLocation());
 					}
 					StatusComponent->ApplyItem(*ItemData);
 				}
@@ -733,7 +757,7 @@ void AMainPlayer::UseItem(int32 SlotIndex)
 			{
 				if (ItemData->Type == EItemType::FOOD && EatingSound)
 				{
-					Multi_PlaySound(EatingSound, GetActorLocation());
+					Multi_PlaySoundAtLocation(EatingSound, GetActorLocation());
 				}
 				StatusComponent->ApplyItem(*ItemData);
 				//TODO: 서버 호출 함수로 변경
@@ -883,7 +907,13 @@ void AMainPlayer::RefreshHand()
 			if (ItemData->ID == TEXT("EQ006"))
 			{
 				ItemMesh->SetStaticMesh(nullptr);
-				WeaponComponent->CheckWeapon(Item);
+				WeaponComponent->UnequipeWeapon();
+
+				// 토치 전용 애님 레이어 적용 (무기 DT 독립)
+				if (TorchAnimLayerClass)
+				{
+					GetMesh()->LinkAnimClassLayers(TorchAnimLayerClass);
+				}
 				
 				if (Torch)
 				{
@@ -893,12 +923,15 @@ void AMainPlayer::RefreshHand()
 				return;
 			}
 			
-			ItemMesh->SetStaticMesh(ItemData->AssetData.Mesh);
-			ItemMesh->AttachToComponent(
-			GetMesh(),
-			FAttachmentTransformRules::KeepRelativeTransform,
-			TEXT("hand_r"));
-			ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		ItemMesh->SetStaticMesh(ItemData->AssetData.Mesh);
+		ItemMesh->AttachToComponent(
+		GetMesh(),
+		FAttachmentTransformRules::KeepRelativeTransform,
+		TEXT("hand_r"));
+		// 메시 에셋의 콜리전 응답을 완전히 초기화 후 Weapon 트레이스 채널만 허용
+		ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		ItemMesh->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+		ItemMesh->SetCollisionResponseToChannel(ECC_GameTraceChannel4, ECollisionResponse::ECR_Block); // Weapon 채널
 		
 			FTransform SocketTransform = ItemMesh->GetSocketTransform(TEXT("HandSocket"), RTS_Component);
 			ItemMesh->SetRelativeTransform(SocketTransform.Inverse());
@@ -947,9 +980,9 @@ void AMainPlayer::Attack()
 
 void AMainPlayer::KnockOut()
 {
-	UE_LOG(LogTemp, Display, TEXT("[PLAYER] KNOCKOUT"));
+	UE_LOG(LogTemp, Display, TEXT("[%hs][PLAYER] KNOCKOUT"), HasAuthority()?"SERVER":"CLIENT");
 	//일단 기본 스탠드 상태로 전환
-	if (IsCrouching) ToggleCrouch();
+	if (IsCrouching) Request_ToggleCrouch();
 	if (IsRunning) Request_StopRun();
 	
 	//기절 타이머 실행 - 누가 소생시켜주지 않으면 10초 뒤 사망
@@ -957,10 +990,11 @@ void AMainPlayer::KnockOut()
 		KnockOutTimer,
 		[this]()
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[PLAYER] KNOCK OUT TIMER ACTIAVTED"));
+			UE_LOG(LogTemp, Warning, TEXT("[PLAYER] KNOCK OUT TIMER ACTIVATED"));
 			if (HasAuthority())
 			{
 				UE_LOG(LogTemp, Warning, TEXT("[PLAYER] SERVER PLAYER"));
+				//서버 캐릭터면 사망 카메라 세팅
 				if (IsLocallyControlled())
 				{
 					FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
@@ -970,7 +1004,9 @@ void AMainPlayer::KnockOut()
 					{
 						PC->OpenDeathScreen();
 					}
-				} else
+				}
+				//클라 캐릭터면 사망 카메라 클라 함수 실행
+				else
 				{
 					Client_ShowDeathScreen();
 				}
@@ -1049,7 +1085,7 @@ void AMainPlayer::CheckInteraction()
 		FHitResult HitResult;
 
 		//라인트레이스 실행 후 부딪혔나?
-		if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECC_Visibility, QueryParams))
+		if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECC_GameTraceChannel6, QueryParams))
 		{
 			//부딪힌 액터가 인터랙션 인터페이스를 가지고 있나?
 			if (HitResult.GetActor() && HitResult.GetActor()->GetClass()->ImplementsInterface(UInteractionInterface::StaticClass()))
@@ -1600,8 +1636,8 @@ void AMainPlayer::SwimCheck()
 	EnteredWater->GetWaveInfoAtPosition(SurfaceLocation, WaterDepth, false, WaveInfo);
 	
 	//디버그 출력
-	UE_LOG(LogTemp, Warning, TEXT("Surface Z : %f"), SurfaceLocation.Z);
-	UE_LOG(LogTemp, Warning, TEXT("WAVE Z : %f"), WaveInfo.Height);
+	//UE_LOG(LogTemp, Warning, TEXT("Surface Z : %f"), SurfaceLocation.Z);
+	//UE_LOG(LogTemp, Warning, TEXT("WAVE Z : %f"), WaveInfo.Height);
 	
 	//플레이어 발 위치
 	FVector FootCheckLocation = FVector(
@@ -1871,7 +1907,7 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 	// 월드 좌표 기준으로 트랜스폼 가져오기
 	ISMC->GetInstanceTransform(InstanceIndex, InstanceTransform, true);
 	
-	//====>> 2.19 조성윤 추가 <<====
+	//====>> 2.19 조성윤 추가 <<====Start
 	//삭제될 폴리지 정보 저장
 	//이 함수는 서버에서만 실행되니까 GetAuthGameMode이 null이 아님.
 	AMainGameMode* GM = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode());
@@ -1883,7 +1919,7 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 	RemovedData.Mesh = ISMC->GetStaticMesh();
 	
 	GM->RemovedFoliageData.Add(RemovedData);
-	//====>> 2.19 조성윤 추가 <<====
+	//====>> 2.19 조성윤 추가 <<====End
 	
 	// 폴리지 삭제 (서버에서 삭제하면 리플리케이션 설정에 따라 클라이언트에게 전달됩니다)
 	Multi_RemoveFoliageInstance(ISMC, InstanceIndex);
@@ -2097,7 +2133,7 @@ void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 
 void AMainPlayer::Request_Run()
 {
-	if (IsBuildingInputBlocked()) return;
+	if (IsBuildingInputBlocked() || IsInability) return;
 
 	if (HasAuthority())
 	{
@@ -2136,10 +2172,21 @@ void AMainPlayer::OnRep_IsCrouching()
 {
 	if (IsCrouching)
 	{
-		GetCharacterMovement()->MaxWalkSpeed = 150.0f;
+		GetCharacterMovement()->MaxWalkSpeed = CrouchSpeed;
 	} else
 	{
-		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
+		GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+	}
+}
+
+void AMainPlayer::OnRep_IsInability()
+{
+	if (IsInability)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = KnockOutSpeed;
+	} else
+	{
+		GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	}
 }
 
@@ -2147,10 +2194,10 @@ void AMainPlayer::OnRep_IsRunning()
 {
 	if (IsRunning)
 	{
-		GetCharacterMovement()->MaxWalkSpeed = 750.0f;
+		GetCharacterMovement()->MaxWalkSpeed = RunSpeed;
 	} else
 	{
-		GetCharacterMovement()->MaxWalkSpeed = 300.0f;
+		GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	}
 }
 
@@ -2351,7 +2398,7 @@ void AMainPlayer::Server_DrinkWater_Implementation(UPrimitiveComponent* WaterCom
 		
 		if (EatingSound) 
 		{
-			Multi_PlaySound(EatingSound, GetActorLocation());
+			Multi_PlaySoundAtLocation(EatingSound, GetActorLocation());
 		}
 		LastDrinkTime = CurrentTime;
 	}
@@ -2361,7 +2408,7 @@ void AMainPlayer::Server_DrinkWater_Implementation(UPrimitiveComponent* WaterCom
         
 		if (EatingSound) 
 		{
-			Multi_PlaySound(EatingSound, GetActorLocation());
+			Multi_PlaySoundAtLocation(EatingSound, GetActorLocation());
 		}
 
 		LastDrinkTime = CurrentTime;
@@ -2396,7 +2443,7 @@ void AMainPlayer::Multi_PlayAnimMontage_Implementation(UAnimMontage* Anim)
 	PlayAnimMontage(Anim);
 }
 
-void AMainPlayer::Multi_PlaySound_Implementation(USoundBase* Sound, FVector Location)
+void AMainPlayer::Multi_PlaySoundAtLocation_Implementation(USoundBase* Sound, FVector Location)
 {
 	UGameplayStatics::PlaySoundAtLocation(GetWorld(), Sound, Location);
 }

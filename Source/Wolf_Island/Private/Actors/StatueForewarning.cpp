@@ -60,6 +60,12 @@ void AStatueForewarning::BeginPlay()
 	}
 }
 
+void AStatueForewarning::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorldTimerManager().ClearAllTimersForObject(this);
+	Super::EndPlay(EndPlayReason);
+}
+
 void AStatueForewarning::OnForewarningEnd()
 {
 	if (!HasAuthority())

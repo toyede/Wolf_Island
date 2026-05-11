@@ -31,8 +31,21 @@ void ABarricadeTrap::BeginPlay()
 	}
 }
 
+void ABarricadeTrap::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	
+	if (HasAuthority() && DamageBox)
+	{
+		DamageBox->OnComponentBeginOverlap.RemoveDynamic(this, &ABarricadeTrap::OnOverlapBegin);
+		DamageBox->OnComponentEndOverlap.RemoveDynamic(this, &ABarricadeTrap::OnOverlapEnd);
+	}
+	
+	Super::EndPlay(EndPlayReason);
+}
+
 void ABarricadeTrap::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+                                    UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	if (OtherActor && OtherActor != this)
 	{

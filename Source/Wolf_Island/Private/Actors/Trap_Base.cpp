@@ -31,6 +31,14 @@ void ATrap_Base::BeginPlay()
 	TriggerSphere->OnComponentBeginOverlap.AddDynamic(this, &ATrap_Base::OnOverlapBegin);
 }
 
+void ATrap_Base::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	TriggerSphere->OnComponentBeginOverlap.RemoveDynamic(this, &ATrap_Base::OnOverlapBegin);
+	
+	Super::EndPlay(EndPlayReason);	
+}
+
 // Called every frame
 void ATrap_Base::Tick(float DeltaTime)
 {
@@ -53,7 +61,7 @@ void ATrap_Base::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* Oth
 
 			Enemy->GetCharacterMovement()->DisableMovement();
 
-			// SetLifeSpan ´ë½Å Å¸ÀÌ¸Ó »ç¿ë
+			// SetLifeSpan ï¿½ï¿½ï¿½ Å¸ï¿½Ì¸ï¿½ ï¿½ï¿½ï¿½
 			GetWorldTimerManager().SetTimer(ReleaseTimerHandle, this, &ATrap_Base::ReleaseTrap, TrapSpan, false);
 		}
 	}

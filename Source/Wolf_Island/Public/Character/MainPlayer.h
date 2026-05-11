@@ -142,6 +142,9 @@ public:
 	ATorch* Torch;
 	UPROPERTY(EditDefaultsOnly, Category = "Torch")
 	TSubclassOf<ATorch> TorchClass;
+	// 토치 전용 애님 레이어 (무기 DT 밖에서 별도 관리)
+	UPROPERTY(EditDefaultsOnly, Category = "Torch")
+	TSubclassOf<UAnimInstance> TorchAnimLayerClass;
 	
 	//부력 컴포넌트 - 수영을 위한 것
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
@@ -268,7 +271,7 @@ public:
 	bool IsRunning = false;
 
 	//웅크리는 중인지
-	UPROPERTY(ReplicatedUsing=OnRep_IsCrouching,EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
+	UPROPERTY(ReplicatedUsing=OnRep_IsCrouching, EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsCrouching = false;
 	
 	//수영 중인지
@@ -288,7 +291,7 @@ public:
 	bool IsFirstPerson = true;
 
 	//행동불능 상태인지
-	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
+	UPROPERTY(ReplicatedUsing=OnRep_IsInability, EditDefaultsOnly, BlueprintReadWrite, Category="State", SaveGame)
 	bool IsInability = false;
 
 	//공격 소모 스태미나
@@ -588,7 +591,7 @@ public:
 	//카메라 복구 함수
 	UFUNCTION(Client, Reliable, BlueprintCallable)
 	void RestoreCamera();
-
+	
 	//인터랙션 관련 함수===================================================
 	//인터랙션 체크 함수 - 라인트레이스로 인터랙션 액터 체크
 	UFUNCTION()
@@ -711,6 +714,10 @@ public:
 	void Server_ToggleCrouch();
 	UFUNCTION()
 	void OnRep_IsCrouching();
+	
+	//기절
+	UFUNCTION()
+	void OnRep_IsInability();
 
 	//공격
 	UFUNCTION()
@@ -770,7 +777,6 @@ public:
 	UFUNCTION(BlueprintPure)
 	FORCEINLINE bool IsBuildingInputBlocked() const { return bBuildingInputBlocked; }
 	
-	
 	//아이템 정보 저장
 	
 	//클라이언트 실행 함수 (UI 사운드 등 클라이언트 혼자만 보면 되는 것)
@@ -782,7 +788,7 @@ public:
 	
 	//멀티캐스트 실행 함수
 	UFUNCTION(NetMulticast, Reliable)
-	void Multi_PlaySound(USoundBase* Sound, FVector Location);
+	void Multi_PlaySoundAtLocation(USoundBase* Sound, FVector Location);
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_PlayAnimMontage(UAnimMontage* Anim);

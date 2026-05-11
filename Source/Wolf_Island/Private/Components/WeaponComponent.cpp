@@ -136,8 +136,8 @@ void UWeaponComponent::UseWeapon_Implementation(int32 Index)
 		{
 			AttackSound= CurrentWeapon.Sounds[Index];
 		}
-		UGameplayStatics::PlaySoundAtLocation(GetWorld(), AttackSound, Owner->GetActorLocation());
-		//Owner->Multi_PlaySound(Owner->PunchSound, Owner->GetActorLocation());
+		//UGameplayStatics::PlaySoundAtLocation(GetWorld(), AttackSound, Owner->GetActorLocation());
+		Owner->Multi_PlaySoundAtLocation(AttackSound, Owner->GetActorLocation());
 	}
 	
 	//몽타주 실행 완료 후 공격 중 상태 변수 변경하는 델리게이트

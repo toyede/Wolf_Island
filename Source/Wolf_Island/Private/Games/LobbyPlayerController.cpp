@@ -4,10 +4,17 @@
 #include "Games/LobbyPlayerController.h"
 
 #include "Blueprint/UserWidget.h"
+#include "Camera/CameraActor.h"
 #include "Games/MainPlayerState.h"
 #include "Games/GameModes/LobbyGameMode.h"
+#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "Widgets/Lobby/Lobby.h"
+
+ALobbyPlayerController::ALobbyPlayerController()
+{
+	bAutoManageActiveCameraTarget = false;
+}
 
 void ALobbyPlayerController::BeginPlay()
 {
@@ -22,6 +29,14 @@ void ALobbyPlayerController::BeginPlay()
 		FInputModeUIOnly InputMode;
 		InputMode.SetWidgetToFocus(LobbyWidget->TakeWidget());
 		SetInputMode(InputMode);
+		
+		if (AActor* Camera = UGameplayStatics::GetActorOfClass(this, ACameraActor::StaticClass()))
+		{
+			SetViewTarget(Camera);
+		} else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("NO CAMERA DETECTED"))
+		}
 	}
 }
 
@@ -35,6 +50,17 @@ void ALobbyPlayerController::GetLifetimeReplicatedProps(TArray<class FLifetimePr
 void ALobbyPlayerController::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
+	
+	if (LobbyWidget)
+	{
+		ULobby* Lobby = Cast<ULobby>(LobbyWidget);
+		Lobby->RefreshInfo();
+	}
+}
+
+void ALobbyPlayerController::InitPlayerState()
+{
+	Super::InitPlayerState();
 	
 	if (LobbyWidget)
 	{

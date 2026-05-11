@@ -35,6 +35,7 @@ void ABossStatue::BeginPlay()
 void ABossStatue::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	GetWorldTimerManager().ClearTimer(HealTimerHandle);
+	GetWorldTimerManager().ClearAllTimersForObject(this);
 	Super::EndPlay(EndPlayReason);
 }
 

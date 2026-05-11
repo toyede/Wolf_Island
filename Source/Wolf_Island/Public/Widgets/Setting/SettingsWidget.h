@@ -189,7 +189,14 @@ public:
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Settings|Input")
 	TArray<TObjectPtr<UInputMappingContext>> FallbackInputMappingContexts;
-
+	
+	UPROPERTY(BlueprintReadWrite)
+	float PendingMasterVolume = 1.0f;
+	UPROPERTY(BlueprintReadWrite)
+	float PendingBGMVolume = 1.0f;
+	UPROPERTY(BlueprintReadWrite)
+	float PendingSFXVolume = 1.0f;
+	
 private:
 	TArray<FIntPoint> ResolutionList;
 	TArray<float> FrameRateLimitList;
@@ -202,10 +209,6 @@ private:
 	int32 PendingShadowQuality = 3;
 	int32 PendingEffectQuality = 3;
 	int32 PendingAntiAliasingIndex = 2;
-
-	float PendingMasterVolume = 1.0f;
-	float PendingBGMVolume = 1.0f;
-	float PendingSFXVolume = 1.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Settings|Audio")
 	TObjectPtr<USoundMix> GameSoundMix;

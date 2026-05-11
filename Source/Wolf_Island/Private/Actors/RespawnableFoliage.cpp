@@ -38,6 +38,12 @@ void ARespawnableFoliage::BeginPlay()
 	
 }
 
+void ARespawnableFoliage::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorldTimerManager().ClearAllTimersForObject(this);
+	Super::EndPlay(EndPlayReason);
+}
+
 void ARespawnableFoliage::RespawnOriginalFoliage()
 {
 	if (HasAuthority() && OriginalISMC)

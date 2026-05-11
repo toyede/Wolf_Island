@@ -32,6 +32,13 @@ void UBuildingComponent::BeginPlay()
 	
 }
 
+void UBuildingComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	
+	Super::EndPlay(EndPlayReason);
+}
+
 void UBuildingComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);

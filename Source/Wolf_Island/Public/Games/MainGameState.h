@@ -73,6 +73,7 @@ public:
 	bool IsMulti = false;
 	
 	//선택한 역할들이 바뀌면
+	UPROPERTY(BlueprintAssignable)
 	FOnSelectedRolesChanged OnSelectedRolesChanged;
 	
 	//채팅창 채팅 리스트

@@ -87,6 +87,26 @@ void APortalActor::BeginPlay()
 	UpdatePortalState();
 }
 
+void APortalActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	
+	MultiReadyVolume->OnComponentBeginOverlap.RemoveDynamic(this, &APortalActor::OnReadyVolumeBeginOverlap);
+	MultiReadyVolume->OnComponentEndOverlap.RemoveDynamic(this, &APortalActor::OnReadyVolumeEndOverlap);
+
+	if (AMainGameState* GS = GetWorld()->GetGameState<AMainGameState>())
+	{
+		GS->OnUnlockedRecordsChanged.RemoveDynamic(this, &APortalActor::HandleUnlockedRecordsChanged);
+	}
+	
+	if (SequencePlayer)
+	{
+		SequencePlayer->OnFinished.RemoveDynamic(this, &APortalActor::OnTeleportSequenceFinished);
+	}
+	
+	Super::EndPlay(EndPlayReason);
+}
+
 void APortalActor::LoadData_Implementation(const FActorSaveData& InData)
 {
 	Super::LoadData_Implementation(InData);

@@ -129,9 +129,18 @@ void AEnemyAIBase::BeginPlay()
 
     if (AttackCollisionComponent)
     {
+        //TODO: 이건 델리게이트 해제 안해줘도 괜찮은가...
         AttackCollisionComponent->OnHitActor.AddUObject(this, &AEnemyAIBase::OnAttackHit);
         AttackCollisionComponent->AddIgnoredActor(this);
     }
+}
+
+void AEnemyAIBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+    OnHitResponse.RemoveDynamic(this, &AEnemyAIBase::HitResponse);
+    
+    Super::EndPlay(EndPlayReason);
 }
 
 void AEnemyAIBase::OnRep_Controller()

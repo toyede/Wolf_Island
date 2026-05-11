@@ -24,6 +24,17 @@ void AEnemyAIControllerBase::BeginPlay()
 	}
 }
 
+void AEnemyAIControllerBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	
+	if (AIPerceptionComp)
+	{
+		AIPerceptionComp->OnPerceptionUpdated.RemoveDynamic(this, &AEnemyAIControllerBase::OnPerceptionUpdated);
+	}
+	Super::EndPlay(EndPlayReason);
+}
+
 void AEnemyAIControllerBase::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);

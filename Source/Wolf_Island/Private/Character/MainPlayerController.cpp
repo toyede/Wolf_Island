@@ -21,7 +21,9 @@
 #include "Widgets/DeathScreen.h"
 #include "Moon/MoonlightInfectionSystem.h"
 #include "Actors/SpectatorCameraActor.h"
+#include "Widgets/Setting/SettingsWidget.h"
 
+//TODO: 일단 바인딩 해제 코드 안넣어봄.
 void AMainPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
@@ -101,6 +103,8 @@ void AMainPlayerController::OnPossess(APawn* InPawn)
 void AMainPlayerController::OnUnPossess()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER CONTROLLER] UNPOSSESSED"));
+	GetWorldTimerManager().ClearAllTimersForObject(this);
+	
 	if (IsLocalController() && PlayerHUD)
 	{
 		PlayerHUD->RemoveFromParent();
@@ -112,23 +116,6 @@ void AMainPlayerController::OnUnPossess()
 
 void AMainPlayerController::SetPlayerHUD(AMainPlayer* OwnerPlayer)
 {
-	/*if (PlayerHUD)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[PLAYER CONTROLLER] Player HUD is already exist."));
-		return;
-	}
-	
-	UE_LOG(LogTemp, Warning, TEXT("[%s] Possessed in %s"), *GetName(), *OwnerPlayer->GetName())
-
-	if (OwnerPlayer && HUDClass && IsLocalController())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[%hs]Set Player HUD"), HasAuthority()?"SERVER":"CLIENT")
-		PlayerHUD = CreateWidget<UPlayerHUD>(this, HUDClass);
-		PlayerHUD->AddToViewport();
-		PlayerHUD->SetPlayerRef(OwnerPlayer);
-		OwnerPlayer->SetHUDWidget(PlayerHUD);
-	}*/
-
 	if (!OwnerPlayer || !IsLocalController()) return;
 
 	if (!HUDClass)
@@ -207,7 +194,7 @@ void AMainPlayerController::DisplayPauseMenu()
 	FInputModeUIOnly Mode;
 	SetInputMode(Mode);
 	
-	UGameplayStatics::SetGamePaused(GetWorld(), true);
+	UGameplayStatics::SetGamePaused(GetWorld(), IsPause);
 	
 	PauseMenu->SetVisibility(ESlateVisibility::Visible);
 }
@@ -443,6 +430,11 @@ void AMainPlayerController::OnResume()
 void AMainPlayerController::OnSetting()
 {
 	UE_LOG(LogTemp, Warning, TEXT("SETTING BUTTON CLICKED"));
+	if (SettingsWidgetClass)
+	{
+		SettingsWidget = CreateWidget<USettingsWidget>(this, SettingsWidgetClass);
+		SettingsWidget->AddToViewport(11);
+	}
 }
 
 void AMainPlayerController::OnQuit()

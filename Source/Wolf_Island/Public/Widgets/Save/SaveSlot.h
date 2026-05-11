@@ -7,6 +7,7 @@
 #include "Blueprint/UserWidget.h"
 #include "SaveSlot.generated.h"
 
+class UIconButton;
 class UMainSaveGame;
 class UTextBlock;
 class UImage;
@@ -24,7 +25,7 @@ public:
 	UPROPERTY(meta=(BindWidget))
 	UButton* SlotButton;
 	UPROPERTY(meta=(BindWidget))
-	UButton* DeleteButton;
+	UIconButton* DeleteButton;
 	UPROPERTY(meta=(BindWidget))
 	UTextBlock* WorldNameText;
 	UPROPERTY(meta=(BindWidget))

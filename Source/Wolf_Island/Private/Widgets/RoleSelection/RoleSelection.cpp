@@ -21,8 +21,9 @@ void URoleSelection::NativeConstruct()
 	
 	if (MainGameState)
 	{
-		MainGameState->OnSelectedRolesChanged.AddDynamic(this, &URoleSelection::CheckOccupied);
 		UE_LOG(LogTemp, Warning, TEXT("MainGameState is valid"));
+		MainGameState->OnSelectedRolesChanged.AddDynamic(this, &URoleSelection::CheckOccupied);
+		UE_LOG(LogTemp, Warning, TEXT("OnSelectedRolesChanged Binded"));
 	} else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("MainGameState is invalid"));
@@ -44,7 +45,7 @@ void URoleSelection::NativeConstruct()
 
 void URoleSelection::CheckOccupied()
 {
-	MainGameState = Cast<AMainGameState>(GetWorld()->GetGameState());
+	//MainGameState = Cast<AMainGameState>(GetWorld()->GetGameState());
 	
 	if (!MainGameState)
 	{
@@ -61,11 +62,12 @@ void URoleSelection::CheckOccupied()
 		{
 			if (OccupiedRole == Button->Role)
 			{
-				//Button->SetOccupied(true);
 				Button->Button->SetIsEnabled(false);
+				break;
 			} else
 			{
 				Button->Button->SetIsEnabled(true);
+				break;
 			}
 		}
 	}

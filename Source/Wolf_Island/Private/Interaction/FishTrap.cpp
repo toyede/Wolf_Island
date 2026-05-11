@@ -28,6 +28,12 @@ void AFishTrap::BeginPlay()
 	}
 }
 
+void AFishTrap::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	Super::EndPlay(EndPlayReason);
+}
+
 void AFishTrap::Interact_Implementation(AActor* Interactor)
 {
 	if (HasAuthority())

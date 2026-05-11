@@ -26,11 +26,15 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UUserWidget> LobbyWidgetClass;
 	
+	ALobbyPlayerController();
+	
 	virtual void BeginPlay() override;
 	
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	
 	void OnRep_PlayerState() override;
+	
+	virtual void InitPlayerState() override;
 	
 	UFUNCTION(BlueprintCallable)
 	void Request_ToggleReady();
