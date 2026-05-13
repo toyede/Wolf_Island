@@ -2414,19 +2414,19 @@ void AMainPlayer::Server_DrinkWater_Implementation(UPrimitiveComponent* WaterCom
 			StatusComponent->IncreaseHydration(5.0f);
 		}
 		
-		if (EatingSound) 
+		if (DrinkingSound) 
 		{
-			Multi_PlaySoundAtLocation(EatingSound, GetActorLocation());
+			Multi_PlaySoundAtLocation(DrinkingSound, GetActorLocation());
 		}
 		LastDrinkTime = CurrentTime;
 	}
 	else if (ClassName.Contains(TEXT("WaterBodyOcean")))
 	{
 		StatusComponent->DecreaseHydration(5.0f);
-        
-		if (EatingSound) 
+		
+		if (EwSound) 
 		{
-			Multi_PlaySoundAtLocation(EatingSound, GetActorLocation());
+			Multi_PlaySoundAtLocation(EwSound, GetActorLocation());
 		}
 
 		LastDrinkTime = CurrentTime;

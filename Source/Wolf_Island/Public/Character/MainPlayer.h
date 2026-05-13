@@ -385,6 +385,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
 	USoundBase* EatingSound;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
+	USoundBase* DrinkingSound;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
+	USoundBase* EwSound;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
 	USoundBase* PunchSound;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
 	USoundBase* UnderWaterAmbience;
