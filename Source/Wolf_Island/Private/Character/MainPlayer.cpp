@@ -1087,6 +1087,22 @@ void AMainPlayer::CheckInteraction()
 		//라인트레이스 실행 후 부딪혔나?
 		if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECC_GameTraceChannel6, QueryParams))
 		{
+			//타겟 HP 보여줄 지 안보여줄 지
+			if (UStatusComponent* Status = HitResult.GetActor()->GetComponentByClass<UStatusComponent>())
+			{
+				//UE_LOG(LogTemp, Warning, TEXT("[PLAYER] HIT ACTOR HAS STATUS COMPONENT"));
+				if (Status->ShowCurrentHP)
+				{
+					HUD->DisplayTargetHP(HitResult.GetActor());
+				} else
+				{
+					//UE_LOG(LogTemp, Warning, TEXT("[PLAYER] ShowCurrentHP is FALSE"));
+				}
+			} else
+			{
+				//UE_LOG(LogTemp, Warning, TEXT("[PLAYER] HIT ACTOR HAS NO STATUS COMPONENT"));
+			}
+			
 			//부딪힌 액터가 인터랙션 인터페이스를 가지고 있나?
 			if (HitResult.GetActor() && HitResult.GetActor()->GetClass()->ImplementsInterface(UInteractionInterface::StaticClass()))
 			{
@@ -1125,8 +1141,6 @@ void AMainPlayer::CheckInteraction()
 			AActor* HitActor = HitResult.GetActor();
 			UPrimitiveComponent* HitComp = HitResult.GetComponent();
 			
-			
-			
 			if (HitActor)
 			{
 				FString ClassName = HitActor->GetClass()->GetName();
@@ -1134,6 +1148,7 @@ void AMainPlayer::CheckInteraction()
 					ClassName.Contains(TEXT("WaterBodyRiver")) || 
 					ClassName.Contains(TEXT("WaterBodyLake")))
 				{
+					UE_LOG(LogTemp, Warning, TEXT("[PLAYER] FIND WATER : %s"), *ClassName);
 					if (GetWorld()->GetTimeSeconds() >= LastDrinkTime + DrinkCooldown)
 					{
 						if (InteractionData.CurrentWaterComponent != HitComp)
@@ -1145,9 +1160,11 @@ void AMainPlayer::CheckInteraction()
 					return;
 				}
 			}
+		} else
+		{
+			HUD->HideTargetHP();
 		}
 	}
-	
 	NotFoundInteractable();
 }
 
@@ -1226,6 +1243,7 @@ void AMainPlayer::NotFoundInteractable()
 			{
 				HUD->DisplayDefault();
 				HUD->HideInteraction();
+				HUD->HideTargetHP();
 			}
 		}
 		
@@ -1893,6 +1911,7 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 	// 4. 맵(목록)에 등록된 나무인지 확인
 	if (!HitMesh || !FoliageToActorMap.Contains(HitMesh)) 
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] THIS TREE IS NOT ON TREE MAP"))
 		return;
 	}
 
@@ -1929,6 +1948,7 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 	ATree* NewTree = GetWorld()->SpawnActor<ATree>(TargetActorClass, InstanceTransform, SpawnParams);
+	NewTree->SetTreeMesh(HitMesh);
 	NewTree->EnsureGUID();
 	UE_LOG(LogTemp, Warning, TEXT("Spawn Tree class : %s"), *NewTree->GetClass()->GetName());
 	// 데미지 전달
@@ -2045,9 +2065,7 @@ void AMainPlayer::ProcessAttackHit(const FHitResult& HitResult, float DamageAmou
                 
 		UE_LOG(LogTemp, Warning, TEXT("Hit Actor: %s"), *HitActor->GetName());
 	}
-
 	
-
 	// 2. 폴리지 변환 시도
 	TryConvertFoliageToActor(HitResult, DamageAmount);
 }

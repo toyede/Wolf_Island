@@ -11,6 +11,7 @@
  * 
  */
 
+class UTextBlock;
 class UProgressBar;
 class UItemAcquiredBlock;
 
@@ -54,6 +55,10 @@ public:
 	UProgressBar* HydrationBar;
 	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
 	UProgressBar* AirBar;
+	
+	//공격 에임 상대의 HP
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	UTextBlock* TargetHPText;
 	
 	UPROPERTY(BlueprintReadWrite, meta=(BindWidgetAnim), Transient)
 	UWidgetAnimation* Infected;
@@ -100,6 +105,11 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void OnInfectionChanged();
+	
+	UFUNCTION(BlueprintCallable)
+	void DisplayTargetHP(AActor* Target);
+	UFUNCTION(BlueprintCallable)
+	void HideTargetHP();
 
 protected:
 	

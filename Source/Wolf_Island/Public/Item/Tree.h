@@ -87,4 +87,6 @@ public:
 	//저장 관련 코드
 	virtual void SaveData_Implementation(FActorSaveData& OutData0) override;
 	virtual void LoadData_Implementation(const FActorSaveData& InData) override;
+	
+	void SetTreeMesh(UStaticMesh* NewTreeMesh) const { TreeMesh->SetStaticMesh(NewTreeMesh); };
 };
