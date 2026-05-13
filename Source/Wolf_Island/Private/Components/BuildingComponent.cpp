@@ -27,7 +27,6 @@ UBuildingComponent::UBuildingComponent()
 void UBuildingComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	SetIsReplicatedByDefault(true);
 	// ...
 	
 }
