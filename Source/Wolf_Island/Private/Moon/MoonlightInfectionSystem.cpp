@@ -879,6 +879,17 @@ void AMoonlightInfectionSystem::EvaluateAllPlayersInfectedAndSkipMorning()
 		bMorningSkipTriggeredThisNight = true;
 		ISkyInterface::Execute_SkipToMorning(DynamicSkyActor);
 	}
+	
+	// 수리된 것 중 랜덤 1개 파괴
+	TArray<AActor*> RepairActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ARepair_Actor::StaticClass(), RepairActors);
+	for (AActor* Actor : RepairActors)
+	{
+		if (ARepair_Actor* RepairActor = Cast<ARepair_Actor>(Actor))
+		{
+			if (RepairActor->BreakRandomCompletedRepair()) break;
+		}
+	}
 }
 
 void AMoonlightInfectionSystem::HandlePlayerLogout(AController* ExitingController)
