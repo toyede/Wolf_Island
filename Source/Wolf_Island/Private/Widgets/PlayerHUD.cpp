@@ -300,3 +300,25 @@ void UPlayerHUD::OnInfectionChanged()
 		UE_LOG(LogTemp, Warning, TEXT("[PLAYER HUD] NO STATUS ON PLAYER"));
 	}
 }
+
+void UPlayerHUD::DisplayTargetHP(AActor* Target)
+{
+	//UE_LOG(LogTemp, Warning, TEXT("[PLAYER HUD] Display target HP"));
+	if (UStatusComponent* Status = Target->GetComponentByClass<UStatusComponent>())
+	{
+		float HP = Status->GetHPPercent() * 100.0f;
+		FText HPText = FText::Format(FText::FromString("{0}%"), FText::AsNumber(FMath::RoundToInt(HP)));
+		TargetHPText->SetText(HPText);
+		TargetHPText->SetVisibility(ESlateVisibility::Visible);
+	} else
+	{
+		//UE_LOG(LogTemp, Warning, TEXT("[PLAYER HUD] Target has no Status"));
+		TargetHPText->SetVisibility(ESlateVisibility::Collapsed);
+	}
+}
+
+void UPlayerHUD::HideTargetHP()
+{
+	//UE_LOG(LogTemp, Warning, TEXT("[PLAYER HUD] Hide target HP"));
+	TargetHPText->SetVisibility(ESlateVisibility::Collapsed);
+}
