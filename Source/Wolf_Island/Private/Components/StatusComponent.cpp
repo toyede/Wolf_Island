@@ -601,6 +601,7 @@ void UStatusComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
 	DOREPLIFETIME(UStatusComponent, CurrentAir);
 	DOREPLIFETIME(UStatusComponent, CurrentInfectionRate);
 	DOREPLIFETIME(UStatusComponent, IsInfected);
+	DOREPLIFETIME(UStatusComponent, ShowCurrentHP);
 }
 
 void UStatusComponent::Request_SetInputMode(bool IsEnable)

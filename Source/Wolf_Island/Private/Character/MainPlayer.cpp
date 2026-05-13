@@ -253,14 +253,21 @@ void AMainPlayer::BeginPlay()
 	MainPlayerController = Cast<AMainPlayerController>(GetController());
 	InteractableData.CanInteract = false;
 	
-	FActorSpawnParameters SpawnParams;
-		
-	Torch = GetWorld()->SpawnActor<ATorch>(TorchClass, SpawnParams);
-	Torch->AttachToComponent(
-		GetMesh(), 
-		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-		FName("hand_r"));
-	Torch->SetActorHiddenInGame(true);
+	//토치 설정
+	if (HasAuthority())
+	{
+		FActorSpawnParameters SpawnParams;
+		Torch = GetWorld()->SpawnActor<ATorch>(TorchClass, SpawnParams);
+	}
+	
+	if (Torch)
+	{
+		Torch->AttachToComponent(
+			GetMesh(), 
+			FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+			FName("hand_r"));
+		Torch->SetActorHiddenInGame(true);
+	}
 
 	// 냄새 보고 타이머 설정
 	GetWorldTimerManager().SetTimer(ScentTimerHandle, this, &AMainPlayer::ReportScent, ScentReportInterval, true);
@@ -890,6 +897,13 @@ void AMainPlayer::OnDeath_Implementation()
 void AMainPlayer::RefreshHand()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Refresh Hand"));
+	
+	if (!InventoryComponent || !WeaponComponent)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Inven & Weapon Comp is not Ready in REFRESH HAND"))
+		return;
+	}
+	
 	//핫바 인덱스의 아이템 정보 가져오기.
 	FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
 	
@@ -1087,6 +1101,7 @@ void AMainPlayer::CheckInteraction()
 		//라인트레이스 실행 후 부딪혔나?
 		if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECC_GameTraceChannel6, QueryParams))
 		{
+			/*
 			//타겟 HP 보여줄 지 안보여줄 지
 			if (UStatusComponent* Status = HitResult.GetActor()->GetComponentByClass<UStatusComponent>())
 			{
@@ -1102,6 +1117,7 @@ void AMainPlayer::CheckInteraction()
 			{
 				//UE_LOG(LogTemp, Warning, TEXT("[PLAYER] HIT ACTOR HAS NO STATUS COMPONENT"));
 			}
+			*/
 			
 			//부딪힌 액터가 인터랙션 인터페이스를 가지고 있나?
 			if (HitResult.GetActor() && HitResult.GetActor()->GetClass()->ImplementsInterface(UInteractionInterface::StaticClass()))
@@ -1160,10 +1176,13 @@ void AMainPlayer::CheckInteraction()
 					return;
 				}
 			}
-		} else
+		}
+		/*
+		else
 		{
 			HUD->HideTargetHP();
 		}
+		*/
 	}
 	NotFoundInteractable();
 }
@@ -1243,7 +1262,7 @@ void AMainPlayer::NotFoundInteractable()
 			{
 				HUD->DisplayDefault();
 				HUD->HideInteraction();
-				HUD->HideTargetHP();
+				//HUD->HideTargetHP();
 			}
 		}
 		
@@ -2134,19 +2153,17 @@ void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 	DOREPLIFETIME(AMainPlayer, IsCrouching);
 	DOREPLIFETIME(AMainPlayer, IsSliding);
 	DOREPLIFETIME(AMainPlayer, IsInability);
-	DOREPLIFETIME(AMainPlayer, AttackConsumeAmount);
-	DOREPLIFETIME(AMainPlayer, SlideConsumeAmount);
 	DOREPLIFETIME(AMainPlayer, IsInventoryOpen);
 	DOREPLIFETIME(AMainPlayer, IsHoldingItem);
+	DOREPLIFETIME(AMainPlayer, IsUsingItem);
 	DOREPLIFETIME(AMainPlayer, IsAttacking);
 	DOREPLIFETIME(AMainPlayer, HotBarIndex);
-	DOREPLIFETIME(AMainPlayer, StatusComponent);
-	DOREPLIFETIME(AMainPlayer, InventoryComponent);
-	DOREPLIFETIME(AMainPlayer, WeaponComponent);
 	DOREPLIFETIME(AMainPlayer, ItemMesh);
 	DOREPLIFETIME(AMainPlayer, IsSwimming);
 	DOREPLIFETIME(AMainPlayer, MovementMultiplier);
 	DOREPLIFETIME(AMainPlayer, CanInteract);
+	DOREPLIFETIME(AMainPlayer, CharacterRole);
+	DOREPLIFETIME(AMainPlayer, SwimMode);
 }
 
 void AMainPlayer::Request_Run()
@@ -2414,19 +2431,19 @@ void AMainPlayer::Server_DrinkWater_Implementation(UPrimitiveComponent* WaterCom
 			StatusComponent->IncreaseHydration(5.0f);
 		}
 		
-		if (EatingSound) 
+		if (DrinkingSound) 
 		{
-			Multi_PlaySoundAtLocation(EatingSound, GetActorLocation());
+			Multi_PlaySoundAtLocation(DrinkingSound, GetActorLocation());
 		}
 		LastDrinkTime = CurrentTime;
 	}
 	else if (ClassName.Contains(TEXT("WaterBodyOcean")))
 	{
 		StatusComponent->DecreaseHydration(5.0f);
-        
-		if (EatingSound) 
+		
+		if (EwSound) 
 		{
-			Multi_PlaySoundAtLocation(EatingSound, GetActorLocation());
+			Multi_PlaySoundAtLocation(EwSound, GetActorLocation());
 		}
 
 		LastDrinkTime = CurrentTime;

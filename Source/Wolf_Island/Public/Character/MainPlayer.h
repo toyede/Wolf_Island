@@ -115,26 +115,26 @@ public:
 	
 	virtual void OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState) override;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	class AMainPlayerController* MainPlayerController;
 	//HUD=============================================================================
 	//UPROPERTY(EditAnywhere)
 	//class AMainHUD* HUD;
 	
 	//컴포넌트=========================================================================
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UCameraComponent* FirstPersonCamera;
 
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UStatusComponent* StatusComponent;
 
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UInventoryComponent* InventoryComponent;
 
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UWeaponComponent* WeaponComponent;
 	
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UBuildingComponent* BuildingComponent;
 	
 	//횃불
@@ -147,10 +147,10 @@ public:
 	TSubclassOf<UAnimInstance> TorchAnimLayerClass;
 	
 	//부력 컴포넌트 - 수영을 위한 것
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UBuoyancyComponent* BuoyancyComponent;
 	
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UBillboardComponent* WaterLevelCheckPoint;
 	
 	UPROPERTY(BlueprintReadWrite)
@@ -170,43 +170,43 @@ public:
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
 	float MovementMultiplier = 1.0f;
 	
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement")
 	float KnockOutSpeed = 100.0f;
 	
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement")
 	float WalkSpeed = 300.0f;
 	
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement")
 	float RunSpeed = 750.0f;
 	
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement")
 	float CrouchSpeed = 150.0f;
 	
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement")
 	float DefaultHeight = 88.0f;
 	
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement")
 	float DefaultZ = -88.0f;
 	
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement")
 	float CrouchHeight = 60.0f;
 	
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement")
 	float CrouchZ = -60.0f;
 	
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
 	float SwimmingSpeed = 300.0f;
 	
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
 	float SwimmingSprintSpeed = 500.0f;
 	
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
 	float WaterDeceleration = 0.4f;
 	
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
 	float WaterSurfaceOffset = 50.0f;
 	
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Swim")
 	float WaterSuffocatedOffest = 55.0f;
 	
 	//입력 관련 변수====================================================================
@@ -263,7 +263,7 @@ public:
 	FTimerHandle KnockOutTimer;
 	
 	//기절 후 사망까지 소요 시간
-	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	float KnockOutToDeathTime = 30.0f;
 	
 	//뛰는 중인지
@@ -295,15 +295,15 @@ public:
 	bool IsInability = false;
 
 	//공격 소모 스태미나
-	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	float AttackConsumeAmount = 1.0f;
 
 	//점프 소모 스태미나
-	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	float JumpConsumeAmount = 1.0f;
 
 	//슬라이딩 소모 스태미나
-	UPROPERTY(Replicated,EditDefaultsOnly, BlueprintReadWrite, Category="State")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="State")
 	float SlideConsumeAmount = 2.0f;
 
 	//인벤토리가 열려 있는지
@@ -384,6 +384,10 @@ public:
 	USoundBase* JumpSound;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
 	USoundBase* EatingSound;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
+	USoundBase* DrinkingSound;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
+	USoundBase* EwSound;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
 	USoundBase* PunchSound;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
