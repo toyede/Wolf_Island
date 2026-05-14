@@ -17,7 +17,11 @@
 #include "Games/MainPlayerState.h"
 #include "LevelSequence.h"
 #include "LevelSequenceActor.h"
+#include "MediaPlayer.h"
+#include "MediaSource.h"
+#include "Blueprint/UserWidget.h"
 #include "LevelSequencePlayer.h"
+#include "MediaSoundComponent.h"
 #include "MovieSceneSequencePlayer.h"
 
 APortalActor::APortalActor()
@@ -43,6 +47,9 @@ APortalActor::APortalActor()
 	MultiReadyVolume->SetCollisionResponseToAllChannels(ECR_Ignore);
 	MultiReadyVolume->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	MultiReadyVolume->SetGenerateOverlapEvents(true);
+	
+	MediaSoundComponent = CreateDefaultSubobject<UMediaSoundComponent>(TEXT("MediaSoundComponent"));
+	MediaSoundComponent->SetupAttachment(Root);
 }
 
 void APortalActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -99,9 +106,9 @@ void APortalActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		GS->OnUnlockedRecordsChanged.RemoveDynamic(this, &APortalActor::HandleUnlockedRecordsChanged);
 	}
 	
-	if (SequencePlayer)
+	if (TeleportMediaPlayer)
 	{
-		SequencePlayer->OnFinished.RemoveDynamic(this, &APortalActor::OnTeleportSequenceFinished);
+		TeleportMediaPlayer->OnEndReached.RemoveDynamic(this, &APortalActor::OnTeleportVideoFinished);
 	}
 	
 	Super::EndPlay(EndPlayReason);
@@ -387,9 +394,9 @@ void APortalActor::TeleportAllPlayers()
 
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Portal Triggered"));
 	
-	if (TeleportSequence)
+	if (TeleportMediaPlayer && TeleportMediaSource)
 	{
-		Multicast_PlayTeleportSequence();
+		Multicast_PlayTeleportVideo();
 	}
 	else if (HasAuthority())
 	{
@@ -436,9 +443,9 @@ void APortalActor::TeleportPlayer(AActor* Interactor)
 
 	Pawn->TeleportTo(TargetLocation + Offset, TargetRotation);
 
-	if (TeleportSequence)
+	if (TeleportMediaPlayer && TeleportMediaSource)
 	{
-		Multicast_PlayTeleportSequence();
+		Multicast_PlayTeleportVideo();
 	}
 	else if (HasAuthority())
 	{
@@ -531,41 +538,59 @@ void APortalActor::ResolveTargetPortal()
 	}
 }
 
-void APortalActor::OnTeleportSequenceFinished()
+void APortalActor::OnTeleportVideoFinished()
 {
+	if (TeleportMediaPlayer)
+	{
+		TeleportMediaPlayer->OnEndReached.RemoveDynamic(this, &APortalActor::OnTeleportVideoFinished);
+	}
+
 	if (AMainPlayerController* LocalPC = Cast<AMainPlayerController>(GetWorld()->GetFirstPlayerController()))
 	{
 		LocalPC->ToggleMainUI(true);
 	}
+
+	if (VideoWidgetInstance)
+	{
+		VideoWidgetInstance->RemoveFromParent();
+		VideoWidgetInstance = nullptr;
+	}
+
 	if (HasAuthority())
 	{
 		OnPortalTriggered.Broadcast(this);
 	}
 }
 
-void APortalActor::Multicast_PlayTeleportSequence_Implementation()
+void APortalActor::Multicast_PlayTeleportVideo_Implementation()
 {
-	if (!TeleportSequence) return;
+	if (!TeleportMediaPlayer || !TeleportMediaSource) return;
 
-	FMovieSceneSequencePlaybackSettings PlaybackSettings;
-
-	PlaybackSettings.bDisableMovementInput = true; 
-	PlaybackSettings.bDisableLookAtInput = true;   
-	PlaybackSettings.bHideHud = true;
-	
-	ALevelSequenceActor* OutActor;
-
-	SequencePlayer = ULevelSequencePlayer::CreateLevelSequencePlayer(GetWorld(), TeleportSequence, PlaybackSettings, OutActor);
-
-	if (SequencePlayer)
+	if (MediaSoundComponent)
 	{
-		SequencePlayer->OnFinished.AddDynamic(this, &APortalActor::OnTeleportSequenceFinished);
-
-		if (AMainPlayerController* LocalPC = Cast<AMainPlayerController>(GetWorld()->GetFirstPlayerController()))
-		{
-			LocalPC->ToggleMainUI(false);
-		}
-
-		SequencePlayer->Play();
+		MediaSoundComponent->SetMediaPlayer(TeleportMediaPlayer);
 	}
+
+	if (AMainPlayerController* LocalPC = Cast<AMainPlayerController>(GetWorld()->GetFirstPlayerController()))
+	{
+		LocalPC->ToggleMainUI(false);
+
+		if (LocalPC->IsLocalController() && TeleportVideoWidgetClass)
+		{
+			if (!VideoWidgetInstance)
+			{
+				VideoWidgetInstance = CreateWidget<UUserWidget>(LocalPC, TeleportVideoWidgetClass);
+			}
+			
+			if (VideoWidgetInstance && !VideoWidgetInstance->IsInViewport())
+			{
+				VideoWidgetInstance->AddToViewport(9999);
+			}
+		}
+	}
+
+	TeleportMediaPlayer->OnEndReached.AddUniqueDynamic(this, &APortalActor::OnTeleportVideoFinished);
+
+	TeleportMediaPlayer->OpenSource(TeleportMediaSource);
+	TeleportMediaPlayer->Play();
 }
