@@ -43,6 +43,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Patrol|Expansion")
 	int32 MaxExpandCount = 5;
 
+	/** 이 스플라인의 확장을 비활성화할지 여부 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Patrol|Expansion")
+	bool bDisableExpansion = false;
+
 	/** 현재까지 확장된 횟수 (읽기 전용) */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Patrol|Expansion")
 	int32 CurrentExpandCount = 0;

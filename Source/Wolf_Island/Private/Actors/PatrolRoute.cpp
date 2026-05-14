@@ -72,6 +72,13 @@ void APatrolRoute::ExpandSplineFromCenter(float Scale)
 
 void APatrolRoute::OnMorningEvent()
 {
+	// 인스턴스 단위 비활성화 플래그 체크
+	if (bDisableExpansion)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[PatrolRoute] 확장 비활성화됨 - 이벤트 무시"));
+		return;
+	}
+
 	// 최대 횟수 체크 (MaxExpandCount가 0이면 무제한)
 	if (MaxExpandCount > 0 && CurrentExpandCount >= MaxExpandCount)
 	{
