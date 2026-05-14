@@ -12,7 +12,12 @@ class AMainPlayer;
 class AEnemyAIBoss;
 class ULevelSequence;
 class ULevelSequencePlayer;
+class UMediaPlayer;
+class UMediaSoundComponent;
+class UMediaSource;
+class UUserWidget;
 class APortalActor;
+
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPortalTriggered, APortalActor*, TriggeredPortal);
 
@@ -123,17 +128,28 @@ private:
 	TArray<TObjectPtr<AMainPlayer>> LastTriggeredPartyMembers;
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cinematic")
-	ULevelSequence* TeleportSequence;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Media")
+	UMediaPlayer* TeleportMediaPlayer;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Media")
+	UMediaSource* TeleportMediaSource;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Media")
+	UMediaSoundComponent* MediaSoundComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Media")
+	TSubclassOf<UUserWidget> TeleportVideoWidgetClass;
 
 	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_PlayTeleportSequence();
+	void Multicast_PlayTeleportVideo();
 
 protected:
 	UFUNCTION()
-	void OnTeleportSequenceFinished();
+	void OnTeleportVideoFinished();
 
 private:
+	UPROPERTY()
+	UUserWidget* VideoWidgetInstance;
 	UPROPERTY()
 	ULevelSequencePlayer* SequencePlayer;
 };
