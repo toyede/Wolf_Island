@@ -52,7 +52,7 @@ public:
 	// 모든 클라이언트에서 파괴 효과를 재생하는 멀티캐스트
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_PlayDestroyEffects();
-
+	
 	// 서버에서 아이템을 스폰하는 함수
 	void SpawnDrops();
 
@@ -63,6 +63,9 @@ public:
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UStaticMeshComponent* TreeMesh;
+	
+	UPROPERTY(ReplicatedUsing = OnRep_SetTree)
+	UStaticMesh* CurrentTreeMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UStatusComponent* StatusComponent;
@@ -83,10 +86,15 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 	USoundBase* DestroySound;
 	
+	UFUNCTION()
+	void OnRep_SetTree() { TreeMesh->SetStaticMesh(CurrentTreeMesh); };
+	
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+	
 public:
 	//저장 관련 코드
 	virtual void SaveData_Implementation(FActorSaveData& OutData0) override;
 	virtual void LoadData_Implementation(const FActorSaveData& InData) override;
 	
-	void SetTreeMesh(UStaticMesh* NewTreeMesh) const { TreeMesh->SetStaticMesh(NewTreeMesh); };
+	void SetTreeMesh(UStaticMesh* NewTreeMesh);
 };

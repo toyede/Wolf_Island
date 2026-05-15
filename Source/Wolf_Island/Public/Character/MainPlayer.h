@@ -358,6 +358,9 @@ public:
 	//인터랙션 가능한 지
 	UPROPERTY(ReplicatedUsing=OnRep_CanInteract, EditDefaultsOnly, BlueprintReadWrite, Category="Interaction", SaveGame)
 	bool CanInteract = false;
+	//날 인터랙트 하고 있는 다른 플레이어
+	UPROPERTY(ReplicatedUsing=OnRep_Interacted)
+	AMainPlayer* InteractingPlayer;
 
 	//애니메이션 변수======================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
@@ -420,8 +423,7 @@ public:
 	// 채집 시 플레이어 인벤토리로 들어올 아이템 정보 및 스폰될 BP가 담긴 맵
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	TMap<UStaticMesh*, FFoliageReward> FoliageRewardMap;
-
-public:
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	TSubclassOf<class AActor> OutlineActorClass;
 	
@@ -700,6 +702,22 @@ public:
 	void OnRep_CanInteract() { InteractableData.CanInteract = CanInteract; };
 	UFUNCTION()
 	void OnRep_InteractionDuration() { InteractableData.InteractionDuration = InteractionDuration; };
+	UFUNCTION()
+	void OnRep_Interacted();
+	
+	UFUNCTION()
+	void Request_BeginInteractPlayer(AActor* Target);
+	UFUNCTION(Server, Reliable)
+	void Server_BeginInteractPlayer(AActor* Target);
+	UFUNCTION()
+	void BeginInteractPlayer(AActor* Target);
+	
+	UFUNCTION()
+	void Request_EndInteractPlayer(AActor* Target);
+	UFUNCTION(Server, Reliable)
+	void Server_EndInteractPlayer(AActor* Target);
+	UFUNCTION()
+	void EndInteractPlayer(AActor* Target);
 		
 	//달리기
 	UFUNCTION()

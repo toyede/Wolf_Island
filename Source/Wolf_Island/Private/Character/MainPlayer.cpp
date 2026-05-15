@@ -254,11 +254,8 @@ void AMainPlayer::BeginPlay()
 	InteractableData.CanInteract = false;
 	
 	//토치 설정
-	if (HasAuthority())
-	{
-		FActorSpawnParameters SpawnParams;
-		Torch = GetWorld()->SpawnActor<ATorch>(TorchClass, SpawnParams);
-	}
+	FActorSpawnParameters SpawnParams;
+	Torch = GetWorld()->SpawnActor<ATorch>(TorchClass, SpawnParams);
 	
 	if (Torch)
 	{
@@ -1189,6 +1186,8 @@ void AMainPlayer::CheckInteraction()
 
 void AMainPlayer::FoundInteractable(AActor* Interactable)
 {
+	//UE_LOG(LogTemp, Warning, TEXT("[PLAYER] FOUND IMTERACTABLE"));
+	
 	if (IsInteracting()) 
 	{
 		EndInteract();
@@ -1239,6 +1238,7 @@ void AMainPlayer::FoundInteractable(AActor* Interactable)
 //인터랙션 가능 액터를 못찾았을 때
 void AMainPlayer::NotFoundInteractable()
 {
+	//UE_LOG(LogTemp, Warning, TEXT("[PLAYER] NOT FOUND INTERACTABLE"));
 	//인터랙션 중이면
 	if (IsInteracting())
 	{
@@ -1247,12 +1247,18 @@ void AMainPlayer::NotFoundInteractable()
 
 	//인터랙션 액터 데이터가 있으면
 	if (InteractionData.CurrentInteractable) 
-	{
+	{		
+		//인터랙션 타겟 액터
+		if (AActor* Target = Cast<AActor>(TargetInteractionInterface.GetObject()))
+		{
+			Request_EndInteractPlayer(Target);
+		}
+		
 		//그 액터가 아직 유효한 액터면
 		if (IsValid(TargetInteractionInterface.GetObject()))
 		{
 			//포커스 끝내기
-			TargetInteractionInterface->Execute_EndFocus(InteractionData.CurrentInteractable);
+			TargetInteractionInterface->Execute_EndFocus(InteractionData.CurrentInteractable);			
 		}
 
 		//TODO:여기 인터랙션 UI 업데이트 코드 추가 예정
@@ -1306,6 +1312,7 @@ void AMainPlayer::Client_InteractionExecuted_Implementation()
 //인터랙션 시작 함수 (인터랙션 키 눌렀을 때)
 void AMainPlayer::BeginInteract()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] BeginInteract"));
 	if (IsBuildingInputBlocked()) return;
 
 	//인터랙션이 시작됐을 때부터 인터렉션 상태가 변하지 않는 것을 체크
@@ -1318,6 +1325,10 @@ void AMainPlayer::BeginInteract()
 		{
 			//인터랙션 타겟 액터
 			AActor* Target = Cast<AActor>(TargetInteractionInterface.GetObject());
+			
+			//타겟이 플레이어일 때, 그 플레이어에게 내가 너 인터랙팅 중임! 이라고 알림
+			Request_BeginInteractPlayer(Target);
+			
 			//인터랙션 액터의 인터랙션 시작 함수 실행
 			//TargetInteractionInterface->BeginInteract();
 			//즉시 인터랙션이 가능하면 (꾹 누르는 인터랙션이 아니면)
@@ -1362,11 +1373,21 @@ void AMainPlayer::BeginInteract()
 
 void AMainPlayer::EndInteract()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] EndInteract"));
 	if (IsBuildingInputBlocked()) return;
-
+	
 	if (HUD)
 	{
 		HUD->HideInteraction();
+	}
+	
+	if (InteractionData.CurrentInteractable)
+	{
+		//인터랙션 타겟 액터
+		AActor* Target = Cast<AActor>(TargetInteractionInterface.GetObject());
+		
+		//인터랙션 타겟이 플레이어면 그만 만진다고 알림!
+		Request_EndInteractPlayer(Target);
 	}
 	
 	//인터랙션 타이머 클리어
@@ -1409,6 +1430,8 @@ void AMainPlayer::Interaction_Implementation(AActor* Target)
 		{
 			//인터랙션 액터의 인터랙션 함수 실행
 			TargetInteractionInterface->Execute_Interact(Target, this);
+			
+			Request_EndInteractPlayer(Target);
 		}
 	}
 }
@@ -1519,14 +1542,47 @@ void AMainPlayer::WeaponTrace(const FVector& StartPos, const FVector& EndPos)
 
 		//최초로 맞은 액터면 맞은 액터 배열에 추가
 		DamagedActors.Add(HitActor);
-		
-		//대미지 적용
-		/*UGameplayStatics::ApplyDamage(
-			HitActor,
-			Damage,
-			GetController(),
-			this,
-			UDamageType::StaticClass());*/
+
+		//판정 함수 호출 (맞은 정보와 대미지를 전달)
+		ProcessAttackHit(Hit, DamageAmount);
+	}
+	
+	FVector AimPos = FirstPersonCamera->GetComponentLocation();
+	FVector AimStartPos = AimPos + FirstPersonCamera->GetForwardVector() * 60.0f;
+	FVector AimEndPos = AimPos + FirstPersonCamera->GetForwardVector() * 60.0f;
+	
+	//에임에 트레이스 하나 더 실행
+	if (UKismetSystemLibrary::SphereTraceSingle(
+		GetWorld(),
+		AimStartPos,
+		AimEndPos,
+		1.0f,
+		TraceTypeQuery,
+		true,
+		IgnoreActors,
+		EDrawDebugTrace::None,
+		//EDrawDebugTrace::ForDuration,
+		Hit,
+		true))
+	{
+		// 기본 대미지
+		float DamageAmount = 0.0f;
+		FItemBaseData HoldingItem = GetHoldingItemReference();
+
+		//무기 장착 시 무기 대미지로 설정
+		if (HoldingItem.IsValid())
+		{
+			if (FItemData* ItemData = InventoryComponent->GetItemData(HoldingItem))
+			{
+				DamageAmount = ItemData->NumericData.Damage;
+			}
+		}
+
+		//최초로 맞고 또 맞은 액터면 무시
+		if (DamagedActors.Contains(HitActor)) return;
+
+		//최초로 맞은 액터면 맞은 액터 배열에 추가
+		DamagedActors.Add(HitActor);
 
 		//판정 함수 호출 (맞은 정보와 대미지를 전달)
 		ProcessAttackHit(Hit, DamageAmount);
@@ -1969,6 +2025,7 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 	ATree* NewTree = GetWorld()->SpawnActor<ATree>(TargetActorClass, InstanceTransform, SpawnParams);
 	NewTree->SetTreeMesh(HitMesh);
 	NewTree->EnsureGUID();
+	
 	UE_LOG(LogTemp, Warning, TEXT("Spawn Tree class : %s"), *NewTree->GetClass()->GetName());
 	// 데미지 전달
 	if (NewTree)
@@ -2164,6 +2221,90 @@ void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 	DOREPLIFETIME(AMainPlayer, CanInteract);
 	DOREPLIFETIME(AMainPlayer, CharacterRole);
 	DOREPLIFETIME(AMainPlayer, SwimMode);
+	DOREPLIFETIME(AMainPlayer, InteractingPlayer);
+}
+
+void AMainPlayer::OnRep_Interacted()
+{
+	//여기서 HUD로 살리는 중! 보여주기
+	//날 만지는 사람이 있다..
+	if (InteractingPlayer)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] SOMEONE TOUCHING ME...(%s)"), *GetName());
+		if (HUD)
+		{
+			HUD->DisplayInteractionInfoText(InteractingPlayer);
+		}
+	} 
+	//이제 아무도 안만짐
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] STOP TOUCHING ME...(%s)"), *GetName());
+		if (HUD)
+		{
+			HUD->HideInteractionInfoText();
+		}
+	}
+}
+
+void AMainPlayer::Request_BeginInteractPlayer(AActor* Target)
+{
+	if (HasAuthority())
+	{
+		BeginInteractPlayer(Target);
+	} else
+	{
+		Server_BeginInteractPlayer(Target);
+	}
+}
+
+void AMainPlayer::Server_BeginInteractPlayer_Implementation(AActor* Target)
+{
+	BeginInteractPlayer(Target);
+}
+
+void AMainPlayer::BeginInteractPlayer(AActor* Target)
+{
+	if (!Target) return;
+	
+	if (AMainPlayer* NewTarget = Cast<AMainPlayer>(Target))
+	{
+		if (!NewTarget->IsInability) return;
+		
+		NewTarget->InteractingPlayer = this;
+		NewTarget->OnRep_Interacted();
+	}
+}
+
+void AMainPlayer::Request_EndInteractPlayer(AActor* Target)
+{
+	if (HasAuthority())
+	{
+		EndInteractPlayer(Target);
+	} else
+	{
+		Server_EndInteractPlayer(Target);
+	}
+}
+
+void AMainPlayer::Server_EndInteractPlayer_Implementation(AActor* Target)
+{
+	EndInteractPlayer(Target);
+}
+
+void AMainPlayer::EndInteractPlayer(AActor* Target)
+{
+	if (!Target) return;
+	
+	if (AMainPlayer* NewTarget = Cast<AMainPlayer>(Target))
+	{
+		if (NewTarget->InteractingPlayer == this)
+		{
+			NewTarget->InteractingPlayer = nullptr;
+			NewTarget->OnRep_Interacted();
+		}
+	}
+	
 }
 
 void AMainPlayer::Request_Run()
