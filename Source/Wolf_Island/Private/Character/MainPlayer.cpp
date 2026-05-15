@@ -222,6 +222,10 @@ void AMainPlayer::BeginPlay()
 			//배고픔, 수분 감소 시작
 			StatusComponent->StartHunger();
 			StatusComponent->StartHydration();
+
+			//강제 휴식 애님 바인딩 (서버에서 브로드캐스트되므로 서버에서만 바인딩)
+			StatusComponent->OnForcedRestStart.AddDynamic(this, &AMainPlayer::Multi_PlayForcedRestStart);
+			StatusComponent->OnForcedRestEnd.AddDynamic(this, &AMainPlayer::Multi_PlayForcedRestEnd);
 		}
 		
 		//산소 게이지 숨기기 바인딩(테스트용)
@@ -298,6 +302,10 @@ void AMainPlayer::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 			//죽음 바인딩
 			StatusComponent->OnHPZero.RemoveDynamic(this, &AMainPlayer::OnDeath);
+
+			//강제 휴식 애님 바인딩 해제
+			StatusComponent->OnForcedRestStart.RemoveDynamic(this, &AMainPlayer::Multi_PlayForcedRestStart);
+			StatusComponent->OnForcedRestEnd.RemoveDynamic(this, &AMainPlayer::Multi_PlayForcedRestEnd);
 		}
 		
 		//산소 게이지 숨기기 바인딩(테스트용)
@@ -2476,6 +2484,52 @@ void AMainPlayer::Server_StopCraft_Implementation()
 void AMainPlayer::Multi_PlayAnimMontage_Implementation(UAnimMontage* Anim)
 {
 	PlayAnimMontage(Anim);
+}
+
+void AMainPlayer::Multi_PlayForcedRestStart_Implementation()
+{
+	if (!SitDownMontage) return;
+
+	// 주저앉기 = 일어서는 모션을 PlayRate -1로 역재생
+	PlayAnimMontage(SitDownMontage, -1.0f);
+
+	// 몽타주가 끝났을 때(역재생 완료 = 앉은 자세) 마지막 프레임에서 멈추도록 바인딩
+	if (UAnimInstance* AnimInst = GetMesh()->GetAnimInstance())
+	{
+		// 중복 바인딩 방지
+		AnimInst->OnMontageEnded.RemoveDynamic(this, &AMainPlayer::OnSitDownMontageEnded);
+		AnimInst->OnMontageEnded.AddDynamic(this, &AMainPlayer::OnSitDownMontageEnded);
+	}
+}
+
+void AMainPlayer::OnSitDownMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (Montage != SitDownMontage) return;
+
+	UAnimInstance* AnimInst = GetMesh()->GetAnimInstance();
+	if (!AnimInst) return;
+
+	// 콜백 제거
+	AnimInst->OnMontageEnded.RemoveDynamic(this, &AMainPlayer::OnSitDownMontageEnded);
+
+	// 중단(인터럽트)된 게 아니고 아직 강제 휴식 중이면 앉은 포즈 유지
+	if (!bInterrupted && StatusComponent && StatusComponent->bIsForcedResting)
+	{
+		// 이미 끝난 몽타주는 Pause가 무시되므로:
+		// position 0.0(앉은 포즈)에서 다시 Play한 뒤 즉시 Pause → 포즈 고정
+		AnimInst->Montage_Play(SitDownMontage, 1.0f, EMontagePlayReturnType::MontageLength, 0.0f, true);
+		AnimInst->Montage_Pause(SitDownMontage);
+	}
+}
+
+void AMainPlayer::Multi_PlayForcedRestEnd_Implementation()
+{
+	// PlayAnimMontage가 내부적으로 기존 몽타주(일시정지된 SitDown)를 교체하므로
+	// 별도로 Montage_Stop 호출 불필요 → 그 사이 Idle 프레임 방지
+	if (StandUpMontage)
+	{
+		PlayAnimMontage(StandUpMontage, 1.0f);
+	}
 }
 
 void AMainPlayer::Multi_PlaySoundAtLocation_Implementation(USoundBase* Sound, FVector Location)

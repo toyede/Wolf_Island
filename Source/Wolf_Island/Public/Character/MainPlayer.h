@@ -368,6 +368,12 @@ public:
 	UAnimMontage* FuckyouMontage;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
 	UAnimMontage* PickUpMontage;
+	// 스태미나 소진 주저앉기 몽타주 (일어서는 모션을 PlayRate -1로 역재생)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
+	UAnimMontage* SitDownMontage;
+	// 스태미나 회복 후 일어서기 몽타주
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
+	UAnimMontage* StandUpMontage;
 
 	//위젯=============================================================================
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Widget")
@@ -796,6 +802,18 @@ public:
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_PlayAnimMontage(UAnimMontage* Anim);
+
+	// 강제 휴식 시작 - 주저앉기 몽타주 재생 (멀티캐스트)
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_PlayForcedRestStart();
+
+	// 강제 휴식 종료 - 일어서기 몽타주 재생 (멀티캐스트)
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_PlayForcedRestEnd();
+
+	// 주저앉기 몽타주 종료 콜백 - 마지막 프레임 유지용
+	UFUNCTION()
+	void OnSitDownMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 
 	// 물 마시기 추가(준행)

@@ -388,6 +388,8 @@ void UStatusComponent::ForcedRest()
 {
 	if (!GetWorld()->GetTimerManager().IsTimerActive(ForcedRestTimer))
 	{
+		bIsForcedResting = true; // 휴식상태
+		OnForcedRestStart.Broadcast();
 		DisableController();
 		
 		GetWorld()->GetTimerManager().SetTimer(
@@ -407,6 +409,8 @@ void UStatusComponent::DisableController()
 
 void UStatusComponent::EnableController()
 {
+	bIsForcedResting = false;
+	OnForcedRestEnd.Broadcast();
 	Request_SetInputMode(true);
 	
 	RecoverStamina();
@@ -602,6 +606,7 @@ void UStatusComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
 	DOREPLIFETIME(UStatusComponent, CurrentInfectionRate);
 	DOREPLIFETIME(UStatusComponent, IsInfected);
 	DOREPLIFETIME(UStatusComponent, ShowCurrentHP);
+	DOREPLIFETIME(UStatusComponent, bIsForcedResting);
 }
 
 void UStatusComponent::Request_SetInputMode(bool IsEnable)
