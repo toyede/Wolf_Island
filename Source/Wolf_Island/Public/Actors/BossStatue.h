@@ -34,7 +34,7 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnStatueDestroyed OnStatueDestroyed;
 
-	// ·¯½¬ Ãæµ¹ ½Ã ¹Ş´Â Ãß°¡ µ¥¹ÌÁö ¹èÀ²
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½æµ¹ ï¿½ï¿½ ï¿½Ş´ï¿½ ï¿½ß°ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	UPROPERTY(EditAnywhere, Category = "Statue|Combat")
 	float RushDamageMultiplier = 3.0f;
 
@@ -45,12 +45,17 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Statue|Healing")
 	float HealInterval = 2.0f;
 
-	// ÆÄ±« ÀÌÆåÆ® ³ªÁß¿¡
+	// ï¿½Ä±ï¿½ ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ß¿ï¿½
 	UPROPERTY(EditAnywhere, Category = "Statue|Effects")
 	class UNiagaraSystem* DestroyEffect;
 
+	// BossRush ì±„ë„ ê°ì§€ìš© (ëŒì§„ íˆíŠ¸ íŒì •)
 	UPROPERTY(EditAnywhere, Category = "Collision")
 	UBoxComponent* BoxCollision;
+
+	// í”Œë ˆì´ì–´ ë¬¼ë¦¬ ì°¨ë‹¨ ì „ìš© (WorldDynamic)
+	UPROPERTY(EditAnywhere, Category = "Collision")
+	UBoxComponent* BlockingCollision;
 
 	UPROPERTY(EditAnywhere, Category = "Statue|Effects")
 	class UNiagaraSystem* HealEffect;

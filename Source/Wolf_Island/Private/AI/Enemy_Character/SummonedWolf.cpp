@@ -40,9 +40,21 @@ void ASummonedWolf::BeginPlay()
 		AttackCollisionComponent->OnHitActor.AddUObject(this, &ASummonedWolf::OnAttackHit);
 		AttackCollisionComponent->AddIgnoredActor(this);
 
-		if (AActor* OwnerBoss = GetOwner())
+		AActor* OwnerBoss = GetOwner();
+		if (OwnerBoss)
 		{
 			AttackCollisionComponent->AddIgnoredActor(OwnerBoss);
+		}
+		else
+		{
+			// Owner가 아직 없을 경우 한 프레임 뒤에 재시도
+			GetWorldTimerManager().SetTimerForNextTick([this]()
+			{
+				if (AttackCollisionComponent && GetOwner())
+				{
+					AttackCollisionComponent->AddIgnoredActor(GetOwner());
+				}
+			});
 		}
 	}
 
@@ -261,6 +273,12 @@ void ASummonedWolf::OnAttackHit(const FHitResult& HitResult)
 
 	AActor* HitActor = HitResult.GetActor();
 	if (!HitActor)
+	{
+		return;
+	}
+
+	// 보스(Owner) 또는 같은 소환 늑대끼리는 피해 무시
+	if (HitActor == GetOwner() || HitActor->IsA(ASummonedWolf::StaticClass()))
 	{
 		return;
 	}

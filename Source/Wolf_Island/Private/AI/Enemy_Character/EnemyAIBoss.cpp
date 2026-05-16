@@ -184,7 +184,7 @@ void AEnemyAIBoss::SpawnStatueSequence()
 		AStatueForewarning* Forewarning = GetWorld()->SpawnActor<AStatueForewarning>(
 			ForewarningClass,
 			SpawnLocation,
-			FRotator::ZeroRotator
+			SelectedPoint->GetActorRotation()
 		);
 
 		if (Forewarning)
@@ -237,6 +237,7 @@ void AEnemyAIBoss::TrySpawnStatueWithRetry()
 	}
 
 	const FVector SpawnLocation = PendingSpawnPoint->GetActorLocation();
+	const FRotator SpawnRotation = PendingSpawnPoint->GetActorRotation();
 
 	if (IsSpawnAreaOccupied(SpawnLocation))
 	{
@@ -277,7 +278,7 @@ void AEnemyAIBoss::TrySpawnStatueWithRetry()
 	ABossStatue* Spawned = GetWorld()->SpawnActor<ABossStatue>(
 		StatueClass,
 		SpawnLocation,
-		FRotator::ZeroRotator,
+		SpawnRotation,
 		SpawnParams
 	);
 
