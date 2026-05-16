@@ -251,6 +251,9 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputAction* DropItemAction;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
+	UInputAction* EmotionAction;
 
 	//상태 관련 변수 (뛰는 중인지, ~~하는 중인지 등등)=====================================
 	
@@ -371,6 +374,11 @@ public:
 	UAnimMontage* FuckyouMontage;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
 	UAnimMontage* PickUpMontage;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
+	UAnimMontage* DrinkMontage;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
+	TArray<UAnimMontage*> EmotionMontages;
 
 	//위젯=============================================================================
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Widget")
@@ -697,6 +705,20 @@ public:
 	//서버 실행 함수 안에서는 실제 작동 함수를 실행시킴.
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	
+	//감정표현
+	UFUNCTION(BlueprintCallable)
+	void Emotion(const FInputActionInstance& Instance);
+	UFUNCTION()
+	void Request_Emotion(UAnimMontage* Emotion);
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void Server_Emotion(UAnimMontage* Emotion);
+	
+	UFUNCTION()
+	void Request_StopEmotion(UAnimMontage* Emotion=nullptr);
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void Server_StopEmotion(UAnimMontage* Emotion=nullptr);
+	
+	
 	//인터랙션
 	UFUNCTION()
 	void OnRep_CanInteract() { InteractableData.CanInteract = CanInteract; };
@@ -814,6 +836,9 @@ public:
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_PlayAnimMontage(UAnimMontage* Anim);
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_StopAnimMontage(UAnimMontage* Anim);
 
 
 	// 물 마시기 추가(준행)

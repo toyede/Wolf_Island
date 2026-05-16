@@ -406,6 +406,10 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 		//아이템 버리기
 		EnhancedInputComponent->BindAction(DropItemAction, ETriggerEvent::Started,
 			this, &AMainPlayer::DropItemOnHotBar);
+		
+		//감정표현
+		EnhancedInputComponent->BindAction(EmotionAction, ETriggerEvent::Started,
+			this, &AMainPlayer::Emotion);
 	}
 }
 
@@ -995,6 +999,8 @@ void AMainPlayer::KnockOut()
 	//일단 기본 스탠드 상태로 전환
 	if (IsCrouching) Request_ToggleCrouch();
 	if (IsRunning) Request_StopRun();
+	
+	Request_StopEmotion();
 	
 	//기절 타이머 실행 - 누가 소생시켜주지 않으면 10초 뒤 사망
 	GetWorld()->GetTimerManager().SetTimer(
@@ -2200,6 +2206,63 @@ void AMainPlayer::StopCraft()
 	GetWorld()->GetTimerManager().ClearTimer(CraftTimer);
 }
 
+void AMainPlayer::Emotion(const FInputActionInstance& Instance)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Emotion"));
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (PC)
+	{
+		if (PC->IsInputKeyDown(EKeys::One))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Ctrl + 1"));
+			if (EmotionMontages[0])
+			{
+				Request_Emotion(EmotionMontages[0]);
+			}
+		}
+		else if (PC->IsInputKeyDown(EKeys::Two))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Ctrl + 2"));
+			if (EmotionMontages[1])
+			{
+				Request_Emotion(EmotionMontages[1]);
+			}
+		}
+	}
+}
+
+void AMainPlayer::Request_Emotion(UAnimMontage* Emotion)
+{
+	if (HasAuthority())
+	{
+		Multi_PlayAnimMontage(Emotion);
+	} else
+	{
+		Server_Emotion(Emotion);
+	}
+}
+
+void AMainPlayer::Server_Emotion_Implementation(UAnimMontage* Emotion)
+{
+	Multi_PlayAnimMontage(Emotion);
+}
+
+void AMainPlayer::Request_StopEmotion(UAnimMontage* Emotion)
+{
+	if (HasAuthority())
+	{
+		Multi_StopAnimMontage(Emotion);
+	} else
+	{
+		Server_StopEmotion(Emotion);
+	}
+}
+
+void AMainPlayer::Server_StopEmotion_Implementation(UAnimMontage* Emotion)
+{
+	Multi_StopAnimMontage(Emotion);
+}
+
 //멀티플레이어 코드
 
 void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -2523,6 +2586,11 @@ void AMainPlayer::Request_StopCraft()
 	}
 }
 
+void AMainPlayer::Multi_StopAnimMontage_Implementation(UAnimMontage* Anim)
+{
+	StopAnimMontage(Anim);
+}
+
 void AMainPlayer::FoundInteractableWater(UPrimitiveComponent* WaterComp)
 {
 	if (InteractionData.CurrentInteractable || InteractionData.CurrentFoliageComponent)
@@ -2550,13 +2618,14 @@ void AMainPlayer::Server_DrinkWater_Implementation(UPrimitiveComponent* WaterCom
 		bool bFilledBottle = false;
 
 		FItemBaseData HoldingItem = GetHoldingItemReference();
-		
+		//빈 물병 들고 있으면
 		if (HoldingItem.IsValid() && HoldingItem.ItemID == FName("FQ005"))
 		{
 			if (InventoryComponent)
 			{
 				InventoryComponent->Request_RemoveItemAmountAtSlot(HotBarIndex, 1);
 				
+				//빈 물병 지우고 찬 물병으로 넣기
 				FItemBaseData FilledWaterBottle = InventoryComponent->CreateItemByID(FName("FO019"), 1);
 				if (FilledWaterBottle.IsValid())
 				{
@@ -2570,21 +2639,22 @@ void AMainPlayer::Server_DrinkWater_Implementation(UPrimitiveComponent* WaterCom
 		if (bFilledBottle == false)
 		{
 			StatusComponent->IncreaseHydration(5.0f);
+			
+			if (DrinkMontage)
+			{
+				Multi_PlayAnimMontage(DrinkMontage);
+			}
 		}
 		
-		if (DrinkingSound) 
-		{
-			Multi_PlaySoundAtLocation(DrinkingSound, GetActorLocation());
-		}
 		LastDrinkTime = CurrentTime;
 	}
 	else if (ClassName.Contains(TEXT("WaterBodyOcean")))
 	{
 		StatusComponent->DecreaseHydration(5.0f);
 		
-		if (EwSound) 
+		if (DrinkMontage)
 		{
-			Multi_PlaySoundAtLocation(EwSound, GetActorLocation());
+			Multi_PlayAnimMontage(DrinkMontage);
 		}
 
 		LastDrinkTime = CurrentTime;
