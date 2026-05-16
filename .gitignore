@@ -74,3 +74,8 @@ Plugins/**/Intermediate/*
 DerivedDataCache/*
 
 Content/FreeSampleAnimationSet/*
+
+# 용량이 커서 올라가지 않는 메가스캔&etc... 에셋들 업로드 배제. 구글 드라이브나 USB로 공유
+Content/EuropeanHornbeam/*
+Content/Fab/Megascans/3D/*
+Content/TerrainRemixBrushes/*

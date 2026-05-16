@@ -80,6 +80,8 @@ public:
 	UPROPERTY(BlueprintAssignable, Category="Status Delegate")
 	FOnAirFull OnAirFull;
 	
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Widget")
+	bool ShowCurrentHP = false;
 
 	//늑대인간
 	//현재 감염률

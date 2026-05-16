@@ -19,6 +19,7 @@ ATree::ATree()
 	TreeMesh->SetCollisionProfileName(TEXT("BlockAll"));
 
 	StatusComponent = CreateDefaultSubobject<UStatusComponent>(TEXT("StatusComponent"));
+	StatusComponent->ShowCurrentHP = true;
 }
 
 void ATree::BeginPlay()
