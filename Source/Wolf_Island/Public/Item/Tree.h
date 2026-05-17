@@ -44,7 +44,7 @@ protected:
 public:
 	// 대미지 전달 및 파괴 판정
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
-
+	
 	// 파괴 시 실행될 함수
 	UFUNCTION()
 	void OnTreeDestroyed();
@@ -52,6 +52,9 @@ public:
 	// 모든 클라이언트에서 파괴 효과를 재생하는 멀티캐스트
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_PlayDestroyEffects();
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_PlaySoundAtLoaction(USoundBase* Sound, FVector Location);
 	
 	// 서버에서 아이템을 스폰하는 함수
 	void SpawnDrops();
@@ -69,6 +72,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UStatusComponent* StatusComponent;
+	
+	UPROPERTY(EditDefaultsOnly)
+	USoundBase* HitSound;
 	
 	// 모든 드랍 항목이 참조할 공통 데이터 테이블
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Settings")

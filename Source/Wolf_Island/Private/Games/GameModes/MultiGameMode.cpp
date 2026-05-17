@@ -11,6 +11,7 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "AIController.h"
 #include "AI/Enemy_Character/EnemyAIBoss.h"
+#include "Games/MainGameInstance.h"
 
 AMultiGameMode::AMultiGameMode()
 {
@@ -143,6 +144,19 @@ APawn* AMultiGameMode::SpawnDefaultPawnAtTransform_Implementation(AController* N
 		Params);
 	
 	return Player;
+}
+
+void AMultiGameMode::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	if (UMainGameInstance* GI = Cast<UMainGameInstance>(GetGameInstance()))
+	{
+		if (AMainGameState* GS = Cast<AMainGameState>(GetWorld()->GetGameState()))
+		{
+			GS->SetCurrentSessionCode(GI->GetSessionCode());
+		}
+	}
 }
 
 void AMultiGameMode::Logout(AController* Exiting)

@@ -55,6 +55,11 @@ float ATree::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, ACo
 	{
 		StatusComponent->DecreaseHP(ActualDamage);
 	}
+	
+	if (HitSound)
+	{
+		Multi_PlaySoundAtLoaction(HitSound, GetActorLocation());
+	}
 
 	return ActualDamage;
 }
@@ -79,6 +84,11 @@ void ATree::Multi_PlayDestroyEffects_Implementation()
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, DestroySound, GetActorLocation());
 	}
+}
+
+void ATree::Multi_PlaySoundAtLoaction_Implementation(USoundBase* Sound, FVector Location)
+{
+	UGameplayStatics::PlaySoundAtLocation(this, Sound, Location);
 }
 
 void ATree::SpawnDrops()

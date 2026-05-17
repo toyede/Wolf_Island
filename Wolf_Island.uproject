@@ -245,6 +245,10 @@
 		{
 			"Name": "LandscapePatch",
 			"Enabled": true
+		},
+		{
+			"Name": "SteamSockets",
+			"Enabled": true
 		}
 	],
 	"TargetPlatforms": [

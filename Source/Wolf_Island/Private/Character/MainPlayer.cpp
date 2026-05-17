@@ -1167,7 +1167,7 @@ void AMainPlayer::CheckInteraction()
 					ClassName.Contains(TEXT("WaterBodyRiver")) || 
 					ClassName.Contains(TEXT("WaterBodyLake")))
 				{
-					UE_LOG(LogTemp, Warning, TEXT("[PLAYER] FIND WATER : %s"), *ClassName);
+					//UE_LOG(LogTemp, Warning, TEXT("[PLAYER] FIND WATER : %s"), *ClassName);
 					if (GetWorld()->GetTimeSeconds() >= LastDrinkTime + DrinkCooldown)
 					{
 						if (InteractionData.CurrentWaterComponent != HitComp)
