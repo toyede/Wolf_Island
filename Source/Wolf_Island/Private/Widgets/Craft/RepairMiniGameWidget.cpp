@@ -2,7 +2,6 @@
 
 
 #include "Widgets/Craft/RepairMiniGameWidget.h"
-
 #include "Components/Button.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Components/Image.h"
@@ -37,69 +36,17 @@ void URepairMiniGameWidget::StartMiniGame(const FRepairRecipeData& RepairData)
     CurrentRepairData = RepairData;
     CurrentSuccesses = 0;
 
-    const float RawTarget = CurrentRepairData.Duration * SuccessCountPerSecond;
-    TargetSuccesses = FMath::CeilToInt(RawTarget);
-    TargetSuccesses = FMath::Clamp(TargetSuccesses, MinSuccesses, MaxSuccesses);
+    bCircleActive = false;
+    bMissedCurrentCircle = false;
+    CurrentShrinkSpeed = FMath::FRandRange(ShrinkSpeedMin, ShrinkSpeedMax);
 
-    HammerDirection = -1;
-    HammerSpeed = FMath::FRandRange(HammerSpeedMin, HammerSpeedMax);
-    bHammerActive = false;
-    bMissedCurrentHammer = false;
-    PrevHammerCenterX = HammerX;
-    bWasInZone = false;
-
-    if (ZoneImage)
-    {
-        ZoneOriginalColor = ZoneImage->GetColorAndOpacity();
-    }
-
-    // If a track image exists, use it to define the hammer travel range.
     if (TrackImage)
     {
-        if (UCanvasPanelSlot* TrackSlot = Cast<UCanvasPanelSlot>(TrackImage->Slot))
-        {
-            const FVector2D TrackPos = TrackSlot->GetPosition();
-            const FVector2D TrackSize = TrackSlot->GetSize();
-            HammerMinX = TrackPos.X;
-            HammerMaxX = TrackPos.X + TrackSize.X;
-
-            // Align zone to the track vertically if possible.
-            if (ZoneImage)
-            {
-                if (UCanvasPanelSlot* ZoneSlot = Cast<UCanvasPanelSlot>(ZoneImage->Slot))
-                {
-                    FVector2D ZonePos = ZoneSlot->GetPosition();
-                    ZonePos.Y = TrackPos.Y;
-                    ZoneSlot->SetPosition(ZonePos);
-                }
-            }
-        }
+        ZoneOriginalColor = TrackImage->GetColorAndOpacity();
     }
 
     if (HammerImage)
     {
-        if (UCanvasPanelSlot* HammerSlot = Cast<UCanvasPanelSlot>(HammerImage->Slot))
-        {
-            HammerWidth = HammerSlot->GetSize().X;
-            if (HammerWidth <= 0.0f)
-            {
-                HammerWidth = HammerImage->GetDesiredSize().X;
-            }
-
-            // Keep hammer fully within the track bounds.
-            if (HammerWidth > 0.0f)
-            {
-                HammerMaxX = FMath::Max(HammerMinX, HammerMaxX - HammerWidth);
-            }
-
-            HammerX = HammerMaxX;
-            HammerY = HammerSlot->GetPosition().Y;
-            HammerSlot->SetPosition(FVector2D(HammerX, HammerY));
-        }
-        else
-        {
-            HammerX = HammerMaxX;
-        }
         HammerImage->SetVisibility(ESlateVisibility::Hidden);
     }
 
@@ -110,25 +57,20 @@ void URepairMiniGameWidget::StartMiniGame(const FRepairRecipeData& RepairData)
         CheckButton->SetIsEnabled(true);
     }
 
-    RandomizeHammerSpeed();
-    SpawnHammer();
+    RandomizeShrinkSpeed();
+    SpawnCircle();
 }
 
 void URepairMiniGameWidget::OnCheckButtonClicked()
 {
-    if (!bMiniGameActive) return;
+    if (!bMiniGameActive || !bCircleActive) return;
 
-    if (!bHammerActive)
-    {
-        return;
-    }
+    bMissedCurrentCircle = true;
 
-    bMissedCurrentHammer = true;
-
-    const bool bSuccess = IsHammerInZone();
+    const bool bSuccess = IsCircleInZone();
     if (bSuccess)
     {
-        CurrentSuccesses = FMath::Clamp(CurrentSuccesses + 1, 0, TargetSuccesses);
+        CurrentSuccesses = FMath::Clamp(CurrentSuccesses + 1, 0, TargetSuccessCount);
         FlashZoneSuccess();
 
         if (SuccessSound)
@@ -138,7 +80,6 @@ void URepairMiniGameWidget::OnCheckButtonClicked()
     }
     else
     {
-        // 실패 시 진행도 감소
         CurrentSuccesses = FMath::Max(0, CurrentSuccesses - 1);
         FlashZoneFail();
 
@@ -150,9 +91,13 @@ void URepairMiniGameWidget::OnCheckButtonClicked()
 
     UpdateRemainingText();
 
-    if (CurrentSuccesses >= TargetSuccesses)
+    if (CurrentSuccesses >= TargetSuccessCount)
     {
         StopMiniGame(true);
+    }
+    else
+    {
+        HideCircleAndScheduleRespawn();
     }
 }
 
@@ -165,8 +110,7 @@ void URepairMiniGameWidget::StopMiniGame(bool bCompleted)
 {
     bMiniGameActive = false;
     CurrentSuccesses = 0;
-    TargetSuccesses = 0;
-    bHammerActive = false;
+    bCircleActive = false;
 
     if (GetWorld())
     {
@@ -188,169 +132,114 @@ void URepairMiniGameWidget::UpdateRemainingText()
 {
     if (RemainingSuccessText)
     {
-        const int32 Remaining = FMath::Max(0, TargetSuccesses - CurrentSuccesses);
+        const int32 Remaining = FMath::Max(0, TargetSuccessCount - CurrentSuccesses);
         RemainingSuccessText->SetText(FText::FromString(FString::Printf(TEXT("남은 성공: %d"), Remaining)));
     }
 }
 
-void URepairMiniGameWidget::UpdateHammerPosition(float DeltaTime)
+void URepairMiniGameWidget::UpdateCircleScale(float DeltaTime)
 {
-    if (!HammerImage || !bHammerActive) return;
+    if (!HammerImage || !bCircleActive || bMissedCurrentCircle) return;
 
-    const float PrevCenter = HammerX + (HammerWidth * 0.5f);
-    PrevHammerCenterX = PrevCenter;
-    HammerX += (HammerSpeed * DeltaTime) * static_cast<float>(HammerDirection);
-    const float CurrentCenter = HammerX + (HammerWidth * 0.5f);
+    CurrentCircleScale -= CurrentShrinkSpeed * DeltaTime;
+    
+    HammerImage->SetRenderScale(FVector2D(CurrentCircleScale, CurrentCircleScale));
 
-    float ZoneMinX = 0.0f;
-    float ZoneMaxX = 0.0f;
-    if (!bMissedCurrentHammer && GetZoneBounds(ZoneMinX, ZoneMaxX))
+    if (CurrentCircleScale < (CurrentTargetScale - SuccessTolerance))
     {
-        const bool bInZoneNow = (CurrentCenter >= ZoneMinX && CurrentCenter <= ZoneMaxX);
-        bWasInZone = bWasInZone || bInZoneNow;
-
-        const bool bCrossedWithoutEntering = (PrevHammerCenterX > ZoneMaxX && CurrentCenter < ZoneMinX);
-        const bool bExitedZone = (bWasInZone && CurrentCenter < ZoneMinX);
-
-        if (bCrossedWithoutEntering || bExitedZone)
+        bMissedCurrentCircle = true;
+        
+        CurrentSuccesses = FMath::Max(0, CurrentSuccesses - 1);
+        FlashZoneFail();
+        
+        if (FailSound)
         {
-            bMissedCurrentHammer = true;
-            CurrentSuccesses = FMath::Max(0, CurrentSuccesses - 1);
-            FlashZoneFail();
-            
-            if (FailSound)
-            {
-                UGameplayStatics::PlaySound2D(this, FailSound);
-            }
-            
-            UpdateRemainingText();
-            HideHammerAndScheduleRespawn();
-            return;
+            UGameplayStatics::PlaySound2D(this, FailSound);
         }
-    }
-
-    if (HammerX <= HammerMinX)
-    {
-        HammerX = HammerMinX;
-        HideHammerAndScheduleRespawn();
-        return;
-    }
-
-    if (UCanvasPanelSlot* HammerSlot = Cast<UCanvasPanelSlot>(HammerImage->Slot))
-    {
-        HammerSlot->SetPosition(FVector2D(HammerX, HammerY));
+        
+        UpdateRemainingText();
+        HideCircleAndScheduleRespawn();
     }
 }
 
-void URepairMiniGameWidget::SpawnHammer()
+void URepairMiniGameWidget::SpawnCircle()
 {
     if (!bMiniGameActive || !HammerImage) return;
 
-    bHammerActive = true;
-    bMissedCurrentHammer = false;
-    HammerDirection = -1;
-    HammerX = HammerMaxX;
-    PrevHammerCenterX = HammerX;
-    bWasInZone = false;
+    bCircleActive = true;
+    bMissedCurrentCircle = false;
 
-    if (UCanvasPanelSlot* HammerSlot = Cast<UCanvasPanelSlot>(HammerImage->Slot))
+    CurrentTargetScale = FMath::FRandRange(SuccessTargetScaleMin, SuccessTargetScaleMax);
+    if (ZoneImage)
     {
-        HammerSlot->SetPosition(FVector2D(HammerX, HammerY));
+        ZoneImage->SetRenderScale(FVector2D(CurrentTargetScale, CurrentTargetScale));
     }
-
+    
+    CurrentCircleScale = CircleStartScale;
+    HammerImage->SetRenderScale(FVector2D(CurrentCircleScale, CurrentCircleScale));
     HammerImage->SetVisibility(ESlateVisibility::Visible);
 }
 
-void URepairMiniGameWidget::HideHammerAndScheduleRespawn()
+void URepairMiniGameWidget::HideCircleAndScheduleRespawn()
 {
     if (!bMiniGameActive || !HammerImage || !GetWorld()) return;
 
-    bHammerActive = false;
+    bCircleActive = false;
     HammerImage->SetVisibility(ESlateVisibility::Hidden);
 
     float Difficulty = 0.0f;
-    if (TargetSuccesses > 0)
+    if (TargetSuccessCount > 0)
     {
-        Difficulty = FMath::Clamp(static_cast<float>(CurrentSuccesses) / static_cast<float>(TargetSuccesses), 0.0f, 1.0f);
+        Difficulty = FMath::Clamp(static_cast<float>(CurrentSuccesses) / static_cast<float>(TargetSuccessCount), 0.0f, 1.0f);
     }
+    
     const float DelayScale = FMath::Lerp(1.0f, DifficultyRespawnMultiplierMin, Difficulty);
     const float DelayMin = RespawnDelayMin * DelayScale;
     const float DelayMax = RespawnDelayMax * DelayScale;
     const float Delay = FMath::FRandRange(DelayMin, DelayMax);
+    
     GetWorld()->GetTimerManager().SetTimer(
         RespawnTimer,
         this,
-        &URepairMiniGameWidget::SpawnHammer,
+        &URepairMiniGameWidget::SpawnCircle,
         Delay,
         false);
 }
 
-void URepairMiniGameWidget::RandomizeHammerSpeed()
+void URepairMiniGameWidget::RandomizeShrinkSpeed()
 {
     if (!GetWorld()) return;
 
     float Difficulty = 0.0f;
-    if (TargetSuccesses > 0)
+    if (TargetSuccessCount > 0)
     {
-        Difficulty = FMath::Clamp(static_cast<float>(CurrentSuccesses) / static_cast<float>(TargetSuccesses), 0.0f, 1.0f);
+        Difficulty = FMath::Clamp(static_cast<float>(CurrentSuccesses) / static_cast<float>(TargetSuccessCount), 0.0f, 1.0f);
     }
+    
     const float SpeedScale = FMath::Lerp(1.0f, DifficultySpeedMultiplierMax, Difficulty);
-    const float MinSpeed = HammerSpeedMin * SpeedScale;
-    const float MaxSpeed = HammerSpeedMax * SpeedScale;
-    HammerSpeed = FMath::FRandRange(MinSpeed, MaxSpeed);
+    const float MinSpeed = ShrinkSpeedMin * SpeedScale;
+    const float MaxSpeed = ShrinkSpeedMax * SpeedScale;
+    CurrentShrinkSpeed = FMath::FRandRange(MinSpeed, MaxSpeed);
 
     const float Interval = FMath::FRandRange(SpeedChangeIntervalMin, SpeedChangeIntervalMax);
     GetWorld()->GetTimerManager().SetTimer(
         SpeedChangeTimer,
         this,
-        &URepairMiniGameWidget::RandomizeHammerSpeed,
+        &URepairMiniGameWidget::RandomizeShrinkSpeed,
         Interval,
         false);
 }
 
-bool URepairMiniGameWidget::GetZoneBounds(float& OutMinX, float& OutMaxX) const
+bool URepairMiniGameWidget::IsCircleInZone() const
 {
-    if (ZoneImage)
-    {
-        if (const UCanvasPanelSlot* ZoneSlot = Cast<UCanvasPanelSlot>(ZoneImage->Slot))
-        {
-            const FVector2D ZonePos = ZoneSlot->GetPosition();
-            const FVector2D ZoneSize = ZoneSlot->GetSize();
-            OutMinX = ZonePos.X;
-            OutMaxX = ZonePos.X + ZoneSize.X;
-            return true;
-        }
-    }
-
-    const float Range = FMath::Max(1.0f, HammerMaxX - HammerMinX);
-    OutMinX = HammerMinX + Range * 0.4f;
-    OutMaxX = HammerMinX + Range * 0.6f;
-    return true;
-}
-
-bool URepairMiniGameWidget::IsHammerInZone() const
-{
-    float HammerCenterX = HammerX;
-    if (HammerWidth > 0.0f)
-    {
-        HammerCenterX = HammerX + (HammerWidth * 0.5f);
-    }
-
-    float ZoneMin = 0.0f;
-    float ZoneMax = 0.0f;
-    if (!GetZoneBounds(ZoneMin, ZoneMax))
-    {
-        return false;
-    }
-
-    return HammerCenterX >= ZoneMin && HammerCenterX <= ZoneMax;
+    return FMath::IsWithinInclusive(CurrentCircleScale, CurrentTargetScale - SuccessTolerance, CurrentTargetScale + SuccessTolerance);
 }
 
 void URepairMiniGameWidget::FlashZoneFail()
 {
-    if (!ZoneImage || !GetWorld()) return;
+    if (!TrackImage || !GetWorld()) return;
 
-    ZoneImage->SetColorAndOpacity(FailFlashColor);
+    TrackImage->SetColorAndOpacity(FailFlashColor);
     GetWorld()->GetTimerManager().ClearTimer(FailFlashTimer);
     GetWorld()->GetTimerManager().SetTimer(
         FailFlashTimer,
@@ -362,9 +251,9 @@ void URepairMiniGameWidget::FlashZoneFail()
 
 void URepairMiniGameWidget::FlashZoneSuccess()
 {
-    if (!ZoneImage || !GetWorld()) return;
+    if (!TrackImage || !GetWorld()) return;
 
-    ZoneImage->SetColorAndOpacity(SuccessFlashColor);
+    TrackImage->SetColorAndOpacity(SuccessFlashColor);
     GetWorld()->GetTimerManager().ClearTimer(SuccessFlashTimer);
     GetWorld()->GetTimerManager().SetTimer(
         SuccessFlashTimer,
@@ -376,8 +265,8 @@ void URepairMiniGameWidget::FlashZoneSuccess()
 
 void URepairMiniGameWidget::ResetZoneColor()
 {
-    if (!ZoneImage) return;
-    ZoneImage->SetColorAndOpacity(ZoneOriginalColor);
+    if (!TrackImage) return;
+    TrackImage->SetColorAndOpacity(ZoneOriginalColor);
 }
 
 void URepairMiniGameWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -386,7 +275,7 @@ void URepairMiniGameWidget::NativeTick(const FGeometry& MyGeometry, float InDelt
 
     if (bMiniGameActive)
     {
-        UpdateHammerPosition(InDeltaTime);
+        UpdateCircleScale(InDeltaTime);
     }
 }
 
