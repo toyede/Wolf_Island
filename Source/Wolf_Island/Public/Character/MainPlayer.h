@@ -383,6 +383,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
 	UAnimMontage* DrinkMontage;
 	
+	// 쓰러진 플레이어 살리는 몽타주
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
+	UAnimMontage* HealMontage;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
 	TArray<UAnimMontage*> EmotionMontages;
 
@@ -868,6 +872,13 @@ public:
 	// 물 마시기 서버 실행 함수
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category="Interaction")
 	void Server_DrinkWater(UPrimitiveComponent* WaterComp);
+
+	// 치유 몽타주 서버 실행 함수
+	UFUNCTION(Server, Reliable)
+	void Server_PlayHealMontage();
+
+	UFUNCTION(Server, Reliable)
+	void Server_StopHealMontage();
 
 	// 물 마시기 쿨타임 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Survival|Interaction")

@@ -1362,6 +1362,16 @@ void AMainPlayer::BeginInteract()
 				if (TargetInteractionInterface->InteractableData.CanInteract)
 				{
 					HUD->DisplayInteraction();
+					
+				// 기절한 플레이어인 경우 치유 몽타주 재생
+				if (AMainPlayer* TargetPlayer = Cast<AMainPlayer>(Target))
+				{
+					if (TargetPlayer->IsInability && HealMontage)
+					{
+						Server_PlayHealMontage();
+					}
+				}
+					
 					//인터랙션 실행 시간 만큼 대기 후 인터랙션 실행
 					GetWorldTimerManager().SetTimer(InteractionTimer,
 						[this, Target]()
@@ -1402,6 +1412,11 @@ void AMainPlayer::EndInteract()
 		
 		//인터랙션 타겟이 플레이어면 그만 만진다고 알림!
 		Request_EndInteractPlayer(Target);
+	}
+	
+	if (HealMontage)
+	{
+		Server_StopHealMontage();
 	}
 	
 	//인터랙션 타이머 클리어
@@ -2597,6 +2612,22 @@ void AMainPlayer::Request_StopCraft()
 void AMainPlayer::Multi_StopAnimMontage_Implementation(UAnimMontage* Anim)
 {
 	StopAnimMontage(Anim);
+}
+
+void AMainPlayer::Server_PlayHealMontage_Implementation()
+{
+	if (HealMontage)
+	{
+		Multi_PlayAnimMontage(HealMontage);
+	}
+}
+
+void AMainPlayer::Server_StopHealMontage_Implementation()
+{
+	if (HealMontage)
+	{
+		Multi_StopAnimMontage(HealMontage);
+	}
 }
 
 void AMainPlayer::FoundInteractableWater(UPrimitiveComponent* WaterComp)
