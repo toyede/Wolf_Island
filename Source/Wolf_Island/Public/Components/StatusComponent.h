@@ -14,6 +14,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInfectionStarted, UStatusComponen
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInfectionChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAirZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAirFull);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnForcedRestStart);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnForcedRestEnd);
 
 USTRUCT(BlueprintType)
 struct FStatusSaveData
@@ -79,6 +81,10 @@ public:
 	FOnAirZero OnAirZero;
 	UPROPERTY(BlueprintAssignable, Category="Status Delegate")
 	FOnAirFull OnAirFull;
+	UPROPERTY(BlueprintAssignable, Category="Status Delegate")
+	FOnForcedRestStart OnForcedRestStart;
+	UPROPERTY(BlueprintAssignable, Category="Status Delegate")
+	FOnForcedRestEnd OnForcedRestEnd;
 	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Widget")
 	bool ShowCurrentHP = false;
@@ -121,6 +127,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	float DeadLineStamina = 5.0f;
 	float TempMaxStamina = 0.0f;
+	
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Status", SaveGame)
+	bool bIsForcedResting = false;
 
 	//배고픔
 	//현재 배고픔

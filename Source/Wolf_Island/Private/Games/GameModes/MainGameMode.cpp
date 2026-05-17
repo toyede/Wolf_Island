@@ -238,6 +238,8 @@ void AMainGameMode::SpawnBossForPortal(APortalActor* TriggeredPortal, const TArr
 		}
 	}
 
+	SpawnedBoss->StatusComponent->MaxHP = PartyMembers.Num() * 250.0f;
+	SpawnedBoss->StatusComponent->CurrentHP = SpawnedBoss->StatusComponent->MaxHP;
 	SpawnedBoss->StartBossCombat();
 
 	BossRef = SpawnedBoss;

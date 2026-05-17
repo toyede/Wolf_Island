@@ -29,6 +29,8 @@ public class Wolf_Island : ModuleRules
             "OnlineSubsystemUtils",
             "LevelSequence",
             "MovieScene",
+            "MediaAssets",
+            "UMG",
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[]

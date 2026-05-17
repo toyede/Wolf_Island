@@ -247,6 +247,39 @@ void AMultiGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 						}
 					}
 				}
+
+				bool bAnyAlive = false;
+				for (AMainPlayer* Participant : GM->BossRef->BossParticipants)
+				{
+					if (IsValid(Participant) && !Participant->IsHidden())
+					{
+						bAnyAlive = true;
+						break;
+					}
+				}
+
+				if (!bAnyAlive)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE][MULTI] All boss participants dead. Ending boss combat."));
+
+					// 모든 참가자의 IsBossStage 초기화 (재도전을 위해)
+					if (AMainGameState* GS = GetGameState<AMainGameState>())
+					{
+						for (APlayerState* PS : GS->PlayerArray)
+						{
+							if (AMainPlayerState* MPS = Cast<AMainPlayerState>(PS))
+							{
+								MPS->SetIsBossStage(false);
+							}
+						}
+					}
+
+					// 보스 전투 종료 후 파괴 → HandleManagedBossDestroyed 콜백으로
+					// ActiveBossByPortal에서 자동 제거되어 재도전 가능 상태가 됨
+					GM->BossRef->EndBossCombat();
+					GM->BossRef->Destroy();
+					GM->BossRef = nullptr;
+				}
 			}
 		}
 

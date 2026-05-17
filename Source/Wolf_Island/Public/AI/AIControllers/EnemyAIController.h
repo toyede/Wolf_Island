@@ -44,7 +44,7 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Delegate")
 	FOnEnemyStateChanged OnEnemyStateChanged;
-
+	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	// Current State
@@ -56,13 +56,15 @@ public:
 
 	UFUNCTION()
 	void OnRep_State();
-
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
+	TObjectPtr<AEnemyAIBase> ControlledEnemy;
+	
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnUnPossess() override;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
-	TObjectPtr<AEnemyAIBase> ControlledEnemy;
+	
 
 	
 	UFUNCTION()
@@ -104,7 +106,7 @@ public:
 	// Patrol
 	UFUNCTION(BlueprintCallable, Category = "AI|Patrol")
 	void MoveToNextRoute();
-
+	
 	UPROPERTY(EditDefaultsOnly, Category = "AI|Perception")
 	float SightTime = 5.0f;
 	
