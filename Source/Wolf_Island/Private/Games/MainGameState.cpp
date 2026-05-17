@@ -111,6 +111,7 @@ void AMainGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(AMainGameState, SelectedRoles);
 	DOREPLIFETIME(AMainGameState, IsMulti);
 	DOREPLIFETIME(AMainGameState, SharedRecipes);
+	DOREPLIFETIME(AMainGameState, CurrentSessionCode);
 }
 
 void AMainGameState::Multi_AddChat_Implementation(FChattingData NewChattingData)

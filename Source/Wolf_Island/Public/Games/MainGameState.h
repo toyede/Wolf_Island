@@ -72,6 +72,9 @@ public:
 	UPROPERTY(Replicated, BlueprintReadOnly)
 	bool IsMulti = false;
 	
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	FString CurrentSessionCode;
+	
 	//선택한 역할들이 바뀌면
 	UPROPERTY(BlueprintAssignable)
 	FOnSelectedRolesChanged OnSelectedRolesChanged;
@@ -98,6 +101,14 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void AddChattingMessage(FChattingData NewChattingData);
+	
+	//현재 세션 코드 설정 함수
+	UFUNCTION(BlueprintCallable)
+	void SetCurrentSessionCode(FString NewCode) { CurrentSessionCode = NewCode; }
+	
+	//현재 세션 코드 반환 함수
+	UFUNCTION(BlueprintCallable)
+	FString GetCurrentSessionCode() const { return CurrentSessionCode; }
 	
 	UFUNCTION(BlueprintCallable)
 	FChattingData GetLastChattingData();

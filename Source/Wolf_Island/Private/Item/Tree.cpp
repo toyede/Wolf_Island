@@ -4,6 +4,7 @@
 #include "Data/ItemDataStruct.h"
 #include "Components/StatusComponent.h" 
 #include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 #include "Particles/ParticleSystem.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 #include "Sound/SoundBase.h"
@@ -54,6 +55,11 @@ float ATree::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, ACo
 	{
 		StatusComponent->DecreaseHP(ActualDamage);
 	}
+	
+	if (HitSound)
+	{
+		Multi_PlaySoundAtLoaction(HitSound, GetActorLocation());
+	}
 
 	return ActualDamage;
 }
@@ -78,6 +84,11 @@ void ATree::Multi_PlayDestroyEffects_Implementation()
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, DestroySound, GetActorLocation());
 	}
+}
+
+void ATree::Multi_PlaySoundAtLoaction_Implementation(USoundBase* Sound, FVector Location)
+{
+	UGameplayStatics::PlaySoundAtLocation(this, Sound, Location);
 }
 
 void ATree::SpawnDrops()
@@ -142,6 +153,13 @@ TArray<FString> ATree::GetItemIDs() const
 	return Options;
 }
 
+void ATree::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(ATree, CurrentTreeMesh);
+}
+
 void ATree::SaveData_Implementation(FActorSaveData& OutData)
 {
 	Super::SaveData_Implementation(OutData);
@@ -153,4 +171,12 @@ void ATree::LoadData_Implementation(const FActorSaveData& InData)
 	Super::LoadData_Implementation(InData);
 	
 	ForceNetUpdate();
+}
+
+void ATree::SetTreeMesh(UStaticMesh* NewTreeMesh)
+{
+	TreeMesh->SetStaticMesh(NewTreeMesh);
+	CurrentTreeMesh = NewTreeMesh;
+	
+	OnRep_SetTree();
 }

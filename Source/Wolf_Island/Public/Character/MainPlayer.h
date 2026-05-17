@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -251,6 +251,9 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
 	UInputAction* DropItemAction;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Input")
+	UInputAction* EmotionAction;
 
 	//상태 관련 변수 (뛰는 중인지, ~~하는 중인지 등등)=====================================
 	
@@ -358,6 +361,9 @@ public:
 	//인터랙션 가능한 지
 	UPROPERTY(ReplicatedUsing=OnRep_CanInteract, EditDefaultsOnly, BlueprintReadWrite, Category="Interaction", SaveGame)
 	bool CanInteract = false;
+	//날 인터랙트 하고 있는 다른 플레이어
+	UPROPERTY(ReplicatedUsing=OnRep_Interacted)
+	AMainPlayer* InteractingPlayer;
 
 	//애니메이션 변수======================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
@@ -374,6 +380,11 @@ public:
 	// 스태미나 회복 후 일어서기 몽타주
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
 	UAnimMontage* StandUpMontage;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
+	UAnimMontage* DrinkMontage;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Animations")
+	TArray<UAnimMontage*> EmotionMontages;
 
 	//위젯=============================================================================
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Widget")
@@ -426,8 +437,7 @@ public:
 	// 채집 시 플레이어 인벤토리로 들어올 아이템 정보 및 스폰될 BP가 담긴 맵
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	TMap<UStaticMesh*, FFoliageReward> FoliageRewardMap;
-
-public:
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	TSubclassOf<class AActor> OutlineActorClass;
 	
@@ -701,11 +711,41 @@ public:
 	//서버 실행 함수 안에서는 실제 작동 함수를 실행시킴.
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	
+	//감정표현
+	UFUNCTION(BlueprintCallable)
+	void Emotion(const FInputActionInstance& Instance);
+	UFUNCTION()
+	void Request_Emotion(UAnimMontage* Emotion);
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void Server_Emotion(UAnimMontage* Emotion);
+	
+	UFUNCTION()
+	void Request_StopEmotion(UAnimMontage* Emotion=nullptr);
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void Server_StopEmotion(UAnimMontage* Emotion=nullptr);
+	
+	
 	//인터랙션
 	UFUNCTION()
 	void OnRep_CanInteract() { InteractableData.CanInteract = CanInteract; };
 	UFUNCTION()
 	void OnRep_InteractionDuration() { InteractableData.InteractionDuration = InteractionDuration; };
+	UFUNCTION()
+	void OnRep_Interacted();
+	
+	UFUNCTION()
+	void Request_BeginInteractPlayer(AActor* Target);
+	UFUNCTION(Server, Reliable)
+	void Server_BeginInteractPlayer(AActor* Target);
+	UFUNCTION()
+	void BeginInteractPlayer(AActor* Target);
+	
+	UFUNCTION()
+	void Request_EndInteractPlayer(AActor* Target);
+	UFUNCTION(Server, Reliable)
+	void Server_EndInteractPlayer(AActor* Target);
+	UFUNCTION()
+	void EndInteractPlayer(AActor* Target);
 		
 	//달리기
 	UFUNCTION()
@@ -802,6 +842,9 @@ public:
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_PlayAnimMontage(UAnimMontage* Anim);
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_StopAnimMontage(UAnimMontage* Anim);
 
 	// 강제 휴식 시작 - 주저앉기 몽타주 재생 (멀티캐스트)
 	UFUNCTION(NetMulticast, Reliable)
