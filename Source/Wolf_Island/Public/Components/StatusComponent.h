@@ -151,7 +151,7 @@ public:
 	//산소
 	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	float CurrentAir = 100.0f;
-	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	float MaxAir = 100.0f;
 
 	/*----Ability----*/

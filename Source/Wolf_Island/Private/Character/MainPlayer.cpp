@@ -1357,7 +1357,7 @@ void AMainPlayer::BeginInteract()
 				//인터랙션 가능 상태인지 확인
 				if (TargetInteractionInterface->InteractableData.CanInteract)
 				{
-					HUD->DisplayInteraction();
+					if (HUD) HUD->DisplayInteraction();
 					
 				// 기절한 플레이어인 경우 치유 몽타주 재생
 				if (AMainPlayer* TargetPlayer = Cast<AMainPlayer>(Target))
@@ -1440,7 +1440,7 @@ void AMainPlayer::Interaction_Implementation(AActor* Target)
 	if (IsLocallyControlled())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[PLAYER][SERVER] Interaction Complete. Hide Bar"));
-		HUD->HideInteraction();
+		if (HUD) HUD->HideInteraction();
 	} else
 	{
 		Client_InteractionExecuted();
@@ -1852,7 +1852,7 @@ void AMainPlayer::SetSwimMode(ESwimMode NewSwimMode)
 			StatusComponent->StartAir();
 			if (IsLocallyControlled())
 			{
-				HUD->DisplayAirBar();
+				if (HUD) HUD->DisplayAirBar();
 				if (UnderWaterAmbience)
 				{
 					WaterAmbience->SetSound(UnderWaterAmbience);
@@ -1867,7 +1867,7 @@ void AMainPlayer::SetSwimMode(ESwimMode NewSwimMode)
 			StatusComponent->StartAir();
 			if (IsLocallyControlled())
 			{
-				HUD->DisplayAirBar();
+				if (HUD) HUD->DisplayAirBar();
 				if (UnderWaterAmbience)
 				{
 					WaterAmbience->SetSound(UnderWaterAmbience);
@@ -2303,7 +2303,7 @@ void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 	DOREPLIFETIME(AMainPlayer, CanInteract);
 	DOREPLIFETIME(AMainPlayer, CharacterRole);
 	DOREPLIFETIME(AMainPlayer, SwimMode);
-	DOREPLIFETIME(AMainPlayer, InteractingPlayer);
+	DOREPLIFETIME(AMainPlayer, Torch);
 }
 
 void AMainPlayer::OnRep_Interacted()
@@ -2496,7 +2496,7 @@ void AMainPlayer::Request_SetHotbarIndex(int32 Index)
 	if (HasAuthority())
 	{
 		SetHotbarIndex(Index);
-		HUD->UpdateHotBar();
+		if (HUD) HUD->UpdateHotBar();
 		RefreshHand();
 	} else
 	{
