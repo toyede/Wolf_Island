@@ -21,6 +21,7 @@
 #include "Widgets/DeathScreen.h"
 #include "Moon/MoonlightInfectionSystem.h"
 #include "Actors/SpectatorCameraActor.h"
+#include "Components/Button.h"
 #include "Widgets/Setting/SettingsWidget.h"
 
 //TODO: 일단 바인딩 해제 코드 안넣어봄.

@@ -16,6 +16,16 @@ ABossStatue::ABossStatue()
 
 	BoxCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxCollision"));
 	BoxCollision->SetupAttachment(RootComponent);
+	// BossRush 채널 그대로 유지 (돌진 감지 목적) - 콜리전 설정은 BP/프로젝트 세팅 따름
+
+	// 플레이어 물리 차단 전용 컴포넌트 (WorldDynamic → Pawn 기본 Block)
+	BlockingCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("BlockingCollision"));
+	BlockingCollision->SetupAttachment(RootComponent);
+	BlockingCollision->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	BlockingCollision->SetCollisionObjectType(ECC_WorldDynamic);
+	BlockingCollision->SetCollisionResponseToAllChannels(ECR_Block);
+	BlockingCollision->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+	BlockingCollision->SetCollisionResponseToChannel(ECC_Visibility, ECR_Ignore);
 
 	bReplicates = true;
 }
