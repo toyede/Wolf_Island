@@ -1212,6 +1212,8 @@ void AMainPlayer::FoundInteractable(AActor* Interactable)
 		EndInteract();
 	}
 	
+	NotFoundInteractable();
+	
 	//현재 인터랙션 액터 데이터가 있으면
 	if (InteractionData.CurrentInteractable)
 	{	
@@ -1257,43 +1259,43 @@ void AMainPlayer::FoundInteractable(AActor* Interactable)
 //인터랙션 가능 액터를 못찾았을 때
 void AMainPlayer::NotFoundInteractable()
 {
-	//UE_LOG(LogTemp, Warning, TEXT("[PLAYER] NOT FOUND INTERACTABLE"));
-	//인터랙션 중이면
+	// 인터랙션 중이면 타이머 해제
 	if (IsInteracting())
 	{
 		GetWorldTimerManager().ClearTimer(InteractionTimer);
 	}
 
-	//인터랙션 액터 데이터가 있으면
+	// 1. 기존에 바라보던 액터가 있었다면 포커스 해제
 	if (InteractionData.CurrentInteractable) 
 	{		
-		//인터랙션 타겟 액터
 		if (AActor* Target = Cast<AActor>(TargetInteractionInterface.GetObject()))
 		{
 			Request_EndInteractPlayer(Target);
 		}
 		
-		//그 액터가 아직 유효한 액터면
 		if (IsValid(TargetInteractionInterface.GetObject()))
 		{
-			//포커스 끝내기
 			TargetInteractionInterface->Execute_EndFocus(InteractionData.CurrentInteractable);			
 		}
 
-		//TODO:여기 인터랙션 UI 업데이트 코드 추가 예정
 		if (IsLocallyControlled())
 		{
 			if (HUD)
 			{
 				HUD->DisplayDefault();
 				HUD->HideInteraction();
-				//HUD->HideTargetHP();
 			}
 		}
 		
-		//인터랙션 액터 데이터 비우기
 		InteractionData.CurrentInteractable = nullptr;
 		TargetInteractionInterface = nullptr;
+	}
+
+	// 2. 아웃라인 액터 파괴 및 폴리지 데이터 초기화
+	if (CurrentOutlineActor)
+	{
+		CurrentOutlineActor->Destroy();
+		CurrentOutlineActor = nullptr;
 	}
 
 	if (InteractionData.CurrentFoliageComponent)
@@ -1302,18 +1304,7 @@ void AMainPlayer::NotFoundInteractable()
 		InteractionData.FoliageInstanceIndex = INDEX_NONE;
 	}
 
-	if (InteractionData.CurrentFoliageComponent || CurrentOutlineActor)
-	{
-		if (CurrentOutlineActor)
-		{
-			CurrentOutlineActor->Destroy();
-			CurrentOutlineActor = nullptr;
-		}
-
-		InteractionData.CurrentFoliageComponent = nullptr;
-		InteractionData.FoliageInstanceIndex = INDEX_NONE;
-	}
-
+	// 3. 물 상호작용 데이터 초기화
 	if (InteractionData.CurrentWaterComponent)
 	{
 		InteractionData.CurrentWaterComponent = nullptr;
@@ -1961,7 +1952,7 @@ void AMainPlayer::Server_InteractFoliage_Implementation(UInstancedStaticMeshComp
 
 void AMainPlayer::FoundInteractableFoliage(UInstancedStaticMeshComponent* ISMC, int32 InstanceIndex)
 {
-	if (InteractionData.CurrentInteractable)
+	if (InteractionData.CurrentInteractable || InteractionData.CurrentFoliageComponent || InteractionData.CurrentWaterComponent)
 	{
 		NotFoundInteractable(); 
 	}
