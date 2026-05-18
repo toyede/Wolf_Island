@@ -10,11 +10,14 @@
 #include "Kismet/GameplayStatics.h"
 #include "Widgets/Lobby/Lobby.h"
 
+ALobbyGameMode::ALobbyGameMode()
+{
+	bUseSeamlessTravel = true;
+}
+
 void ALobbyGameMode::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	bUseSeamlessTravel = true;
 	
 	SetPlayerSlots();
 	

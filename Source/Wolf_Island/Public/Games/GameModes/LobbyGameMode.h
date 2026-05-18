@@ -17,6 +17,8 @@ class WOLF_ISLAND_API ALobbyGameMode : public AGameMode
 	
 public:
 	
+	ALobbyGameMode();
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool SlotsDone = false;
 	
