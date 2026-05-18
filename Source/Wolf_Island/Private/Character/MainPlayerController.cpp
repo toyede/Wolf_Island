@@ -37,13 +37,13 @@ void AMainPlayerController::BeginPlay()
 		ChattingPanel->AddToViewport();
 	}
 	
-	if (PauseWidgetClass && IsLocalController())
+	if (PauseWidgetClass && IsLocalController() && !PauseMenu)
 	{
 		PauseMenu = CreateWidget<UPauseMenu>(this, PauseWidgetClass);
 		
-		PauseMenu->ResumeButton->OnClicked.AddDynamic(this, &AMainPlayerController::OnResume);
-		PauseMenu->SettingButton->OnClicked.AddDynamic(this, &AMainPlayerController::OnSetting);
-		PauseMenu->QuitButton->OnClicked.AddDynamic(this, &AMainPlayerController::OnQuit);
+		PauseMenu->ResumeButton->OnClicked.AddUniqueDynamic(this, &AMainPlayerController::OnResume);
+		PauseMenu->SettingButton->OnClicked.AddUniqueDynamic(this, &AMainPlayerController::OnSetting);
+		PauseMenu->QuitButton->OnClicked.AddUniqueDynamic(this, &AMainPlayerController::OnQuit);
 		
 		PauseMenu->AddToViewport(10);
 		HidePauseMenu();
@@ -54,11 +54,13 @@ void AMainPlayerController::BeginPlay()
 	MainPlayerState = GetPlayerState<AMainPlayerState>();
 	MainGameState = Cast<AMainGameState>(GetWorld()->GetGameState());
 	
-	if (HasAuthority() && MainPlayerState && MainGameState->IsMulti)
+	// Selection UI는 OnRep_PlayerState에서만 처리 (중복 호출 방지)
+	// 서버 로컬 플레이어는 OnRep_PlayerState가 호출되지 않으므로 여기서 처리
+	if (IsLocalController() && HasAuthority() && MainPlayerState && MainGameState && MainGameState->IsMulti)
 	{
 		if (MainPlayerState->GetPlayerRole() == ECharacterRole::NONE)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Open Selection UI in Player Controller"))
+			UE_LOG(LogTemp, Warning, TEXT("Open Selection UI in Player Controller (Server Local)"))
 			Client_OpenSelectionUI();
 		} else
 		{
@@ -327,7 +329,7 @@ void AMainPlayerController::Request_SavePlayer()
 		SavePlayer();
 	} else
 	{
-		Request_SavePlayer();
+		Server_SavePlayer(); // <--- 서버 RPC 호출로 변경!
 	}
 }
 

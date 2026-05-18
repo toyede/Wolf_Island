@@ -102,6 +102,7 @@ void AMainPlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
 	DOREPLIFETIME(AMainPlayerState, PlayerRole);
 	DOREPLIFETIME(AMainPlayerState, Items);
 	DOREPLIFETIME(AMainPlayerState, PersonalRecipes);
+	DOREPLIFETIME(AMainPlayerState, IsBossStage);
 }
 
 void AMainPlayerState::UnlockPersonalRecipe(const FName& RecipeID)

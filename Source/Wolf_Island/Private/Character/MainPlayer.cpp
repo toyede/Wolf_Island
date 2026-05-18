@@ -214,7 +214,7 @@ void AMainPlayer::BeginPlay()
 		if (HasAuthority())
 		{
 			//상태 델리게이트 바인딩
-			StatusComponent->OnStaminaZero.AddDynamic(this, &AMainPlayer::Request_StopRun);
+			StatusComponent->OnStaminaZero.AddUniqueDynamic(this, &AMainPlayer::Request_StopRun);
 
 			//죽음 바인딩
 			StatusComponent->OnHPZero.AddUniqueDynamic(this, &AMainPlayer::OnDeath);
@@ -224,12 +224,12 @@ void AMainPlayer::BeginPlay()
 			StatusComponent->StartHydration();
 
 			//강제 휴식 애님 바인딩 (서버에서 브로드캐스트되므로 서버에서만 바인딩)
-			StatusComponent->OnForcedRestStart.AddDynamic(this, &AMainPlayer::Multi_PlayForcedRestStart);
-			StatusComponent->OnForcedRestEnd.AddDynamic(this, &AMainPlayer::Multi_PlayForcedRestEnd);
+			StatusComponent->OnForcedRestStart.AddUniqueDynamic(this, &AMainPlayer::Multi_PlayForcedRestStart);
+			StatusComponent->OnForcedRestEnd.AddUniqueDynamic(this, &AMainPlayer::Multi_PlayForcedRestEnd);
 		}
 		
 		//산소 게이지 숨기기 바인딩(테스트용)
-		StatusComponent->OnAirFull.AddDynamic(this, &AMainPlayer::HideAirBar);
+		StatusComponent->OnAirFull.AddUniqueDynamic(this, &AMainPlayer::HideAirBar);
 	}
 
 	if (InventoryComponent)
@@ -248,8 +248,8 @@ void AMainPlayer::BeginPlay()
 	
 	if (BuoyancyComponent)
 	{
-		BuoyancyComponent->OnEnteredWaterDelegate.AddDynamic(this, &AMainPlayer::EnterWater);
-		BuoyancyComponent->OnExitedWaterDelegate.AddDynamic(this, &AMainPlayer::ExitWater);
+		BuoyancyComponent->OnEnteredWaterDelegate.AddUniqueDynamic(this, &AMainPlayer::EnterWater);
+		BuoyancyComponent->OnExitedWaterDelegate.AddUniqueDynamic(this, &AMainPlayer::ExitWater);
 	}
 	
 	UE_LOG(LogTemp, Warning, TEXT("[%s] All Components Set"), *GetName());

@@ -126,7 +126,9 @@ void UAdvancedFriendsGameInstance::Init()
 		SessionInviteReceivedDelegateHandle = SessionInterface->AddOnSessionInviteReceivedDelegate_Handle(SessionInviteReceivedDelegate);
 		
 		// Custom steam join game delegate
-		SessionInterface->OnSessionUserInviteAcceptedDelegates.AddUObject(this, &UAdvancedFriendsGameInstance::OnSessionUserInviteAccepted);
+		// NOTE: 중복 제거 - SessionInviteAcceptedDelegate (L124)가 이미 OnSessionUserInviteAcceptedMaster를 통해 처리하므로
+		// 아래 직접 바인딩은 이중 JoinSession 호출을 유발함 → 제거
+		// SessionInterface->OnSessionUserInviteAcceptedDelegates.AddUObject(this, &UAdvancedFriendsGameInstance::OnSessionUserInviteAccepted);
 	}
 	else
 	{
