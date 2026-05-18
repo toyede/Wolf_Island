@@ -408,7 +408,7 @@ void AMainGameMode::SaveWorld()
 	AMainGameState* GS = GetGameState<AMainGameState>();
 	FChattingData Chat = FChattingData(
 		TEXT("SYSTEM"),TEXT("저장 완료"), EMessageType::NOTICE);
-	GS->AddChattingMessage(Chat);
+	//GS->AddChattingMessage(Chat);
 }
 
 void AMainGameMode::LoadWorld()

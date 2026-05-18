@@ -314,6 +314,34 @@ void AMainPlayerController::ToggleMainUI(bool bShow)
 	}
 }
 
+void AMainPlayerController::Request_SavePlayer()
+{
+	if (HasAuthority())
+	{
+		SavePlayer();
+	} else
+	{
+		Request_SavePlayer();
+	}
+}
+
+void AMainPlayerController::Server_SavePlayer_Implementation()
+{
+	SavePlayer();
+}
+
+void AMainPlayerController::SavePlayer()
+{
+	if (AMainGameMode* GM = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode()))
+	{
+		if (AMainPlayerState* PS = GetPlayerState<AMainPlayerState>())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PLAYER CONTROLLER] SAVE PLAYER"))
+			GM->SavePlayer(PS);
+		}	
+	}
+}
+
 void AMainPlayerController::Client_SetViewTargetWithBlend_Implementation(AActor* NewTarget, float BlendTime)
 {
 	if (!IsValid(NewTarget))

@@ -219,7 +219,6 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_Respawn();
 
-
 	// 관전 전용 카메라 시점 함수
 	// 클라이언트에서 실행될 RPC 선언
 	UFUNCTION(Client, Reliable)
@@ -228,4 +227,12 @@ public:
 	// 플레이어 UI 끄고 키는 함수
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void ToggleMainUI(bool bShow);
+	
+	//플레이어 데이터 저장 요첨
+	UFUNCTION()
+	void Request_SavePlayer();
+	UFUNCTION(Server, Reliable)
+	void Server_SavePlayer();
+	UFUNCTION()
+	void SavePlayer();
 };
