@@ -1213,44 +1213,39 @@ void AMainPlayer::FoundInteractable(AActor* Interactable)
 	}
 	
 	NotFoundInteractable();
-	
-	//현재 인터랙션 액터 데이터가 있으면
-	if (InteractionData.CurrentInteractable)
-	{	
-		TargetInteractionInterface = InteractionData.CurrentInteractable;
-		TargetInteractionInterface->Execute_EndFocus(InteractionData.CurrentInteractable);
-	}
-	
-	//인터랙션 액터 데이터 지정
+
+	// 새로운 인터렉션 대상 지정
 	InteractionData.CurrentInteractable = Interactable;
 	TargetInteractionInterface = Interactable;
+	
+	if (!IsValid(TargetInteractionInterface.GetObject())) 
+	{
+		return;
+	}
 	
 	//인터랙터블 액터의 상태가 인터랙션 가능한 상태가 아니면
 	if (!TargetInteractionInterface->InteractableData.CanInteract)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] THIS ACTOR CAN'T INTERACT"));
-		//TODO:여기 인터랙션 UI 해제 코드 추가 예정
+		//UE_LOG(LogTemp, Warning, TEXT("[PLAYER] THIS ACTOR CAN'T INTERACT"));
 		if (IsLocallyControlled())
 		{
-			if (HUD) HUD->DisplayDefault();
+			if (IsValid(HUD)) HUD->DisplayDefault();
 		} else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[PLAYER] NOT LOCALLY CONTROLLED : Can't Change Aim to Unfocus"));
+			//UE_LOG(LogTemp, Warning, TEXT("[PLAYER] NOT LOCALLY CONTROLLED : Can't Change Aim to Unfocus"));
 		}
 		TargetInteractionInterface->Execute_EndFocus(InteractionData.CurrentInteractable);
 		return;
 	} else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] THIS ACTOR CAN INTERACT"));
+		//UE_LOG(LogTemp, Warning, TEXT("[PLAYER] THIS ACTOR CAN INTERACT"));
 	}
-	
-	//TODO:여기 인터랙션 UI 업데이트 코드 추가 예정
 	if (IsLocallyControlled())
 	{
-		if (HUD) HUD->DisplayInteractable();
+		if (IsValid(HUD)) HUD->DisplayInteractable();
 	} else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] NOT LOCALLY CONTROLLED : Can't Change Aim to Focus"));
+		//UE_LOG(LogTemp, Warning, TEXT("[PLAYER] NOT LOCALLY CONTROLLED : Can't Change Aim to Focus"));
 		
 	}
 	TargetInteractionInterface->Execute_BeginFocus(InteractionData.CurrentInteractable);
@@ -1266,7 +1261,7 @@ void AMainPlayer::NotFoundInteractable()
 	}
 
 	// 1. 기존에 바라보던 액터가 있었다면 포커스 해제
-	if (InteractionData.CurrentInteractable) 
+	if (IsValid(InteractionData.CurrentInteractable)) 
 	{		
 		if (AActor* Target = Cast<AActor>(TargetInteractionInterface.GetObject()))
 		{
@@ -1280,7 +1275,7 @@ void AMainPlayer::NotFoundInteractable()
 
 		if (IsLocallyControlled())
 		{
-			if (HUD)
+			if (IsValid(HUD))
 			{
 				HUD->DisplayDefault();
 				HUD->HideInteraction();
@@ -1292,23 +1287,16 @@ void AMainPlayer::NotFoundInteractable()
 	}
 
 	// 2. 아웃라인 액터 파괴 및 폴리지 데이터 초기화
-	if (CurrentOutlineActor)
+	if (IsValid(CurrentOutlineActor))
 	{
 		CurrentOutlineActor->Destroy();
-		CurrentOutlineActor = nullptr;
 	}
+	CurrentOutlineActor = nullptr;
 
-	if (InteractionData.CurrentFoliageComponent)
-	{
-		InteractionData.CurrentFoliageComponent = nullptr;
-		InteractionData.FoliageInstanceIndex = INDEX_NONE;
-	}
-
-	// 3. 물 상호작용 데이터 초기화
-	if (InteractionData.CurrentWaterComponent)
-	{
-		InteractionData.CurrentWaterComponent = nullptr;
-	}
+	// 3. 폴리지 및 물 데이터 무조건 초기화
+	InteractionData.CurrentFoliageComponent = nullptr;
+	InteractionData.FoliageInstanceIndex = INDEX_NONE;
+	InteractionData.CurrentWaterComponent = nullptr;
 }
 
 void AMainPlayer::Client_InteractionExecuted_Implementation()
