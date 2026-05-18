@@ -272,7 +272,13 @@ void AMainPlayerController::OnRep_PlayerState()
 	
 	MainPlayerState = GetPlayerState<AMainPlayerState>();
 	
-	if (MainPlayerState && MainGameState->IsMulti)
+	if (!MainGameState)
+	{
+		MainGameState = Cast<AMainGameState>(GetWorld()->GetGameState());
+	}
+   
+	// 2. 널 체크 추가: MainGameState가 유효할 때만 IsMulti 변수에 접근
+	if (MainPlayerState && MainGameState && MainGameState->IsMulti)
 	{
 		if (MainPlayerState->GetPlayerRole() == ECharacterRole::NONE)
 		{
