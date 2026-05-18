@@ -548,6 +548,11 @@ void APortalActor::OnTeleportVideoFinished()
 	if (AMainPlayerController* LocalPC = Cast<AMainPlayerController>(GetWorld()->GetFirstPlayerController()))
 	{
 		LocalPC->ToggleMainUI(true);
+
+		if (APawn* LocalPawn = LocalPC->GetPawn())
+		{
+			LocalPawn->EnableInput(LocalPC);
+		}
 	}
 
 	if (VideoWidgetInstance)
@@ -574,6 +579,11 @@ void APortalActor::Multicast_PlayTeleportVideo_Implementation()
 	if (AMainPlayerController* LocalPC = Cast<AMainPlayerController>(GetWorld()->GetFirstPlayerController()))
 	{
 		LocalPC->ToggleMainUI(false);
+
+		if (APawn* LocalPawn = LocalPC->GetPawn())
+		{
+			LocalPawn->DisableInput(LocalPC);
+		}
 
 		if (LocalPC->IsLocalController() && TeleportVideoWidgetClass)
 		{

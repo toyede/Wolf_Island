@@ -23,12 +23,15 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Repair|MiniGame")
     FOnRepairMiniGameFinished OnMiniGameFinished;
 
+    // 블루프린트 위젯 호환성을 위해 이름 유지 (실제로는 '수축하는 외곽선 원' 역할)
     UPROPERTY(VisibleAnywhere, meta=(BindWidgetOptional))
     UImage* HammerImage;
 
+    // 블루프린트 위젯 호환성을 위해 이름 유지 (실제로는 '고정된 타겟 원' 역할)
     UPROPERTY(VisibleAnywhere, meta=(BindWidgetOptional))
     UImage* ZoneImage;
 
+    // (선택 사항) 배경 원 이미지
     UPROPERTY(VisibleAnywhere, meta=(BindWidgetOptional))
     UImage* TrackImage;
 
@@ -58,43 +61,46 @@ protected:
 
     void StopMiniGame(bool bCompleted);
     void UpdateRemainingText();
-    void UpdateHammerPosition(float DeltaTime);
-    void SpawnHammer();
-    void HideHammerAndScheduleRespawn();
-    void RandomizeHammerSpeed();
-    bool IsHammerInZone() const;
-    bool GetZoneBounds(float& OutMinX, float& OutMaxX) const;
+    
+    // 이동 대신 스케일을 줄이는 함수로 변경
+    void UpdateCircleScale(float DeltaTime);
+    
+    void SpawnCircle();
+    void HideCircleAndScheduleRespawn();
+    void RandomizeShrinkSpeed();
+    
+    bool IsCircleInZone() const;
     void FlashZoneFail();
     void FlashZoneSuccess();
     void ResetZoneColor();
 
 public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
-    float HammerMinX = 0.0f;
+    int32 TargetSuccessCount = 5;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
+    float CircleStartScale = 2.5f;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
+    float SuccessTargetScaleMin = 0.8f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
-    float HammerMaxX = 400.0f;
+    float SuccessTargetScaleMax = 1.3f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
-    float HammerSpeedMin = 140.0f;
+    float SuccessTolerance = 0.2f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
-    float HammerSpeedMax = 320.0f;
+    float ShrinkSpeedMin = 0.8f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
+    float ShrinkSpeedMax = 1.6f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
     float SpeedChangeIntervalMin = 3.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
     float SpeedChangeIntervalMax = 4.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
-    int32 MinSuccesses = 3;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
-    int32 MaxSuccesses = 12;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
-    float SuccessCountPerSecond = 4.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
     float RespawnDelayMin = 0.3f;
@@ -107,7 +113,7 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
     float DifficultyRespawnMultiplierMin = 0.5f;
-
+    
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Repair|MiniGame")
     FLinearColor FailFlashColor = FLinearColor(0.92f, 0.58f, 0.58f, 1.0f);
 
@@ -128,18 +134,16 @@ public:
 
 private:
     bool bMiniGameActive = false;
-    float HammerX = 0.0f;
-    float HammerY = 0.0f;
-    float HammerWidth = 0.0f;
-    int32 HammerDirection = -1;
-    float HammerSpeed = 120.0f;
-    bool bHammerActive = false;
-    bool bMissedCurrentHammer = false;
-    float PrevHammerCenterX = 0.0f;
-    bool bWasInZone = false;
-    int32 TargetSuccesses = 0;
+    bool bCircleActive = false;
+    bool bMissedCurrentCircle = false;
+    
+    float CurrentCircleScale = 1.0f;
+    float CurrentShrinkSpeed = 1.0f;
+    float CurrentTargetScale = 1.0f;
+    
     int32 CurrentSuccesses = 0;
     FRepairRecipeData CurrentRepairData;
+    
     FTimerHandle SpeedChangeTimer;
     FTimerHandle FailFlashTimer;
     FTimerHandle SuccessFlashTimer;
