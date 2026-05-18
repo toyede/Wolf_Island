@@ -56,9 +56,23 @@ public:
 	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
 	UProgressBar* AirBar;
 	
+	//아이콘 애님
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidgetAnim), Transient)
+	UWidgetAnimation* HealthIconAnimation;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidgetAnim), Transient)
+	UWidgetAnimation* StaminaIconAnimation;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidgetAnim), Transient)
+	UWidgetAnimation* HungerIconAnimation;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidgetAnim), Transient)
+	UWidgetAnimation* HydrationIconAnimation;
+	
 	//공격 에임 상대의 HP
 	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
 	UTextBlock* TargetHPText;
+	
+	//살리는 중! 안내 메시지
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	UTextBlock* InteractingInfoText;
 	
 	UPROPERTY(BlueprintReadWrite, meta=(BindWidgetAnim), Transient)
 	UWidgetAnimation* Infected;
@@ -110,6 +124,16 @@ public:
 	void DisplayTargetHP(AActor* Target);
 	UFUNCTION(BlueprintCallable)
 	void HideTargetHP();
+	
+	UFUNCTION(BlueprintCallable)
+	void DisplayInteractionInfoText(AActor* Target);
+	UFUNCTION(BlueprintCallable)
+	void HideInteractionInfoText();
+	
+	UFUNCTION()
+	void PlayIconAnim(UWidgetAnimation* Anim);
+	UFUNCTION()
+	void StopIconAnim(UWidgetAnimation* Anim);
 
 protected:
 	

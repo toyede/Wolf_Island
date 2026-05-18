@@ -34,6 +34,8 @@ public:
 	
 	virtual APawn* SpawnDefaultPawnAtTransform_Implementation(AController* NewPlayer, const FTransform& SpawnTransform) override;
 	
+	virtual void BeginPlay() override;
+	
 	virtual void Logout(AController* Exiting) override;
 	
 	//선택한 역할이 사용 가능한 지 확인

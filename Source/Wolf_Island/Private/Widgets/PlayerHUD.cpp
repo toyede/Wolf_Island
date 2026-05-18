@@ -12,6 +12,7 @@
 #include "Components/StatusComponent.h"
 #include "Components/TextBlock.h"
 #include "Components/WrapBox.h"
+#include "Games/MainPlayerState.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Widgets/Inventory/HotbarSlot.h"
 #include "Widgets/Inventory/InventorySlot.h"
@@ -267,11 +268,22 @@ void UPlayerHUD::UpdateStatusBars()
 	{
 		if (UStatusComponent* Status = PlayerRef->StatusComponent)
 		{
-			HealthBar->SetPercent(Status->GetHPPercent());
-			StaminaBar->SetPercent(Status->GetStaminaPercent());
-			HungerBar->SetPercent(Status->GetHungerPercent());
-			HydrationBar->SetPercent(Status->GetHydrationPercent());
-			AirBar->SetPercent(Status->GetAirPercent());
+			float Health = Status->GetHPPercent();
+			float Stamina = Status->GetStaminaPercent();
+			float Hunger = Status->GetHungerPercent();
+			float Hydration = Status->GetHydrationPercent();
+			float Air = Status->GetAirPercent();
+			
+			HealthBar->SetPercent(Health);
+			StaminaBar->SetPercent(Stamina);
+			HungerBar->SetPercent(Hunger);
+			HydrationBar->SetPercent(Hydration);
+			AirBar->SetPercent(Air);
+			
+			Health <= 0.1f ? PlayIconAnim(HealthIconAnimation) : StopIconAnim(HealthIconAnimation);
+			Stamina <= 0.1f ? PlayIconAnim(StaminaIconAnimation) : StopIconAnim(StaminaIconAnimation);
+			Hunger <= 0.1f ? PlayIconAnim(HungerIconAnimation) : StopIconAnim(HungerIconAnimation);
+			Hydration <= 0.1f ?	PlayIconAnim(HydrationIconAnimation) : StopIconAnim(HydrationIconAnimation);
 		}
 	}
 }
@@ -321,4 +333,37 @@ void UPlayerHUD::HideTargetHP()
 {
 	//UE_LOG(LogTemp, Warning, TEXT("[PLAYER HUD] Hide target HP"));
 	TargetHPText->SetVisibility(ESlateVisibility::Collapsed);
+}
+
+void UPlayerHUD::DisplayInteractionInfoText(AActor* Target)
+{
+	if (AMainPlayer* TargetPlayer = Cast<AMainPlayer>(Target))
+	{
+		if (AMainPlayerState* PS = Cast<AMainPlayerState>(TargetPlayer->GetPlayerState()))
+		{
+			FString PlayerName = PS->GetPlayerName();
+			FText Info = FText::Format(FText::FromString(TEXT("{0}이(가) 소생 중")), FText::FromString(PlayerName));
+			InteractingInfoText->SetText(Info);
+			InteractingInfoText->SetVisibility(ESlateVisibility::Visible);
+		} else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PLAYER HUD] NO PS"));
+		}
+	}
+}
+
+void UPlayerHUD::HideInteractionInfoText()
+{
+	InteractingInfoText->SetVisibility(ESlateVisibility::Collapsed);
+}
+
+void UPlayerHUD::PlayIconAnim(UWidgetAnimation* Anim)
+{
+	if (IsAnimationPlaying(Anim)) return;
+	PlayAnimation(Anim, 0, 0, EUMGSequencePlayMode::Forward, 1, true);
+}
+
+void UPlayerHUD::StopIconAnim(UWidgetAnimation* Anim)
+{
+	if (IsAnimationPlaying(Anim)) StopAnimation(Anim);
 }

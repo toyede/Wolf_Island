@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "PauseMenu.generated.h"
 
+class UButton;
 class UBaseButton;
 class AMainPlayerController;
 /**
@@ -20,13 +21,13 @@ class WOLF_ISLAND_API UPauseMenu : public UUserWidget
 public:
 	
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
-	UBaseButton* ResumeButton;
+	UButton* ResumeButton;
 	
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
-	UBaseButton* SettingButton;
+	UButton* SettingButton;
 
 	UPROPERTY(meta=(BindWidget), BlueprintReadWrite)
-	UBaseButton* QuitButton;
+	UButton* QuitButton;
 	
 	UPROPERTY()
 	AMainPlayerController* PlayerController;
