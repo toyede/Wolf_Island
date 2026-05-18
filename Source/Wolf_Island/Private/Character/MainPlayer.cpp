@@ -272,6 +272,11 @@ void AMainPlayer::BeginPlay()
 
 	// 냄새 보고 타이머 설정
 	GetWorldTimerManager().SetTimer(ScentTimerHandle, this, &AMainPlayer::ReportScent, ScentReportInterval, true);
+	
+	if (AMainPlayerController* PC = Cast<AMainPlayerController>(GetController()))
+	{
+		PC->Request_SavePlayer();
+	}
 }
 
 void AMainPlayer::ReportScent()

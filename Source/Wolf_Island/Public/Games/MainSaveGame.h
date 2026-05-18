@@ -19,7 +19,7 @@ struct FPlayerSaveData
 	GENERATED_BODY()
 	
 	//플레이어 스테이트 데이터
-	UPROPERTY(SaveGame)
+	UPROPERTY(BlueprintReadOnly, SaveGame)
 	FString PlayerID;
 	
 	UPROPERTY(SaveGame)
