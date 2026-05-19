@@ -541,6 +541,8 @@ void AMainGameMode::LoadWorldFromSave(UMainSaveGame* Save)
 
 void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 {
+	if (!PlayerState) return;
+	
 	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] SAVE PLAYER [%s]"), *PlayerState->GetPersistantId());
 	
 	//해당 플레이어의 아이디를 키로하는 맵에 데이터를 저장.
@@ -630,6 +632,9 @@ void AMainGameMode::SavePlayers()
 	//월드에 있는 플레이어 순회
 	for (APlayerState* PS : GS->PlayerArray)
 	{
+		//유효하지 않은 플레이어 스테이트면 건너뛰기
+		if (!IsValid(PS)) continue;
+		
 		//각 플레이어의 저장 코드 실행
 		AMainPlayerState* MPS = Cast<AMainPlayerState>(PS);
 		SavePlayer(MPS);
