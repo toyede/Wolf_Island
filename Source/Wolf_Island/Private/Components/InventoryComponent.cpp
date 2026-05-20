@@ -577,6 +577,7 @@ FItemBaseData UInventoryComponent::CreateItemByID(FName ItemID, int32 Amount)
 
 	//데이터 테이블에서 아이템 데이터 삽입
 	NewItem.ItemID = ItemData->ID;
+	NewItem.Type = ItemData->Type;
 	NewItem.SetAmount(Amount);
 
 	if (ItemData)

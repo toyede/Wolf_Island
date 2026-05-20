@@ -137,6 +137,8 @@ AMainPlayer::AMainPlayer()
 	WaterAmbience = CreateDefaultSubobject<UAudioComponent>("WaterAmbience");
 	
 	NickName = CreateDefaultSubobject<UWidgetComponent>("NickNameWidget");
+	
+	EatingSoundPlayer = CreateDefaultSubobject<UAudioComponent>("EatingSoundPlayer");
 
 	//손에 든 아이템 메쉬
 	ItemMesh = CreateDefaultSubobject<UStaticMeshComponent>("Item");
@@ -880,9 +882,9 @@ void AMainPlayer::StartUseItem()
 			float UseDuration = ItemData->NumericData.UseDuration;
 			
 			//음식이면 먹는 소리 재생
-			if (TargetItem.Type == EItemType::FOOD && DuringFoodSound)
+			if (TargetItem.Type == EItemType::FOOD)
 			{
-				Multi_PlaySoundAtLocation(DuringFoodSound, GetActorLocation());
+				Multi_PlayEatingSound();
 			}
 		
 			GetWorld()->GetTimerManager().SetTimer(
@@ -890,6 +892,7 @@ void AMainPlayer::StartUseItem()
 			[this, TargetIndex]()
 			{
 				UseItem(HotBarIndex);
+				Multi_StopEatingSound();
 			},
 			UseDuration,
 			false
@@ -1618,8 +1621,8 @@ void AMainPlayer::WeaponTrace(const FVector& StartPos, const FVector& EndPos)
 		TraceTypeQuery,
 		true,
 		IgnoreActors,
-		//EDrawDebugTrace::None,
-		EDrawDebugTrace::ForDuration,
+		EDrawDebugTrace::None,
+		//EDrawDebugTrace::ForDuration,
 		Hit,
 		true))
 	{
@@ -1659,8 +1662,8 @@ void AMainPlayer::WeaponTrace(const FVector& StartPos, const FVector& EndPos)
 		TraceTypeQuery,
 		true,
 		IgnoreActors,
-		//EDrawDebugTrace::None,
-		EDrawDebugTrace::ForDuration,
+		EDrawDebugTrace::None,
+		//EDrawDebugTrace::ForDuration,
 		Hit,
 		true))
 	{
@@ -2815,6 +2818,22 @@ void AMainPlayer::Multi_PlayForcedRestStart_Implementation()
 		AnimInst->OnMontageEnded.RemoveDynamic(this, &AMainPlayer::OnSitDownMontageEnded);
 		AnimInst->OnMontageEnded.AddDynamic(this, &AMainPlayer::OnSitDownMontageEnded);
 	}
+}
+
+void AMainPlayer::Multi_PlayEatingSound_Implementation()
+{
+	if (EatingSoundPlayer && DuringFoodSound)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Multicast Eating Sound On"));
+		EatingSoundPlayer->SetSound(DuringFoodSound);
+		EatingSoundPlayer->Play();
+	}
+}
+
+void AMainPlayer::Multi_StopEatingSound_Implementation()
+{
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Multicast Eating Sound Off"));
+	EatingSoundPlayer->Stop();
 }
 
 void AMainPlayer::OnSitDownMontageEnded(UAnimMontage* Montage, bool bInterrupted)

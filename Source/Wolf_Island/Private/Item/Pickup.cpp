@@ -53,6 +53,7 @@ void APickup::InitializePickUp(const int32 InAmount)
 
         ItemReference = FItemBaseData();
         
+        ItemReference.Type = ItemData->Type;
         ItemReference.ItemID = ItemData->ID;
         ItemReference.ItemName = ItemData->TextData.Name;
         ItemReference.MaxDurability = ItemData->NumericData.Durability;

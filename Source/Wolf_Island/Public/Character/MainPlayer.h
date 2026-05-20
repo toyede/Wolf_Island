@@ -138,6 +138,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UBuildingComponent* BuildingComponent;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UAudioComponent* EatingSoundPlayer;
+	
 	//횃불
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Torch")
 	ATorch* Torch;
@@ -857,6 +860,10 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_StopAnimMontage(UAnimMontage* Anim);
 	
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_PlayEatingSound();
+	UFUNCTION(Client, Reliable)
+	void Multi_StopEatingSound();
 
 	// 강제 휴식 시작 - 주저앉기 몽타주 재생 (멀티캐스트)
 	UFUNCTION(NetMulticast, Reliable)
