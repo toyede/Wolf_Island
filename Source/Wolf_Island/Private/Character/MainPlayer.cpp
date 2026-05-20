@@ -303,6 +303,21 @@ void AMainPlayer::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] END REASON : %s"), *StaticEnum<EEndPlayReason::Type>()->GetNameStringByValue((int)EndPlayReason));
 	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	
+	// 인벤토리 위젯 바인딩 해제
+	if (InventoryWidget)
+	{
+		InventoryWidget->RemoveFromParent();
+		InventoryWidget = nullptr;
+	}
+	
+	// 인벤토리 컴포넌트 바인딩 해제
+	if (InventoryComponent)
+	{
+		InventoryComponent->OnInventoryUpdated.RemoveAll(this);
+		InventoryComponent->OnCurrentWeightChanged.RemoveAll(this);
+	}
+	
 	//바인딩 해제 코드
 	if(StatusComponent){
 		//서버에서 실행
@@ -779,58 +794,61 @@ void AMainPlayer::UseItem(int32 SlotIndex)
 	{
 		FItemData* ItemData = InventoryComponent->GetItemDataAtIndex(SlotIndex);
 		
-		if (ItemData->IsNotEmpty())
+		if (ItemData)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("TRY TO USE THIS : [ %s ]"), *ItemData->TextData.Name.ToString());
+			if (ItemData->IsNotEmpty())
+			{
+				UE_LOG(LogTemp, Warning, TEXT("TRY TO USE THIS : [ %s ]"), *ItemData->TextData.Name.ToString());
 
 			
-			if (ItemData->ID == FName("FO019"))
-			{
-				if (StatusComponent)
+				if (ItemData->ID == FName("FO019"))
 				{
-					if (EatingSound)
+					if (StatusComponent)
+					{
+						if (EatingSound)
+						{
+							Multi_PlaySoundAtLocation(EatingSound, GetActorLocation());
+						}
+						StatusComponent->ApplyItem(*ItemData);
+					}
+
+					FItemBaseData SlotItem = InventoryComponent->GetItemAtIndex(SlotIndex);
+				
+					SlotItem.CurrentDurability -= 1.0f;
+
+					if (SlotItem.CurrentDurability <= 0.0f)
+					{
+						InventoryComponent->Request_RemoveItemAmountAtSlot(SlotIndex, 1);
+					
+						FItemBaseData RewardItem = InventoryComponent->CreateItemByID(FName("FQ005"), 1);
+						if (RewardItem.IsValid())
+						{
+							InventoryComponent->Request_HandleAddItem(RewardItem);
+						}
+					}
+					else
+					{
+						InventoryComponent->Request_SetItemAtSlot(SlotIndex, SlotItem);
+					}
+				
+					return; 
+				}
+			
+			
+				if (StatusComponent && ItemData->Type == EItemType::FOOD)
+				{
+					if (ItemData->Type == EItemType::FOOD && EatingSound)
 					{
 						Multi_PlaySoundAtLocation(EatingSound, GetActorLocation());
 					}
 					StatusComponent->ApplyItem(*ItemData);
-				}
-
-				FItemBaseData SlotItem = InventoryComponent->GetItemAtIndex(SlotIndex);
-				
-				SlotItem.CurrentDurability -= 1.0f;
-
-				if (SlotItem.CurrentDurability <= 0.0f)
-				{
+					//TODO: 서버 호출 함수로 변경
 					InventoryComponent->Request_RemoveItemAmountAtSlot(SlotIndex, 1);
-					
-					FItemBaseData RewardItem = InventoryComponent->CreateItemByID(FName("FQ005"), 1);
-					if (RewardItem.IsValid())
-					{
-						InventoryComponent->Request_HandleAddItem(RewardItem);
-					}
 				}
-				else
-				{
-					InventoryComponent->Request_SetItemAtSlot(SlotIndex, SlotItem);
-				}
-				
-				return; 
-			}
-			
-			
-			if (StatusComponent && ItemData->Type == EItemType::FOOD)
+			} else
 			{
-				if (ItemData->Type == EItemType::FOOD && EatingSound)
-				{
-					Multi_PlaySoundAtLocation(EatingSound, GetActorLocation());
-				}
-				StatusComponent->ApplyItem(*ItemData);
-				//TODO: 서버 호출 함수로 변경
-				InventoryComponent->Request_RemoveItemAmountAtSlot(SlotIndex, 1);
+				UE_LOG(LogTemp, Warning, TEXT("NO ITEM IN HOTBAR SLOT"));
 			}
-		} else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("NO ITEM IN HOTBAR SLOT"));
 		}
 	}
 }
@@ -852,6 +870,9 @@ void AMainPlayer::StartUseItem()
 		if (!GetWorld()->GetTimerManager().IsTimerActive(ItemUseTimer))
 		{
 			FItemData* ItemData = InventoryComponent->GetItemData(TargetItem);
+			
+			if (!ItemData) return;
+
 			//사용까지 꾹 눌러야 하는 시간
 			float UseDuration = ItemData->NumericData.UseDuration;
 			
@@ -977,51 +998,61 @@ void AMainPlayer::RefreshHand()
 		//데이터 베이스에서 아이템 데이터 가져오기
 		FItemData* ItemData = InventoryComponent->GetItemData(Item);
 		
-		if (ItemData->Type == EItemType::EQUIPMENT || ItemData->Type == EItemType::FOOD)
+		if (ItemData)
 		{
-			IsHoldingItem = true;
-			
-			//토치 들기
-			if (ItemData->ID == TEXT("EQ006"))
+			if (ItemData->Type == EItemType::EQUIPMENT || ItemData->Type == EItemType::FOOD)
 			{
-				ItemMesh->SetStaticMesh(nullptr);
-				WeaponComponent->UnequipeWeapon();
-
-				// 토치 전용 애님 레이어 적용 (무기 DT 독립)
-				if (TorchAnimLayerClass)
-				{
-					GetMesh()->LinkAnimClassLayers(TorchAnimLayerClass);
-				}
-				
-				if (Torch)
-				{
-					Torch->SetActorHiddenInGame(false);
-				}
-				
-				return;
-			}
+				IsHoldingItem = true;
 			
-		ItemMesh->SetStaticMesh(ItemData->AssetData.Mesh);
-		ItemMesh->AttachToComponent(
-		GetMesh(),
-		FAttachmentTransformRules::KeepRelativeTransform,
-		TEXT("hand_r"));
-		// 메시 에셋의 콜리전 응답을 완전히 초기화 후 Weapon 트레이스 채널만 허용
-		ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-		ItemMesh->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
-		ItemMesh->SetCollisionResponseToChannel(ECC_GameTraceChannel4, ECollisionResponse::ECR_Block); // Weapon 채널
-		
-			FTransform SocketTransform = ItemMesh->GetSocketTransform(TEXT("HandSocket"), RTS_Component);
-			ItemMesh->SetRelativeTransform(SocketTransform.Inverse());
-			WeaponComponent->CheckWeapon(Item);
-		} 
+				//토치 들기
+				if (ItemData->ID == TEXT("EQ006"))
+				{
+					ItemMesh->SetStaticMesh(nullptr);
+					WeaponComponent->UnequipeWeapon();
+
+					// 토치 전용 애님 레이어 적용 (무기 DT 독립)
+					if (TorchAnimLayerClass)
+					{
+						GetMesh()->LinkAnimClassLayers(TorchAnimLayerClass);
+					}
+				
+					if (Torch)
+					{
+						Torch->SetActorHiddenInGame(false);
+					}
+				
+					return;
+				}
+			
+				ItemMesh->SetStaticMesh(ItemData->AssetData.Mesh);
+				ItemMesh->AttachToComponent(
+				GetMesh(),
+				FAttachmentTransformRules::KeepRelativeTransform,
+				TEXT("hand_r"));
+				// 메시 에셋의 콜리전 응답을 완전히 초기화 후 Weapon 트레이스 채널만 허용
+				ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+				ItemMesh->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+				ItemMesh->SetCollisionResponseToChannel(ECC_GameTraceChannel4, ECollisionResponse::ECR_Block); // Weapon 채널
+			
+				FTransform SocketTransform = ItemMesh->GetSocketTransform(TEXT("HandSocket"), RTS_Component);
+				ItemMesh->SetRelativeTransform(SocketTransform.Inverse());
+				WeaponComponent->CheckWeapon(Item);
+			} 
+			else
+			{
+				WeaponComponent->CheckWeapon(Item);
+				IsHoldingItem = false;
+				ItemMesh->SetStaticMesh(nullptr);
+			}
+		}
 		else
 		{
 			WeaponComponent->CheckWeapon(Item);
 			IsHoldingItem = false;
 			ItemMesh->SetStaticMesh(nullptr);
 		}
-	} else
+	}
+	else
 	{
 		WeaponComponent->CheckWeapon(Item);
 		IsHoldingItem = false;
