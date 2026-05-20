@@ -95,6 +95,10 @@ public:
 
 	UFUNCTION()
 	void OnBossDefeated();
+
+	// 보스 실패 시 ExitPortal 상태를 초기화
+	UFUNCTION(BlueprintCallable)
+	void ResetBossDefeated();
 	
 	UPROPERTY(EditInstanceOnly, Category = "Boss")
 	AActor* BossSpawnPoint;

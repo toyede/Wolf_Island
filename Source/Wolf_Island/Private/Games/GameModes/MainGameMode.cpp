@@ -263,6 +263,34 @@ void AMainGameMode::HandleManagedBossDestroyed(AActor* DestroyedActor)
 	}
 }
 
+void AMainGameMode::FailBossCombat(AEnemyAIBoss* FailedBoss)
+{
+	if (!IsValid(FailedBoss)) return;
+
+	// 어느 포탈에서 스폰된 보스인지 찾아서 ExitPortal 리셋
+	for (auto& Pair : ActiveBossByPortal)
+	{
+		if (Pair.Value.Get() == FailedBoss)
+		{
+			if (APortalActor* EntryPortal = Pair.Key.Get())
+			{
+				if (IsValid(EntryPortal->ExitPortal))
+				{
+					// 탈출 포탈 bBossDefeated 리셋 → 포탈 닫힘
+					EntryPortal->ExitPortal->ResetBossDefeated();
+					UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] ExitPortal reset on boss fail"));
+				}
+			}
+			break;
+		}
+	}
+
+	// OnBossCombatEnd 델리게이트 제거 → EndBossCombat() 호출해도 포탈이 열리지 않음
+	FailedBoss->OnBossCombatEnd.Clear();
+	FailedBoss->EndBossCombat();
+	FailedBoss->Destroy();
+}
+
 void AMainGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	AMainPlayerState* PS = Cast<AMainPlayerState>(NewPlayer->PlayerState);
@@ -881,6 +909,40 @@ void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 					UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] Clear Boss Target Blackboard"));
 				}
 			}
+		}
+
+		// 싱글은 참가자가 1명이므로 죽으면 곧바로 보스 전투 종료
+		// (모든 참가자가 살아있지 않으면 보스 종료)
+		bool bAnyAlive = false;
+		for (AMainPlayer* Participant : BossRef->BossParticipants)
+		{
+			if (IsValid(Participant) && !Participant->IsHidden())
+			{
+				bAnyAlive = true;
+				break;
+			}
+		}
+
+		if (!bAnyAlive)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE][SINGLE] All boss participants dead. Ending boss combat."));
+
+			// 참가자들의 IsBossStage 초기화
+			if (AMainGameState* GS = GetGameState<AMainGameState>())
+			{
+				for (APlayerState* PS : GS->PlayerArray)
+				{
+					if (AMainPlayerState* MPS = Cast<AMainPlayerState>(PS))
+					{
+						MPS->SetIsBossStage(false);
+					}
+				}
+			}
+
+			// 실패 처리: ExitPortal 리셋 + 델리게이트 해제 후 보스 파괴
+			AEnemyAIBoss* FailedBoss = BossRef;
+			BossRef = nullptr;
+			FailBossCombat(FailedBoss);
 		}
 	}
 

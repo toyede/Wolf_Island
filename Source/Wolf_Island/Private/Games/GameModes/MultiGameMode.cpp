@@ -272,7 +272,7 @@ void AMultiGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 					}
 				}
 
-				if (!bAnyAlive)
+			if (!bAnyAlive)
 				{
 					UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE][MULTI] All boss participants dead. Ending boss combat."));
 
@@ -288,11 +288,10 @@ void AMultiGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 						}
 					}
 
-					// 보스 전투 종료 후 파괴 → HandleManagedBossDestroyed 콜백으로
-					// ActiveBossByPortal에서 자동 제거되어 재도전 가능 상태가 됨
-					GM->BossRef->EndBossCombat();
-					GM->BossRef->Destroy();
+					// 실패 처리: ExitPortal 리셋 + 델리게이트 해제 후 보스 파괴
+					AEnemyAIBoss* FailedBoss = GM->BossRef;
 					GM->BossRef = nullptr;
+					FailBossCombat(FailedBoss);
 				}
 			}
 		}

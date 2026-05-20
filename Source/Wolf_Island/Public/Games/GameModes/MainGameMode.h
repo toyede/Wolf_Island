@@ -141,6 +141,9 @@ protected:
 	void UnbindPortalDelegates();
 	void SpawnBossForPortal(APortalActor* TriggeredPortal, const TArray<AMainPlayer*>& PartyMembers);
 
+	// 보스 실패 처리: OnBossCombatEnd 브로드캐스트 없이 보스 종료 + ExitPortal 리셋
+	void FailBossCombat(AEnemyAIBoss* FailedBoss);
+
 private:
 	TSet<TWeakObjectPtr<APortalActor>> BoundPortals;
 	TMap<TWeakObjectPtr<APortalActor>, TWeakObjectPtr<AEnemyAIBoss>> ActiveBossByPortal;

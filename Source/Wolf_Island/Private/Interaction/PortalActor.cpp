@@ -220,6 +220,12 @@ void APortalActor::OnBossDefeated()
 	OnRep_BossDefeated();
 }
 
+void APortalActor::ResetBossDefeated()
+{
+	bBossDefeated = false;
+	OnRep_BossDefeated();
+}
+
 void APortalActor::HandleUnlockedRecordsChanged()
 {
 	if (TargetPortalID.IsEmpty() && IsValid(TargetPortal))
