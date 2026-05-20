@@ -732,6 +732,9 @@ void AMainPlayer::ToggleInventory()
 	if (IsLocallyControlled() && InventoryWidgetClass)
 	{
 		InventoryWidget = CreateWidget<UInventory>(GetWorld(), InventoryWidgetClass);
+		FInputModeUIOnly InputMode;
+		GetLocalViewingPlayerController()->SetInputMode(InputMode);
+		GetLocalViewingPlayerController()->bShowMouseCursor = true;
 		InventoryWidget->AddToViewport();
 		//InventoryWidget->SetVisibility(ESlateVisibility::Collapsed);
 	}
