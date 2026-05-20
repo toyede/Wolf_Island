@@ -723,9 +723,16 @@ void AEnemyAIBase::ApplyDeadState()
         WolfMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     }
 
-    if (DieSound)
+    if (HumanDieSound && WolfDieSound)
     {
-        UGameplayStatics::PlaySoundAtLocation(this, DieSound, GetActorLocation());
+        if (EnemyForm == EEnemyForm::Human)
+        {
+            UGameplayStatics::PlaySoundAtLocation(this, HumanDieSound, GetActorLocation());
+        }
+        else if (EnemyForm == EEnemyForm::Wolf)
+        {
+            UGameplayStatics::PlaySoundAtLocation(this, WolfDieSound, GetActorLocation());
+        }
     }
 }
 

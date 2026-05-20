@@ -270,7 +270,10 @@ public:
 	bool bIsDead = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Dead")
-	TObjectPtr<USoundBase> DieSound;
+	TObjectPtr<USoundBase> HumanDieSound;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Dead")
+	TObjectPtr<USoundBase> WolfDieSound;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Attack")
 	TObjectPtr<UAnimMontage> AttackMontage;
