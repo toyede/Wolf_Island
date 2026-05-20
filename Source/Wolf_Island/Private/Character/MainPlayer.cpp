@@ -361,7 +361,7 @@ void AMainPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
-	if (IsLocallyControlled()&&
+	if (IsLocallyControlled() && !IsInability &&
 		GetWorld()->TimeSince(InteractionData.LastInteractionCheckTime) > InteractionCheckFrequency)
 	{
 		CheckInteraction();
