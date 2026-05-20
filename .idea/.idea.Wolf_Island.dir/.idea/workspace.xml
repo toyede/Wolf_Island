@@ -9,15 +9,10 @@
   <component name="ChangeListManager">
     <list default="true" id="367b04d5-c3d9-4599-86e8-ad54ff3b4b47" name="변경" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.Wolf_Island.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Wolf_Island.dir/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/JSY/Characters/Player/BP_MainPlayer_ljh.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/JSY/Characters/Player/BP_MainPlayer_ljh.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/JSY/Widgets/Craft/WBP_Repair.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/JSY/Widgets/Craft/WBP_Repair.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/JSY/Widgets/Craft/WBP_RepairMiniGameWidget.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/JSY/Widgets/Craft/WBP_RepairMiniGameWidget.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/JSY/Widgets/Craft/WBP_RepairPanel.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/JSY/Widgets/Craft/WBP_RepairPanel.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Maps/Island_Copy.umap" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Maps/Island_Copy.umap" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/item/DT_RepairRecipes.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/DT_RepairRecipes.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/item/ItemMesh/boat/boat_broken/BP_BrokenShip.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/ItemMesh/boat/boat_broken/BP_BrokenShip.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Private/Interaction/Repair_Actor.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Private/Interaction/Repair_Actor.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Public/Interaction/Repair_Actor.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Public/Interaction/Repair_Actor.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Maps/mesh/BP_Tree.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Maps/mesh/BP_Tree.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/item/DT_ItemData.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/DT_ItemData.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/item/DT_Recipes.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/item/DT_Recipes.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Wolf_Island/Private/Item/Tree.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Wolf_Island/Private/Item/Tree.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -58,7 +53,7 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "Uproject.Wolf_Island.executor": "Run",
-    "git-widget-placeholder": "LJH__ver2",
+    "git-widget-placeholder": "Build__Test2",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -177,6 +172,7 @@
       <workItem from="1764550295303" duration="3996000" />
       <workItem from="1770746596980" duration="2116000" />
       <workItem from="1774851297331" duration="5048000" />
+      <workItem from="1779248009737" duration="1256000" />
     </task>
     <servers />
   </component>

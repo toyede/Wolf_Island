@@ -111,7 +111,7 @@ void ATree::SpawnDrops()
 				PickupData.Amount = DropEntry.Amount;
 
 				FVector RandomOffset = FMath::VRand(); 
-				RandomOffset.Z = 0.5f; 
+				RandomOffset.Z = 1.0f; 
 				RandomOffset.Normalize();
 				FVector SpawnLocation = GetActorLocation() + (RandomOffset * FMath::RandRange(50.0f, 100.0f));
 				
