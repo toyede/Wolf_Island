@@ -37,6 +37,7 @@
 #include "Games/MainPlayerState.h"
 #include "Games/MainGameState.h"
 #include "AI/Sense/AISense_Scent.h"
+#include "Widgets/Inventory/Inventory.h"
 
 
 void AMainPlayer::PossessedBy(AController* NewController)
@@ -239,6 +240,13 @@ void AMainPlayer::BeginPlay()
 		
 		//무게 업데이트 바인딩
 		InventoryComponent->OnCurrentWeightChanged.AddUObject(this, &AMainPlayer::OnCurrentWeightChanged);
+		
+		if (InventoryWidgetClass)
+		{
+			InventoryWidget = CreateWidget<UInventory>(GetWorld(), InventoryWidgetClass);
+			InventoryWidget->AddToViewport();
+			InventoryWidget->SetVisibility(ESlateVisibility::Collapsed);
+		}
 	}
 
 	if (WeaponComponent)
@@ -707,11 +715,28 @@ void AMainPlayer::ToggleInventory()
 	//인벤토리가 열려 있으면
 	if (IsInventoryOpen)
 	{
+		if (HUD) HUD->SetVisibility(ESlateVisibility::Visible);
+		if (InventoryWidget) InventoryWidget->SetVisibility(ESlateVisibility::Collapsed);
+		
+		FInputModeGameOnly InputMode;
+		GetLocalViewingPlayerController()->SetInputMode(InputMode);
+		GetLocalViewingPlayerController()->bShowMouseCursor = false;
 		IsInventoryOpen = false;
 	}
 	//인벤토리가 닫혀 있으면
 	else
 	{
+		if (HUD) HUD->SetVisibility(ESlateVisibility::Collapsed);
+		if (InventoryWidget)
+		{
+			InventoryWidget->SetVisibility(ESlateVisibility::Visible);
+			InventoryWidget->SetFocus();
+			InventoryWidget->SetKeyboardFocus();
+		}
+		
+		FInputModeUIOnly InputMode;
+		GetLocalViewingPlayerController()->SetInputMode(InputMode);
+		GetLocalViewingPlayerController()->bShowMouseCursor = true;
 		IsInventoryOpen = true;
 	}
 }
@@ -1030,6 +1055,8 @@ void AMainPlayer::KnockOut()
 					FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
 					FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(0,0,0,0);
 		
+					if (InventoryWidget) InventoryWidget->SetVisibility(ESlateVisibility::Collapsed);
+					
 					if (AMainPlayerController* PC = GetController<AMainPlayerController>())
 					{
 						PC->OpenDeathScreen();
@@ -1561,20 +1588,20 @@ void AMainPlayer::WeaponTrace(const FVector& StartPos, const FVector& EndPos)
 	}
 	
 	FVector AimPos = FirstPersonCamera->GetComponentLocation();
-	FVector AimStartPos = AimPos + FirstPersonCamera->GetForwardVector() * 60.0f;
-	FVector AimEndPos = AimPos + FirstPersonCamera->GetForwardVector() * 60.0f;
+	FVector AimStartPos = AimPos + FirstPersonCamera->GetForwardVector() * 10.0f;
+	FVector AimEndPos = AimPos + FirstPersonCamera->GetForwardVector() * 100.0f;
 	
 	//에임에 트레이스 하나 더 실행
 	if (UKismetSystemLibrary::SphereTraceSingle(
 		GetWorld(),
 		AimStartPos,
 		AimEndPos,
-		1.0f,
+		5.0f,
 		TraceTypeQuery,
 		true,
 		IgnoreActors,
-		EDrawDebugTrace::None,
-		//EDrawDebugTrace::ForDuration,
+		//EDrawDebugTrace::None,
+		EDrawDebugTrace::ForDuration,
 		Hit,
 		true))
 	{
@@ -2691,6 +2718,8 @@ void AMainPlayer::Client_ShowDeathScreen_Implementation()
 	{
 		FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
 		FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(0,0,0,0);
+		
+		if (InventoryWidget) InventoryWidget->SetVisibility(ESlateVisibility::Collapsed);
 		
 		if (AMainPlayerController* MPC = GetController<AMainPlayerController>())
 		{

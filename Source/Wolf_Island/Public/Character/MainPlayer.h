@@ -12,6 +12,7 @@
 #include "Engine/DataTable.h"
 #include "MainPlayer.generated.h"
 
+class UInventory;
 class ATorch;
 class UWidgetComponent;
 class UWaterBodyComponent;
@@ -397,6 +398,10 @@ public:
 	UWidgetComponent* NickName;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	TSubclassOf<UNickName> NickNameWidgetClass;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Widget")
+	UInventory* InventoryWidget;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
+	TSubclassOf<UInventory>InventoryWidgetClass;
 
 	//사운드============================================================================
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
@@ -560,7 +565,7 @@ public:
 	void ToggleCrouch();
 
 	//인벤토리 토글 함수
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void ToggleInventory();
 
 	//아이템 사용 함수

@@ -68,6 +68,11 @@ void ATree::OnTreeDestroyed()
 {
 	if (!HasAuthority()) return;
 
+	if (DestroySound)
+	{
+		Multi_PlaySoundAtLoaction(DestroySound, GetActorLocation());
+	}
+	
 	Multi_PlayDestroyEffects();
 	SpawnDrops();
 	Destroy();
@@ -78,11 +83,6 @@ void ATree::Multi_PlayDestroyEffects_Implementation()
 	if (DestroyParticle)
 	{
 		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), DestroyParticle, GetActorLocation(), GetActorRotation(), true);
-	}
-
-	if (DestroySound)
-	{
-		UGameplayStatics::PlaySoundAtLocation(this, DestroySound, GetActorLocation());
 	}
 }
 
