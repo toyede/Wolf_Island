@@ -16,6 +16,13 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAirZero);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAirFull);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnForcedRestStart);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnForcedRestEnd);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHPPercentChanged, float, CurrentHPPercent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStaminaPercentChanged, float, CurrentStaminaPercent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHungerPercentChanged, float, CurrentHungerPercent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHydrationPercentChanged, float, CurrentHydrationPercent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInfectionPercentChanged, float, CurrentInfectionPercent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAirPercentChanged, float, CurrentAirPercent);
+
 
 USTRUCT(BlueprintType)
 struct FStatusSaveData
@@ -85,6 +92,18 @@ public:
 	FOnForcedRestStart OnForcedRestStart;
 	UPROPERTY(BlueprintAssignable, Category="Status Delegate")
 	FOnForcedRestEnd OnForcedRestEnd;
+	UPROPERTY(BlueprintAssignable, Category="Status Delegate")
+	FOnHPPercentChanged OnHPPercentChanged;
+	UPROPERTY(BlueprintAssignable, Category="Status Delegate")
+	FOnStaminaPercentChanged OnStaminaPercentChanged;
+	UPROPERTY(BlueprintAssignable, Category="Status Delegate")
+	FOnHungerPercentChanged OnHungerPercentChanged;
+	UPROPERTY(BlueprintAssignable, Category="Status Delegate")
+	FOnHydrationPercentChanged OnHydrationPercentChanged;
+	UPROPERTY(BlueprintAssignable, Category="Status Delegate")
+	FOnInfectionPercentChanged OnInfectionPercentChanged;
+	UPROPERTY(BlueprintAssignable, Category="Status Delegate")
+	FOnAirPercentChanged OnAirPercentChanged;
 	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Widget")
 	bool ShowCurrentHP = false;

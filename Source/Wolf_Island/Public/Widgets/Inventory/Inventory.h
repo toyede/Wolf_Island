@@ -10,6 +10,7 @@
  * 
  */
 
+class UProgressBar;
 class UTextButton;
 DECLARE_DELEGATE(FOnInventoryClicked);
 DECLARE_DELEGATE(FOnCraftClicked);
@@ -50,6 +51,21 @@ public:
 	USizeBox* BuildingRecipeSection;
 	
 	UPROPERTY(meta=(BindWidget))
+	UProgressBar* HPProgressBar;
+	
+	UPROPERTY(meta=(BindWidget))
+	UProgressBar* StaminaProgressBar;
+	
+	UPROPERTY(meta=(BindWidget))
+	UProgressBar* HungerProgressBar;
+	
+	UPROPERTY(meta=(BindWidget))
+	UProgressBar* HydrationProgressBar;
+	
+	UPROPERTY(meta=(BindWidget))
+	UProgressBar* InfectionProgressBar;
+	
+	UPROPERTY(meta=(BindWidget))
 	class UInventoryPanel* InventoryPanel;
 
 	UPROPERTY(meta=(BindWidget))
@@ -82,7 +98,23 @@ protected:
 	virtual void NativeConstruct() override;
 
 	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
-
+	
+	virtual void NativeDestruct() override;
+	 
+	UFUNCTION()
+	void InventorySetting(AMainPlayer* Owner);
+	
+	UFUNCTION()
+	void UpdateHP(float NewHP);
+	UFUNCTION()
+	void UpdateStamina(float NewStamina);
+	UFUNCTION()
+	void UpdateHunger(float NewHunger);
+	UFUNCTION()
+	void UpdateHydration(float NewHydration);
+	UFUNCTION()
+	void UpdateInfection(float NewInfection);
+	
 	UFUNCTION()
 	void HandleFoodRecipeClicked(UTextButton* ClickedButton);
 	UFUNCTION()

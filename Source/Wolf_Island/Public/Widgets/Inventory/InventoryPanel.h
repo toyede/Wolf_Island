@@ -41,6 +41,9 @@ public:
 		
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UInventorySlot> SlotClass;
+	
+	UFUNCTION()
+	void InventorySetting(AMainPlayer* Owner);
 
 protected:
 

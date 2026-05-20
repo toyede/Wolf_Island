@@ -409,6 +409,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
 	USoundBase* JumpSound;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
+	USoundBase* DuringFoodSound;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
 	USoundBase* EatingSound;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Sounds")
 	USoundBase* DrinkingSound;
@@ -854,6 +856,7 @@ public:
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_StopAnimMontage(UAnimMontage* Anim);
+	
 
 	// 강제 휴식 시작 - 주저앉기 몽타주 재생 (멀티캐스트)
 	UFUNCTION(NetMulticast, Reliable)

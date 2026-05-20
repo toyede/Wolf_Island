@@ -109,6 +109,9 @@ struct FItemBaseData
 	GENERATED_USTRUCT_BODY();
 	
 	UPROPERTY(BlueprintReadWrite, SaveGame)
+	EItemType Type = EItemType::MATERIAL;
+	
+	UPROPERTY(BlueprintReadWrite, SaveGame)
 	FName ItemID = NAME_None;
 	
 	UPROPERTY(BlueprintReadWrite, SaveGame)
@@ -129,7 +132,8 @@ struct FItemBaseData
 	
 	bool operator==(const FItemBaseData& Other) const
 	{
-		return ItemID == Other.ItemID
+		return Type == Other.Type
+			&& ItemID == Other.ItemID
 			&& Amount == Other.Amount
 			&& FMath::IsNearlyEqual(CurrentDurability, Other.CurrentDurability);
 	}
@@ -141,6 +145,7 @@ struct FItemBaseData
 	
 	void LogData()
 	{
+		UE_LOG(LogTemp, Warning, TEXT("ItemType : %d"), Type)
 		UE_LOG(LogTemp, Warning, TEXT("ItemID : %s"), *ItemID.ToString());
 		UE_LOG(LogTemp, Warning, TEXT("ItemName : %s"), *ItemName.ToString());
 		UE_LOG(LogTemp, Warning, TEXT("ItemAmount : %d"), Amount);

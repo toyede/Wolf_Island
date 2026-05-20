@@ -5,7 +5,9 @@
 
 #include "Character/MainPlayer.h"
 #include "Components/InventoryComponent.h"
+#include "Components/ProgressBar.h"
 #include "Components/SizeBox.h"
+#include "Components/StatusComponent.h"
 #include "Widgets/Record/UnknownRecordPanel.h"
 #include "Components/WidgetSwitcher.h"
 #include "Widgets/TextButton.h"
@@ -28,11 +30,6 @@ void UInventory::NativeOnInitialized()
 	BuildingRecipeButton->OnClicked.AddDynamic(this, &UInventory::HandleBuildingRecipeClicked);
 	UnknownRecordButton->OnClicked.AddDynamic(this, &UInventory::HandleUnknownRecordClicked);
 	
-	if (UCraftPanel* CraftPanel = Cast<UCraftPanel>(CraftRecipeSection))
-	{
-		CraftPanel->SetCraftingMethod(ECraftMethod::INVEN);
-	}
-	
 	CurrentPanelButton = CraftRecipeButton;
 	CurrentPanelButton->SetSelected(true);
 }
@@ -42,6 +39,26 @@ void UInventory::NativeConstruct()
 	Super::NativeConstruct();
 
 	PlayerRef = Cast<AMainPlayer>(GetOwningPlayerPawn());
+	
+	if (PlayerRef && PlayerRef->StatusComponent)
+	{
+		PlayerRef->StatusComponent->OnHPPercentChanged.AddDynamic(this, &UInventory::UpdateHP);
+		PlayerRef->StatusComponent->OnStaminaPercentChanged.AddDynamic(this, &UInventory::UpdateStamina);
+		PlayerRef->StatusComponent->OnHungerPercentChanged.AddDynamic(this, &UInventory::UpdateHunger);
+		PlayerRef->StatusComponent->OnHydrationPercentChanged.AddDynamic(this, &UInventory::UpdateHydration);
+		PlayerRef->StatusComponent->OnInfectionPercentChanged.AddDynamic(this, &UInventory::UpdateInfection);
+		
+		UpdateHP(PlayerRef->StatusComponent->GetHPPercent());
+		UpdateStamina(PlayerRef->StatusComponent->GetStaminaPercent());
+		UpdateHunger(PlayerRef->StatusComponent->GetHungerPercent());
+		UpdateHydration(PlayerRef->StatusComponent->GetHydrationPercent());
+		UpdateInfection(PlayerRef->StatusComponent->GetInfectionPercent());
+	}
+	
+	if (UCraftPanel* CraftPanel = Cast<UCraftPanel>(CraftRecipeSection))
+	{
+		CraftPanel->SetCraftingMethod(ECraftMethod::INVEN);
+	}
 }
 
 bool UInventory::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,
@@ -96,6 +113,55 @@ bool UInventory::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent&
 		UE_LOG(LogTemp, Warning, TEXT("DROP ON PANEL ITEM INVALID"));
 	}
 	return false;
+}
+
+void UInventory::NativeDestruct()
+{
+	CraftRecipeButton->OnClicked.RemoveDynamic(this, &UInventory::HandleCraftRecipeClicked);
+	FoodRecipeButton->OnClicked.RemoveDynamic(this, &UInventory::HandleFoodRecipeClicked);
+	BuildingRecipeButton->OnClicked.RemoveDynamic(this, &UInventory::HandleBuildingRecipeClicked);
+	UnknownRecordButton->OnClicked.RemoveDynamic(this, &UInventory::HandleUnknownRecordClicked);
+	
+	PlayerRef->StatusComponent->OnHPPercentChanged.RemoveDynamic(this, &UInventory::UpdateHP);
+	PlayerRef->StatusComponent->OnStaminaPercentChanged.RemoveDynamic(this, &UInventory::UpdateStamina);
+	PlayerRef->StatusComponent->OnHungerPercentChanged.RemoveDynamic(this, &UInventory::UpdateHunger);
+	PlayerRef->StatusComponent->OnHydrationPercentChanged.RemoveDynamic(this, &UInventory::UpdateHydration);
+	PlayerRef->StatusComponent->OnInfectionPercentChanged.RemoveDynamic(this, &UInventory::UpdateInfection);
+	
+	Super::NativeDestruct();
+}
+
+void UInventory::InventorySetting(AMainPlayer* Owner)
+{
+	if (Owner)
+	{
+		InventoryPanel->InventorySetting(Owner);
+	}
+}
+
+void UInventory::UpdateHP(float NewHP)
+{
+	HPProgressBar->SetPercent(NewHP);
+}
+
+void UInventory::UpdateStamina(float NewStamina)
+{
+	StaminaProgressBar->SetPercent(NewStamina);
+}
+
+void UInventory::UpdateHunger(float NewHunger)
+{
+	HungerProgressBar->SetPercent(NewHunger);
+}
+
+void UInventory::UpdateHydration(float NewHydration)
+{
+	HydrationProgressBar->SetPercent(NewHydration);
+}
+
+void UInventory::UpdateInfection(float NewInfection)
+{
+	InfectionProgressBar->SetPercent(NewInfection);
 }
 
 void UInventory::HandleFoodRecipeClicked(UTextButton* ClickedButton)

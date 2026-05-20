@@ -485,12 +485,14 @@ void AMainPlayerController::Respawn()
 {
 	if (AMultiGameMode* MGM = GetWorld()->GetAuthGameMode<AMultiGameMode>())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[MPC] MULTI RESPAWN"))
 		MGM->HandlePlayerDeath(this);
 		return;
 	}
 	
 	if (AMainGameMode* SGM = GetWorld()->GetAuthGameMode<AMainGameMode>())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[MPC] SINGLE RESPAWN"))
 		SGM->HandlePlayerDeath(this);
 	}
 }

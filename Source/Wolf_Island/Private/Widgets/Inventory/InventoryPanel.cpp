@@ -48,6 +48,26 @@ void UInventoryPanel::SetInfoText() const
 	WeightInfo->SetText(FText::FromString(WeightInfoText));
 }
 
+void UInventoryPanel::InventorySetting(AMainPlayer* Owner)
+{
+	if (Owner)
+	{
+		PlayerRef = Owner;
+		if (PlayerRef)
+		{
+			InventoryRef = PlayerRef->InventoryComponent;
+		
+			if (InventoryRef)
+			{
+				InventoryRef->OnInventoryUpdated.AddUObject(this, &UInventoryPanel::SetInfoText);
+				SetInfoText();
+			}
+		
+			RefreshInventory();
+		}
+	}
+}
+
 void UInventoryPanel::RefreshInventory()
 {
 	UE_LOG(LogTemp, Warning, TEXT("RefreshInventory"));

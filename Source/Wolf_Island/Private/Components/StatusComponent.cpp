@@ -92,6 +92,7 @@ void UStatusComponent::IncreaseHP(float amount)
 		CurrentHP = 0;
 		OnHPZero.Broadcast();
 	}
+	OnHPPercentChanged.Broadcast(GetHPPercent());
 }
 
 //체력 감소 함수
@@ -108,6 +109,7 @@ void UStatusComponent::DecreaseHP(float amount)
 		CurrentHP = 0;
 		OnHPZero.Broadcast();
 	}
+	OnHPPercentChanged.Broadcast(GetHPPercent());
 }
 
 //스태미나 증가 함수
@@ -127,6 +129,7 @@ void UStatusComponent::IncreaseStamina(float amount)
 		CurrentStamina = 0;
 		OnStaminaZero.Broadcast();
 	}
+	OnStaminaPercentChanged.Broadcast(GetStaminaPercent());
 }
 
 //스태미나 감소 함수
@@ -140,6 +143,7 @@ void UStatusComponent::DecreaseStamina(float amount)
 		CurrentStamina = 0;
 		OnStaminaZero.Broadcast();
 	}
+	OnStaminaPercentChanged.Broadcast(GetStaminaPercent());
 }
 
 //배고픔 증가 함수
@@ -154,6 +158,7 @@ void UStatusComponent::IncreaseHunger(float amount)
 		CurrentHunger = 0;
 		OnHungerZero.Broadcast();
 	}
+	OnHungerPercentChanged.Broadcast(GetHungerPercent());
 }
 
 //배고픔 감소 함수
@@ -167,6 +172,7 @@ void UStatusComponent::DecreaseHunger(float amount)
 		CurrentHunger = 0;
 		OnHungerZero.Broadcast();
 	}
+	OnHungerPercentChanged.Broadcast(GetHungerPercent());
 }
 
 //수분 증가 함수
@@ -181,6 +187,7 @@ void UStatusComponent::IncreaseHydration(float amount)
 		CurrentHydration = 0;
 		OnHydrationZero.Broadcast();
 	}
+	OnHydrationPercentChanged.Broadcast(GetHydrationPercent());
 }
 
 //수분 감소 함수
@@ -194,6 +201,7 @@ void UStatusComponent::DecreaseHydration(float amount)
 		CurrentHydration = 0;
 		OnHydrationZero.Broadcast();
 	}
+	OnHydrationPercentChanged.Broadcast(GetHydrationPercent());
 }
 
 void UStatusComponent::IncreaseAir(float amount)
@@ -213,6 +221,7 @@ void UStatusComponent::IncreaseAir(float amount)
 		CurrentAir = 0;
 		OnAirZero.Broadcast();
 	}
+	OnAirPercentChanged.Broadcast(GetAirPercent());
 }
 
 void UStatusComponent::DecreaseAir(float amount)
@@ -225,6 +234,7 @@ void UStatusComponent::DecreaseAir(float amount)
 		CurrentAir = 0;
 		OnAirZero.Broadcast();
 	}
+	OnAirPercentChanged.Broadcast(GetAirPercent());
 }
 
 //스태미나 감소 시작 함수
@@ -446,12 +456,14 @@ void UStatusComponent::IncreaseInfectionBy(float Amount)
 	{
 		OnInfectionChanged.Broadcast();
 	}
+	OnInfectionPercentChanged.Broadcast(GetInfectionPercent());
 }
 
 void UStatusComponent::DecreaseInfection(float Amount)
 {
 	CurrentInfectionRate = FMath::Clamp(CurrentInfectionRate - Amount, 0.0f, MaxInfection);
 	OnInfectionChanged.Broadcast();
+	OnInfectionPercentChanged.Broadcast(GetInfectionPercent());
 }
 
 void UStatusComponent::StartAir()

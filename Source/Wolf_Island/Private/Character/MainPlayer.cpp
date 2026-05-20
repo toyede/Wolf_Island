@@ -241,7 +241,8 @@ void AMainPlayer::BeginPlay()
 		//무게 업데이트 바인딩
 		InventoryComponent->OnCurrentWeightChanged.AddUObject(this, &AMainPlayer::OnCurrentWeightChanged);
 		
-		if (InventoryWidgetClass)
+		
+		if (IsLocallyControlled() && InventoryWidgetClass)
 		{
 			InventoryWidget = CreateWidget<UInventory>(GetWorld(), InventoryWidgetClass);
 			InventoryWidget->AddToViewport();
@@ -712,32 +713,50 @@ void AMainPlayer::ToggleInventory()
 {
 	if (IsBuildingInputBlocked()) return;
 
+	
+	if (IsLocallyControlled() && InventoryWidgetClass)
+	{
+		InventoryWidget = CreateWidget<UInventory>(GetWorld(), InventoryWidgetClass);
+		InventoryWidget->AddToViewport();
+		//InventoryWidget->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	
+	return;
+	
 	//인벤토리가 열려 있으면
 	if (IsInventoryOpen)
 	{
-		if (HUD) HUD->SetVisibility(ESlateVisibility::Visible);
-		if (InventoryWidget) InventoryWidget->SetVisibility(ESlateVisibility::Collapsed);
+		if (InventoryWidget)
+		{
+			if (HUD) HUD->SetVisibility(ESlateVisibility::Visible);
+			InventoryWidget->SetVisibility(ESlateVisibility::Collapsed);
+			
+			FInputModeGameOnly InputMode;
+			GetLocalViewingPlayerController()->SetInputMode(InputMode);
+			GetLocalViewingPlayerController()->bShowMouseCursor = false;
+			IsInventoryOpen = false;
+		}
 		
-		FInputModeGameOnly InputMode;
-		GetLocalViewingPlayerController()->SetInputMode(InputMode);
-		GetLocalViewingPlayerController()->bShowMouseCursor = false;
-		IsInventoryOpen = false;
 	}
 	//인벤토리가 닫혀 있으면
 	else
 	{
-		if (HUD) HUD->SetVisibility(ESlateVisibility::Collapsed);
+		
 		if (InventoryWidget)
 		{
+			if (HUD) HUD->SetVisibility(ESlateVisibility::Collapsed);
 			InventoryWidget->SetVisibility(ESlateVisibility::Visible);
+			
+			FInputModeUIOnly InputMode;
+			GetLocalViewingPlayerController()->SetInputMode(InputMode);
+			GetLocalViewingPlayerController()->bShowMouseCursor = true;
+			IsInventoryOpen = true;
+			
 			InventoryWidget->SetFocus();
 			InventoryWidget->SetKeyboardFocus();
 		}
 		
-		FInputModeUIOnly InputMode;
-		GetLocalViewingPlayerController()->SetInputMode(InputMode);
-		GetLocalViewingPlayerController()->bShowMouseCursor = true;
-		IsInventoryOpen = true;
+		
 	}
 }
 
@@ -835,6 +854,12 @@ void AMainPlayer::StartUseItem()
 			FItemData* ItemData = InventoryComponent->GetItemData(TargetItem);
 			//사용까지 꾹 눌러야 하는 시간
 			float UseDuration = ItemData->NumericData.UseDuration;
+			
+			//음식이면 먹는 소리 재생
+			if (TargetItem.Type == EItemType::FOOD && DuringFoodSound)
+			{
+				Multi_PlaySoundAtLocation(DuringFoodSound, GetActorLocation());
+			}
 		
 			GetWorld()->GetTimerManager().SetTimer(
 			ItemUseTimer,
@@ -1559,8 +1584,8 @@ void AMainPlayer::WeaponTrace(const FVector& StartPos, const FVector& EndPos)
 		TraceTypeQuery,
 		true,
 		IgnoreActors,
-		EDrawDebugTrace::None,
-		//EDrawDebugTrace::ForDuration,
+		//EDrawDebugTrace::None,
+		EDrawDebugTrace::ForDuration,
 		Hit,
 		true))
 	{
@@ -2319,6 +2344,7 @@ void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 	DOREPLIFETIME(AMainPlayer, CharacterRole);
 	DOREPLIFETIME(AMainPlayer, SwimMode);
 	DOREPLIFETIME(AMainPlayer, Torch);
+	DOREPLIFETIME(AMainPlayer, InteractingPlayer);
 }
 
 void AMainPlayer::OnRep_Interacted()
