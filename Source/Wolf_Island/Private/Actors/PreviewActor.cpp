@@ -60,7 +60,7 @@ void APreviewActor::UpdateGhostVisual_Implementation(bool bIsAvailable)
 		if (GhostMat)
 		{
 			const FLinearColor GhostColor = bIsAvailable
-				? FLinearColor(0.0f, 1.0f, 0.0f, 1.0f)
+				? FLinearColor(1.0f, 1.0f, 1.0f, 1.0f)
 				: FLinearColor(1.0f, 0.0f, 0.0f, 1.0f);
 			GhostMat->SetVectorParameterValue(TEXT("GhostColor"), GhostColor);
 		}
@@ -69,7 +69,7 @@ void APreviewActor::UpdateGhostVisual_Implementation(bool bIsAvailable)
 	if (GhostMaterial)
 	{
 		const FLinearColor GhostColor = bIsAvailable
-			? FLinearColor(0.0f, 1.0f, 0.0f, 1.0f)
+			? FLinearColor(1.0f, 1.0f, 1.0f, 1.0f)
 			: FLinearColor(1.0f, 0.0f, 0.0f, 1.0f);
 		GhostMaterial->SetVectorParameterValue(TEXT("GhostColor"), GhostColor);
 	}

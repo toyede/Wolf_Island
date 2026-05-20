@@ -17,6 +17,7 @@ class WOLF_ISLAND_API UBuildingPanel : public UUserWidget
 	GENERATED_BODY()
 	
 public:
+	UFUNCTION()
 	void RefreshBuildingList();
 	void SetBuildingMethod(ECraftMethod NewMethod);
 
@@ -46,6 +47,7 @@ public:
 
 protected:
 	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
 
 	UFUNCTION()
 	void OnBuildButtonClicked();

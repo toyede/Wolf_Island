@@ -21,6 +21,7 @@
 
 void UBuildingPanel::RefreshBuildingList()
 {
+	if (!IsValid(RecipeList) || !IsValid(RecipeTable)) return;
 	if (!RecipeList || !RecipeTable) return;
 
 	// 플레이어 참조 가져오기
@@ -89,6 +90,23 @@ void UBuildingPanel::NativeConstruct()
 	}
 
 	RefreshBuildingList();
+}
+
+void UBuildingPanel::NativeDestruct()
+{
+	Super::NativeDestruct();
+	
+	if (AMainGameState* GS = GetWorld() ? GetWorld()->GetGameState<AMainGameState>() : nullptr)
+	{
+		GS->OnSharedRecipesChanged.RemoveDynamic(this, &UBuildingPanel::RefreshBuildingList);
+	}
+
+	if (OwnerBuildingComponent)
+	{
+		OwnerBuildingComponent->OnBuildingModeEnded.RemoveDynamic(this, &UBuildingPanel::OnBuildingFinished);
+	}
+
+	Super::NativeDestruct();
 }
 
 void UBuildingPanel::OnBuildButtonClicked()
