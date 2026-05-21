@@ -19,7 +19,16 @@ EBTNodeResult::Type UBTTask_InfectedAttack::ExecuteTask(UBehaviorTreeComponent& 
 	{
 		return EBTNodeResult::Failed;
 	}
-	AWerewolfInfected* Infected = AICon ? Cast<AWerewolfInfected>(AICon->GetPawn()) : nullptr;
+
+	AWerewolfInfected* Infected = Cast<AWerewolfInfected>(AICon->GetPawn());
+
+	// [Refactor] 비동기 콜백 준비 전: Infected 유효성 체크
+	if (!IsValid(Infected))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Refactor] UBTTask_InfectedAttack::ExecuteTask: Infected is invalid"));
+		return EBTNodeResult::Failed;
+	}
+
 	CachedInfected = Infected;
 	CachedOwnerComp = &OwnerComp;
 	Infected->OnAttackEnd.AddDynamic(this, &UBTTask_InfectedAttack::OnAttackFinished);
@@ -28,6 +37,9 @@ EBTNodeResult::Type UBTTask_InfectedAttack::ExecuteTask(UBehaviorTreeComponent& 
 		IEnemyCommonInterface::Execute_NormalAttack(Infected);
 		return EBTNodeResult::InProgress;
 	}
+
+	// [Refactor] 인터페이스 미구현 시 AddDynamic 정리 후 실패 반환
+	Infected->OnAttackEnd.RemoveDynamic(this, &UBTTask_InfectedAttack::OnAttackFinished);
 	return EBTNodeResult::Failed;
 }
 void UBTTask_InfectedAttack::OnAttackFinished()

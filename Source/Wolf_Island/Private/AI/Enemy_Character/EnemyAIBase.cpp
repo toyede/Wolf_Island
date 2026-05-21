@@ -139,6 +139,19 @@ void AEnemyAIBase::BeginPlay()
 
 void AEnemyAIBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+    // [Refactor] 델리게이트 해제: OnEnemyStateChanged 바인딩 대칭 해제
+    if (IsValid(EnemyAIController))
+    {
+        EnemyAIController->OnEnemyStateChanged.RemoveDynamic(this, &AEnemyAIBase::OnStateChanged);
+    }
+
+    // [Refactor] 델리게이트 해제: AttackCollisionComponent OnHitActor 바인딩 대칭 해제
+    if (AttackCollisionComponent)
+    {
+        AttackCollisionComponent->OnHitActor.RemoveAll(this);
+    }
+
+    // [Refactor] 타이머 정리: 이 오브젝트에 등록된 모든 타이머 해제
     GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
     OnHitResponse.RemoveDynamic(this, &AEnemyAIBase::HitResponse);
     
@@ -357,6 +370,8 @@ void AEnemyAIBase::StopAllMontages()
 
 void AEnemyAIBase::OnThrowMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+    // [Refactor] 몽타주 종료 콜백: 유효성 체크
+    if (!IsValid(this)) return;
     if (!bInterrupted)
     {
         OnThrowEnd.Broadcast();
@@ -451,6 +466,12 @@ void AEnemyAIBase::Howling_Implementation()
 
 void AEnemyAIBase::Heal()
 {
+    // [Refactor] 타이머 콜백: StatusComponent 유효성 체크
+    if (!IsValid(StatusComponent))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Refactor] %s: StatusComponent is invalid"), *FString(__FUNCTION__));
+        return;
+    }
 	StatusComponent->IncreaseHP(HealAmount);
 }
 
@@ -503,12 +524,13 @@ void AEnemyAIBase::Multicast_HitResponse_Implementation()
 }
 void AEnemyAIBase::OnFrozenMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-    if (!EnemyAIController || EnemyAIController->EnemyState == EEnemyState::Dead)
+    // [Refactor] 몽타주 종료 콜백: EnemyAIController 유효성 체크
+    if (!IsValid(EnemyAIController) || EnemyAIController->EnemyState == EEnemyState::Dead)
     {
         return;
     }
 
-    if (EnemyAIController->AttackTarget)
+    if (IsValid(EnemyAIController->AttackTarget))
     {
         EnemyAIController->SetEnemyState(EEnemyState::Combat);
     }
@@ -520,15 +542,18 @@ void AEnemyAIBase::OnFrozenMontageEnded(UAnimMontage* Montage, bool bInterrupted
 
 void AEnemyAIBase::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+    // [Refactor] 몽타주 종료 콜백: 유효성 체크
+    if (!IsValid(this)) return;
     if (!bInterrupted)
     {
         OnAttackEnd.Broadcast();
     }
-   
 }
 
 void AEnemyAIBase::OnHowlingMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+    // [Refactor] 몽타주 종료 콜백: 유효성 체크
+    if (!IsValid(this)) return;
     if (!bInterrupted)
     {
         OnHowlingEnd.Broadcast();
@@ -738,6 +763,13 @@ void AEnemyAIBase::ApplyDeadState()
 
 void AEnemyAIBase::OnStateChanged(EEnemyState NewState)
 {
+    // [Refactor] 델리게이트 콜백 진입부: World 유효성 체크
+    if (!GetWorld())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Refactor] AEnemyAIBase::OnStateChanged: World is invalid"));
+        return;
+    }
+
     if (NewState == EEnemyState::Passive)
     {
         // 힐 타이머 시작

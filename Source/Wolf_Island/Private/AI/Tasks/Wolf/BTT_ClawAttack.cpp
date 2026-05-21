@@ -11,13 +11,14 @@ EBTNodeResult::Type UBTT_ClawAttack::ExecuteTask(UBehaviorTreeComponent& OwnerCo
 {
 	AICon = Cast<AEnemyAIController>(OwnerComp.GetAIOwner());
 
-	AIPawn = AICon ? Cast<ACharacter>(AICon->GetPawn()) : nullptr;
+	AIPawn = AICon.IsValid() ? Cast<ACharacter>(AICon->GetPawn()) : nullptr;
 
-	if (!AICon) return EBTNodeResult::Failed;
+	// [Refactor] Tick 안전성: 비동기 콜백 전 포인터 유효성 체크
+	if (!AICon.IsValid()) return EBTNodeResult::Failed;
 
-	if (!AIPawn) return EBTNodeResult::Failed;
+	if (!AIPawn.IsValid()) return EBTNodeResult::Failed;
 
-	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(AIPawn, 0);
+	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(AIPawn.Get(), 0);
 
 	if (!PlayerPawn) return EBTNodeResult::Failed;
 
@@ -42,6 +43,7 @@ EBTNodeResult::Type UBTT_ClawAttack::ExecuteTask(UBehaviorTreeComponent& OwnerCo
 
 void UBTT_ClawAttack::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted, UBehaviorTreeComponent* OwnerComp)
 {
+	// [Refactor] 비동기 콜백 진입부: OwnerComp 유효성 체크
 	if (Montage == ClawAttackMontage && OwnerComp)
 	{
 		FinishLatentTask(*OwnerComp, bInterrupted ? EBTNodeResult::Failed : EBTNodeResult::Succeeded);

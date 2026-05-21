@@ -107,6 +107,12 @@ void AEnemyAIBoss::RefreshStatueSpawnPointsFromTag()
 
 void AEnemyAIBoss::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	// [Refactor] 델리게이트 해제: AttackCollisionComponent OnHitActor 바인딩 대칭 해제
+	if (AttackCollisionComponent)
+	{
+		AttackCollisionComponent->OnHitActor.RemoveAll(this);
+	}
+
 	// 타이머 클리어
 	GetWorldTimerManager().ClearTimer(GroggyTimerHandle);
 	GetWorldTimerManager().ClearTimer(SpawnRetryTimerHandle);
@@ -742,6 +748,12 @@ void AEnemyAIBoss::Multicast_PlayGroggyMontage_Implementation()
 
 void AEnemyAIBoss::EndGroggy()
 {
+	// [Refactor] 타이머 콜백: 액터 및 World 유효성 체크
+	if (!IsValid(this) || !GetWorld())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Refactor] AEnemyAIBoss::EndGroggy: Actor or World is invalid"));
+		return;
+	}
 	Multicast_PlayGroggyGetUp();
 }
 
@@ -910,9 +922,13 @@ void AEnemyAIBoss::Die_Implementation()
 	bIsDead = true;
 	ApplyDeadState();
 
+	// [Refactor] 널가드: BrainComponent null 체크 후 StopLogic 호출
 	if (AEnemyAIBossController* AIC = Cast<AEnemyAIBossController>(GetController()))
 	{
-		AIC->GetBrainComponent()->StopLogic(TEXT("Boss Dead"));
+		if (AIC->GetBrainComponent())
+		{
+			AIC->GetBrainComponent()->StopLogic(TEXT("Boss Dead"));
+		}
 	}
 
 	SetLifeSpan(2.5f);
@@ -920,17 +936,23 @@ void AEnemyAIBoss::Die_Implementation()
 
 void AEnemyAIBoss::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	// [Refactor] 몽타주 종료 콜백: 유효성 체크
+	if (!IsValid(this)) return;
 	OnBossAttackEnd.Broadcast();
 }
 
 void AEnemyAIBoss::OnRushMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	// [Refactor] 몽타주 종료 콜백: 유효성 체크
+	if (!IsValid(this)) return;
 	bIsRushing = false;
 	OnBossRushEnd.Broadcast();
 }
 
 void AEnemyAIBoss::OnGroggyMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	// [Refactor] 몽타주 종료 콜백: 유효성 체크
+	if (!IsValid(this)) return;
 	if (AEnemyAIBossController* AIC = Cast<AEnemyAIBossController>(GetController()))
 	{
 		AIC->SetNewState(EBossState::Combat);
@@ -941,21 +963,29 @@ void AEnemyAIBoss::OnGroggyMontageEnded(UAnimMontage* Montage, bool bInterrupted
 
 void AEnemyAIBoss::OnSummonStatueMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	// [Refactor] 몽타주 종료 콜백: 유효성 체크
+	if (!IsValid(this)) return;
 	OnSummonStatueEnd.Broadcast();
 }
 
 void AEnemyAIBoss::OnSummonWolvesMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	// [Refactor] 몽타주 종료 콜백: 유효성 체크
+	if (!IsValid(this)) return;
 	OnSummonWolvesEnd.Broadcast();
 }
 
 void AEnemyAIBoss::OnThrustMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	// [Refactor] 몽타주 종료 콜백: 유효성 체크
+	if (!IsValid(this)) return;
 	OnThrustEnd.Broadcast();
 }
 
 void AEnemyAIBoss::OnSpecialAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	// [Refactor] 몽타주 종료 콜백: 유효성 체크
+	if (!IsValid(this)) return;
 	OnSpecialAttackEnd.Broadcast();
 }
 
@@ -1044,7 +1074,11 @@ void AEnemyAIBoss::ApplyDeadState()
 	GetCharacterMovement()->DisableMovement();
 	GetCharacterMovement()->GravityScale = 0.f;
 
-	GetMesh()->GetAnimInstance()->Montage_Stop(0.2f);
+	// [Refactor] OnRep 콜백 경유 가능: AnimInstance 유효성 체크 후 Montage 중지
+	if (UAnimInstance* AnimInst = GetMesh()->GetAnimInstance())
+	{
+		AnimInst->Montage_Stop(0.2f);
+	}
 
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);

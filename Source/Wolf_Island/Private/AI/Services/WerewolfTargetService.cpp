@@ -17,7 +17,15 @@ void UWerewolfTargetService::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
 {
     Super::TickNode(OwnerComp, NodeMemory, DeltaSeconds);
 
-    APawn* ControllingPawn = OwnerComp.GetAIOwner()->GetPawn();
+    // [Refactor] Tick 안전성: GetAIOwner() 및 GetPawn() null 체크
+    AAIController* AICon = OwnerComp.GetAIOwner();
+    if (!AICon)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Refactor] UWerewolfTargetService::TickNode: AIOwner is invalid"));
+        return;
+    }
+
+    APawn* ControllingPawn = AICon->GetPawn();
     if (!ControllingPawn) return;
 
     float ClosestDist = DetectionRange;
@@ -42,6 +50,9 @@ void UWerewolfTargetService::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
         }
     }
 
-    // ã�� Ÿ���� �������忡 �����մϴ�.
-    OwnerComp.GetBlackboardComponent()->SetValueAsObject(TargetActorKey.SelectedKeyName, ClosestPlayer);
+    // [Refactor] Tick 안전성: BlackboardComponent null 체크 후 값 설정
+    if (UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent())
+    {
+        BB->SetValueAsObject(TargetActorKey.SelectedKeyName, ClosestPlayer);
+    }
 }

@@ -49,7 +49,7 @@ AAnimalController::AAnimalController()
 	//ScentConfig = CreateDefaultSubobject<UAISenseConfig_Scent>(TEXT("ScentConfig"));
 	//ScentConfig->SetMaxAge(5.0f);
 
-	// Perception¿¡ µî·Ï
+	// Perceptionï¿½ï¿½ ï¿½ï¿½ï¿½
 	AIPerceptionComp->ConfigureSense(*SightConfig);
 	AIPerceptionComp->ConfigureSense(*HearingConfig);
 	AIPerceptionComp->ConfigureSense(*DamageConfig);
@@ -124,6 +124,12 @@ void AAnimalController::OnUnPossess()
 {
 	Super::OnUnPossess();
 
+	// [Refactor] íƒ€ì´ë¨¸ ì •ë¦¬: UnPossess ì‹œ ë“±ë¡ëœ ëª¨ë“  íƒ€ì´ë¨¸ í•´ì œ
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	}
+
 	if (BehaviorTreeAsset)
 	{
 		BehaviorComp->StopTree(EBTStopMode::Safe);
@@ -162,35 +168,35 @@ void AAnimalController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus Sti
 
 void AAnimalController::HandleSight(AActor* Actor, const FAIStimulus& Stimulus)
 {
-	//// 1. ½Ã¾ß ¼Ò½Ç
+	//// 1. ï¿½Ã¾ï¿½ ï¿½Ò½ï¿½
 	//if (!Stimulus.WasSuccessfullySensed())
 	//{
-	//	// ÇÃ·¹ÀÌ¾î¸¦ ³õÃÆ´Ù°í ¹Ù·Î Æ÷±âÇÏÁö ¾Ê°í, 
-	//	// "3ÃÊ µÚ¿¡µµ ¾È º¸ÀÌ¸é Æ÷±âÇØ¶ó"¶ó°í ¿¹¾àÀ» °Ì´Ï´Ù.
+	//	// ï¿½Ã·ï¿½ï¿½Ì¾î¸¦ ï¿½ï¿½ï¿½Æ´Ù°ï¿½ ï¿½Ù·ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê°ï¿½, 
+	//	// "3ï¿½ï¿½ ï¿½Ú¿ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½Ì¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ø¶ï¿½"ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ì´Ï´ï¿½.
 	//	if (AnimalState == EAnimalState::Combat && Actor == AttackTarget)
 	//	{
 	//		GetWorld()->GetTimerManager().SetTimer(LineOfSightTimer, [this]()
 	//			{
-	//				// 3ÃÊ µÚ ½ÇÇàµÉ ÄÚµå:
-	//				// ¿©ÀüÈ÷ Å¸°ÙÀÌ ¾È º¸ÀÎ´Ù¸é(È¤Àº °Å¸®°¡ ¸Ö´Ù¸é) Æ÷±â
+	//				// 3ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½:
+	//				// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Å¸ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½Î´Ù¸ï¿½(È¤ï¿½ï¿½ ï¿½Å¸ï¿½ï¿½ï¿½ ï¿½Ö´Ù¸ï¿½) ï¿½ï¿½ï¿½ï¿½
 	//				SetAnimalState(EAnimalState::Passive);
-	//			}, 3.0f, false); // 3.0f´Â '±â¾ï Áö¼Ó ½Ã°£'
+	//			}, 3.0f, false); // 3.0fï¿½ï¿½ 'ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ã°ï¿½'
 	//	}
 	//	return;
 	//}
 
-	//// 2. ½Ã¾ß °¨Áö & ÇÃ·¹ÀÌ¾î È®ÀÎ
+	//// 2. ï¿½Ã¾ï¿½ ï¿½ï¿½ï¿½ï¿½ & ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ È®ï¿½ï¿½
 	//APawn* SensedPawn = Cast<APawn>(Actor);
 	//if (!SensedPawn || !SensedPawn->IsPlayerControlled()) return;
 
 	//GetWorld()->GetTimerManager().ClearTimer(LineOfSightTimer);
 
-	//// 3. Å¸°Ù ÀüÈ¯ÀÌ ÇÊ¿äÇÒ ¶§¸¸ ¾÷µ¥ÀÌÆ®
+	//// 3. Å¸ï¿½ï¿½ ï¿½ï¿½È¯ï¿½ï¿½ ï¿½Ê¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®
 	//if (ShouldSwitchTarget(Actor))
 	//{
 	//	AttackTarget = Actor;
 
-	//	// ÀÌ¹Ì CombatÀÌ¸é State Àç¼³Á¤ ¾È ÇÔ
+	//	// ï¿½Ì¹ï¿½ Combatï¿½Ì¸ï¿½ State ï¿½ç¼³ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½
 	//	if (EnemyState != EEnemyState::Combat)
 	//	{
 	//		SetEnemyState(EEnemyState::Combat);
@@ -213,15 +219,15 @@ void AAnimalController::HandleHearing(AActor* Actor, const FAIStimulus& Stimulus
 	//if (!Stimulus.WasSuccessfullySensed()) return;
 	//if (Stimulus.Tag != FName("Howling")) return;
 
-	//// ÀÌ¹Ì ±³Àü ÁßÀÌ¸é ¼Ò¸® ¹«½Ã
+	//// ï¿½Ì¹ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ì¸ï¿½ ï¿½Ò¸ï¿½ ï¿½ï¿½ï¿½ï¿½
 	//if (AnimalState == EAnimalState::Combat) return;
 
-	//// ¹ÝÀÀ µô·¹ÀÌ
+	//// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	//float RandomDelay = FMath::RandRange(1.0f, 2.0f);
 	//FTimerDelegate TimerDel;
 	//TimerDel.BindWeakLambda(this, [this, Actor]()
 	//	{
-	//		// µô·¹ÀÌ ÈÄ¿¡µµ Å¸°ÙÀÌ À¯È¿ÇÏ°í ¾ÆÁ÷ ±³Àü ÁßÀÌ ¾Æ´Ï¶ó¸é °ø°Ý ½ÃÀÛ
+	//		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ä¿ï¿½ï¿½ï¿½ Å¸ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È¿ï¿½Ï°ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Æ´Ï¶ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	//		if (IsValid(Actor) && EnemyState != EEnemyState::Combat && EnemyState != EEnemyState::Dead)
 	//		{
 	//			AttackTarget = Actor;
@@ -236,10 +242,10 @@ void AAnimalController::HandleHearing(AActor* Actor, const FAIStimulus& Stimulus
 //{
 //	//if (!Stimulus.WasSuccessfullySensed()) return;
 //
-//	//// ÆòÈ­·Ó°Å³ª Á¶»ç ÁßÀÏ ¶§¸¸ ³¿»õ ¹ÝÀÀ
+//	//// ï¿½ï¿½È­ï¿½Ó°Å³ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 //	//if (EnemyState == EEnemyState::Passive || EnemyState == EEnemyState::Investigating)
 //	//{
-//	//	// ³¿»õ À§Ä¡ ÀúÀå
+//	//	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½ï¿½
 //	//	if (UBlackboardComponent* BB = GetBlackboardComponent())
 //	//	{
 //	//		BB->SetValueAsVector(PointOfInterestKey, Stimulus.StimulusLocation);
