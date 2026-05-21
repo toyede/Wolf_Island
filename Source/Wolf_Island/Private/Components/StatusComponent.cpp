@@ -85,6 +85,13 @@ void UStatusComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 void UStatusComponent::IncreaseHP(float amount)
 {
 	CurrentHP = FMath::Clamp(CurrentHP+amount, 0.0f, MaxHP);
+	
+	//초과 방지
+	if (CurrentHP >= MaxHP)
+	{
+		CurrentHP = MaxHP;
+		StopAutoHeal();
+	}
 
 	//음수 방지
 	if (CurrentHP <= 0)
@@ -551,6 +558,45 @@ void UStatusComponent::ApplyItem(FItemData Item)
 	}
 }
 
+void UStatusComponent::StartAutoHeal()
+{
+	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+	
+	if (TimerManager.IsTimerActive(AutoHealStartTimer)) return;
+	
+	TimerManager.SetTimer(
+		AutoHealStartTimer,
+		this,
+		&UStatusComponent::AutoHeal,
+		AutoHealDelay,
+		true);
+		
+}
+
+void UStatusComponent::AutoHeal()
+{
+	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+	
+	if (TimerManager.IsTimerActive(AutoHealTimer)) return;
+	
+	TimerManager.SetTimer(
+		AutoHealTimer,
+		[this]
+		{
+			IncreaseHP(AutoHealAmount);
+		},
+		AutoHealRate,
+		true);
+}
+
+void UStatusComponent::StopAutoHeal()
+{
+	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+	
+	TimerManager.ClearTimer(AutoHealStartTimer);
+	TimerManager.ClearTimer(AutoHealTimer);
+}
+
 void UStatusComponent::ClearAllTimers()
 {
 	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
@@ -566,6 +612,8 @@ void UStatusComponent::ClearAllTimers()
 	TimerManager.ClearTimer(AirDeathTimer);
 	TimerManager.ClearTimer(AirRecoverTimer);
 	TimerManager.ClearTimer(AirTimer);
+	TimerManager.ClearTimer(AutoHealStartTimer);
+	TimerManager.ClearTimer(AutoHealTimer);
 }
 
 void UStatusComponent::DebugGetStatus(float &HP, float& Stamina, float& Hunger, float& Hydration)

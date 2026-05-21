@@ -190,16 +190,18 @@ void AMainPlayerController::ExitChatMode()
 
 void AMainPlayerController::DisplayPauseMenu()
 {
-	IsPause = !Cast<AMultiGameMode>(GetWorld()->GetAuthGameMode());
-	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE MULTI?] : %d"), IsPause)
+	IsPause = true;
+	bool GamePause = !Cast<AMultiGameMode>(GetWorld()->GetAuthGameMode());
+	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE MULTI?] : %d"), GamePause)
 	bShowMouseCursor = true;
 	
 	FInputModeUIOnly Mode;
 	SetInputMode(Mode);
 	
-	UGameplayStatics::SetGamePaused(GetWorld(), IsPause);
+	UGameplayStatics::SetGamePaused(GetWorld(), GamePause);
 	
 	PauseMenu->SetVisibility(ESlateVisibility::Visible);
+	PauseMenu->SetKeyboardFocus();
 }
 
 void AMainPlayerController::HidePauseMenu()

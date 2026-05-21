@@ -2,6 +2,7 @@
 
 #include "Character/MainPlayer.h"
 #include "Components/InventoryComponent.h"
+#include "Components/SphereComponent.h"
 #include "Data/ItemDataStruct.h"
 #include "Net/UnrealNetwork.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
@@ -9,6 +10,8 @@
 APickup::APickup()
 {
     bReplicates = true;
+    
+    PlayerDetector = CreateDefaultSubobject<USphereComponent>("PlayerDetector");
     
     PickupMesh = CreateDefaultSubobject<UStaticMeshComponent>("PickupMesh");
     PickupMesh->SetSimulatePhysics(IsPhysics);
@@ -31,6 +34,17 @@ void APickup::BeginPlay()
     Super::BeginPlay();
     //게임 시작 시 아이템 정보 초기화
     InitializePickUp(ItemAmount);
+    
+    PlayerDetector->OnComponentBeginOverlap.AddDynamic(this, &APickup::OnPlayerClose);
+    PlayerDetector->OnComponentEndOverlap.AddDynamic(this, &APickup::OnPlayerOut);
+}
+
+void APickup::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    PlayerDetector->OnComponentBeginOverlap.RemoveDynamic(this, &APickup::OnPlayerClose);
+    PlayerDetector->OnComponentEndOverlap.RemoveDynamic(this, &APickup::OnPlayerOut);
+    
+    Super::EndPlay(EndPlayReason);
 }
 
 void APickup::Tick(float DeltaSeconds)
@@ -98,6 +112,40 @@ void APickup::InitializeDrop(FItemBaseData ItemToDrop, const int32 InAmount)
         UE_LOG(LogTemp, Warning, TEXT("Item Data Table is not valid"));
     }
     
+}
+
+void APickup::OnPlayerClose(
+    UPrimitiveComponent* OverlappedComponent, 
+    AActor* OtherActor, 
+    UPrimitiveComponent* OtherComp, 
+    int32 OtherBodyIndex, 
+    bool bFromSweep, 
+    const FHitResult& SweepResult)
+{
+    if (AMainPlayer* Player = Cast<AMainPlayer>(OtherActor))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[ITEM] PLAYER DETECTED"))
+        BeginFocus();
+    } else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[ITEM] SOMETHING DETECTED"))
+    }
+}
+
+void APickup::OnPlayerOut(
+    UPrimitiveComponent* OverlappedComponent,
+    AActor* OtherActor, 
+    UPrimitiveComponent* OtherComp, 
+    int32 OtherBodyIndex)
+{
+    if (AMainPlayer* Player = Cast<AMainPlayer>(OtherActor))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[ITEM] PLAYER OUTTED"))
+        EndFocus();
+    } else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[ITEM] SOMETHING OUTTED"))
+    }
 }
 
 void APickup::Interact_Implementation(AActor* Interactor)

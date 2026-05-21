@@ -74,6 +74,14 @@ public:
 	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
 	UTextBlock* InteractingInfoText;
 	
+	//에임 중인 대상 이름
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	UTextBlock* InteractableInfoText;
+	
+	//인터랙션 키 아이콘
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	UImage* InteractableIcon;
+	
 	UPROPERTY(BlueprintReadWrite, meta=(BindWidgetAnim), Transient)
 	UWidgetAnimation* Infected;
 
@@ -129,6 +137,15 @@ public:
 	void DisplayInteractionInfoText(AActor* Target);
 	UFUNCTION(BlueprintCallable)
 	void HideInteractionInfoText();
+	
+	UFUNCTION(BlueprintCallable)
+	void DisplayInteractableInfoText(AActor* Target);
+	UFUNCTION(BlueprintCallable)
+	void DisplayInteractableInfoTextByItem(const FItemData& ItemData);
+	UFUNCTION(BlueprintCallable)
+	void DisplayInteractableInfoTextByComponent(UActorComponent* Component);
+	UFUNCTION(BlueprintCallable)
+	void HideInteractableInfoText();
 	
 	UFUNCTION()
 	void PlayIconAnim(UWidgetAnimation* Anim);

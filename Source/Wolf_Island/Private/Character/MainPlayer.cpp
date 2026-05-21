@@ -37,6 +37,8 @@
 #include "Games/MainPlayerState.h"
 #include "Games/MainGameState.h"
 #include "AI/Sense/AISense_Scent.h"
+#include "Engine/DamageEvents.h"
+#include "Games/Damage/WolfAttackDamageType.h"
 #include "Widgets/Inventory/Inventory.h"
 
 
@@ -406,7 +408,7 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 			this, &AMainPlayer::Look);
 
 		//달리기
-		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Triggered,
+		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Started,
 			this, &AMainPlayer::Request_Run);
 		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Completed,
 			this, &AMainPlayer::Request_StopRun);
@@ -432,7 +434,7 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 			this, &AMainPlayer::Request_StopUseItem);
 
 		//핫바 숫자키
-		EnhancedInputComponent->BindAction(HotBarAction, ETriggerEvent::Triggered,
+		EnhancedInputComponent->BindAction(HotBarAction, ETriggerEvent::Started,
 			this, &AMainPlayer::HandleHotBar); 
 		//핫바 마우스 휠
 		EnhancedInputComponent->BindAction(HotBarWheelAction, ETriggerEvent::Triggered,
@@ -464,6 +466,34 @@ void AMainPlayer::NotifyControllerChanged()
 			Subsystem->AddMappingContext(InputMappingContext, 0);
 		}
 	}
+}
+
+float AMainPlayer::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
+	class AController* EventInstigator, AActor* DamageCauser)
+{	
+	if (EwSound)
+	{
+		Multi_PlaySoundAtLocation(EwSound, GetActorLocation());
+	}
+	
+	float Damage = DamageAmount;
+	
+	if (StatusComponent)
+	{
+		StatusComponent->StopAutoHeal();
+		
+		Damage = StatusComponent->CalculateFinalDamage(DamageCauser, this, Damage);
+		StatusComponent->DecreaseHP(Damage);
+		
+		if (DamageEvent.DamageTypeClass == UWolfAttackDamageType::StaticClass() && !StatusComponent->IsInfected)
+		{
+			StatusComponent->StartInfection();
+		}
+		
+		StatusComponent->StartAutoHeal();
+	}
+	
+	return Damage;
 }
 
 void AMainPlayer::OnCurrentWeightChanged()
@@ -949,7 +979,7 @@ void AMainPlayer::HandleHotBarWithWheel(const FInputActionValue& Value)
 			return;
 		}
 	}
-
+	
 	if (Value.Get<float>() > 0)
 	{
 		Request_SetHotbarIndex((HotBarIndex + 1) % 6);
@@ -1202,9 +1232,31 @@ void AMainPlayer::CheckInteraction()
 		QueryParams.AddIgnoredActor(this);
 		//충돌 결과 변수
 		FHitResult HitResult;
+		
+		TArray<AActor*> IgnoreActors;
+		IgnoreActors.Add(this);
+		ETraceTypeQuery TraceTypeQuery = UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel6);
 
 		//라인트레이스 실행 후 부딪혔나?
-		if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECC_GameTraceChannel6, QueryParams))
+		/*if (GetWorld()->LineTraceSingleByChannel(
+			HitResult, 
+			TraceStart, 
+			TraceEnd, 
+			ECC_GameTraceChannel6, 
+			QueryParams)) */
+		//스피어 트레이스로 두껍게 변경 (정확히 에임 안해도 되도록)
+		if (UKismetSystemLibrary::SphereTraceSingle(
+			GetWorld(),
+			TraceStart,
+			TraceEnd,
+			10.0f,
+			TraceTypeQuery,
+			true,
+			IgnoreActors,
+			EDrawDebugTrace::None,
+			//EDrawDebugTrace::ForDuration,
+			HitResult,
+			true))
 		{
 			/*
 			//타겟 HP 보여줄 지 안보여줄 지
@@ -1254,6 +1306,14 @@ void AMainPlayer::CheckInteraction()
 					if (InteractionData.CurrentFoliageComponent != ISMC || InteractionData.FoliageInstanceIndex != InstanceIndex)
 					{
 						FoundInteractableFoliage(ISMC, InstanceIndex);
+						
+						if (InventoryComponent)
+						{
+							if (const FItemData* ItemData = InventoryComponent->GetItemData(FoliageRewardMap[HitMesh].ItemID))
+							{
+								if (HUD) HUD->DisplayInteractableInfoTextByItem(*ItemData);
+							}
+						}
 					}
 					return;
 				}
@@ -1275,6 +1335,8 @@ void AMainPlayer::CheckInteraction()
 						if (InteractionData.CurrentWaterComponent != HitComp)
 						{
 							FoundInteractableWater(HitComp);
+							if (HUD) HUD->DisplayInteractableInfoTextByComponent(HitComp);
+							
 						}
 						return;
 					}
@@ -1331,7 +1393,11 @@ void AMainPlayer::FoundInteractable(AActor* Interactable)
 	}
 	if (IsLocallyControlled())
 	{
-		if (IsValid(HUD)) HUD->DisplayInteractable();
+		if (IsValid(HUD))
+		{
+			HUD->DisplayInteractable();
+			HUD->DisplayInteractableInfoText(Interactable);
+		}
 	} else
 	{
 		//UE_LOG(LogTemp, Warning, TEXT("[PLAYER] NOT LOCALLY CONTROLLED : Can't Change Aim to Focus"));
@@ -1361,15 +1427,6 @@ void AMainPlayer::NotFoundInteractable()
 		{
 			TargetInteractionInterface->Execute_EndFocus(InteractionData.CurrentInteractable);			
 		}
-
-		if (IsLocallyControlled())
-		{
-			if (IsValid(HUD))
-			{
-				HUD->DisplayDefault();
-				HUD->HideInteraction();
-			}
-		}
 		
 		InteractionData.CurrentInteractable = nullptr;
 		TargetInteractionInterface = nullptr;
@@ -1386,6 +1443,16 @@ void AMainPlayer::NotFoundInteractable()
 	InteractionData.CurrentFoliageComponent = nullptr;
 	InteractionData.FoliageInstanceIndex = INDEX_NONE;
 	InteractionData.CurrentWaterComponent = nullptr;
+	
+	if (IsLocallyControlled())
+	{
+		if (IsValid(HUD))
+		{
+			HUD->DisplayDefault();
+			HUD->HideInteraction();
+			HUD->HideInteractableInfoText();
+		}
+	}
 }
 
 void AMainPlayer::Client_InteractionExecuted_Implementation()
@@ -2062,6 +2129,11 @@ void AMainPlayer::FoundInteractableFoliage(UInstancedStaticMeshComponent* ISMC, 
 		}
 	}
 	
+	if (IsLocallyControlled() && HUD)
+	{
+		HUD->DisplayInteractable();
+	}
+	
 }
 
 void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float DamageAmount)
@@ -2709,6 +2781,11 @@ void AMainPlayer::FoundInteractableWater(UPrimitiveComponent* WaterComp)
 	if (InteractionData.CurrentInteractable || InteractionData.CurrentFoliageComponent)
 	{
 		NotFoundInteractable(); 
+	}
+	
+	if (IsLocallyControlled() && HUD)
+	{
+		HUD->DisplayInteractable();
 	}
 
 	InteractionData.CurrentWaterComponent = WaterComp;

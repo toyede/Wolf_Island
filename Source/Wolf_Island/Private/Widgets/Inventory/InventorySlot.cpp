@@ -73,7 +73,7 @@ void UInventorySlot::RefreshSlot()
 			
 			if (ItemRef.Amount == 1)
 			{
-				ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
+				//ItemAmount->SetVisibility(ESlateVisibility::Collapsed);
 			}
 		} else
 		{

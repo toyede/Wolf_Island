@@ -534,6 +534,8 @@ public:
 
 	virtual void NotifyControllerChanged() override;
 	
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+	
 	//무게 업데이트 시 능력치 영향
 	UFUNCTION()
 	void OnCurrentWeightChanged();

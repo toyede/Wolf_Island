@@ -2,6 +2,8 @@
 
 
 #include "Widgets/PlayerHUD.h"
+
+#include "WaterBodyComponent.h"
 #include "Widgets/Inventory/ItemAcquiredBlock.h"
 
 #include "Character/MainPlayer.h"
@@ -13,6 +15,7 @@
 #include "Components/TextBlock.h"
 #include "Components/WrapBox.h"
 #include "Games/MainPlayerState.h"
+#include "Item/Pickup.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Widgets/Inventory/HotbarSlot.h"
 #include "Widgets/Inventory/InventorySlot.h"
@@ -189,6 +192,11 @@ void UPlayerHUD::DisplayInteractable()
 	{
 		//UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NO CROSSHAIR | %s"), *GetName())
 	}
+	
+	if (InteractableIcon)
+	{
+		InteractableIcon->SetVisibility(ESlateVisibility::Visible);
+	}
 }
 
 void UPlayerHUD::DisplayDefault()
@@ -201,6 +209,11 @@ void UPlayerHUD::DisplayDefault()
 	} else
 	{
 		//UE_LOG(LogTemp, Warning, TEXT("[PlayerHUD] NO CROSSHAIR | %s"), *GetName())
+	}
+	
+	if (InteractableIcon)
+	{
+		InteractableIcon->SetVisibility(ESlateVisibility::Collapsed);
 	}
 }
 
@@ -355,6 +368,47 @@ void UPlayerHUD::DisplayInteractionInfoText(AActor* Target)
 void UPlayerHUD::HideInteractionInfoText()
 {
 	InteractingInfoText->SetVisibility(ESlateVisibility::Collapsed);
+}
+
+void UPlayerHUD::DisplayInteractableInfoText(AActor* Target)
+{
+	if (!Target) return;
+	
+	if (AMainPlayer* Player = Cast<AMainPlayer>(Target))
+	{
+		InteractableInfoText->SetText(FText::FromString("살려주기"));
+	} else if (APickup* Item = Cast<APickup>(Target))
+	{
+		const FItemBaseData ItemData= Item->GetItemData();
+		InteractableInfoText->SetText(ItemData.ItemName);
+	} else
+	{
+		InteractableInfoText->SetText(FText::FromString(""));
+		HideInteractableInfoText();
+	}
+	
+	InteractableInfoText->SetVisibility(ESlateVisibility::Visible);
+}
+
+void UPlayerHUD::DisplayInteractableInfoTextByItem(const FItemData& ItemData)
+{
+	InteractableInfoText->SetText(ItemData.TextData.Name);
+	InteractableInfoText->SetVisibility(ESlateVisibility::Visible);
+}
+
+void UPlayerHUD::DisplayInteractableInfoTextByComponent(UActorComponent* Component)
+{
+	//일단 이건 물밖에 없어서 물로 고정
+	if (Component)
+	{
+		InteractableInfoText->SetText(FText::FromString(TEXT("물 마시기")));
+		InteractableInfoText->SetVisibility(ESlateVisibility::Visible);
+	}
+}
+
+void UPlayerHUD::HideInteractableInfoText()
+{
+	InteractableInfoText->SetVisibility(ESlateVisibility::Collapsed);
 }
 
 void UPlayerHUD::PlayIconAnim(UWidgetAnimation* Anim)

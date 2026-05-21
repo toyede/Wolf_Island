@@ -8,6 +8,7 @@
 #include "Interaction/InteractableActor.h"
 #include "Pickup.generated.h"
 
+class USphereComponent;
 /**
  * 
  */
@@ -19,6 +20,8 @@ public:
 	
 	APickup();
 
+	UPROPERTY(VisibleAnywhere,BlueprintReadWrite)
+	USphereComponent* PlayerDetector;
 	UPROPERTY(VisibleAnywhere, Category = "Item Data")
 	UStaticMeshComponent* PickupMesh;
 	//최대 스택 개수를 초과하면 최대 스택 개수로 초기화됨.
@@ -43,6 +46,22 @@ public:
 	void InitializeDrop(FItemBaseData ItemToDrop, const int32 InAmount);
 
 	FORCEINLINE FItemBaseData& GetItemData() { return ItemReference; };
+	
+	UFUNCTION()
+	void OnPlayerClose(
+		UPrimitiveComponent* OverlappedComponent, 
+		AActor* OtherActor, 
+		UPrimitiveComponent* OtherComp, 
+		int32 OtherBodyIndex, 
+		bool bFromSweep, 
+		const FHitResult& SweepResult);
+	
+	UFUNCTION()
+	void OnPlayerOut(
+		UPrimitiveComponent* OverlappedComponent,
+		AActor* OtherActor, 
+		UPrimitiveComponent* OtherComp, 
+		int32 OtherBodyIndex);
 
 	virtual void Interact_Implementation(AActor* Interactor) override;
 	
@@ -53,6 +72,8 @@ public:
 public:
 
 	virtual void BeginPlay() override;
+	
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 	virtual void Tick(float DeltaSeconds) override;
 	

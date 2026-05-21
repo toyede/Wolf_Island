@@ -238,7 +238,7 @@ public:
 	float StaminaRecoverDelay = 5.0f;
 	//스태미나 강제 휴식 시간(초)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
-	float ForcedRestTime = 15.0f;
+	float ForcedRestTime = 5.0f;
 
 	//배고픔 감소 주기
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status Setting", SaveGame)
@@ -408,6 +408,24 @@ public:
 	void StartRecoverAir();
 	UFUNCTION(BlueprintCallable)
 	void StopRecoverAir();
+	
+	//체력 자동 회복 기능
+	UPROPERTY()
+	FTimerHandle AutoHealStartTimer;
+	UPROPERTY()
+	FTimerHandle AutoHealTimer;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float AutoHealAmount = 0.05f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float AutoHealRate = 0.01f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float AutoHealDelay = 15.0f;
+	UFUNCTION(BlueprintCallable)
+	void StartAutoHeal();
+	UFUNCTION(BlueprintCallable)
+	void AutoHeal();
+	UFUNCTION(BlueprintCallable)
+	void StopAutoHeal();
 
 	//모든 타이머 삭제
 	UFUNCTION(BlueprintCallable)
