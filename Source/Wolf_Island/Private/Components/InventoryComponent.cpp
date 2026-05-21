@@ -695,9 +695,16 @@ bool UInventoryComponent::MakeItem(FRecipeData Recipe)
 		if (ResultItem.IsValid())
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Result Item Created."));
-			//빈 슬롯이 없으면 바닥에 떨구기
-			if (GetEmptySlotCount() <= 0)
+			
+			FItemAddResult AddResult = HandleAddItem(ResultItem);
+
+			// 아이템이 인벤토리에 전부 들어가지 않았다면 바닥에 드롭
+			if (AddResult.OperationResult != EItemAddedResult::AllItemAdded)
 			{
+				// 넣으려던 총 개수에서 실제로 인벤토리에 들어간 개수를 빼서 남은 개수 계산
+				int32 RemainAmount = ResultItem.Amount - AddResult.ActualAmountAdded;
+				ResultItem.SetAmount(RemainAmount);
+
 				FActorSpawnParameters SpawnParams;
 				SpawnParams.Owner = GetOwner();
 				SpawnParams.bNoFail = true;
@@ -707,13 +714,7 @@ bool UInventoryComponent::MakeItem(FRecipeData Recipe)
 				const FTransform SpawnTransform(SpawnParams.Owner->GetActorRotation(), SpawnLocation);
 		
 				APickup* Pickup = GetWorld()->SpawnActor<APickup>(APickup::StaticClass(), SpawnTransform, SpawnParams);
-				Pickup->InitializeDrop(ResultItem, ResultItem.Amount);
-				
-			}
-			//있으면 추가
-			else
-			{
-				AddNewItem(ResultItem, ResultItem.Amount);
+				Pickup->InitializeDrop(ResultItem, RemainAmount);
 			}
 			InventoryChanged();
 			return true;

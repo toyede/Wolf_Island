@@ -286,6 +286,16 @@ FReply URepairMiniGameWidget::NativeOnPreviewKeyDown(const FGeometry& InGeometry
         StopMiniGame(false);
         return FReply::Handled();
     }
+    else if (InKeyEvent.GetKey() == EKeys::SpaceBar)
+    {
+        OnCheckButtonClicked();
+        return FReply::Handled();
+    }
+    else if (InKeyEvent.GetKey() == EKeys::E)
+    { 
+        OnCheckButtonClicked();
+        return FReply::Handled();
+    }
 
     return Super::NativeOnPreviewKeyDown(InGeometry, InKeyEvent);
 }
@@ -295,6 +305,16 @@ FReply URepairMiniGameWidget::NativeOnKeyDown(const FGeometry& InGeometry, const
     if (InKeyEvent.GetKey() == EKeys::Tab)
     {
         StopMiniGame(false);
+        return FReply::Handled();
+    }
+    else if (InKeyEvent.GetKey() == EKeys::SpaceBar)
+    { 
+        OnCheckButtonClicked();
+        return FReply::Handled();
+    }
+    else if (InKeyEvent.GetKey() == EKeys::E)
+    { 
+        OnCheckButtonClicked();
         return FReply::Handled();
     }
 
