@@ -41,7 +41,7 @@ protected:
 	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastPlayHitSound();
 
-	UFUNCTION(NetMulticast, Reliable)
+	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastPlayDieSound();
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")

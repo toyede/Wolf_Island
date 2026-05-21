@@ -3,10 +3,12 @@
 #include "AI/Enemy_Character/EnemyAIBoss.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/Character.h"
 #include "Animation/AnimInstance.h"
 #include "Components/StatusComponent.h"
 #include "Components/AttackCollisionComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "Engine/DamageEvents.h"
 #include "Net/UnrealNetwork.h"
 #include "Actors/BossStatue.h"
@@ -854,6 +856,49 @@ void AEnemyAIBoss::ExecuteThrust()
 	Multicast_PlayThrustMontage();
 }
 
+void AEnemyAIBoss::OnThrustImpact()
+{
+	// 서버에서만 판정 처리 — 클라이언트 노티파이 호출은 무시
+	if (!HasAuthority()) return;
+
+	const FVector Origin = GetActorLocation();
+
+	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
+
+	TArray<AActor*> IgnoreActors;
+	IgnoreActors.Add(this);
+
+	TArray<AActor*> FoundActors;
+	UKismetSystemLibrary::SphereOverlapActors(
+		GetWorld(),
+		Origin,
+		ThrustRange,
+		ObjectTypes,
+		ACharacter::StaticClass(),
+		IgnoreActors,
+		FoundActors
+	);
+
+	for (AActor* Actor : FoundActors)
+	{
+		ACharacter* Target = Cast<ACharacter>(Actor);
+		if (!Target) continue;
+
+		// 데미지
+		if (ThrustImpactDamage > 0.f)
+		{
+			FDamageEvent DamageEvent;
+			Target->TakeDamage(ThrustImpactDamage, DamageEvent, GetController(), this);
+		}
+
+		// 넉백 방향: 보스 → 타겟 (수평) + 상방
+		const FVector ToTarget = (Target->GetActorLocation() - Origin).GetSafeNormal2D();
+		const FVector LaunchVelocity = ToTarget * ThrustForce + FVector(0.f, 0.f, UpwardForce);
+		Target->LaunchCharacter(LaunchVelocity, true, true);
+	}
+}
+
 void AEnemyAIBoss::Multicast_PlayThrustMontage_Implementation()
 {
 	// 사운드 재생
@@ -866,7 +911,7 @@ void AEnemyAIBoss::Multicast_PlayThrustMontage_Implementation()
 
 	if (AnimInstance && ThrustMontage)
 	{
-		AnimInstance->Montage_Play(ThrustMontage);
+		AnimInstance->Montage_Play(ThrustMontage, ThrustMontagePlayRate);
 
 		if (HasAuthority())
 		{

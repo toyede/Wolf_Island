@@ -121,7 +121,7 @@ protected:
 	UFUNCTION()
 	void OnRep_IsDead();
 
-	UFUNCTION(NetMulticast, Reliable)
+	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlayAttackMontage();
 
 	void ApplyDeadState();
