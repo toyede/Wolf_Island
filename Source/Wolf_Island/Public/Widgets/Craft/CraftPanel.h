@@ -64,6 +64,8 @@ public:
 	void SetCraftButton(FRecipeData RecipeData);
 	UFUNCTION(BlueprintCallable)
 	void SetCraftingMethod(ECraftMethod NewMethod);
+	UFUNCTION()
+	void UpdateCraftUI();
 
 protected:
 	virtual void NativeConstruct() override;

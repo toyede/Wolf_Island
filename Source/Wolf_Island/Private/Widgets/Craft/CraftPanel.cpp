@@ -22,6 +22,14 @@ void UCraftPanel::SetCraftingMethod(ECraftMethod NewMethod)
 	RefreshRecipeList();
 }
 
+void UCraftPanel::UpdateCraftUI()
+{
+	if (CurrentRecipeData.ResultID != NAME_None)
+	{
+		SetCraftButton(CurrentRecipeData);
+	}
+}
+
 void UCraftPanel::NativeConstruct()
 {
 	Super::NativeConstruct();
@@ -31,7 +39,7 @@ void UCraftPanel::NativeConstruct()
 		: nullptr;
 	if (OwnerInventory)
 	{
-		OwnerInventory->OnInventoryUpdated.AddUObject(this, &UCraftPanel::RefreshRecipeList);
+		OwnerInventory->OnInventoryUpdated.AddUObject(this, &UCraftPanel::UpdateCraftUI);
 	}
 
 	if (AMainGameState* GS = GetWorld() ? GetWorld()->GetGameState<AMainGameState>() : nullptr)
@@ -46,6 +54,16 @@ void UCraftPanel::NativeConstruct()
 void UCraftPanel::NativeDestruct()
 {
 	StopCraft();
+	
+	if (OwnerInventory)
+	{
+		OwnerInventory->OnInventoryUpdated.RemoveAll(this);
+	}
+
+	if (AMainGameState* GS = GetWorld() ? GetWorld()->GetGameState<AMainGameState>() : nullptr)
+	{
+		GS->OnSharedRecipesChanged.RemoveDynamic(this, &UCraftPanel::RefreshRecipeList);
+	}
 	
 	Super::NativeDestruct();
 }
@@ -86,11 +104,13 @@ void UCraftPanel::StopCraft()
 
 void UCraftPanel::MakeItem(FRecipeData RecipeData)
 {
+	GetWorld()->GetTimerManager().ClearTimer(CraftingTimer);
+	
 	if (AMainPlayer* Player = Cast<AMainPlayer>(OwnerInventory->GetOwner()))
 	{
 		Player->InventoryComponent->Request_MakeItem(CurrentRecipeData);
 	}
-	CraftButton->SetIsEnabled(true);
+	//CraftButton->SetIsEnabled(true);
 	SetCraftButton(CurrentRecipeData);
 }
 
@@ -132,11 +152,20 @@ inline void UCraftPanel::RefreshRecipeList()
 	AMainPlayer* Player = Cast<AMainPlayer>(OwnerInventory->GetOwner());
 	if (!Player) return;
 
+	FRecipeData LastSelectedRecipe = CurrentRecipeData;
+	
 	RecipeList->ClearChildren();
+	CurrentRecipeBlock = nullptr;
 
+	
 	int32 Index = 0;
+	bool bFoundPrevious = false;
+	URecipeBlock* FirstBlock = nullptr;
+	FRecipeData FirstRecipeData;
+	
 	RecipeTable->ForeachRow<FRecipeData>(TEXT("RecipeTableContext"),
 	[&](const FName& RowName, const FRecipeData& Recipe)
+	
 	{
 		// 플레이어가 해금한 레시피가 아니라면 건너뜀
 		if (!Player->HasRecipe(RowName)) return;
@@ -159,20 +188,46 @@ inline void UCraftPanel::RefreshRecipeList()
 				SetRecipeInfo(NewBlock, CurrentRecipeData);
 			}
 			
+			bool bIsSameRecipe = (LastSelectedRecipe.ResultID != NAME_None) &&
+								 (Recipe.ResultID == LastSelectedRecipe.ResultID) &&
+								 (Recipe.Ingredient1ID == LastSelectedRecipe.Ingredient1ID) &&
+								 (Recipe.Ingredient2ID == LastSelectedRecipe.Ingredient2ID) &&
+								 (Recipe.Ingredient3ID == LastSelectedRecipe.Ingredient3ID);
+
+			if (bIsSameRecipe)
+			{
+				SetRecipeInfo(NewBlock, Recipe);
+				bFoundPrevious = true;
+			}
+			
 			Index++;
 		}
+		
 	});
+	if (!bFoundPrevious && FirstBlock != nullptr)
+	{
+		SetRecipeInfo(FirstBlock, FirstRecipeData);
+	}
 }
 
 void UCraftPanel::SetRecipeInfo(URecipeBlock* ClickedBlock, FRecipeData RecipeData)
 {
+	CurrentRecipeData = RecipeData;
 	//선택된 버튼 강조 변경
 	//원래 선택 됐던 거 강조 해제
-	CurrentRecipeBlock->SetSelected(false);
+	if (CurrentRecipeBlock)
+	{
+		//원래 선택 됐던 거 강조 해제
+		CurrentRecipeBlock->SetSelected(false);
+	}
 	//선택된 버튼을 최신 거로 변경
 	CurrentRecipeBlock = ClickedBlock;
 	//최신 선택된 거 강조
-	CurrentRecipeBlock->SetSelected(true);
+	if (CurrentRecipeBlock)
+	{
+		//최신 선택된 거 강조
+		CurrentRecipeBlock->SetSelected(true);
+	}
 	
 	//재료 슬롯 초기화
 	IngredientList->ClearChildren();
@@ -214,7 +269,7 @@ void UCraftPanel::SetCraftButton(FRecipeData RecipeData)
 	if (OwnerInventory->CheckCanMakeRecipe(RecipeData))
 	{
 		CraftButton->SetIsEnabled(true);
-		CurrentRecipeData = RecipeData;
+		//CurrentRecipeData = RecipeData;
 	} else
 	{
 		CraftButton->SetIsEnabled(false);
