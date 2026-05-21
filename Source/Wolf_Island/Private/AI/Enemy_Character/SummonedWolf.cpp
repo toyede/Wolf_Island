@@ -47,14 +47,15 @@ void ASummonedWolf::BeginPlay()
 		}
 		else
 		{
-			// Owner가 아직 없을 경우 한 프레임 뒤에 재시도
-			GetWorldTimerManager().SetTimerForNextTick([this]()
+		// Owner가 아직 없을 경우 한 프레임 뒤에 재시도
+		// [Refactor] 타이머 콜백: WeakLambda로 안전한 this 캡처
+		GetWorldTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this]()
+		{
+			if (AttackCollisionComponent && GetOwner())
 			{
-				if (AttackCollisionComponent && GetOwner())
-				{
-					AttackCollisionComponent->AddIgnoredActor(GetOwner());
-				}
-			});
+				AttackCollisionComponent->AddIgnoredActor(GetOwner());
+			}
+		}));
 		}
 	}
 
@@ -71,6 +72,13 @@ void ASummonedWolf::BeginPlay()
 
 void ASummonedWolf::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	// [Refactor] 델리게이트 해제: AttackCollisionComponent OnHitActor 바인딩 대칭 해제
+	if (AttackCollisionComponent)
+	{
+		AttackCollisionComponent->OnHitActor.RemoveAll(this);
+	}
+
+	// [Refactor] 타이머 정리
 	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
 	
 	if (StatusComponent)
@@ -143,7 +151,8 @@ bool ASummonedWolf::IsValidCombatTarget(const AActor* Target) const
 
 void ASummonedWolf::UpdateChaseAndCombat()
 {
-	if (!HasAuthority() || bIsDead)
+	// [Refactor] 타이머 콜백: World 및 Dead 상태 유효성 체크
+	if (!HasAuthority() || bIsDead || !GetWorld())
 	{
 		return;
 	}
@@ -260,6 +269,8 @@ void ASummonedWolf::Multicast_PlayAttackMontage_Implementation()
 
 void ASummonedWolf::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	// [Refactor] 몽타주 종료 콜백: 유효성 체크
+	if (!IsValid(this)) return;
 	bIsAttacking = false;
 	OnAttackEnd.Broadcast();
 }
@@ -288,6 +299,12 @@ void ASummonedWolf::OnAttackHit(const FHitResult& HitResult)
 
 void ASummonedWolf::HandleHPZero()
 {
+	// [Refactor] 델리게이트 콜백: 유효성 체크
+	if (!IsValid(this))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Refactor] ASummonedWolf::HandleHPZero: Actor is invalid"));
+		return;
+	}
 	IEnemyCommonInterface::Execute_Die(this);
 }
 

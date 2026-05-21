@@ -19,7 +19,14 @@ EBTNodeResult::Type UBTTask_NormalAttack::ExecuteTask(UBehaviorTreeComponent& Ow
         return EBTNodeResult::Failed;
     }
 
-    AEnemyAIBase* Enemy = AICon ? Cast<AEnemyAIBase>(AICon->GetPawn()) : nullptr;
+    AEnemyAIBase* Enemy = Cast<AEnemyAIBase>(AICon->GetPawn());
+
+    // [Refactor] 비동기 콜백 준비 전: Enemy 유효성 체크
+    if (!IsValid(Enemy))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Refactor] UBTTask_NormalAttack::ExecuteTask: Enemy is invalid"));
+        return EBTNodeResult::Failed;
+    }
 
     CachedEnemy = Enemy;
     CachedOwnerComp = &OwnerComp;
@@ -32,6 +39,8 @@ EBTNodeResult::Type UBTTask_NormalAttack::ExecuteTask(UBehaviorTreeComponent& Ow
         return EBTNodeResult::InProgress;
     }
 
+    // [Refactor] 인터페이스 미구현 시 AddDynamic 정리 후 실패 반환
+    Enemy->OnAttackEnd.RemoveDynamic(this, &UBTTask_NormalAttack::OnAttackFinished);
     return EBTNodeResult::Failed;
 }
 

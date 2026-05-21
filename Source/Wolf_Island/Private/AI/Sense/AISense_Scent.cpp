@@ -19,31 +19,31 @@ UAISense_Scent::UAISense_Scent()
 
 void UAISense_Scent::RegisterEvent(const FAIScentEvent& Event)
 {
-    UE_LOG(LogTemp, Warning, TEXT("Scent RegisterEvent called! Location: %s, Instigator: %s"),
-        *Event.Location.ToString(),
-        Event.Instigator != nullptr ? *Event.Instigator->GetName() : TEXT("None"));
+    // MaxRange가 0이면 어떤 리스너도 감지할 수 없으므로 등록 자체를 차단
+    if (FMath::IsNearlyZero(Event.MaxRange))
+    {
+        return;
+    }
 
-    // ���� �̺�Ʈ(Instigator ����) ����
+    // 기존 이벤트(Instigator 동일) 갱신
     for (int32 i = 0; i < RegisteredEvents.Num(); i++)
     {
         if (RegisteredEvents[i].Instigator == Event.Instigator)
         {
-            RegisteredEvents[i].Location = Event.Location;
+            RegisteredEvents[i].Location  = Event.Location;
             RegisteredEvents[i].Intensity = Event.Intensity;
-            RegisteredEvents[i].MaxRange = Event.MaxRange;
-            RegisteredEvents[i].Age = 0.f;
-
-            // A�� �ٽ�: ���ŵ� ������ �� ������ �ο�
-            RegisteredEvents[i].Sequence = ++GlobalScentSequence;
+            RegisteredEvents[i].MaxRange  = Event.MaxRange;
+            RegisteredEvents[i].Age       = 0.f;
+            RegisteredEvents[i].Sequence  = ++GlobalScentSequence;
 
             RequestImmediateUpdate();
             return;
         }
     }
 
-    // �ű� �̺�Ʈ �߰�
+    // 신규 이벤트 추가
     FAIScentEvent NewEvent = Event;
-    NewEvent.Age = 0.f;
+    NewEvent.Age      = 0.f;
     NewEvent.Sequence = ++GlobalScentSequence;
 
     RegisteredEvents.Add(NewEvent);
@@ -91,6 +91,11 @@ float UAISense_Scent::Update()
         }
     }
 
+    if (RegisteredEvents.Num() == 0 || ListenersMap.Num() == 0)
+    {
+        return 1.0f;
+    }
+
     for (auto& Elem : ListenersMap)
     {
         FPerceptionListener& Listener = Elem.Value;
@@ -101,60 +106,44 @@ float UAISense_Scent::Update()
         const AActor* ListenerBodyActor = Listener.GetBodyActor();
         if (!ListenerBodyActor) continue;
 
-        const FVector ListenerLoc = ListenerBodyActor->GetActorLocation();
-        float DetectionRadiusSq = FMath::Square(Prop->ScentDetectionRadius);
+        const FVector ListenerLoc      = ListenerBodyActor->GetActorLocation();
+        const float DetectionRadiusSq  = FMath::Square(Prop->ScentDetectionRadius);
+
+        // FindOrAdd를 이벤트 루프 바깥으로 이동 → 이벤트마다 맵 탐색하던 비용 제거
+        TMap<TWeakObjectPtr<AActor>, int32>& LastMap =
+            LastProcessedSequenceByListener.FindOrAdd(Listener.GetListenerID());
 
         for (const FAIScentEvent& Event : RegisteredEvents)
         {
-            float DistSq = FVector::DistSquared(ListenerLoc, Event.Location);
-            float MaxRangeSq = FMath::Square(Event.MaxRange);
+            // Instigator 유효성 조기 체크
+            if (!Event.Instigator) continue;
 
-            if (DistSq <= MaxRangeSq && DistSq <= DetectionRadiusSq)
-            {
-                // A��: (Listener, Instigator)�� ������ ó�� ������ Ȯ��
-                TMap<TWeakObjectPtr<AActor>, int32>& LastMap =
-                    LastProcessedSequenceByListener.FindOrAdd(Listener.GetListenerID());
+            // MaxRange와 DetectionRadius 중 작은 값으로 단일 비교
+            const float EffectiveRangeSq = FMath::Min(FMath::Square(Event.MaxRange), DetectionRadiusSq);
+            const float DistSq = FVector::DistSquared(ListenerLoc, Event.Location);
 
-                int32* LastSeq = LastMap.Find(Event.Instigator);
+            if (DistSq > EffectiveRangeSq) continue;
 
-                const bool bIsNewReport = (!LastSeq || *LastSeq < Event.Sequence);
-                if (!bIsNewReport)
-                {
-                    continue; // �� report�� �ƴϸ� stimulus Ǫ�� �� ��
-                }
+            int32* LastSeq = LastMap.Find(Event.Instigator);
+            if (LastSeq && *LastSeq >= Event.Sequence) continue; // 이미 처리된 report
 
-                if (FMath::IsNearlyZero(Event.MaxRange))
-                {
-                    continue; // MaxRange�� 0�̸� ó������ �ʰ� ��ŵ
-                }
+            // stimulus 발행
+            const float Distance         = FMath::Sqrt(DistSq);
+            const float StrengthMult     = 1.0f - (Distance / Event.MaxRange);
+            const float FinalStrength    = Event.Intensity * StrengthMult;
 
-                // �� report�� ���� stimulus 1ȸ Ǫ��
-                float Distance = FMath::Sqrt(DistSq);
-                float StrengthMultiplier = 1.0f - (Distance / Event.MaxRange);
-                float FinalStrength = Event.Intensity * StrengthMultiplier;
+            Listener.RegisterStimulus(Event.Instigator.Get(),
+                FAIStimulus(*this, FinalStrength, Event.Location, ListenerLoc));
 
-                Listener.RegisterStimulus(Event.Instigator.Get(),
-                    FAIStimulus(*this, FinalStrength, Event.Location, ListenerLoc));
-
-                // ó�� ������ ����
-                LastMap.Add(Event.Instigator, Event.Sequence);
-            }
+            LastMap.Add(Event.Instigator, Event.Sequence);
         }
     }
 
-    if (RegisteredEvents.Num() == 0 || ListenersMap.Num() == 0)
-    {
-        return 1.0f;
-    }
     return 0.5f;
 }
 
 void UAISense_Scent::OnNewListenerImpl(const FPerceptionListener& NewListener)
 {
-    UE_LOG(LogTemp, Warning, TEXT("Scent: New listener added!"));
-
-    check(NewListener.Listener.IsValid());
-
     if (!NewListener.Listener.IsValid())
     {
         return;
@@ -174,11 +163,10 @@ void UAISense_Scent::OnNewListenerImpl(const FPerceptionListener& NewListener)
 
 void UAISense_Scent::OnListenerRemovedImpl(const FPerceptionListener& UpdatedListener)
 {
-    UE_LOG(LogTemp, Warning, TEXT("Scent: Listener removed!"));
     DigestedProperties.Remove(UpdatedListener.GetListenerID());
-
     LastProcessedSequenceByListener.Remove(UpdatedListener.GetListenerID());
 }
+
 UAISense_Scent::FDigestedScentProperties::FDigestedScentProperties()
 {
     ScentDetectionRadius = 1000.f;

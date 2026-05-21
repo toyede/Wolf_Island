@@ -20,10 +20,10 @@ protected:
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 
 	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted, UBehaviorTreeComponent* OwnerComp);
-	
-	AEnemyAIController* AICon;
 
-	ACharacter* AIPawn;
+	// [Refactor] 외부 참조 포인터: raw 포인터 대신 TWeakObjectPtr로 전환 (소유권 없는 외부 참조)
+	TWeakObjectPtr<AEnemyAIController> AICon;
+	TWeakObjectPtr<ACharacter> AIPawn;
 
 	bool SphereTraceSingle(
 		const FVector Start, const FVector End, float Radius,

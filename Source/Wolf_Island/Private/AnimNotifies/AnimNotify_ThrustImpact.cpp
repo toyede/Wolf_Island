@@ -1,11 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "AnimNotifies/AnimNotify_ThrustImpact.h"
 #include "AI/Enemy_Character/EnemyAIBoss.h"
-#include "GameFramework/Character.h"
-#include "Kismet/KismetSystemLibrary.h"
-#include "Engine/DamageEvents.h"
 
 void UAnimNotify_ThrustImpact::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
@@ -16,48 +12,6 @@ void UAnimNotify_ThrustImpact::Notify(USkeletalMeshComponent* MeshComp, UAnimSeq
 	AEnemyAIBoss* Boss = Cast<AEnemyAIBoss>(MeshComp->GetOwner());
 	if (!Boss) return;
 
-	// ¼­¹ö¿¡¼­¸¸ ½ÇÇà
-	if (!Boss->HasAuthority()) return;
-
-	FVector BossLocation = Boss->GetActorLocation();
-
-	// ÁÖº¯ ¿øÇü ¹üÀ§ ³» ¾×ÅÍ Å½»ö
-	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
-	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
-
-	TArray<AActor*> IgnoreActors;
-	IgnoreActors.Add(Boss);
-
-	TArray<AActor*> FoundActors;
-
-	UKismetSystemLibrary::SphereOverlapActors(
-		Boss->GetWorld(),
-		BossLocation,
-		ThrustRange,
-		ObjectTypes,
-		ACharacter::StaticClass(),
-		IgnoreActors,
-		FoundActors
-	);
-
-	for (AActor* Actor : FoundActors)
-	{
-		ACharacter* TargetChar = Cast<ACharacter>(Actor);
-		if (!TargetChar) continue;
-
-		// ¹ÐÃÄ³»´Â ¹æÇâ: º¸½º ¡æ Å¸°Ù
-		FVector ToTarget = (TargetChar->GetActorLocation() - BossLocation).GetSafeNormal2D();
-		FVector LaunchVelocity = ToTarget * ThrustForce;
-		LaunchVelocity.Z = UpwardForce;
-
-		// µ¥¹ÌÁö Àû¿ë
-		if (ThrustDamage > 0.f)
-		{
-			FDamageEvent DamageEvent;
-			TargetChar->TakeDamage(ThrustDamage, DamageEvent, Boss->GetController(), Boss);
-		}
-
-		// ³Ë¹é Àû¿ë
-		TargetChar->LaunchCharacter(LaunchVelocity, true, true);
-	}
+	// ì‹ í˜¸ë§Œ ì „ë‹¬ â€” ì‹¤ì œ íŒì •/ë°ë¯¸ì§€/ë„‰ë°±ì€ ë³´ìŠ¤ê°€ ì²˜ë¦¬
+	Boss->OnThrustImpact();
 }

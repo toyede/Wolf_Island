@@ -74,8 +74,12 @@ EBossState AEnemyAIBossController::SetStateAsStun()
 
 void AEnemyAIBossController::HandlePhaseChanged(int32 NewPhase)
 {
-	if (UBlackboardComponent* BB = GetBlackboardComponent())
+	// [Refactor] 델리게이트 콜백 진입부: BlackboardComponent 유효성 체크
+	UBlackboardComponent* BB = GetBlackboardComponent();
+	if (!IsValid(BB))
 	{
-		BB->SetValueAsInt(TEXT("CurrentPhase"), NewPhase);
+		UE_LOG(LogTemp, Warning, TEXT("[Refactor] AEnemyAIBossController::HandlePhaseChanged: BlackboardComponent is invalid"));
+		return;
 	}
+	BB->SetValueAsInt(TEXT("CurrentPhase"), NewPhase);
 }

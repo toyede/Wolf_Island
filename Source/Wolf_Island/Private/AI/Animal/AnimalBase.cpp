@@ -143,7 +143,11 @@ void AAnimalBase::ApplyDeadState()
     GetCharacterMovement()->DisableMovement();
     GetCharacterMovement()->GravityScale = 0.f;
 
-    GetMesh()->GetAnimInstance()->Montage_Stop(0.2f);
+    // [Refactor] 비동기 OnRep 콜백: AnimInstance 유효성 체크 후 Montage 중지
+    if (UAnimInstance* AnimInst = GetMesh()->GetAnimInstance())
+    {
+        AnimInst->Montage_Stop(0.2f);
+    }
 
     // ĸ��: �ٴڸ� Block, ������ Ignore
     GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);

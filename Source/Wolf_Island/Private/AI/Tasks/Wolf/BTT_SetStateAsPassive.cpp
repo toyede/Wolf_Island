@@ -9,13 +9,14 @@ EBTNodeResult::Type UBTT_SetStateAsPassive::ExecuteTask(UBehaviorTreeComponent& 
 {
 	AICon = Cast<AEnemyAIController>(OwnerComp.GetAIOwner());
 
-	AIPawn = AICon ? Cast<ACharacter>(AICon->GetPawn()) : nullptr;
+	AIPawn = AICon.IsValid() ? Cast<ACharacter>(AICon->GetPawn()) : nullptr;
 
-	if (!AICon) return EBTNodeResult::Failed;
+	// [Refactor] 외부 참조 포인터 유효성 체크
+	if (!AICon.IsValid()) return EBTNodeResult::Failed;
 
-	if (!AIPawn) return EBTNodeResult::Failed;
+	if (!AIPawn.IsValid()) return EBTNodeResult::Failed;
 
-	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(AIPawn, 0);
+	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(AIPawn.Get(), 0);
 
 	AICon->SetEnemyState(EEnemyState::Passive);
 

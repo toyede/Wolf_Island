@@ -9,23 +9,16 @@
 /**
  * 
  */
+/**
+ * ThrustImpact 애님 노티파이.
+ * 충격파 발생 타이밍에 삽입되며, 보스에게 신호만 전달합니다.
+ * 실제 범위 판정 / 데미지 / 넉백 로직은 AEnemyAIBoss::OnThrustImpact() 에서 처리합니다.
+ */
 UCLASS()
 class WOLF_ISLAND_API UAnimNotify_ThrustImpact : public UAnimNotify
 {
 	GENERATED_BODY()
-	
+
 public:
 	virtual void Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference) override;
-
-	UPROPERTY(EditAnywhere, Category = "Thrust")
-	float ThrustRange = 250.f;
-
-	UPROPERTY(EditAnywhere, Category = "Thrust")
-	float ThrustForce = 1200.f;
-
-	UPROPERTY(EditAnywhere, Category = "Thrust")
-	float UpwardForce = 300.f;
-
-	UPROPERTY(EditAnywhere, Category = "Thrust")
-	float ThrustDamage = 20.f;
 };

@@ -126,6 +126,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Boss|Pattern|Special")
 	void ExecuteSpecialAttack();
 
+	/** AnimNotify_ThrustImpact 에서 호출 — 서버에서 충격파 판정/데미지/넉백 처리 */
+	void OnThrustImpact();
+
 	void SetCurrentDamage(float Damage) { CurrentDamage = Damage; }
 
 	// --- Interface Implementations ---
@@ -271,6 +274,26 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Special")
 	USoundBase* ThrustSound;
+
+	/** 충격파 반경 (cm) */
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Thrust")
+	float ThrustRange = 250.f;
+
+	/** 수평 넉백 강도 */
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Thrust")
+	float ThrustForce = 1200.f;
+
+	/** 수직 넉백 강도 */
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Thrust")
+	float UpwardForce = 300.f;
+
+	/** 충격파 데미지 */
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Thrust")
+	float ThrustImpactDamage = 20.f;
+
+	/** 몽타주 재생 속도 (1.0 = 기본, 낮을수록 느림) */
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Thrust", meta = (ClampMin = "0.1", ClampMax = "2.0"))
+	float ThrustMontagePlayRate = 1.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Special")
 	UAnimMontage* SpecialAttackMontage;

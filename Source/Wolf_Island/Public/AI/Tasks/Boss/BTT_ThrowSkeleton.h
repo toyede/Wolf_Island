@@ -22,9 +22,9 @@ protected:
 	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted, UBehaviorTreeComponent* OwnerComp);
 
 public:
-	AEnemyAIBossController* AICon;
-
-	ACharacter* AIPawn;
+	// [Refactor] 외부 참조 포인터: raw 포인터 대신 TWeakObjectPtr로 전환 (소유권 없는 외부 참조)
+	TWeakObjectPtr<AEnemyAIBossController> AICon;
+	TWeakObjectPtr<ACharacter> AIPawn;
 protected:
 	UPROPERTY(EditAnywhere, Category = "Animation")
 	UAnimMontage* ThrowSkeletonMontage;

@@ -143,10 +143,11 @@ void AEnemyAIController::HandleSight(AActor* Actor, const FAIStimulus& Stimulus)
 	{
 		if (EnemyState == EEnemyState::Combat && Actor == AttackTarget)
 		{
-			GetWorld()->GetTimerManager().SetTimer(LineOfSightTimer, [this]()
+			// [Refactor] 타이머 콜백: BindWeakLambda로 안전한 this 캡처
+			GetWorld()->GetTimerManager().SetTimer(LineOfSightTimer, FTimerDelegate::CreateWeakLambda(this, [this]()
 				{
 					SetEnemyState(EEnemyState::Passive);
-				}, SightTime, false);
+				}), SightTime, false);
 		}
 		return;
 	}
@@ -208,10 +209,11 @@ void AEnemyAIController::HandleHearing(AActor* Actor, const FAIStimulus& Stimulu
 		//  시각 확인 없이 만료되면 Passive 전환
 		if (EnemyState == EEnemyState::Combat && IsValid(AttackTarget))
 		{
-			GetWorld()->GetTimerManager().SetTimer(LineOfSightTimer, [this]()
+			// [Refactor] 타이머 콜백: BindWeakLambda로 안전한 this 캡처
+			GetWorld()->GetTimerManager().SetTimer(LineOfSightTimer, FTimerDelegate::CreateWeakLambda(this, [this]()
 				{
 					SetEnemyState(EEnemyState::Passive);
-				}, SightTime, false);
+				}), SightTime, false);
 		}
 		return;
 	}
@@ -428,7 +430,8 @@ void AEnemyAIController::OnEnterState(EEnemyState NewState)
 			BB->SetValueAsObject(AttackTargetKey, AttackTarget);
 
 			// 타겟이 기절/변신했는지 주기적으로 체크 (0.3초마다)
-			GetWorld()->GetTimerManager().SetTimer(TargetValidationTimer, [this]()
+			// [Refactor] 타이머 콜백: BindWeakLambda로 안전한 this 캡처
+			GetWorld()->GetTimerManager().SetTimer(TargetValidationTimer, FTimerDelegate::CreateWeakLambda(this, [this]()
 			{
 				if (EnemyState == EEnemyState::Combat && !IsTargetValid(AttackTarget))
 				{
@@ -439,7 +442,7 @@ void AEnemyAIController::OnEnterState(EEnemyState NewState)
 					}
 					SetEnemyState(EEnemyState::Passive);
 				}
-			}, 0.3f, true);
+			}), 0.3f, true);
 		}
 		else
 		{

@@ -18,8 +18,8 @@ class WOLF_ISLAND_API UBTT_SetStateAsPassive : public UBTTaskNode
 protected:
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 
-	AEnemyAIController* AICon;
+	TWeakObjectPtr<AEnemyAIController> AICon;
 
-	ACharacter* AIPawn;
+	TWeakObjectPtr<ACharacter> AIPawn;
 	
 };
