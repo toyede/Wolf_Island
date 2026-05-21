@@ -936,6 +936,7 @@ void AMainPlayer::StopUseItem()
 	if (IsUsingItem)
 	{
 		GetWorld()->GetTimerManager().ClearTimer(ItemUseTimer);
+		Multi_StopEatingSound();
 		IsUsingItem = false;
 	}
 }
