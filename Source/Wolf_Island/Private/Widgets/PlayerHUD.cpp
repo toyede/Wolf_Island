@@ -376,13 +376,16 @@ void UPlayerHUD::DisplayInteractableInfoText(AActor* Target)
 	
 	if (AMainPlayer* Player = Cast<AMainPlayer>(Target))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER HUD] THIS INTERACTABLE IS PLAYER"));
 		InteractableInfoText->SetText(FText::FromString("살려주기"));
 	} else if (APickup* Item = Cast<APickup>(Target))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER HUD] THIS INTERACTABLE IS ITEM"));
 		const FItemBaseData ItemData= Item->GetItemData();
 		InteractableInfoText->SetText(ItemData.ItemName);
 	} else
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER HUD] THIS INTERACTABLE IS NOT PLAYER OR ITEM"));
 		InteractableInfoText->SetText(FText::FromString(""));
 		HideInteractableInfoText();
 	}

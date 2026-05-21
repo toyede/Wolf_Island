@@ -103,6 +103,24 @@ void APickup::InitializeDrop(FItemBaseData ItemToDrop, const int32 InAmount)
         }
         
         ItemReference = ItemToDrop;
+        
+        ItemReference.Type = ItemData->Type;
+        ItemReference.ItemID = ItemData->ID;
+        ItemReference.ItemName = ItemData->TextData.Name;
+
+        InAmount <= 0 ? ItemReference.SetAmount(1) : ItemReference.SetAmount(InAmount);
+
+        if (ItemData->NumericData.MaxAmount < InAmount)
+        {
+            ItemReference.SetAmount(ItemData->NumericData.MaxAmount);
+        }
+       
+        if (ItemData->AssetData.Mesh)
+        {
+            PickupMesh->SetStaticMesh(ItemData->AssetData.Mesh);
+            PickupMesh->SetSimulatePhysics(IsPhysics);
+        }
+        
         SetInteractionDuration(ItemData->NumericData.InteractionDuration);
         InAmount <= 0 ? ItemReference.SetAmount(1) : ItemReference.SetAmount(InAmount);
         PickupMesh->SetStaticMesh(ItemData->AssetData.Mesh);
