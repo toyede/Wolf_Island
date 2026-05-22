@@ -97,9 +97,9 @@ public:
 	UFUNCTION()
 	void HandleInfectionStarted(UStatusComponent* StatusComp);
 
-	// �Ϸ� �� ������ ���� ������ (�� ���� �� 0���� �ʱ�ȭ)
+	// 하루 밤 달빛 노출량 누적 (매 밤 시작 시 0으로 초기화)
 	UPROPERTY()
-	TMap<AMainPlayer*, float> NightlyExposure;
+	TMap<TWeakObjectPtr<AMainPlayer>, float> NightlyExposure;
 
 	// �̹� �㿡 �̹� Ʈ���ŵ� �÷��̾� (��� 1ȸ ����)
 	UPROPERTY()
@@ -145,12 +145,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Moonlight System|Debug")
 	void Debug_ForceRestoreAll();
 
-	// ��Ƽ ����: Ȱ�� �����ΰ� ���� ������
+	// 멀티 전용: 활성 늑대인간 변신 세션
 	UPROPERTY()
-	TMap<APlayerController*, FWerewolfSessionData> ActiveWerewolfSessions;
+	TMap<TWeakObjectPtr<APlayerController>, FWerewolfSessionData> ActiveWerewolfSessions;
 private:
 	UPROPERTY()
-	TArray<TObjectPtr<UStatusComponent>> InfectedStatusList;
+	TArray<TWeakObjectPtr<UStatusComponent>> InfectedStatusList;
 
 	UPROPERTY(Transient)
 	bool bMorningSkipTriggeredThisNight = false;
