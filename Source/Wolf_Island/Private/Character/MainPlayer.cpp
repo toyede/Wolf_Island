@@ -498,6 +498,8 @@ float AMainPlayer::TakeDamage(float DamageAmount, struct FDamageEvent const& Dam
 		}
 		
 		StatusComponent->StartAutoHeal();
+		
+		if (HUD) HUD->PlayerScreenHit();
 	}
 	
 	return Damage;
@@ -831,6 +833,11 @@ void AMainPlayer::SetBuildingInputBlocked(bool bBlocked)
 	}
 }
 
+void AMainPlayer::Client_BlinkEdge_Implementation(FColor Color)
+{
+	HUD->PlayScreenEffect(Color);
+}
+
 //TODO: 아이템 사용 로직 멀티로 전환하기
 void AMainPlayer::UseItem(int32 SlotIndex)
 {
@@ -1143,6 +1150,9 @@ void AMainPlayer::KnockOut()
 	if (IsRunning) Request_StopRun();
 	
 	Request_StopEmotion();
+	
+	//자동 회복 기능 정지
+	if (StatusComponent) StatusComponent->StopAutoHeal();
 	
 	//기절 타이머 실행 - 누가 소생시켜주지 않으면 10초 뒤 사망
 	GetWorld()->GetTimerManager().SetTimer(

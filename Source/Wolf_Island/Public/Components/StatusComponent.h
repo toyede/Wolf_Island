@@ -415,7 +415,7 @@ public:
 	UPROPERTY()
 	FTimerHandle AutoHealTimer;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float AutoHealAmount = 0.05f;
+	float AutoHealAmount = 0.03f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float AutoHealRate = 0.01f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

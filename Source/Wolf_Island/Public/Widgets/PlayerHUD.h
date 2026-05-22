@@ -66,6 +66,22 @@ public:
 	UPROPERTY(BlueprintReadWrite, meta=(BindWidgetAnim), Transient)
 	UWidgetAnimation* HydrationIconAnimation;
 	
+	//스크릿 엣지 해야하는 상황인가? 변수
+	UPROPERTY(BlueprintReadWrite)
+	bool ShouldEffect = false;
+	
+	//스크린 엣지 이미지
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	UImage* ScreenHitImage;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	UImage* ScreenEffectImage;
+	
+	//스크린 엣지 이펙트 애님
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidgetAnim), Transient)
+	UWidgetAnimation* ScreenEffectAnimation;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidgetAnim), Transient)
+	UWidgetAnimation* ScreenHitAnimation;
+	
 	//공격 에임 상대의 HP
 	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
 	UTextBlock* TargetHPText;
@@ -146,6 +162,11 @@ public:
 	void DisplayInteractableInfoTextByComponent(UActorComponent* Component);
 	UFUNCTION(BlueprintCallable)
 	void HideInteractableInfoText();
+	
+	UFUNCTION(BlueprintCallable)
+	void PlayScreenEffect(FColor Color = FColor::Red);
+	UFUNCTION(BlueprintCallable)
+	void PlayerScreenHit(FColor Color = FColor::Red);
 	
 	UFUNCTION()
 	void PlayIconAnim(UWidgetAnimation* Anim);

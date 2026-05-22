@@ -297,6 +297,18 @@ void UPlayerHUD::UpdateStatusBars()
 			Stamina <= 0.1f ? PlayIconAnim(StaminaIconAnimation) : StopIconAnim(StaminaIconAnimation);
 			Hunger <= 0.1f ? PlayIconAnim(HungerIconAnimation) : StopIconAnim(HungerIconAnimation);
 			Hydration <= 0.1f ?	PlayIconAnim(HydrationIconAnimation) : StopIconAnim(HydrationIconAnimation);
+			
+			if (Health <= 0.1f || Hunger <= 0.1f || Hydration <= 0.1f) ShouldEffect = true;
+			else ShouldEffect = false;
+			
+			if (ShouldEffect)
+			{
+				ScreenEffectImage->SetColorAndOpacity(FColor(64, 0, 0));
+				if (!IsAnimationPlaying(ScreenEffectAnimation)) PlayAnimation(ScreenEffectAnimation, 0, 0);
+			} else
+			{
+				if (IsAnimationPlaying(ScreenEffectAnimation)) StopAnimation(ScreenEffectAnimation);
+			}
 		}
 	}
 }
@@ -414,8 +426,20 @@ void UPlayerHUD::HideInteractableInfoText()
 	InteractableInfoText->SetVisibility(ESlateVisibility::Collapsed);
 }
 
-void UPlayerHUD::PlayIconAnim(UWidgetAnimation* Anim)
+void UPlayerHUD::PlayScreenEffect(FColor Color)
 {
+	ScreenEffectImage->SetColorAndOpacity(Color);
+	PlayAnimation(ScreenEffectAnimation,0,0);
+}
+
+void UPlayerHUD::PlayerScreenHit(FColor Color)
+{
+	ScreenHitImage->SetColorAndOpacity(Color);
+	PlayAnimation(ScreenHitAnimation);
+}
+
+void UPlayerHUD::PlayIconAnim(UWidgetAnimation* Anim)
+{	
 	if (IsAnimationPlaying(Anim)) return;
 	PlayAnimation(Anim, 0, 0, EUMGSequencePlayMode::Forward, 1, true);
 }

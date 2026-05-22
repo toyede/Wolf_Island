@@ -569,7 +569,7 @@ void UStatusComponent::StartAutoHeal()
 		this,
 		&UStatusComponent::AutoHeal,
 		AutoHealDelay,
-		true);
+		false);
 		
 }
 

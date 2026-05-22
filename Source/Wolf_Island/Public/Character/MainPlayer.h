@@ -852,6 +852,9 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_ShowDeathScreen();
 	
+	UFUNCTION(Client, Reliable)
+	void Client_BlinkEdge(FColor Color);
+	
 	//멀티캐스트 실행 함수
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_PlaySoundAtLocation(USoundBase* Sound, FVector Location);

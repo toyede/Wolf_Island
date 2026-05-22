@@ -697,7 +697,7 @@ bool UInventoryComponent::MakeItem(FRecipeData Recipe)
 			UE_LOG(LogTemp, Warning, TEXT("Result Item Created."));
 			
 			FItemAddResult AddResult = HandleAddItem(ResultItem);
-
+			Client_AddResult(AddResult);
 			// 아이템이 인벤토리에 전부 들어가지 않았다면 바닥에 드롭
 			if (AddResult.OperationResult != EItemAddedResult::AllItemAdded)
 			{

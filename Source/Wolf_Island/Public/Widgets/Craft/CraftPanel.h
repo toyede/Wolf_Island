@@ -25,6 +25,8 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<class UCraftSlot> SlotClass;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	USoundBase* MakeSound;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UInventoryComponent* OwnerInventory;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FRecipeData CurrentRecipeData;

@@ -12,6 +12,7 @@
 #include "Components/WrapBox.h"
 #include "Data/ItemDataStruct.h"
 #include "Games/MainGameState.h"
+#include "Kismet/GameplayStatics.h"
 #include "Widgets/Craft/RecipeBlock.h"
 #include "Widgets/Craft//CraftSlot.h"
 
@@ -108,9 +109,10 @@ void UCraftPanel::MakeItem(FRecipeData RecipeData)
 	
 	if (AMainPlayer* Player = Cast<AMainPlayer>(OwnerInventory->GetOwner()))
 	{
+		if (Player->InventoryComponent->CheckCanMakeRecipe(RecipeData) && MakeSound) UGameplayStatics::PlaySound2D(GetWorld(), MakeSound);
 		Player->InventoryComponent->Request_MakeItem(CurrentRecipeData);
 	}
-	//CraftButton->SetIsEnabled(true);
+	
 	SetCraftButton(CurrentRecipeData);
 }
 

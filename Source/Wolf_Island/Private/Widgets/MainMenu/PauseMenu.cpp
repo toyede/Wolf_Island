@@ -9,7 +9,7 @@ void UPauseMenu::NativeConstruct()
 {
 	Super::NativeConstruct();
 	
-	bIsFocusable = true;
+	SetIsFocusable(true);
 	PlayerController = Cast<AMainPlayerController>(GetOwningPlayer());
 }
 
