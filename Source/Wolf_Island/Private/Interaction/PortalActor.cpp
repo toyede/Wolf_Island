@@ -415,7 +415,7 @@ void APortalActor::TeleportAllPlayers()
 			}
 			Offset.Z += SpawnZOffset;
 
-			PlayerPawn->TeleportTo(TargetLocation + Offset, TargetRotation);
+			PlayerPawn->TeleportTo(TargetLocation + Offset, TargetRotation, false, true);
 
 			if (AController* PC = PlayerPawn->GetController())
 			{
@@ -473,7 +473,7 @@ void APortalActor::TeleportPlayer(AActor* Interactor)
 	}
 	Offset.Z += SpawnZOffset;
 
-	Pawn->TeleportTo(TargetLocation + Offset, TargetRotation);
+	Pawn->TeleportTo(TargetLocation + Offset, TargetRotation, false, true);
 
 	if (TeleportMediaPlayer && TeleportMediaSource)
 	{
