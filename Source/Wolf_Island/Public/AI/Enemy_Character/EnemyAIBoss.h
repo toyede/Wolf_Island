@@ -17,6 +17,8 @@ class AStatueForewarning;
 class ABossStatue;
 class ASummonedWolf;
 class AMainPlayer;
+class UNiagaraSystem;
+class UParticleSystem;
 
 // --- Delegates ---
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBossAttackEnd);
@@ -80,7 +82,7 @@ public:
 	FOnBossCombatEnd OnBossCombatEnd;
 
 	// --- Basic Combat State ---
-	UPROPERTY(BlueprintReadOnly, Category = "Boss|Combat")
+	UPROPERTY(BlueprintReadOnly, Category = "Boss|Combat", ReplicatedUsing = OnRep_CombatActive)
 	bool bIsCombatActive = false;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Combat", ReplicatedUsing = OnRep_IsDead)
@@ -225,6 +227,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|Phase2|Spawn")
 	float SpawnSafetyRadius = 150.0f;
 
+	/** 바닥 스냅 시 Z 오프셋 (cm). 피벗이 중앙이면 메시 반높이, 바닥 기준이면 0 */
+	UPROPERTY(EditAnywhere, Category = "Boss|Pattern|Phase2|Spawn")
+	float StatueGroundOffset = 0.f;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Boss|Pattern|Phase2")
 	USoundBase* SummonStatueSound;
 
@@ -320,10 +326,30 @@ protected:
 	UFUNCTION()
 	void OnRep_IsDead();
 
+	UFUNCTION()
+	void OnRep_CombatActive();
+
 	void ApplyDeadState();
 
 	UPROPERTY(EditDefaultsOnly, Category = "Boss|Combat|Sound")
 	USoundBase* DieSound;
+
+	// --- Hit Effect (피격 이펙트) ---
+	/** Niagara 이펙트 (우선 사용) */
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Combat|Effects")
+	UNiagaraSystem* HitEffect;
+
+	/** Cascade 이펙트 (HitEffect가 없을 때 사용) */
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Combat|Effects")
+	UParticleSystem* HitEffectCascade;
+
+	/** 이펙트를 붙일 소켓명 (비어있으면 피격 위치에 스폰) */
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Combat|Effects")
+	FName HitEffectSocketName = NAME_None;
+
+	/** 피격 사운드 (Unreliable Multicast로 재생) */
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Combat|Effects")
+	USoundBase* HitSound;
 
 	// --- Montage Callback Helpers ---
 	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
@@ -404,4 +430,15 @@ private:
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlaySpecialAttackMontage();
+
+	// --- Hit Effect ---
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayHitEffect(FVector HitLocation, FVector HitNormal);
+
+protected:
+	UFUNCTION(BlueprintImplementableEvent, Category="Boss|UI")
+	void OnCombatStarted(AEnemyAIBoss* Boss);
+	
+	UFUNCTION(BlueprintImplementableEvent, Category="Boss|UI")
+	void OnCombatEnded();
 };

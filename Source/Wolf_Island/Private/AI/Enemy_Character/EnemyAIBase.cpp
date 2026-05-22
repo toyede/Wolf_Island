@@ -625,11 +625,18 @@ float AEnemyAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
                 WolfAnim->Montage_SetEndDelegate(EmptyDelegate, nullptr);
         }
 
-		DropItem();
+        DropItem();
     }
     else
     {
-        OnHitResponse.Broadcast();
+        // 피격 사운드는 확률과 무관하게 무조건 재생
+        Multicast_PlayHitSound();
+
+        // 확률적으로 히트 리스폰스 발생 (기본 70%)
+        if (FMath::FRand() < HitResponseChance)
+        {
+            OnHitResponse.Broadcast();
+        }
     }
 
     return ActualDamage;
@@ -710,6 +717,15 @@ void AEnemyAIBase::Multicast_PlayHowlingMontage_Implementation()
         FOnMontageEnded EndDelegate;
         EndDelegate.BindUObject(this, &AEnemyAIBase::OnHowlingMontageEnded);
         AnimInstance->Montage_SetEndDelegate(EndDelegate, HowlingMontage);
+    }
+}
+
+void AEnemyAIBase::Multicast_PlayHitSound_Implementation()
+{
+    USoundBase* SoundToPlay = bIsHuman ? HitSound_Human : HitSound_Wolf;
+    if (SoundToPlay)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, SoundToPlay, GetActorLocation());
     }
 }
 

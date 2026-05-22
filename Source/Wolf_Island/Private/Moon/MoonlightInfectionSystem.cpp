@@ -690,15 +690,14 @@ void AMoonlightInfectionSystem::SpawnAndPossessWerewolf(APlayerController* PC, F
 
 	SessionData.LastKnownWerewolfTransform = Werewolf->GetActorTransform();
 
-	// 기존 캐릭터에서 Unpossess만 하고 늑대에는 Possess 안 함
-	PC->UnPossess();
-
-
-	// 관전 대상 설정
-	SetSpectateTarget(PC);
-
 	SessionData.WerewolfCharacter = Werewolf;
 	ActiveWerewolfSessions.Add(PC, SessionData);
+
+	// 기존 캐릭터에서 Unpossess (늑대는 AutoPossessAI로 InfectedAIController가 자동 점령 → BT 가동)
+	PC->UnPossess();
+
+	// 관전 대상 설정 후 클라이언트에 관전 모드 진입 요청
+	SetSpectateTarget(PC);
 
 	if (AMainPlayerController* MPC = Cast<AMainPlayerController>(PC))
 	{

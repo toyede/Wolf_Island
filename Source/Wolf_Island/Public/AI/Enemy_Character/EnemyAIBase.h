@@ -224,6 +224,10 @@ public:
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_HitResponse();
 
+	/** 피격 시 히트 리스폰스(경직) 발생 확률 (0.0 ~ 1.0) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float HitResponseChance = 0.7f;
+
 	// 컨트롤러
 	UPROPERTY(BlueprintReadWrite, Category = "AI|Controller")
 	TObjectPtr<AEnemyAIController> EnemyAIController;
@@ -266,6 +270,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Frozen")
 	TObjectPtr<USoundBase> FrozenHitSound;
 
+	/** 피격 시 무조건 재생되는 히트 사운드 (Unreliable) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Hit")
+	TObjectPtr<USoundBase> HitSound_Human;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Hit")
+	TObjectPtr<USoundBase> HitSound_Wolf;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Dead", ReplicatedUsing = OnRep_IsDead)
 	bool bIsDead = false;
 
@@ -304,6 +315,10 @@ public:
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlayHowlingMontage();
+
+	/** 피격 사운드 무조건 재생 (Unreliable, cosmetic) */
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayHitSound();
 
 	UFUNCTION()
 	void OnRep_IsDead();

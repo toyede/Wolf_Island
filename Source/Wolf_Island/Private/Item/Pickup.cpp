@@ -143,7 +143,7 @@ void APickup::OnPlayerClose(
     if (AMainPlayer* Player = Cast<AMainPlayer>(OtherActor))
     {
         UE_LOG(LogTemp, Warning, TEXT("[ITEM] PLAYER DETECTED"))
-        BeginFocus();
+        IInteractionInterface::Execute_BeginFocus(this);
     } else
     {
         UE_LOG(LogTemp, Warning, TEXT("[ITEM] SOMETHING DETECTED"))
@@ -159,7 +159,7 @@ void APickup::OnPlayerOut(
     if (AMainPlayer* Player = Cast<AMainPlayer>(OtherActor))
     {
         UE_LOG(LogTemp, Warning, TEXT("[ITEM] PLAYER OUTTED"))
-        EndFocus();
+        IInteractionInterface::Execute_EndFocus(this);
     } else
     {
         UE_LOG(LogTemp, Warning, TEXT("[ITEM] SOMETHING OUTTED"))

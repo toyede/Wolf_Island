@@ -25,6 +25,7 @@
 #include "Actors/PrayerAltar.h"
 #include "Actors/PrayerStatue.h"
 #include "Actors/PrayerForewarning.h"
+#include "NiagaraFunctionLibrary.h"
 
 AEnemyAIBoss::AEnemyAIBoss()
 {
@@ -55,6 +56,7 @@ void AEnemyAIBoss::StartBossCombat()
 		BossAIC->StartBehaviorTree();
 	}
 
+	OnCombatStarted(this);
 	OnBossCombatStart.Broadcast(this);
 }
 
@@ -79,6 +81,11 @@ void AEnemyAIBoss::BeginPlay()
 	if (StatusComponent)
 	{
 		StatusComponent->CurrentHP = StatusComponent->MaxHP;
+	}
+	
+	if (!HasAuthority() && bIsCombatActive)
+	{
+		OnCombatStarted(this);
 	}
 }
 
@@ -109,6 +116,13 @@ void AEnemyAIBoss::RefreshStatueSpawnPointsFromTag()
 
 void AEnemyAIBoss::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	// 클라이언트에서 보스가 파괴될 때 bIsCombatActive 복제가 먼저 오지 못한 경우
+	// OnRep_CombatActive 대신 EndPlay에서 직접 UI 정리
+	if (!HasAuthority() && bIsCombatActive)
+	{
+		OnCombatEnded();
+	}
+
 	// [Refactor] 델리게이트 해제: AttackCollisionComponent OnHitActor 바인딩 대칭 해제
 	if (AttackCollisionComponent)
 	{
@@ -155,6 +169,7 @@ void AEnemyAIBoss::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 
 	DOREPLIFETIME(AEnemyAIBoss, bIsDead);
 	DOREPLIFETIME(AEnemyAIBoss, bIsRushing);
+	DOREPLIFETIME(AEnemyAIBoss, bIsCombatActive);
 }
 
 void AEnemyAIBoss::Tick(float DeltaTime)
@@ -244,8 +259,30 @@ void AEnemyAIBoss::TrySpawnStatueWithRetry()
 		return;
 	}
 
-	const FVector SpawnLocation = PendingSpawnPoint->GetActorLocation();
-	const FRotator SpawnRotation = PendingSpawnPoint->GetActorRotation();
+	const FVector RawSpawnLocation = PendingSpawnPoint->GetActorLocation();
+
+	// Z 180도 회전 적용
+	const FRotator SpawnRotation = FRotator(
+		PendingSpawnPoint->GetActorRotation().Pitch,
+		PendingSpawnPoint->GetActorRotation().Yaw + 180.f,
+		PendingSpawnPoint->GetActorRotation().Roll
+	);
+
+	// 바닥 스냅: 스폰 포인트 아래로 라인트레이스 → 조각상 하단이 바닥에 닿도록 Z 보정
+	FVector SpawnLocation = RawSpawnLocation;
+	{
+		FHitResult GroundHit;
+		const FVector TraceStart = RawSpawnLocation + FVector(0.f, 0.f, 100.f);
+		const FVector TraceEnd   = RawSpawnLocation - FVector(0.f, 0.f, 500.f);
+		FCollisionQueryParams GroundParams(SCENE_QUERY_STAT(StatueGroundSnap), false, this);
+
+		if (GetWorld()->LineTraceSingleByChannel(GroundHit, TraceStart, TraceEnd, ECC_WorldStatic, GroundParams))
+		{
+			// StatueGroundOffset: 조각상 메시 피벗이 바닥 기준이면 0, 중앙 기준이면 메시 반높이
+			SpawnLocation = FVector(RawSpawnLocation.X, RawSpawnLocation.Y,
+				GroundHit.ImpactPoint.Z + StatueGroundOffset);
+		}
+	}
 
 	if (IsSpawnAreaOccupied(SpawnLocation))
 	{
@@ -1072,12 +1109,17 @@ float AEnemyAIBoss::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-	if (DamageCauser && DamageCauser->IsA<AEnemyAIBoss>())
+	if (DamageCauser && (DamageCauser->IsA<AEnemyAIBoss>() || DamageCauser->IsA<ASummonedWolf>()))
 	{
 		return 0.f;
 	}
 
 	StatusComponent->DecreaseHP(ActualDamage);
+
+	// 피격 이펙트 — Unreliable Multicast (cosmetic)
+	const FVector HitLocation = DamageCauser ? DamageCauser->GetActorLocation() : GetActorLocation();
+	const FVector HitNormal = (GetActorLocation() - HitLocation).GetSafeNormal();
+	Multicast_PlayHitEffect(GetActorLocation(), HitNormal);
 
 	if (!bPhase2Triggered && StatusComponent->CurrentHP <= StatusComponent->MaxHP * Phase2HPThreshold)
 	{
@@ -1113,6 +1155,20 @@ void AEnemyAIBoss::OnRep_IsDead()
 	}
 }
 
+void AEnemyAIBoss::OnRep_CombatActive()
+{
+	if (bIsCombatActive)
+	{
+		OnBossCombatStart.Broadcast(this);
+		OnCombatStarted(this);
+	}
+	else
+	{
+		OnBossCombatEnd.Broadcast();
+		OnCombatEnded();
+	}
+}
+
 void AEnemyAIBoss::ApplyDeadState()
 {
 	GetCharacterMovement()->StopMovementImmediately();
@@ -1128,7 +1184,7 @@ void AEnemyAIBoss::ApplyDeadState()
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
-	
+
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	OnBossCombatEnd.Broadcast();
@@ -1138,3 +1194,62 @@ void AEnemyAIBoss::ApplyDeadState()
 		UGameplayStatics::PlaySoundAtLocation(this, DieSound, GetActorLocation());
 	}
 }
+
+void AEnemyAIBoss::Multicast_PlayHitEffect_Implementation(FVector HitLocation, FVector HitNormal)
+{
+	// 피격 사운드
+	if (HitSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, HitSound, HitLocation);
+	}
+
+	// --- Niagara 우선, 없으면 Cascade 폴백 ---
+	if (HitEffect)
+	{
+		if (HitEffectSocketName != NAME_None && GetMesh())
+		{
+			UNiagaraFunctionLibrary::SpawnSystemAttached(
+				HitEffect,
+				GetMesh(),
+				HitEffectSocketName,
+				FVector::ZeroVector,
+				HitNormal.Rotation(),
+				EAttachLocation::KeepRelativeOffset,
+				true
+			);
+		}
+		else
+		{
+			UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+				GetWorld(),
+				HitEffect,
+				HitLocation,
+				HitNormal.Rotation()
+			);
+		}
+	}
+	else if (HitEffectCascade)
+	{
+		if (HitEffectSocketName != NAME_None && GetMesh())
+		{
+			UGameplayStatics::SpawnEmitterAttached(
+				HitEffectCascade,
+				GetMesh(),
+				HitEffectSocketName,
+				FVector::ZeroVector,
+				HitNormal.Rotation(),
+				EAttachLocation::KeepRelativeOffset
+			);
+		}
+		else
+		{
+			UGameplayStatics::SpawnEmitterAtLocation(
+				GetWorld(),
+				HitEffectCascade,
+				HitLocation,
+				HitNormal.Rotation()
+			);
+		}
+	}
+}
+
