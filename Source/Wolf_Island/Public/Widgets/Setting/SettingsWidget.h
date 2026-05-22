@@ -123,6 +123,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Settings|Current")
 	float GetSFXVolume();
 
+	//JWY - 블루프린트 세팅창에서 감도 슬라이더 초기값을 읽기 위한 getter
+	UFUNCTION(BlueprintCallable, Category = "Settings|Current")
+	float GetMouseSensitivity();
+
 	UFUNCTION(BlueprintCallable, Category = "Settings|Set")
 	void SetResolution(int32 Index);
 
@@ -155,6 +159,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Settings|Set")
 	void SetSFXVolume(float Value);
+
+	//JWY - 블루프린트 감도 슬라이더 값 변경을 Apply 전 대기값으로 저장
+	UFUNCTION(BlueprintCallable, Category = "Settings|Set")
+	void SetMouseSensitivity(float Value);
 
 	UFUNCTION(BlueprintCallable, Category = "Settings")
 	void ApplySettings();
@@ -196,6 +204,8 @@ protected:
 	float PendingBGMVolume = 1.0f;
 	UPROPERTY(BlueprintReadWrite)
 	float PendingSFXVolume = 1.0f;
+	UPROPERTY(BlueprintReadWrite)
+	float PendingMouseSensitivity = 1.0f; //JWY - Apply 전까지 세팅창에서 조절 중인 마우스 감도 값을 보관
 	
 private:
 	TArray<FIntPoint> ResolutionList;
