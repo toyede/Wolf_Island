@@ -5,17 +5,17 @@
 #include "CoreMinimal.h"
 #include "BossWall.h"
 #include "NiagaraComponent.h"
-#include "NiagaraFunctionLibrary.h"
+#include "Interaction/InteractionInterface.h"
 #include "BossStatue.generated.h"
 
 class AEnemyAIBoss;
-class UStatusComponent;
 class UBoxComponent;
+class UStatusComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStatueDestroyed);
 
 UCLASS()
-class WOLF_ISLAND_API ABossStatue : public ABossWall
+class WOLF_ISLAND_API ABossStatue : public ABossWall, public IInteractionInterface
 {
 	GENERATED_BODY()
 
@@ -26,18 +26,26 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
+	// BP 호환성 유지용 (기존 BP 레퍼런스 보존 - 인터랙션 방식으로 전환 후 제거 예정)
 	UPROPERTY(EditDefaultsOnly, Category = "Statue|Status")
 	UStatusComponent* StatusComponent;
-public:
-	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
-		class AController* EventInstigator, AActor* DamageCauser) override;
 
+public:
 	UPROPERTY(BlueprintAssignable)
 	FOnStatueDestroyed OnStatueDestroyed;
 
-	// ���� �浹 �� �޴� �߰� ������ ����
-	UPROPERTY(EditAnywhere, Category = "Statue|Combat")
-	float RushDamageMultiplier = 3.0f;
+	// IInteractionInterface 구현
+	// BlueprintNativeEvent → _Implementation 접미사로 오버라이드
+	virtual void BeginFocus_Implementation() override;
+	virtual void EndFocus_Implementation() override;
+	virtual void Interact_Implementation(AActor* Interactor) override;
+	// 일반 virtual 함수
+	virtual void BeginInteract() override;
+	virtual void EndInteract() override;
+
+	// 인터랙션(꾹 누르기) 지속 시간
+	UPROPERTY(EditAnywhere, Category = "Statue|Interaction")
+	float InteractionHoldDuration = 2.0f;
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Statue|Healing")
@@ -46,7 +54,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Statue|Healing")
 	float HealInterval = 2.0f;
 
-	// �ı� ����Ʈ ���߿�
+	// 파괴 이펙트 (추후)
 	UPROPERTY(EditAnywhere, Category = "Statue|Effects")
 	class UNiagaraSystem* DestroyEffect;
 

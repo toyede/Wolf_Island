@@ -25,6 +25,7 @@
 #include "Actors/PrayerAltar.h"
 #include "Actors/PrayerStatue.h"
 #include "Actors/PrayerForewarning.h"
+#include "NiagaraFunctionLibrary.h"
 
 AEnemyAIBoss::AEnemyAIBoss()
 {
@@ -244,8 +245,30 @@ void AEnemyAIBoss::TrySpawnStatueWithRetry()
 		return;
 	}
 
-	const FVector SpawnLocation = PendingSpawnPoint->GetActorLocation();
-	const FRotator SpawnRotation = PendingSpawnPoint->GetActorRotation();
+	const FVector RawSpawnLocation = PendingSpawnPoint->GetActorLocation();
+
+	// Z 180도 회전 적용
+	const FRotator SpawnRotation = FRotator(
+		PendingSpawnPoint->GetActorRotation().Pitch,
+		PendingSpawnPoint->GetActorRotation().Yaw + 180.f,
+		PendingSpawnPoint->GetActorRotation().Roll
+	);
+
+	// 바닥 스냅: 스폰 포인트 아래로 라인트레이스 → 조각상 하단이 바닥에 닿도록 Z 보정
+	FVector SpawnLocation = RawSpawnLocation;
+	{
+		FHitResult GroundHit;
+		const FVector TraceStart = RawSpawnLocation + FVector(0.f, 0.f, 100.f);
+		const FVector TraceEnd   = RawSpawnLocation - FVector(0.f, 0.f, 500.f);
+		FCollisionQueryParams GroundParams(SCENE_QUERY_STAT(StatueGroundSnap), false, this);
+
+		if (GetWorld()->LineTraceSingleByChannel(GroundHit, TraceStart, TraceEnd, ECC_WorldStatic, GroundParams))
+		{
+			// StatueGroundOffset: 조각상 메시 피벗이 바닥 기준이면 0, 중앙 기준이면 메시 반높이
+			SpawnLocation = FVector(RawSpawnLocation.X, RawSpawnLocation.Y,
+				GroundHit.ImpactPoint.Z + StatueGroundOffset);
+		}
+	}
 
 	if (IsSpawnAreaOccupied(SpawnLocation))
 	{
@@ -1079,6 +1102,11 @@ float AEnemyAIBoss::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 
 	StatusComponent->DecreaseHP(ActualDamage);
 
+	// 피격 이펙트 — Unreliable Multicast (cosmetic)
+	const FVector HitLocation = DamageCauser ? DamageCauser->GetActorLocation() : GetActorLocation();
+	const FVector HitNormal = (GetActorLocation() - HitLocation).GetSafeNormal();
+	Multicast_PlayHitEffect(GetActorLocation(), HitNormal);
+
 	if (!bPhase2Triggered && StatusComponent->CurrentHP <= StatusComponent->MaxHP * Phase2HPThreshold)
 	{
 		bPhase2Triggered = true;
@@ -1128,7 +1156,7 @@ void AEnemyAIBoss::ApplyDeadState()
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
-	
+
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	OnBossCombatEnd.Broadcast();
@@ -1138,3 +1166,62 @@ void AEnemyAIBoss::ApplyDeadState()
 		UGameplayStatics::PlaySoundAtLocation(this, DieSound, GetActorLocation());
 	}
 }
+
+void AEnemyAIBoss::Multicast_PlayHitEffect_Implementation(FVector HitLocation, FVector HitNormal)
+{
+	// 피격 사운드
+	if (HitSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, HitSound, HitLocation);
+	}
+
+	// --- Niagara 우선, 없으면 Cascade 폴백 ---
+	if (HitEffect)
+	{
+		if (HitEffectSocketName != NAME_None && GetMesh())
+		{
+			UNiagaraFunctionLibrary::SpawnSystemAttached(
+				HitEffect,
+				GetMesh(),
+				HitEffectSocketName,
+				FVector::ZeroVector,
+				HitNormal.Rotation(),
+				EAttachLocation::KeepRelativeOffset,
+				true
+			);
+		}
+		else
+		{
+			UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+				GetWorld(),
+				HitEffect,
+				HitLocation,
+				HitNormal.Rotation()
+			);
+		}
+	}
+	else if (HitEffectCascade)
+	{
+		if (HitEffectSocketName != NAME_None && GetMesh())
+		{
+			UGameplayStatics::SpawnEmitterAttached(
+				HitEffectCascade,
+				GetMesh(),
+				HitEffectSocketName,
+				FVector::ZeroVector,
+				HitNormal.Rotation(),
+				EAttachLocation::KeepRelativeOffset
+			);
+		}
+		else
+		{
+			UGameplayStatics::SpawnEmitterAtLocation(
+				GetWorld(),
+				HitEffectCascade,
+				HitLocation,
+				HitNormal.Rotation()
+			);
+		}
+	}
+}
+
