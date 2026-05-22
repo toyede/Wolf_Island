@@ -238,7 +238,17 @@ void AMainGameMode::SpawnBossForPortal(APortalActor* TriggeredPortal, const TArr
 		}
 	}
 
-	SpawnedBoss->StatusComponent->MaxHP = PartyMembers.Num() * 250.0f;
+	// 1순위: StatusComponent nullptr 방어
+	if (!SpawnedBoss->StatusComponent)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[BOSS SPAWN] StatusComponent is null on spawned boss! Aborting."));
+		SpawnedBoss->Destroy();
+		return;
+	}
+
+	// 2순위: PartyMembers가 0명이면 최소 HP 보장
+	const int32 PartyCount = FMath::Max(SpawnedBoss->BossParticipants.Num(), 1);
+	SpawnedBoss->StatusComponent->MaxHP = PartyCount * 250.0f;
 	SpawnedBoss->StatusComponent->CurrentHP = SpawnedBoss->StatusComponent->MaxHP;
 	SpawnedBoss->StartBossCombat();
 

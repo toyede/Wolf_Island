@@ -472,7 +472,7 @@ void AMainPlayer::NotifyControllerChanged()
 float AMainPlayer::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
 	class AController* EventInstigator, AActor* DamageCauser)
 {	
-	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] TAKE DAMAGE TYPE : %s"), *DamageEvent.DamageTypeClass->GetName());
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] TAKE DAMAGE TYPE : %s"), DamageEvent.DamageTypeClass ? *DamageEvent.DamageTypeClass->GetName() : TEXT("None"));
 	if (EwSound)
 	{
 		Multi_PlaySoundAtLocation(EwSound, GetActorLocation());

@@ -46,6 +46,10 @@ public:
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Portal")
 	AActor* TargetPortal;
 
+	// 이 포탈 자신의 고유 ID (다른 포탈이 이 포탈을 TargetPortalID로 찾을 때 사용)
+	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Portal", SaveGame)
+	FString PortalID;
+
 	// Saved ID of the target portal (used to re-link after load)
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Portal", SaveGame)
 	FString TargetPortalID;

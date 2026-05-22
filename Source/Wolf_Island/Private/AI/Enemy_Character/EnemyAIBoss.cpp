@@ -618,7 +618,7 @@ void AEnemyAIBoss::OnAttackHit(const FHitResult& HitResult)
 	AActor* HitActor = HitResult.GetActor();
 	if (!HitActor) return;
 
-	FDamageEvent DamageEvent;
+	FDamageEvent DamageEvent(UDamageType::StaticClass());
 	HitActor->TakeDamage(CurrentDamage, DamageEvent, GetController(), this);
 }
 

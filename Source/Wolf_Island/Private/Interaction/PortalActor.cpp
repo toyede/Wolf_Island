@@ -89,6 +89,13 @@ void APortalActor::BeginPlay()
 		TargetPortalID = ReadPortalIDFromActor(TargetPortal);
 	}
 
+	// 자신의 PortalID가 비어있으면 액터 레이블을 기본값으로 사용
+	// (다른 포탈이 TargetPortalID로 이 포탈을 찾을 수 있게 됨)
+	if (PortalID.IsEmpty())
+	{
+		PortalID = GetActorLabel();
+	}
+
 	ResolveTargetPortal();
 
 	UpdatePortalState();
@@ -116,11 +123,26 @@ void APortalActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void APortalActor::LoadData_Implementation(const FActorSaveData& InData)
 {
+	// Super(바이너리 역직렬화) 호출 전에 현재 TargetPortalID 백업
+	const FString CachedPortalID = TargetPortalID.IsEmpty()
+		? ReadPortalIDFromActor(TargetPortal)
+		: TargetPortalID;
+
+	// TargetPortal 레퍼런스도 백업 (Serialize가 건드리지 않아야 하지만 방어적으로)
+	AActor* CachedTargetPortal = TargetPortal;
+
 	Super::LoadData_Implementation(InData);
 
-	if (TargetPortalID.IsEmpty() && IsValid(TargetPortal))
+	// Super 역직렬화 후 TargetPortalID가 비어있으면 백업값 복원
+	if (TargetPortalID.IsEmpty())
 	{
-		TargetPortalID = ReadPortalIDFromActor(TargetPortal);
+		TargetPortalID = CachedPortalID;
+	}
+
+	// TargetPortal이 무효화됐으면 백업값 복원
+	if (!IsValid(TargetPortal) && IsValid(CachedTargetPortal))
+	{
+		TargetPortal = CachedTargetPortal;
 	}
 
 	if (UWorld* World = GetWorld())
