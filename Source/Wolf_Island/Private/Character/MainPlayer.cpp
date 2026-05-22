@@ -1334,7 +1334,7 @@ void AMainPlayer::CheckInteraction()
 			AActor* HitActor = HitResult.GetActor();
 			UPrimitiveComponent* HitComp = HitResult.GetComponent();
 			
-			if (HitActor)
+			if (HitActor && !IsSwimming)
 			{
 				FString ClassName = HitActor->GetClass()->GetName();
 				if (ClassName.Contains(TEXT("WaterBodyOcean")) || 
