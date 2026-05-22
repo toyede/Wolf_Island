@@ -472,6 +472,7 @@ void AMainPlayer::NotifyControllerChanged()
 float AMainPlayer::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
 	class AController* EventInstigator, AActor* DamageCauser)
 {	
+	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] TAKE DAMAGE TYPE : %s"), *DamageEvent.DamageTypeClass->GetName());
 	if (EwSound)
 	{
 		Multi_PlaySoundAtLocation(EwSound, GetActorLocation());
@@ -486,7 +487,12 @@ float AMainPlayer::TakeDamage(float DamageAmount, struct FDamageEvent const& Dam
 		Damage = StatusComponent->CalculateFinalDamage(DamageCauser, this, Damage);
 		StatusComponent->DecreaseHP(Damage);
 		
-		if (DamageEvent.DamageTypeClass == UWolfAttackDamageType::StaticClass() && !StatusComponent->IsInfected)
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] TAKE DAMAGE : %f"), Damage);
+
+		
+		if (DamageEvent.DamageTypeClass && 
+			DamageEvent.DamageTypeClass->IsChildOf(UWolfAttackDamageType::StaticClass()) && 
+			!StatusComponent->IsInfected)
 		{
 			StatusComponent->StartInfection();
 		}

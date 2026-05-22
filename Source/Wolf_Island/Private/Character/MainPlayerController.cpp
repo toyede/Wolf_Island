@@ -469,6 +469,7 @@ void AMainPlayerController::OnResume()
 void AMainPlayerController::OnSetting()
 {
 	UE_LOG(LogTemp, Warning, TEXT("SETTING BUTTON CLICKED"));
+
 	if (SettingsWidgetClass)
 	{
 		SettingsWidget = CreateWidget<USettingsWidget>(this, SettingsWidgetClass);

@@ -94,6 +94,7 @@ FReply UChestScreen::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEven
 	if (InKeyEvent.GetKey() == EKeys::Escape || InKeyEvent.GetKey() == EKeys::Tab)
 	{
 		CloseWidget();
+		return FReply::Handled();
 	}
 	
 	return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
