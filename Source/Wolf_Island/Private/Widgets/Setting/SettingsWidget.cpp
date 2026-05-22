@@ -108,6 +108,7 @@ void USettingsWidget::InitializeSettings()
 		PendingMasterVolume = WolfSettings->MasterVolume;
 		PendingBGMVolume = WolfSettings->BGMVolume;
 		PendingSFXVolume = WolfSettings->SFXVolume;
+		PendingMouseSensitivity = FMath::Clamp(WolfSettings->MouseSensitivity, 0.1f, 3.0f); //JWY - 저장된 감도를 세팅창 슬라이더 초기값으로 불러옴.
 	}
 
 	RefreshInputKeybinds();
@@ -194,6 +195,7 @@ int32 USettingsWidget::GetCurrentAntiAliasingIndex() { return PendingAntiAliasin
 float USettingsWidget::GetMasterVolume() { return PendingMasterVolume; }
 float USettingsWidget::GetBGMVolume() { return PendingBGMVolume; }
 float USettingsWidget::GetSFXVolume() { return PendingSFXVolume; }
+float USettingsWidget::GetMouseSensitivity() { return PendingMouseSensitivity; } //JWY - 블루프린트에서 현재 감도 대기값을 읽을 수 있게 함.
 
 void USettingsWidget::SetResolution(int32 Index)
 {
@@ -256,6 +258,11 @@ void USettingsWidget::SetSFXVolume(float Value)
 	PendingSFXVolume = FMath::Clamp(Value, 0.0f, 1.0f);
 }
 
+void USettingsWidget::SetMouseSensitivity(float Value)
+{
+	PendingMouseSensitivity = FMath::Clamp(Value, 0.1f, 3.0f); //JWY - UI에서 넘어온 감도 값을 안전 범위로 제한
+}
+
 void USettingsWidget::ApplySettings()
 {
 	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
@@ -301,6 +308,7 @@ void USettingsWidget::ApplySettings()
 		WolfSettings->MasterVolume = PendingMasterVolume;
 		WolfSettings->BGMVolume = PendingBGMVolume;
 		WolfSettings->SFXVolume = PendingSFXVolume;
+		WolfSettings->MouseSensitivity = PendingMouseSensitivity; //JWY - Apply 버튼을 눌렀을 때 마우스 감도를 사용자 설정에 저장
 		WolfSettings->SaveSettings();
 	}
 

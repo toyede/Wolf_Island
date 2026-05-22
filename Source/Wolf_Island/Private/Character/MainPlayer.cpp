@@ -36,6 +36,7 @@
 #include "Moon/MoonlightInfectionSystem.h"
 #include "Games/MainPlayerState.h"
 #include "Games/MainGameState.h"
+#include "Games/WolfGameUserSettings.h" //JWY - 저장된 마우스 감도 설정을 Look 입력에 적용하기 위해 추가
 #include "AI/Sense/AISense_Scent.h"
 #include "Engine/DamageEvents.h"
 #include "Games/Damage/WolfAttackDamageType.h"
@@ -626,7 +627,11 @@ void AMainPlayer::Look(const FInputActionValue& Value)
 
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 	//UE_LOG(LogTemp, Warning, TEXT("LOOK X: %f, Y: %f"), LookAxisVector.X, LookAxisVector.Y);
-	float sen = 1;
+	float sen = 1.0f; //JWY - 설정을 읽지 못하면 기존과 동일한 기본 감도 1.0으로 동작
+	if (const UWolfGameUserSettings* WolfSettings = UWolfGameUserSettings::GetWolfGameUserSettings())
+	{
+		sen = FMath::Clamp(WolfSettings->MouseSensitivity, 0.1f, 3.0f); //JWY - 세팅창에서 저장한 마우스 감도를 실제 시점 회전에 반영
+	}
 
 	if (Controller)
 	{

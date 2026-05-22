@@ -24,5 +24,8 @@ public:
 	UPROPERTY(Config, BlueprintReadWrite, Category = "Audio")
 	float SFXVolume = 1.0f;
 
+	UPROPERTY(Config, BlueprintReadWrite, Category = "Input", meta = (ClampMin = "0.1", ClampMax = "3.0"))
+	float MouseSensitivity = 1.0f; //JWY - 마우스 감도를 GameUserSettings에 저장해서 세팅창 Apply 이후에도 유지
+
 	static UWolfGameUserSettings* GetWolfGameUserSettings();
 };
