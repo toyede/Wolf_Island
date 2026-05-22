@@ -82,6 +82,11 @@ void AEnemyAIBoss::BeginPlay()
 	{
 		StatusComponent->CurrentHP = StatusComponent->MaxHP;
 	}
+	
+	if (!HasAuthority() && bIsCombatActive)
+	{
+		OnCombatStarted(this);
+	}
 }
 
 void AEnemyAIBoss::RefreshStatueSpawnPointsFromTag()
@@ -111,6 +116,13 @@ void AEnemyAIBoss::RefreshStatueSpawnPointsFromTag()
 
 void AEnemyAIBoss::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	// 클라이언트에서 보스가 파괴될 때 bIsCombatActive 복제가 먼저 오지 못한 경우
+	// OnRep_CombatActive 대신 EndPlay에서 직접 UI 정리
+	if (!HasAuthority() && bIsCombatActive)
+	{
+		OnCombatEnded();
+	}
+
 	// [Refactor] 델리게이트 해제: AttackCollisionComponent OnHitActor 바인딩 대칭 해제
 	if (AttackCollisionComponent)
 	{
@@ -1097,7 +1109,7 @@ float AEnemyAIBoss::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-	if (DamageCauser && DamageCauser->IsA<AEnemyAIBoss>() || DamageCauser->IsA<ASummonedWolf>())
+	if (DamageCauser && (DamageCauser->IsA<AEnemyAIBoss>() || DamageCauser->IsA<ASummonedWolf>()))
 	{
 		return 0.f;
 	}
