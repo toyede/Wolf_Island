@@ -93,7 +93,11 @@ void APortalActor::BeginPlay()
 	// (다른 포탈이 TargetPortalID로 이 포탈을 찾을 수 있게 됨)
 	if (PortalID.IsEmpty())
 	{
-		PortalID = GetActorLabel();
+	#if WITH_EDITOR
+			PortalID = GetActorLabel();
+	#else
+			PortalID = GetName();
+	#endif
 	}
 
 	ResolveTargetPortal();
