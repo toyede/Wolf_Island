@@ -157,7 +157,7 @@ void AMoonlightInfectionSystem::BindPlayers(const TArray<AActor*>& Players)
 			if (UStatusComponent* Status =
 				Player->FindComponentByClass<UStatusComponent>())
 			{
-				Status->OnInfectionStarted.AddDynamic(
+				Status->OnInfectionStarted.AddUniqueDynamic(
 					this,
 					&AMoonlightInfectionSystem::HandleInfectionStarted
 				);
@@ -173,7 +173,14 @@ void AMoonlightInfectionSystem::HandleInfectionStarted(UStatusComponent* StatusC
 		return;
 	}
 
-	if (!InfectedStatusList.Contains(StatusComp))
+	// TWeakObjectPtr 기반 중복 체크
+	const bool bAlreadyAdded = InfectedStatusList.ContainsByPredicate(
+		[StatusComp](const TWeakObjectPtr<UStatusComponent>& Weak)
+		{
+			return Weak.Get() == StatusComp;
+		});
+
+	if (!bAlreadyAdded)
 	{
 		InfectedStatusList.Add(StatusComp);
 	}
@@ -320,7 +327,10 @@ void AMoonlightInfectionSystem::OnMorningStarted()
 	TArray<APlayerController*> PCsToRestore;
 	for (auto& Pair : ActiveWerewolfSessions)
 	{
-		PCsToRestore.Add(Pair.Key);
+		if (APlayerController* PC = Pair.Key.Get())
+		{
+			PCsToRestore.Add(PC);
+		}
 	}
 
 	for (APlayerController* PC : PCsToRestore)
@@ -444,9 +454,26 @@ void AMoonlightInfectionSystem::CheckAllPlayers()
 	UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem][TICK] InfectionPerCheck=%.6f | Threshold=%.4f"),
 		InfectionPerCheck, NightlyTransformThreshold);
 
+	// stale(파괴된) 플레이어 키를 NightlyExposure에서 정리
+	for (auto It = NightlyExposure.CreateIterator(); It; ++It)
+	{
+		if (!It.Key().IsValid())
+		{
+			It.RemoveCurrent();
+		}
+	}
+	// stale 키를 ActiveWerewolfSessions에서 정리
+	for (auto It = ActiveWerewolfSessions.CreateIterator(); It; ++It)
+	{
+		if (!It.Key().IsValid())
+		{
+			It.RemoveCurrent();
+		}
+	}
+
 	for (int32 Index = InfectedStatusList.Num() - 1; Index >= 0; --Index)
 	{
-		UStatusComponent* StatusComp = InfectedStatusList[Index];
+		UStatusComponent* StatusComp = InfectedStatusList[Index].Get();
 		if (!IsValid(StatusComp))
 		{
 			InfectedStatusList.RemoveAtSwap(Index);
@@ -461,6 +488,7 @@ void AMoonlightInfectionSystem::CheckAllPlayers()
 		bool bIsCurrentlyWerewolf = false;
 		for (auto& Pair : ActiveWerewolfSessions)
 		{
+			if (!Pair.Key.IsValid()) continue;
 			if (Pair.Value.OriginalCharacter == Player)
 			{
 				bIsCurrentlyWerewolf = true;
@@ -771,9 +799,10 @@ void AMoonlightInfectionSystem::NotifyWerewolfDown(ACharacter* Werewolf)
 	APlayerController* TargetPC = nullptr;
 	for (auto& Pair : ActiveWerewolfSessions)
 	{
+		if (!Pair.Key.IsValid()) continue;
 		if (Pair.Value.WerewolfCharacter == Werewolf)
 		{
-			TargetPC = Pair.Key;
+			TargetPC = Pair.Key.Get();
 			break;
 		}
 	}
