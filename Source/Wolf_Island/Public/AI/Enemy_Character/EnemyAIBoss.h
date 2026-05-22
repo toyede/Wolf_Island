@@ -82,7 +82,7 @@ public:
 	FOnBossCombatEnd OnBossCombatEnd;
 
 	// --- Basic Combat State ---
-	UPROPERTY(BlueprintReadOnly, Category = "Boss|Combat")
+	UPROPERTY(BlueprintReadOnly, Category = "Boss|Combat", ReplicatedUsing = OnRep_CombatActive)
 	bool bIsCombatActive = false;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Combat", ReplicatedUsing = OnRep_IsDead)
@@ -326,6 +326,9 @@ protected:
 	UFUNCTION()
 	void OnRep_IsDead();
 
+	UFUNCTION()
+	void OnRep_CombatActive();
+
 	void ApplyDeadState();
 
 	UPROPERTY(EditDefaultsOnly, Category = "Boss|Combat|Sound")
@@ -431,4 +434,11 @@ private:
 	// --- Hit Effect ---
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlayHitEffect(FVector HitLocation, FVector HitNormal);
+
+protected:
+	UFUNCTION(BlueprintImplementableEvent, Category="Boss|UI")
+	void OnCombatStarted(AEnemyAIBoss* Boss);
+	
+	UFUNCTION(BlueprintImplementableEvent, Category="Boss|UI")
+	void OnCombatEnded();
 };

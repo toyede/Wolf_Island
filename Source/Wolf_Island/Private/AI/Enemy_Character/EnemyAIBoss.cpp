@@ -56,6 +56,7 @@ void AEnemyAIBoss::StartBossCombat()
 		BossAIC->StartBehaviorTree();
 	}
 
+	OnCombatStarted(this);
 	OnBossCombatStart.Broadcast(this);
 }
 
@@ -156,6 +157,7 @@ void AEnemyAIBoss::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 
 	DOREPLIFETIME(AEnemyAIBoss, bIsDead);
 	DOREPLIFETIME(AEnemyAIBoss, bIsRushing);
+	DOREPLIFETIME(AEnemyAIBoss, bIsCombatActive);
 }
 
 void AEnemyAIBoss::Tick(float DeltaTime)
@@ -1095,7 +1097,7 @@ float AEnemyAIBoss::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-	if (DamageCauser && DamageCauser->IsA<AEnemyAIBoss>())
+	if (DamageCauser && DamageCauser->IsA<AEnemyAIBoss>() || DamageCauser->IsA<ASummonedWolf>())
 	{
 		return 0.f;
 	}
@@ -1138,6 +1140,20 @@ void AEnemyAIBoss::OnRep_IsDead()
 	if (bIsDead)
 	{
 		ApplyDeadState();
+	}
+}
+
+void AEnemyAIBoss::OnRep_CombatActive()
+{
+	if (bIsCombatActive)
+	{
+		OnBossCombatStart.Broadcast(this);
+		OnCombatStarted(this);
+	}
+	else
+	{
+		OnBossCombatEnd.Broadcast();
+		OnCombatEnded();
 	}
 }
 
