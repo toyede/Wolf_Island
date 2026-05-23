@@ -108,13 +108,18 @@ void UStatusComponent::DecreaseHP(float amount)
 	//이미 0이면 아무것도 ㄴㄴ
 	if (CurrentHP <= 0) return;
 	
+	StopAutoHeal();
 	CurrentHP = FMath::Clamp(CurrentHP-amount, 0.0f, MaxHP);
 	
 	//음수 방지
 	if (CurrentHP <= 0)
 	{
 		CurrentHP = 0;
+		StopAutoHeal();
 		OnHPZero.Broadcast();
+	} else
+	{
+		StartAutoHeal();
 	}
 	OnHPPercentChanged.Broadcast(GetHPPercent());
 }
@@ -560,6 +565,11 @@ void UStatusComponent::ApplyItem(FItemData Item)
 
 void UStatusComponent::StartAutoHeal()
 {
+	if (GetOwner())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[AUTO HEAL] %hs : Start"), GetOwner()->HasAuthority()?"SERVER":"CLIENT");
+	}
+	
 	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
 	
 	if (TimerManager.IsTimerActive(AutoHealStartTimer)) return;
@@ -575,6 +585,7 @@ void UStatusComponent::StartAutoHeal()
 
 void UStatusComponent::AutoHeal()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[AUTO HEAL] %hs : Heal"), GetOwner()->HasAuthority()?"SERVER":"CLIENT");
 	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
 	
 	if (TimerManager.IsTimerActive(AutoHealTimer)) return;
@@ -591,6 +602,7 @@ void UStatusComponent::AutoHeal()
 
 void UStatusComponent::StopAutoHeal()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[AUTO HEAL] %hs : Stop"), GetOwner()->HasAuthority()?"SERVER":"CLIENT");
 	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
 	
 	TimerManager.ClearTimer(AutoHealStartTimer);

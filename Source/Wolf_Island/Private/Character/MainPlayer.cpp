@@ -482,8 +482,6 @@ float AMainPlayer::TakeDamage(float DamageAmount, struct FDamageEvent const& Dam
 	
 	if (StatusComponent)
 	{
-		StatusComponent->StopAutoHeal();
-		
 		Damage = StatusComponent->CalculateFinalDamage(DamageCauser, this, Damage);
 		StatusComponent->DecreaseHP(Damage);
 		
@@ -496,8 +494,6 @@ float AMainPlayer::TakeDamage(float DamageAmount, struct FDamageEvent const& Dam
 		{
 			StatusComponent->StartInfection();
 		}
-		
-		StatusComponent->StartAutoHeal();
 		
 		if (HUD) HUD->PlayerScreenHit();
 	}
