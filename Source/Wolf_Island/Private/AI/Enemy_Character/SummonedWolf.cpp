@@ -78,8 +78,11 @@ void ASummonedWolf::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		AttackCollisionComponent->OnHitActor.RemoveAll(this);
 	}
 
-	// [Refactor] 타이머 정리
-	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	// [Refactor] 타이머 정리 (GetWorld() null 체크: EndPlay 시점에 월드가 무효화될 수 있음)
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearAllTimersForObject(this);
+	}
 	
 	if (StatusComponent)
 	{
@@ -289,7 +292,8 @@ void ASummonedWolf::OnAttackHit(const FHitResult& HitResult)
 	}
 
 	// 보스(Owner) 또는 같은 소환 늑대끼리는 피해 무시
-	if (HitActor == GetOwner() || HitActor->IsA(ASummonedWolf::StaticClass()))
+	// IsValid 체크: HitActor가 펜딩킬 상태일 수 있음
+	if (!IsValid(HitActor) || HitActor == GetOwner() || HitActor->IsA(ASummonedWolf::StaticClass()))
 	{
 		return;
 	}
@@ -313,7 +317,7 @@ float ASummonedWolf::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 {
 	const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-	if (DamageCauser && DamageCauser->IsA(ASummonedWolf::StaticClass()))
+	if (DamageCauser && IsValid(DamageCauser) && DamageCauser->IsA(ASummonedWolf::StaticClass()))
 	{
 		return 0.f;
 	}
