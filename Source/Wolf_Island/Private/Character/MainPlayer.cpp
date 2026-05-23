@@ -495,7 +495,7 @@ float AMainPlayer::TakeDamage(float DamageAmount, struct FDamageEvent const& Dam
 			StatusComponent->StartInfection();
 		}
 		
-		if (HUD) HUD->PlayerScreenHit();
+		Client_HitEffect();
 	}
 	
 	return Damage;
@@ -829,9 +829,14 @@ void AMainPlayer::SetBuildingInputBlocked(bool bBlocked)
 	}
 }
 
+void AMainPlayer::Client_HitEffect_Implementation()
+{
+	if (HUD) HUD->PlayerScreenHit();
+}
+
 void AMainPlayer::Client_BlinkEdge_Implementation(FColor Color)
 {
-	HUD->PlayScreenEffect(Color);
+	if (HUD) HUD->PlayScreenEffect(Color);
 }
 
 //TODO: 아이템 사용 로직 멀티로 전환하기

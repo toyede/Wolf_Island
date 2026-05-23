@@ -110,7 +110,7 @@ void UCraftPanel::MakeItem(FRecipeData RecipeData)
 	if (AMainPlayer* Player = Cast<AMainPlayer>(OwnerInventory->GetOwner()))
 	{
 		if (Player->InventoryComponent->CheckCanMakeRecipe(RecipeData) && MakeSound) UGameplayStatics::PlaySound2D(GetWorld(), MakeSound);
-		Player->InventoryComponent->Request_MakeItem(CurrentRecipeData);
+		Player->InventoryComponent->Request_MakeItem(RecipeData);
 	}
 	
 	SetCraftButton(CurrentRecipeData);
