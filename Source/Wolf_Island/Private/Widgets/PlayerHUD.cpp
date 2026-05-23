@@ -219,21 +219,25 @@ void UPlayerHUD::DisplayDefault()
 
 void UPlayerHUD::DisplayAirBar()
 {
-	AirBar->SetVisibility(ESlateVisibility::Visible);
+	if (AirBar) AirBar->SetVisibility(ESlateVisibility::Visible);
 }
 
 void UPlayerHUD::HideAirBar()
 {
-	AirBar->SetVisibility(ESlateVisibility::Hidden);
+	if (AirBar) AirBar->SetVisibility(ESlateVisibility::Hidden);
 }
 
 void UPlayerHUD::RefreshHotBar()
 {
+	if (!HotBar || !SlotClass || !PlayerRef || !PlayerRef->InventoryComponent) return;
+
 	HotBar->ClearChildren();
 	
 	for (int i=0; i<6; i++)
 	{
 		UHotbarSlot* HotSlot = CreateWidget<UHotbarSlot>(this, SlotClass);
+		if (!HotSlot) continue;
+
 		HotSlot->SetDragDrop(false);
 		HotSlot->SetInventoryRef(PlayerRef->InventoryComponent);
 		HotSlot->SetIndex(i);

@@ -553,12 +553,18 @@ void UStatusComponent::ApplyItem(FItemData Item)
 			StopInfection();
 			UE_LOG(LogTemp, Warning, TEXT("Infection Stopped"));
 		}
-		
-		AMainGameState* GS = Cast<AMainGameState>(GetWorld()->GetGameState());
-		AMainPlayerController* PC = Cast<AMainPlayerController>(Cast<APawn>(GetOwner())->GetController());
+
+		APawn* OwnerPawn = Cast<APawn>(GetOwner());
+		if (!OwnerPawn) return;
+
+		AMainPlayerController* PC = Cast<AMainPlayerController>(OwnerPawn->GetController());
 		FChattingData Data = FChattingData(
-			"SYSTEM",Item.TextData.Name.ToString()+" USED", EMessageType::NOTICE);
-		if (!PC) UE_LOG(LogTemp, Warning, TEXT("UStatusComponent::ApplyItem: PC is NULL"));
+			"SYSTEM", Item.TextData.Name.ToString()+" USED", EMessageType::NOTICE);
+		if (!PC)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("UStatusComponent::ApplyItem: PC is NULL"));
+			return;
+		}
 		PC->AddChat(Data);
 	}
 }
@@ -580,12 +586,14 @@ void UStatusComponent::StartAutoHeal()
 		&UStatusComponent::AutoHeal,
 		AutoHealDelay,
 		false);
-		
 }
 
 void UStatusComponent::AutoHeal()
 {
-	UE_LOG(LogTemp, Warning, TEXT("[AUTO HEAL] %hs : Heal"), GetOwner()->HasAuthority()?"SERVER":"CLIENT");
+	if (GetOwner())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[AUTO HEAL] %hs : Heal"), GetOwner()->HasAuthority()?"SERVER":"CLIENT");
+	}
 	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
 	
 	if (TimerManager.IsTimerActive(AutoHealTimer)) return;
@@ -602,7 +610,10 @@ void UStatusComponent::AutoHeal()
 
 void UStatusComponent::StopAutoHeal()
 {
-	UE_LOG(LogTemp, Warning, TEXT("[AUTO HEAL] %hs : Stop"), GetOwner()->HasAuthority()?"SERVER":"CLIENT");
+	if (GetOwner())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[AUTO HEAL] %hs : Stop"), GetOwner()->HasAuthority()?"SERVER":"CLIENT");
+	}
 	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
 	
 	TimerManager.ClearTimer(AutoHealStartTimer);
@@ -705,6 +716,7 @@ void UStatusComponent::Client_SetInputMode_Implementation(bool IsEnable)
 void UStatusComponent::SetInputMode(bool IsEnable)
 {
 	APawn* Owner = Cast<APawn>(GetOwner());
+	if (!Owner) return;
 	
 	if (APlayerController* PC = Cast<APlayerController>(Owner->GetController()))
 	{
@@ -761,3 +773,5 @@ float UStatusComponent::CalculateTrueDamage(AActor* Attacker, AActor* Target, fl
 	
 	return TrueDamage;
 }
+
+

@@ -77,7 +77,10 @@ void AMultiGameMode::PostLogin(APlayerController* NewPlayer)
 void AMultiGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
 {
 	AMainPlayerController* NewMainPlayerController = Cast<AMainPlayerController>(NewPlayer);
+	if (!NewMainPlayerController) return;
+
 	AMainPlayerState* PlayerState = Cast<AMainPlayerState>(NewMainPlayerController->PlayerState);
+	if (!PlayerState) return;
 	
 	UE_LOG(LogTemp, Warning, TEXT("Entered Players Role : %d"), PlayerState->GetPlayerRole())
 	
@@ -95,8 +98,9 @@ void AMultiGameMode::RestartPlayer(AController* NewPlayer)
 bool AMultiGameMode::ShouldSpawnAtStartSpot(AController* Player)
 {
 	AMainPlayerState* PlayerState = Cast<AMainPlayerState>(Player->PlayerState);
-	UE_LOG(LogTemp, Warning, TEXT("Check Role on ShouldSpawn : %d"), PlayerState->GetPlayerRole());
 	if (!PlayerState) return false;
+
+	UE_LOG(LogTemp, Warning, TEXT("Check Role on ShouldSpawn : %d"), PlayerState->GetPlayerRole());
 	
 	if (PlayerState->GetPlayerRole() == ECharacterRole::NONE) return false;
 	
@@ -161,13 +165,15 @@ void AMultiGameMode::BeginPlay()
 
 void AMultiGameMode::Logout(AController* Exiting)
 {
-	AMainPlayerState* PS = Cast< AMainPlayerState>(Exiting->PlayerState);
+	AMainPlayerState* PS = Cast<AMainPlayerState>(Exiting->PlayerState);
 
 	AMainGameState* GS = GetGameState<AMainGameState>();
-	FChattingData Chat = FChattingData(
-		TEXT("알림"),PS->GetPlayerName()+TEXT(" 님이 나갔습니다."), EMessageType::NOTICE);
-
-	GS->AddChattingMessage(Chat);
+	if (PS && GS)
+	{
+		FChattingData Chat = FChattingData(
+			TEXT("알림"), PS->GetPlayerName()+TEXT(" 님이 나갔습니다."), EMessageType::NOTICE);
+		GS->AddChattingMessage(Chat);
+	}
 
 	AMoonlightInfectionSystem* InfectionSystem = Cast<AMoonlightInfectionSystem>(
 		UGameplayStatics::GetActorOfClass(GetWorld(), AMoonlightInfectionSystem::StaticClass()));
@@ -190,7 +196,7 @@ bool AMultiGameMode::CheckRoleAvailable(ECharacterRole NewRole) const
 	for (auto Player : GS->PlayerArray)
 	{
 		AMainPlayerState* PS = Cast<AMainPlayerState>(Player);
-		if (PS->GetPlayerRole() == NewRole) return false;
+		if (PS && PS->GetPlayerRole() == NewRole) return false;
 	}
 	return true;
 }
@@ -199,7 +205,7 @@ UClass* AMultiGameMode::GetDefaultPawnClassForController_Implementation(AControl
 {
 	AMainPlayerState* PS = Cast<AMainPlayerState>(InController->PlayerState);
 	
-	if (PS->GetPlayerRole() == ECharacterRole::NONE) return nullptr;
+	if (!PS || PS->GetPlayerRole() == ECharacterRole::NONE) return nullptr;
 	
 	return PlayerRoleClassList[static_cast<int32>(PS->GetPlayerRole())];
 }

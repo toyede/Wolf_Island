@@ -675,6 +675,7 @@ void AMainGameMode::SavePlayers()
 		
 		//각 플레이어의 저장 코드 실행
 		AMainPlayerState* MPS = Cast<AMainPlayerState>(PS);
+		if (!MPS) continue;
 		SavePlayer(MPS);
 	}
 }
@@ -721,7 +722,10 @@ bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState, bool IsDead)
 		UE_LOG(LogTemp, Warning, TEXT("LOAD PLAYER %s : Transform | %s"), *PlayerID, *PlayerSaveData.Transform.ToString())
 		PlayerCharacter->SetActorTransform(PlayerSaveData.Transform);
 		PlayerCharacter->GetCharacterMovement()->Velocity = PlayerSaveData.Velocity;
-		PlayerCharacter->GetController()->SetControlRotation(PlayerSaveData.ControlRotation);
+		if (PlayerCharacter->GetController())
+		{
+			PlayerCharacter->GetController()->SetControlRotation(PlayerSaveData.ControlRotation);
+		}
 	}
 	
 	PlayerState->SetIsBossStage(false);
