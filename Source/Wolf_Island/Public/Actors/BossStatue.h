@@ -79,6 +79,6 @@ private:
 
 	FTimerHandle HealTimerHandle;
 
-	UPROPERTY()
-	AEnemyAIBoss* CachedBoss;
+	// TWeakObjectPtr 사용: 보스가 먼저 소멸돼도 안전하게 null 감지
+	TWeakObjectPtr<AEnemyAIBoss> CachedBoss;
 };

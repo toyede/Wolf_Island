@@ -46,7 +46,7 @@ void ABossStatue::BeginPlay()
 
 	CachedBoss = Cast<AEnemyAIBoss>(UGameplayStatics::GetActorOfClass(GetWorld(), AEnemyAIBoss::StaticClass()));
 
-	if (CachedBoss)
+	if (CachedBoss.IsValid())
 	{
 		StartHealingTimer();
 	}
@@ -72,28 +72,28 @@ void ABossStatue::StartHealingTimer()
 
 void ABossStatue::HealBoss()
 {
-	if (CachedBoss)
-	{
-		CachedBoss->StatusComponent->IncreaseHP(HealAmount);
-		//GEngine->AddOnScreenDebugMessage(
-		//	-1,
-		//	2.f,
-		//	FColor::Green,
-		//	FString::Printf(TEXT("Boss Healed: %.2f   Current HP: %.2f"), HealAmount, CachedBoss->StatusComponent->CurrentHP)
-		///);
+	// 액터 자신이 소멸 중이면 즉시 리턴
+	if (!IsValid(this)) return;
 
-		if (HealEffect)
-		{
-			UNiagaraFunctionLibrary::SpawnSystemAttached(
-				HealEffect,
-				CachedBoss->GetMesh(), // ������ �޽��� ����
-				HealEffectSocketName,
-				FVector::ZeroVector,
-				FRotator::ZeroRotator,
-				EAttachLocation::KeepRelativeOffset,
-				true
-			);
-		}
+	if (!CachedBoss.IsValid()) return;
+
+	AEnemyAIBoss* Boss = CachedBoss.Get();
+
+	if (!IsValid(Boss->StatusComponent)) return;
+
+	Boss->StatusComponent->IncreaseHP(HealAmount);
+
+	if (HealEffect && IsValid(Boss->GetMesh()))
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAttached(
+			HealEffect,
+			Boss->GetMesh(),
+			HealEffectSocketName,
+			FVector::ZeroVector,
+			FRotator::ZeroRotator,
+			EAttachLocation::KeepRelativeOffset,
+			true
+		);
 	}
 }
 
