@@ -56,6 +56,12 @@ void UInventorySlot::SetEmptySlot()
 
 void UInventorySlot::RefreshSlot()
 {
+	// OwnerInventoryRef가 null이면 (HotBar 슬롯이 아직 초기화되지 않았거나 맵 전환 중 정리된 경우) 안전하게 종료
+	if (!IsValid(OwnerInventoryRef))
+	{
+		return;
+	}
+	
 	//UE_LOG(LogTemp, Warning, TEXT("%s's [ %d ] SLOT REFRESHING"), *OwnerInventoryRef->GetOwner()->GetName() ,Index);
 	ItemRef = OwnerInventoryRef->GetItemAtIndex(Index);
 	

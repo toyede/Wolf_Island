@@ -264,6 +264,7 @@ void UPlayerHUD::UpdateHotBar()
 		
 		for (int i=0; i<Count; i++){
 			UHotbarSlot* HotSlot = Cast<UHotbarSlot>(HotBar->GetChildAt(i));
+			if (!HotSlot) continue;  // Cast 실패 시 스킵 (크래시 방지)
 			HotSlot->SetUnSelectedSlot();
 		
 			if (PlayerRef->HotBarIndex == i)
