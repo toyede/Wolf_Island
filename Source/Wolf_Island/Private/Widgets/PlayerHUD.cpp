@@ -16,7 +16,9 @@
 #include "Components/WrapBox.h"
 #include "Games/MainPlayerState.h"
 #include "Item/Pickup.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Moon/MoonlightInfectionSystem.h"
 #include "Widgets/Inventory/HotbarSlot.h"
 #include "Widgets/Inventory/InventorySlot.h"
 
@@ -311,11 +313,30 @@ void UPlayerHUD::UpdateStatusBars()
 			
 			if (ShouldEffect)
 			{
-				ScreenEffectImage->SetColorAndOpacity(FColor(64, 0, 0));
-				if (!IsAnimationPlaying(ScreenEffectAnimation)) PlayAnimation(ScreenEffectAnimation, 0, 0);
-			} else
+				if (ScreenEffectImage) ScreenEffectImage->SetColorAndOpacity(FColor(64, 0, 0));
+				if (ScreenEffectAnimation && !IsAnimationPlaying(ScreenEffectAnimation)) PlayAnimation(ScreenEffectAnimation, 0, 0);
+			}
+			else
 			{
-				if (IsAnimationPlaying(ScreenEffectAnimation)) StopAnimation(ScreenEffectAnimation);
+				// 감염 경고: 이 플레이어의 복제된 NightlyExposure로 직접 판단
+				bool bInfectionWarning = false;
+				if (AMoonlightInfectionSystem* MoonSys = Cast<AMoonlightInfectionSystem>(
+					UGameplayStatics::GetActorOfClass(GetWorld(), AMoonlightInfectionSystem::StaticClass())))
+				{
+					const float Exposure = PlayerRef->NightlyExposure;
+					const float Threshold = MoonSys->NightlyTransformThreshold;
+					bInfectionWarning = (Exposure >= InfectionWarningThreshold && Exposure < Threshold);
+				}
+
+				if (bInfectionWarning)
+				{
+					if (ScreenEffectImage) ScreenEffectImage->SetColorAndOpacity(ScreenEffectInfectionWarningColor);
+					if (ScreenEffectAnimation && !IsAnimationPlaying(ScreenEffectAnimation)) PlayAnimation(ScreenEffectAnimation, 0, 0);
+				}
+				else
+				{
+					if (ScreenEffectAnimation && IsAnimationPlaying(ScreenEffectAnimation)) StopAnimation(ScreenEffectAnimation);
+				}
 			}
 		}
 	}

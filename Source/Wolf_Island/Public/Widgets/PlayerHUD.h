@@ -69,6 +69,14 @@ public:
 	//스크릿 엣지 해야하는 상황인가? 변수
 	UPROPERTY(BlueprintReadWrite)
 	bool ShouldEffect = false;
+
+	// --- 감염 경고 스크린 이펙트 ---
+	/** 플레이어 각각의 하루 당 감염 누적량이 이 값 이상이면 보라 경고 (기본 13.0) */
+	UPROPERTY(EditDefaultsOnly, Category = "HUD|InfectionWarning")
+	float InfectionWarningThreshold = 14.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "HUD|InfectionWarning")
+	FLinearColor ScreenEffectInfectionWarningColor = FLinearColor(0.22f, 0.0f, 0.30f, 1.0f);
 	
 	//스크린 엣지 이미지
 	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))

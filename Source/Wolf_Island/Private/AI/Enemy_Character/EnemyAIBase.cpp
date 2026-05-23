@@ -21,6 +21,8 @@
 #include "Perception/AISense_Hearing.h"
 #include "Perception/AISense_Damage.h"
 #include "Item/Pickup.h"
+#include "NiagaraFunctionLibrary.h"
+#include "Particles/ParticleSystem.h"
 
 AEnemyAIBase::AEnemyAIBase()
 {
@@ -633,6 +635,11 @@ float AEnemyAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
         // 피격 사운드는 확률과 무관하게 무조건 재생
         Multicast_PlayHitSound();
 
+        // 피격 이펙트 (Unreliable Multicast, cosmetic)
+        const FVector HitLoc = DamageCauser ? DamageCauser->GetActorLocation() : GetActorLocation();
+        const FVector HitNorm = (GetActorLocation() - HitLoc).GetSafeNormal();
+        Multicast_PlayHitEffect(GetActorLocation(), HitNorm);
+
         // 확률적으로 히트 리스폰스 발생 (기본 70%)
         if (FMath::FRand() < HitResponseChance)
         {
@@ -727,6 +734,42 @@ void AEnemyAIBase::Multicast_PlayHitSound_Implementation()
     if (SoundToPlay)
     {
         UGameplayStatics::PlaySoundAtLocation(this, SoundToPlay, GetActorLocation());
+    }
+}
+
+void AEnemyAIBase::Multicast_PlayHitEffect_Implementation(FVector HitLocation, FVector HitNormal)
+{
+    USkeletalMeshComponent* TargetMesh = bIsHuman ? GetMesh() : WolfMesh;
+
+    if (HitEffect)
+    {
+        if (HitEffectSocketName != NAME_None && TargetMesh)
+        {
+            UNiagaraFunctionLibrary::SpawnSystemAttached(
+                HitEffect, TargetMesh, HitEffectSocketName,
+                FVector::ZeroVector, HitNormal.Rotation(),
+                EAttachLocation::KeepRelativeOffset, true);
+        }
+        else
+        {
+            UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+                GetWorld(), HitEffect, HitLocation, HitNormal.Rotation());
+        }
+    }
+    else if (HitEffectCascade)
+    {
+        if (HitEffectSocketName != NAME_None && TargetMesh)
+        {
+            UGameplayStatics::SpawnEmitterAttached(
+                HitEffectCascade, TargetMesh, HitEffectSocketName,
+                FVector::ZeroVector, HitNormal.Rotation(),
+                EAttachLocation::KeepRelativeOffset);
+        }
+        else
+        {
+            UGameplayStatics::SpawnEmitterAtLocation(
+                GetWorld(), HitEffectCascade, HitLocation, HitNormal.Rotation());
+        }
     }
 }
 

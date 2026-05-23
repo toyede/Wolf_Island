@@ -14,6 +14,8 @@ class UStatusComponent;
 class UAnimMontage;
 class USoundBase;
 class AMainPlayer;
+class UNiagaraSystem;
+class UParticleSystem;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSummonedWolfAttackEnd);
 
@@ -63,6 +65,23 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Dead")
 	TObjectPtr<USoundBase> DieSound;
+
+	// --- Hit Effect (피격 이펙트) ---
+	/** Niagara 이펙트 (우선 사용) */
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Effects")
+	TObjectPtr<UNiagaraSystem> HitEffect;
+
+	/** Cascade 이펙트 (HitEffect가 없을 때 사용) */
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Effects")
+	TObjectPtr<UParticleSystem> HitEffectCascade;
+
+	/** 이펙트를 붙일 소켓명 (비어있으면 피격 위치에 스폰) */
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Effects")
+	FName HitEffectSocketName = NAME_None;
+
+	/** 피격 사운드 (Unreliable Multicast로 재생) */
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Effects")
+	TObjectPtr<USoundBase> HitSound;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float PassiveSpeed = 250.f;
@@ -123,6 +142,10 @@ protected:
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlayAttackMontage();
+
+	// --- Hit Effect ---
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayHitEffect(FVector HitLocation, FVector HitNormal);
 
 	void ApplyDeadState();
 

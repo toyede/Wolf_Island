@@ -19,6 +19,7 @@ class UAnimMontage;
 class UAttackCollisionComponent;
 class UDamageType;
 class APickup;
+class UParticleSystem;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHitResponse); // 맞을 때 피격 모션 바인딩용
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnThrowEnd); // 투척 공격 끝났음을 알리는 용도
@@ -277,6 +278,19 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Hit")
 	TObjectPtr<USoundBase> HitSound_Wolf;
 
+	// --- 피격 이펙트 ---
+	/** Niagara 피격 이펙트 (우선 사용) */
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Hit")
+	TObjectPtr<UNiagaraSystem> HitEffect;
+
+	/** Cascade 피격 이펙트 (HitEffect 없을 때 폴백) */
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Hit")
+	TObjectPtr<UParticleSystem> HitEffectCascade;
+
+	/** 이펙트 붙일 소켓명 (비어있으면 피격 위치에 스폰) */
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Hit")
+	FName HitEffectSocketName = NAME_None;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Dead", ReplicatedUsing = OnRep_IsDead)
 	bool bIsDead = false;
 
@@ -319,6 +333,10 @@ public:
 	/** 피격 사운드 무조건 재생 (Unreliable, cosmetic) */
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlayHitSound();
+
+	/** 피격 이펙트 재생 (Unreliable, cosmetic) */
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayHitEffect(FVector HitLocation, FVector HitNormal);
 
 	UFUNCTION()
 	void OnRep_IsDead();

@@ -13,6 +13,9 @@
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
+#include "Particles/ParticleSystem.h"
 
 ASummonedWolf::ASummonedWolf()
 {
@@ -327,6 +330,11 @@ float ASummonedWolf::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 		StatusComponent->DecreaseHP(ActualDamage);
 	}
 
+	// 피격 이펙트/사운드 — Unreliable Multicast (cosmetic)
+	const FVector HitLocation = DamageCauser ? DamageCauser->GetActorLocation() : GetActorLocation();
+	const FVector HitNormal = (GetActorLocation() - HitLocation).GetSafeNormal();
+	Multicast_PlayHitEffect(GetActorLocation(), HitNormal);
+
 	return ActualDamage;
 }
 
@@ -377,6 +385,64 @@ void ASummonedWolf::ApplyDeadState()
 	if (DieSound)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, DieSound, GetActorLocation());
+	}
+}
+
+void ASummonedWolf::Multicast_PlayHitEffect_Implementation(FVector HitLocation, FVector HitNormal)
+{
+	// 피격 사운드
+	if (HitSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, HitSound, HitLocation);
+	}
+
+	// --- Niagara 우선, 없으면 Cascade 폴백 ---
+	if (HitEffect)
+	{
+		if (HitEffectSocketName != NAME_None && GetMesh())
+		{
+			UNiagaraFunctionLibrary::SpawnSystemAttached(
+				HitEffect,
+				GetMesh(),
+				HitEffectSocketName,
+				FVector::ZeroVector,
+				HitNormal.Rotation(),
+				EAttachLocation::KeepRelativeOffset,
+				true
+			);
+		}
+		else
+		{
+			UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+				GetWorld(),
+				HitEffect,
+				HitLocation,
+				HitNormal.Rotation()
+			);
+		}
+	}
+	else if (HitEffectCascade)
+	{
+		if (HitEffectSocketName != NAME_None && GetMesh())
+		{
+			UGameplayStatics::SpawnEmitterAttached(
+				HitEffectCascade,
+				GetMesh(),
+				HitEffectSocketName,
+				FVector::ZeroVector,
+				HitNormal.Rotation(),
+				EAttachLocation::KeepRelativeOffset
+			);
+		}
+		else
+		{
+			UGameplayStatics::SpawnEmitterAtLocation(
+				GetWorld(),
+				HitEffectCascade,
+				HitLocation,
+				HitNormal.Rotation()
+			);
+		}
 	}
 }
 

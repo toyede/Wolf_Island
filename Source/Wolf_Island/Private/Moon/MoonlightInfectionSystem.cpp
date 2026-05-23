@@ -213,6 +213,13 @@ void AMoonlightInfectionSystem::StartSingleInfectionSequence(AMainPlayer* Player
 void AMoonlightInfectionSystem::OnNightStarted()
 {
 	// 밤 시작: 하루 누적량 초기화
+	for (auto& Pair : NightlyExposure)
+	{
+		if (AMainPlayer* Player = Pair.Key.Get())
+		{
+			Player->NightlyExposure = 0.0f;
+		}
+	}
 	NightlyExposure.Empty();
 	TriggeredThisNight.Empty();
 	TriggeredInfectionSnapshot.Empty();
@@ -269,6 +276,13 @@ void AMoonlightInfectionSystem::OnDayStarted()
 		}
 	}
 
+	for (auto& Pair : NightlyExposure)
+	{
+		if (AMainPlayer* Player = Pair.Key.Get())
+		{
+			Player->NightlyExposure = 0.0f;
+		}
+	}
 	NightlyExposure.Empty();
 	TriggeredThisNight.Empty();
 	TriggeredInfectionSnapshot.Empty();
@@ -509,6 +523,9 @@ void AMoonlightInfectionSystem::CheckAllPlayers()
 
 				float& Nightly = NightlyExposure.FindOrAdd(MainPlayer);
 				Nightly += InfectionPerCheck;
+
+				// 클라이언트 HUD 경고용으로 플레이어에 복제
+				MainPlayer->NightlyExposure = Nightly;
 
 				if (bShowDebugMessages)
 				{

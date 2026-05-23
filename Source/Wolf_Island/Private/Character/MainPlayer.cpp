@@ -2481,6 +2481,7 @@ void AMainPlayer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 	DOREPLIFETIME(AMainPlayer, SwimMode);
 	DOREPLIFETIME(AMainPlayer, Torch);
 	DOREPLIFETIME(AMainPlayer, InteractingPlayer);
+	DOREPLIFETIME(AMainPlayer, NightlyExposure);
 }
 
 void AMainPlayer::OnRep_Interacted()

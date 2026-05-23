@@ -6,13 +6,15 @@
 #include "InputAction.h"
 #include "AI/Interfaces/AttackMeshProvider.h"
 #include "AI/Interfaces/EnemyCommonInterface.h"
+#include "NiagaraSystem.h"
 #include "WerewolfInfected.generated.h"
 
 class UAttackCollisionComponent;
 class UCameraComponent;
+class UParticleSystem;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FInfectedOnHitResponse); // ¸ÂÀ» ¶§ ÇÇ°İ ¸ğ¼Ç ¹ÙÀÎµù¿ë
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FInfectedOnAttackEnd); // ±âº» °ø°İ ³¡³µÀ½À» ¾Ë¸®´Â ¿ëµµ
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FInfectedOnHitResponse); // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Ç°ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Îµï¿½ï¿½ï¿½
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FInfectedOnAttackEnd); // ï¿½âº» ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ë¸ï¿½ï¿½ï¿½ ï¿½ëµµ
 
 UCLASS()
 class WOLF_ISLAND_API AWerewolfInfected : public ACharacter, public IEnemyCommonInterface, public IAttackMeshProvider
@@ -35,12 +37,12 @@ protected:
 
     void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 public:
-    // === ÄÄÆ÷³ÍÆ® ===
+    // === ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ===
     
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Werewolf|Camera")
     TObjectPtr<UCameraComponent> FirstPersonCamera;
 
-    // === Ã¼·Â ===
+    // === Ã¼ï¿½ï¿½ ===
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Werewolf|Stats")
     float MaxHealth = 100.0f;
 
@@ -53,7 +55,7 @@ public:
     virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
         AController* EventInstigator, AActor* DamageCauser) override;
 
-    // === ±âÀı (HP 10% ÀÌÇÏ) ===
+    // === ï¿½ï¿½ï¿½ï¿½ (HP 10% ï¿½ï¿½ï¿½ï¿½) ===
     UPROPERTY(ReplicatedUsing = OnRep_Incapacitated, BlueprintReadOnly, Category = "Werewolf|State")
     bool bIsIncapacitated = false;
 
@@ -63,7 +65,7 @@ public:
     UPROPERTY(EditAnywhere, Category = "Werewolf|Stats")
     float IncapacitateThreshold = 0.1f;  // 10%
 
-    // === °ø°İ ===
+    // === ï¿½ï¿½ï¿½ï¿½ ===
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Werewolf|Combat")
     TObjectPtr<UAttackCollisionComponent> AttackCollisionComp;
 
@@ -82,11 +84,11 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Werewolf|Combat")
 	float AttackDamage = 10.0f;
 
-    // === °üÀü ÀüÈ¯ Áö¿ø ===
+    // === ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È¯ ï¿½ï¿½ï¿½ï¿½ ===
     UPROPERTY(BlueprintReadOnly, Category = "Werewolf|State")
     bool bIsPlayerControlled = true;
 
-    // === ¸®ÇÃ¸®ÄÉÀÌ¼Ç ===
+    // === ï¿½ï¿½ï¿½Ã¸ï¿½ï¿½ï¿½ï¿½Ì¼ï¿½ ===
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
     virtual void Die_Implementation() override;
@@ -96,13 +98,29 @@ public:
 private:
     void HandleIncapacitated();
 
-    // ÀÔ·Â ¹ÙÀÎµù¿ë
+    // ï¿½Ô·ï¿½ ï¿½ï¿½ï¿½Îµï¿½ï¿½ï¿½
     void OnAttackInput();
+
+	// === í”¼ê²© ì´í™íŠ¸/ì‚¬ìš´ë“œ (HitResponse í™•ë¥  ì—†ì´ ë¬´ì¡°ê±´ ì¬ìƒ) ===
+	UPROPERTY(EditDefaultsOnly, Category = "Werewolf|Hit")
+	TObjectPtr<USoundBase> HitSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Werewolf|Hit")
+	TObjectPtr<UNiagaraSystem> HitEffect;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Werewolf|Hit")
+	TObjectPtr<UParticleSystem> HitEffectCascade;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Werewolf|Hit")
+	FName HitEffectSocketName = NAME_None;
 
 private:
 
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_PlayAttack();
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayHitEffect(FVector HitLocation, FVector HitNormal);
 
     UPROPERTY(EditAnywhere, Category = "Werewolf|AI")
     float AITickInterval = 0.2f;
@@ -117,7 +135,7 @@ private:
 
     FTimerHandle AttackResetHandle;
 
-	// / === °üÀü ÀüÈ¯ °ü·Ã ===
+	// / === ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È¯ ï¿½ï¿½ï¿½ï¿½ ===
 public:
     UPROPERTY(EditDefaultsOnly, Category = "Werewolf|Input")
     TObjectPtr<UInputMappingContext> SpectateIMC;
@@ -127,29 +145,29 @@ public:
 
     void SwitchSpectateTarget();
 
-	// === IAttackMeshProvider ÀÎÅÍÆäÀÌ½º ±¸Çö ===
+	// === IAttackMeshProvider ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì½ï¿½ ï¿½ï¿½ï¿½ï¿½ ===
 public:
     virtual USkeletalMeshComponent* GetAttackMesh() const override;
 	virtual UAttackCollisionComponent* GetAttackCollisionComponent() const override;
 
-	// === ÇÇ°İ Ã³¸® ===
+	// === ï¿½Ç°ï¿½ Ã³ï¿½ï¿½ ===
 public:
-    // ÇÇ°İ ½Ã Àç»ıÇÒ ¾Ö´Ï¸ŞÀÌ¼Ç ¸ùÅ¸ÁÖ
+    // ï¿½Ç°ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´Ï¸ï¿½ï¿½Ì¼ï¿½ ï¿½ï¿½Å¸ï¿½ï¿½
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
     UAnimMontage* HitMontage;
 
 protected:
-    // ÇÇ°İ Ã³¸® (¼­¹ö Àü¿ë)
+    // ï¿½Ç°ï¿½ Ã³ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)
     void HitResponse();
 
-    // ÇÇ°İ ¿¬Ãâ (¸ğµç Å¬¶óÀÌ¾ğÆ®)
+    // ï¿½Ç°ï¿½ ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ Å¬ï¿½ï¿½ï¿½Ì¾ï¿½Æ®)
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_HitResponse();
 
-    // ÇÇ°İ ¸ùÅ¸ÁÖ Á¾·á Äİ¹é
+    // ï¿½Ç°ï¿½ ï¿½ï¿½Å¸ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½İ¹ï¿½
     void OnHitMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
-    // ±âÀı ½Ã Àç»ıÇÒ ¾Ö´Ï¸ŞÀÌ¼Ç ¸ùÅ¸ÁÖ
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´Ï¸ï¿½ï¿½Ì¼ï¿½ ï¿½ï¿½Å¸ï¿½ï¿½
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
     UAnimMontage* IncapacitatedMontage;
 };

@@ -14,6 +14,8 @@
 #include "Moon/MoonlightInfectionSystem.h"
 #include "AI/AIControllers/InfectedAIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "NiagaraFunctionLibrary.h"
+#include "Particles/ParticleSystem.h"
 
 AWerewolfInfected::AWerewolfInfected()
 {
@@ -72,7 +74,12 @@ float AWerewolfInfected::TakeDamage(float DamageAmount,
 
     CurrentHealth = FMath::Clamp(CurrentHealth - ActualDamage, 0.0f, MaxHealth);
 
-    // 10% ���ϸ� ����
+    // 피격 사운드 + 이펙트 — Unreliable Multicast (cosmetic, HitResponse 확률 없이 무조건)
+    const FVector HitLoc = DamageCauser ? DamageCauser->GetActorLocation() : GetActorLocation();
+    const FVector HitNorm = (GetActorLocation() - HitLoc).GetSafeNormal();
+    Multicast_PlayHitEffect(GetActorLocation(), HitNorm);
+
+    // 10% 이하면 기절
     if (CurrentHealth <= MaxHealth * IncapacitateThreshold)
     {
         HandleIncapacitated();
@@ -347,6 +354,47 @@ void AWerewolfInfected::OnHitMontageEnded(UAnimMontage* Montage, bool bInterrupt
         if (UBlackboardComponent* BB = AIC->GetBlackboardComponent())
         {
             BB->SetValueAsBool(FName("bIsHit"), false);
+        }
+    }
+}
+
+void AWerewolfInfected::Multicast_PlayHitEffect_Implementation(FVector HitLocation, FVector HitNormal)
+{
+    // 피격 사운드
+    if (HitSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, HitSound, HitLocation);
+    }
+
+    // Niagara 우선, 없으면 Cascade 폴백
+    if (HitEffect)
+    {
+        if (HitEffectSocketName != NAME_None && GetMesh())
+        {
+            UNiagaraFunctionLibrary::SpawnSystemAttached(
+                HitEffect, GetMesh(), HitEffectSocketName,
+                FVector::ZeroVector, HitNormal.Rotation(),
+                EAttachLocation::KeepRelativeOffset, true);
+        }
+        else
+        {
+            UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+                GetWorld(), HitEffect, HitLocation, HitNormal.Rotation());
+        }
+    }
+    else if (HitEffectCascade)
+    {
+        if (HitEffectSocketName != NAME_None && GetMesh())
+        {
+            UGameplayStatics::SpawnEmitterAttached(
+                HitEffectCascade, GetMesh(), HitEffectSocketName,
+                FVector::ZeroVector, HitNormal.Rotation(),
+                EAttachLocation::KeepRelativeOffset);
+        }
+        else
+        {
+            UGameplayStatics::SpawnEmitterAtLocation(
+                GetWorld(), HitEffectCascade, HitLocation, HitNormal.Rotation());
         }
     }
 }

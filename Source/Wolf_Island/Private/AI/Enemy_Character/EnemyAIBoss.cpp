@@ -655,6 +655,9 @@ void AEnemyAIBoss::OnAttackHit(const FHitResult& HitResult)
 	AActor* HitActor = HitResult.GetActor();
 	if (!HitActor) return;
 
+	// 소환된 늑대는 보스 공격 대상에서 제외
+	if (HitActor->IsA<ASummonedWolf>()) return;
+
 	FDamageEvent DamageEvent(UDamageType::StaticClass());
 	HitActor->TakeDamage(CurrentDamage, DamageEvent, GetController(), this);
 }
@@ -921,6 +924,9 @@ void AEnemyAIBoss::OnThrustImpact()
 	{
 		ACharacter* Target = Cast<ACharacter>(Actor);
 		if (!Target) continue;
+
+		// 소환된 늑대는 충격파 대상에서 제외
+		if (Target->IsA<ASummonedWolf>()) continue;
 
 		// 데미지
 		if (ThrustImpactDamage > 0.f)

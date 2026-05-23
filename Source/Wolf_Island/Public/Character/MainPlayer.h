@@ -144,6 +144,10 @@ public:
 	//횃불
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Torch")
 	ATorch* Torch;
+
+	/** 이번 밤 달빛 감염 누적량 — 클라이언트 HUD 경고용으로 복제 */
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Infection")
+	float NightlyExposure = 0.0f;
 	UPROPERTY(EditDefaultsOnly, Category = "Torch")
 	TSubclassOf<ATorch> TorchClass;
 	// 토치 전용 애님 레이어 (무기 DT 밖에서 별도 관리)
