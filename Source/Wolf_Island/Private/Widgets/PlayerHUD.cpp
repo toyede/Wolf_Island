@@ -97,6 +97,9 @@ void UPlayerHUD::AddItemMessage(FItemAddResult Result)
 void UPlayerHUD::SetPlayerRef(AMainPlayer* OwnerPlayer)
 {
 	PlayerRef = OwnerPlayer;
+
+	// 플레이어 복구 시 핫바 최신화
+	RefreshHotBar();
 	
 	if (PlayerRef)
 	{
