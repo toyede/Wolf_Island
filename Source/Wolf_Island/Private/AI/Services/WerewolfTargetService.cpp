@@ -37,10 +37,19 @@ void UWerewolfTargetService::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
     for (AActor* Actor : FoundPlayers)
     {
         AMainPlayer* MP = Cast<AMainPlayer>(Actor);
-        if (!MP || MP->IsHidden()) continue; // ������ ��ü ����
+        if (!MP || MP->IsHidden()) continue; // 숨겨진 액터 제외
 
         // 기절/쓰러진 상태 제외
         if (MP->IsInability) continue;
+
+        // 늑대인간으로 변신 중인 플레이어 제외 (Werewolf 태그)
+        if (MP->ActorHasTag(FName("Werewolf"))) continue;
+
+        // StatusComponent 기반 추가 방어 체크 (인캐퍼시테이트 상태 제외)
+        if (UStatusComponent* SC = MP->FindComponentByClass<UStatusComponent>())
+        {
+            if (SC->bIsIncapacitated) continue;
+        }
 
         float Dist = FVector::Dist(ControllingPawn->GetActorLocation(), MP->GetActorLocation());
         if (Dist < ClosestDist)
