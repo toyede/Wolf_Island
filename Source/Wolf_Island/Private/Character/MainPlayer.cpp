@@ -1218,7 +1218,11 @@ void AMainPlayer::Revive()
 
 void AMainPlayer::OnRespawn()
 {
-	StatusComponent->IncreaseHP(20.0f);
+	if (StatusComponent)
+	{
+		StatusComponent->IncreaseHP(20.0f);
+		StatusComponent->StartAutoHeal();
+	}
 	
 	//안 기절 상태로 전환
 	IsInability = false;
