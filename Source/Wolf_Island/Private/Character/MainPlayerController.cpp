@@ -23,6 +23,7 @@
 #include "Actors/SpectatorCameraActor.h"
 #include "Components/Button.h"
 #include "Widgets/Setting/SettingsWidget.h"
+#include "Components/InventoryComponent.h"
 
 //TODO: 일단 바인딩 해제 코드 안넣어봄.
 void AMainPlayerController::BeginPlay()
@@ -34,19 +35,25 @@ void AMainPlayerController::BeginPlay()
 	if (ChattingPanelClass && IsLocalController())
 	{
 		ChattingPanel = CreateWidget<UChattingPanel>(this, ChattingPanelClass);
-		ChattingPanel->AddToViewport();
+		if (ChattingPanel)
+		{
+			ChattingPanel->AddToViewport();
+		}
 	}
 	
 	if (PauseWidgetClass && IsLocalController() && !PauseMenu)
 	{
 		PauseMenu = CreateWidget<UPauseMenu>(this, PauseWidgetClass);
 		
-		PauseMenu->ResumeButton->OnClicked.AddUniqueDynamic(this, &AMainPlayerController::OnResume);
-		PauseMenu->SettingButton->OnClicked.AddUniqueDynamic(this, &AMainPlayerController::OnSetting);
-		PauseMenu->QuitButton->OnClicked.AddUniqueDynamic(this, &AMainPlayerController::OnQuit);
-		
-		PauseMenu->AddToViewport(10);
-		HidePauseMenu();
+		if (PauseMenu)
+		{
+			if (PauseMenu->ResumeButton) PauseMenu->ResumeButton->OnClicked.AddUniqueDynamic(this, &AMainPlayerController::OnResume);
+			if (PauseMenu->SettingButton) PauseMenu->SettingButton->OnClicked.AddUniqueDynamic(this, &AMainPlayerController::OnSetting);
+			if (PauseMenu->QuitButton) PauseMenu->QuitButton->OnClicked.AddUniqueDynamic(this, &AMainPlayerController::OnQuit);
+			
+			PauseMenu->AddToViewport(10);
+			HidePauseMenu();
+		}
 	}
 	
 	MainGameInstance = Cast<UMainGameInstance>(GetGameInstance());
@@ -67,6 +74,50 @@ void AMainPlayerController::BeginPlay()
 			UE_LOG(LogTemp, Warning, TEXT("[PC] Can't open Selection UI. Player role is %d"), MainPlayerState->GetPlayerRole())
 		}
 	}
+}
+
+void AMainPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// 월드 전환이나 객체 파괴 시 생성된 위젯들 정리
+	if (ChattingPanel)
+	{
+		ChattingPanel->RemoveFromParent();
+		ChattingPanel = nullptr;
+	}
+
+	if (PauseMenu)
+	{
+		PauseMenu->RemoveFromParent();
+		PauseMenu = nullptr;
+	}
+
+	if (SettingsWidget)
+	{
+		SettingsWidget->RemoveFromParent();
+		SettingsWidget = nullptr;
+	}
+
+	if (RoleSelectionWidget)
+	{
+		RoleSelectionWidget->RemoveFromParent();
+		RoleSelectionWidget = nullptr;
+	}
+
+	if (DeathScreenWidget)
+	{
+		DeathScreenWidget->RemoveFromParent();
+		DeathScreenWidget = nullptr;
+	}
+
+	if (PlayerHUD)
+	{
+		PlayerHUD->RemoveFromParent();
+		PlayerHUD = nullptr;
+	}
+
+	GetWorldTimerManager().ClearAllTimersForObject(this);
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void AMainPlayerController::SetupInputComponent()
@@ -574,6 +625,22 @@ void AMainPlayerController::Client_EnterSpectateMode_Implementation()
 void AMainPlayerController::Client_ExitSpectateMode_Implementation()
 {
 	ExitSpectateMode();
+}
+
+void AMainPlayerController::Client_RestoreHUDAfterTransform_Implementation()
+{
+	// OnUnPossess에서 PlayerHUD가 파괴되므로 복귀 후 재생성 필요
+	AMainPlayer* RestoredPlayer = Cast<AMainPlayer>(GetPawn());
+	if (!RestoredPlayer) return;
+
+	// PlayerHUD 재생성
+	SetPlayerHUD(RestoredPlayer);
+
+	// 인벤토리 컴포넌트 갱신 (UI 브로드캐스트)
+	if (UInventoryComponent* Inv = RestoredPlayer->FindComponentByClass<UInventoryComponent>())
+	{
+		Inv->InventoryChanged();
+	}
 }
 
 void AMainPlayerController::Client_SetSpectateTarget_Implementation(AActor* TargetPlayer)

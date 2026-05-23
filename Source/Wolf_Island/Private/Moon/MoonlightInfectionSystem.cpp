@@ -411,6 +411,8 @@ void AMoonlightInfectionSystem::RestorePlayerAtDawn(APlayerController* PC)
 	if (AMainPlayerController* MPC = Cast<AMainPlayerController>(PC))
 	{
 		MPC->Client_ExitSpectateMode();
+		// OnUnPossess에서 파괴된 PlayerHUD 재생성 + 인벤토리 UI 갱신
+		MPC->Client_RestoreHUDAfterTransform();
 	}
 	
 	// 스탯 복구 (백업된 값 사용)

@@ -44,10 +44,15 @@ void UStatusComponent::BeginPlay()
 
 void UStatusComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (GetOwner()->HasAuthority())
+	// 맵 전환 / 액터 소멸 시 모든 타이머를 항상 클리어 (Authority 여부 무관)
+	// 람다 기반 타이머는 ClearAllTimersForObject로 추적되지 않으므로 핸들 기반으로 직접 클리어
+	if (UWorld* World = GetWorld())
 	{
-		GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
-		
+		ClearAllTimers();
+	}
+
+	if (GetOwner() && GetOwner()->HasAuthority())
+	{
 		//스태미나 다 쓰면 15초 이동 불가
 		OnStaminaZero.RemoveDynamic(this, &UStatusComponent::ForcedRest);
 		//배고픔 0일 시
@@ -147,6 +152,9 @@ void UStatusComponent::IncreaseStamina(float amount)
 //스태미나 감소 함수
 void UStatusComponent::DecreaseStamina(float amount)
 {
+	// 맵 전환 중 소멸 진행 중인 오브젝트 보호 가드
+	if (!IsValid(GetOwner()) || IsBeingDestroyed()) return;
+
 	CurrentStamina = FMath::Clamp(CurrentStamina-amount*AmountMultiplier, 0.0f, MaxStamina);
 	
 	//음수 방지
@@ -176,6 +184,9 @@ void UStatusComponent::IncreaseHunger(float amount)
 //배고픔 감소 함수
 void UStatusComponent::DecreaseHunger(float amount)
 {
+	// 맵 전환 중 소멸 진행 중인 오브젝트 보호 가드
+	if (!IsValid(GetOwner()) || IsBeingDestroyed()) return;
+
 	CurrentHunger = FMath::Clamp(CurrentHunger-amount*AmountMultiplier, 0.0f, MaxHunger);
 	
 	//음수 방지
@@ -205,6 +216,9 @@ void UStatusComponent::IncreaseHydration(float amount)
 //수분 감소 함수
 void UStatusComponent::DecreaseHydration(float amount)
 {
+	// 맵 전환 중 소멸 진행 중인 오브젝트 보호 가드
+	if (!IsValid(GetOwner()) || IsBeingDestroyed()) return;
+
 	CurrentHydration = FMath::Clamp(CurrentHydration-amount*AmountMultiplier, 0.0f, MaxHydration);
 	
 	//음수 방지
@@ -238,6 +252,9 @@ void UStatusComponent::IncreaseAir(float amount)
 
 void UStatusComponent::DecreaseAir(float amount)
 {
+	// 맵 전환 중 소멸 진행 중인 오브젝트 보호 가드
+	if (!IsValid(GetOwner()) || IsBeingDestroyed()) return;
+
 	CurrentAir = FMath::Clamp(CurrentAir-amount, 0.0f, MaxAir);
 	
 	//음수 방지

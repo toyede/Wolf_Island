@@ -133,6 +133,8 @@ public:
 
 	virtual void BeginPlay() override;
 
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 	virtual void OnPossess(APawn* InPawn) override;
 
 	virtual void OnUnPossess() override;
@@ -223,6 +225,10 @@ public:
 	// 클라이언트에서 실행될 RPC 선언
 	UFUNCTION(Client, Reliable)
 	void Client_SetViewTargetWithBlend(AActor* NewTarget, float BlendTime);
+
+	// 늑대 변신 복귀 후 PlayerHUD 재생성 + 인벤토리 UI 갱신
+	UFUNCTION(Client, Reliable)
+	void Client_RestoreHUDAfterTransform();
 
 	// 플레이어 UI 끄고 키는 함수
 	UFUNCTION(BlueprintCallable, Category = "UI")
