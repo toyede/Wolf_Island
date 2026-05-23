@@ -131,10 +131,12 @@ void AEnemyAIBase::BeginPlay()
 
     if (AttackCollisionComponent)
     {
-        //TODO: 이건 델리게이트 해제 안해줘도 괜찮은가...
         AttackCollisionComponent->OnHitActor.AddUObject(this, &AEnemyAIBase::OnAttackHit);
         AttackCollisionComponent->AddIgnoredActor(this);
     }
+
+    // 세이브 로드 포함, 어떤 타이밍에서도 EnemyForm 값에 맞게 비주얼을 초기화
+    ApplyFormVisuals();
 }
 
 void AEnemyAIBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -252,7 +254,6 @@ void AEnemyAIBase::ApplyFormVisuals()
     // 패트롤 시작점 초기화
 	CurrentPatrolIndex = GetRandomPointIndex();
 
-    SpawnParticle();
 
     // 애니메이션 - GetMesh() 아니고 각각 메시에
     if (bIsHuman && HumanAnimBP)

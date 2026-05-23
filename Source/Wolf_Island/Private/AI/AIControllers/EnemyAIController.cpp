@@ -153,7 +153,12 @@ void AEnemyAIController::HandleSight(AActor* Actor, const FAIStimulus& Stimulus)
 	}
 
 	APawn* SensedPawn = Cast<APawn>(Actor);
-	if (!SensedPawn || !SensedPawn->IsPlayerControlled()) return;
+	if (!SensedPawn) return;
+
+	// [방어코드] 트래픽 불량 환경에서 IsPlayerControlled()가 일시적으로 false를 반환할 수 있음.
+	// AMainPlayer 자체인 경우는 통과시켜 네트워크 타이밍 이슈로 인한 탐지 누락 방지.
+	const bool bIsMainPlayer = Actor->IsA<AMainPlayer>();
+	if (!SensedPawn->IsPlayerControlled() && !bIsMainPlayer) return;
 
 	if (Actor->ActorHasTag(FName("Invisible")) || Actor->ActorHasTag(FName("Werewolf")) || Actor->IsHidden())
 	{
@@ -363,9 +368,13 @@ bool AEnemyAIController::IsTargetValid(AActor* Target) const
 	// 기절(넉다운) 상태인 플레이어는 타겟 무효
 	if (AMainPlayer* Player = Cast<AMainPlayer>(Target))
 	{
-		if (Player->IsInability)
+		if (Player->IsInability) return false;
+
+		// [방어코드] StatusComponent 기반 이중 체크
+		// 네트워크 지연으로 IsInability가 아직 동기화되지 않은 경우를 대비
+		if (UStatusComponent* SC = Player->FindComponentByClass<UStatusComponent>())
 		{
-			return false;
+			if (SC->bIsIncapacitated) return false;
 		}
 	}
 
