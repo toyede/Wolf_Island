@@ -109,8 +109,11 @@ void UCraftPanel::MakeItem(FRecipeData RecipeData)
 	
 	if (AMainPlayer* Player = Cast<AMainPlayer>(OwnerInventory->GetOwner()))
 	{
-		if (Player->InventoryComponent->CheckCanMakeRecipe(RecipeData) && MakeSound) UGameplayStatics::PlaySound2D(GetWorld(), MakeSound);
-		Player->InventoryComponent->Request_MakeItem(RecipeData);
+		if (Player->InventoryComponent->CheckCanMakeRecipe(RecipeData) && MakeSound)
+		{
+			Player->InventoryComponent->Request_MakeItem(RecipeData);
+			UGameplayStatics::PlaySound2D(GetWorld(), MakeSound);
+		}
 	}
 	
 	SetCraftButton(CurrentRecipeData);
@@ -167,7 +170,6 @@ inline void UCraftPanel::RefreshRecipeList()
 	
 	RecipeTable->ForeachRow<FRecipeData>(TEXT("RecipeTableContext"),
 	[&](const FName& RowName, const FRecipeData& Recipe)
-	
 	{
 		// 플레이어가 해금한 레시피가 아니라면 건너뜀
 		if (!Player->HasRecipe(RowName)) return;
@@ -206,6 +208,7 @@ inline void UCraftPanel::RefreshRecipeList()
 		}
 		
 	});
+	
 	if (!bFoundPrevious && FirstBlock != nullptr)
 	{
 		SetRecipeInfo(FirstBlock, FirstRecipeData);
@@ -248,6 +251,12 @@ void UCraftPanel::SetRecipeInfo(URecipeBlock* ClickedBlock, FRecipeData RecipeDa
 
 	//결과물 아이템 데이터
 	FItemData* ResultData = ItemDataTable->FindRow<FItemData>(RecipeData.ResultID, "ResultItem");
+	
+	if (!ResultData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[CraftPanel] SetRecipeInfo: ResultData is null for ResultID: %s"), *RecipeData.ResultID.ToString());
+		return;
+	}
 	
 	//결과물 정보 세팅
 	ResultSlot->SetCraftSlot(ResultData, RecipeData.ResultAmount);

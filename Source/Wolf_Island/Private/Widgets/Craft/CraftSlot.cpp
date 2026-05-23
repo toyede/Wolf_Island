@@ -15,6 +15,12 @@ void UCraftSlot::NativeConstruct()
 
 void UCraftSlot::SetCraftSlot(FItemData* ItemData, int32 Amount)
 {
+	if (!ItemData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[CraftSlot] SetCraftSlot: ItemData is null!"));
+		return;
+	}
+	
 	if (ItemData->AssetData.Icon)
 	{
 		ItemIcon->SetVisibility(ESlateVisibility::Visible);
