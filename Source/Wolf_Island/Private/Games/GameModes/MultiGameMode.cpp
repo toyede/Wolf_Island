@@ -66,10 +66,12 @@ void AMultiGameMode::PostLogin(APlayerController* NewPlayer)
 	}
 	
 	AMainGameState* GS = GetGameState<AMainGameState>();
-	FChattingData Chat = FChattingData(
-		TEXT("알림"),PS->GetPlayerName()+TEXT(" 님이 접속했습니다."), EMessageType::NOTICE);
-	
-	GS->AddChattingMessage(Chat);
+	if (GS)
+	{
+		FChattingData Chat = FChattingData(
+			TEXT("알림"), PS->GetPlayerName() + TEXT(" 님이 접속했습니다."), EMessageType::NOTICE);
+		GS->AddChattingMessage(Chat);
+	}
 	
 	Super::PostLogin(NewPlayer);
 }
@@ -133,20 +135,26 @@ APawn* AMultiGameMode::SpawnDefaultPawnAtTransform_Implementation(AController* N
 	const FTransform& SpawnTransform)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE MULTI] SpawnAt EXECUTED : Spawn Pawn"))
-	
+
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride =
 		ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-	
+
 	AMainPlayerState* PS = Cast<AMainPlayerState>(NewPlayer->PlayerState);
+	if (!PS) return nullptr;
 
 	int32 RoleIndex = static_cast<int32>(PS->GetPlayerRole());
-	
+	if (!PlayerRoleClassList.IsValidIndex(RoleIndex) || !PlayerRoleClassList[RoleIndex])
+	{
+		UE_LOG(LogTemp, Error, TEXT("[GAMEMODE MULTI] Invalid RoleIndex %d or null class in PlayerRoleClassList"), RoleIndex);
+		return nullptr;
+	}
+
 	AMainPlayer* Player = GetWorld()->SpawnActor<AMainPlayer>(
 		PlayerRoleClassList[RoleIndex],
 		SpawnTransform,
 		Params);
-	
+
 	return Player;
 }
 
@@ -204,10 +212,17 @@ bool AMultiGameMode::CheckRoleAvailable(ECharacterRole NewRole) const
 UClass* AMultiGameMode::GetDefaultPawnClassForController_Implementation(AController* InController)
 {
 	AMainPlayerState* PS = Cast<AMainPlayerState>(InController->PlayerState);
-	
+
 	if (!PS || PS->GetPlayerRole() == ECharacterRole::NONE) return nullptr;
-	
-	return PlayerRoleClassList[static_cast<int32>(PS->GetPlayerRole())];
+
+	int32 RoleIndex = static_cast<int32>(PS->GetPlayerRole());
+	if (!PlayerRoleClassList.IsValidIndex(RoleIndex))
+	{
+		UE_LOG(LogTemp, Error, TEXT("[GAMEMODE MULTI] RoleIndex %d out of bounds in PlayerRoleClassList"), RoleIndex);
+		return nullptr;
+	}
+
+	return PlayerRoleClassList[RoleIndex];
 }
 
 void AMultiGameMode::HandlePlayerDeath(AController* DeadPlayerController)

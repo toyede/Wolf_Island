@@ -505,15 +505,23 @@ void AMainGameMode::LoadWorldFromSave(UMainSaveGame* Save)
 			//저장된 액터가 삭제됐으면
 			else
 			{
+				if (!Data.ActorClass)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] SKIP SPAWN: ActorClass is null for GUID %s"), *GUID.ToString());
+					continue;
+				}
 				//새로 스폰
 				AActor* NewActor = GetWorld()->SpawnActor<AActor>(
 					Data.ActorClass,
 					Data.Transform);
-			
+
 				//데이터 로드
-				if (ISaveInterface* Savable = Cast<ISaveInterface>(NewActor))
+				if (IsValid(NewActor))
 				{
-					Savable->Execute_LoadData(NewActor, Data);
+					if (ISaveInterface* Savable = Cast<ISaveInterface>(NewActor))
+					{
+						Savable->Execute_LoadData(NewActor, Data);
+					}
 				}
 			}
 		}
@@ -614,36 +622,43 @@ void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 	
 	//플레이어가 인간인 상태에서 MainPlayer 액터 데이터를 저장.
 	if (AMainPlayer* TargetPlayer = Cast<AMainPlayer>(PlayerCharacter))
-	{	
+	{
 		FMemoryWriter PlayerWriter(PlayerSaveData.SubBinaryData1, true);
 		FObjectAndNameAsStringProxyArchive PlayerArchive(PlayerWriter, true);
 		PlayerArchive.ArIsSaveGame = true;
 		TargetPlayer->Serialize(PlayerArchive);
 		UE_LOG(LogTemp, Warning, TEXT("Serialize Character"));
-		
-		FMemoryWriter MovementWriter(PlayerSaveData.MovementBinaryData, true);
-		FObjectAndNameAsStringProxyArchive MovementArchive(MovementWriter, true);
-		MovementArchive.ArIsSaveGame = false;
-		TargetPlayer->GetCharacterMovement()->Serialize(MovementArchive);
-		UE_LOG(LogTemp, Warning, TEXT("Serialize Movement"));
-		
-		FMemoryWriter InventoryWriter(PlayerSaveData.InventoryBinaryData, true);
-		FObjectAndNameAsStringProxyArchive InventoryArchive(InventoryWriter, true);
-		InventoryArchive.ArIsSaveGame = true;
-		TargetPlayer->InventoryComponent->Serialize(InventoryArchive);
-		UE_LOG(LogTemp, Warning, TEXT("Serialize Inventory"));
-		
-		FMemoryWriter StatusWriter(PlayerSaveData.StatusBinaryData, true);
-		FObjectAndNameAsStringProxyArchive StatusArchive(StatusWriter, true);
-		StatusArchive.ArIsSaveGame = true;
-		TargetPlayer->StatusComponent->Serialize(StatusArchive);
-		UE_LOG(LogTemp, Warning, TEXT("Serialize Status"));
-		
-		// 구조체 기반 저장도 같이 유지 (바이너리 Serialize 디버깅/호환 보강용)
-		PlayerSaveData.StatusData = TargetPlayer->StatusComponent->SaveStatus();
-		PlayerSaveData.HasStatusData = true;
-		
-		PlayerState->SetItemsData(TargetPlayer->InventoryComponent->GetInventory());
+
+		if (UCharacterMovementComponent* MoveComp = TargetPlayer->GetCharacterMovement())
+		{
+			FMemoryWriter MovementWriter(PlayerSaveData.MovementBinaryData, true);
+			FObjectAndNameAsStringProxyArchive MovementArchive(MovementWriter, true);
+			MovementArchive.ArIsSaveGame = false;
+			MoveComp->Serialize(MovementArchive);
+			UE_LOG(LogTemp, Warning, TEXT("Serialize Movement"));
+		}
+
+		if (TargetPlayer->InventoryComponent)
+		{
+			FMemoryWriter InventoryWriter(PlayerSaveData.InventoryBinaryData, true);
+			FObjectAndNameAsStringProxyArchive InventoryArchive(InventoryWriter, true);
+			InventoryArchive.ArIsSaveGame = true;
+			TargetPlayer->InventoryComponent->Serialize(InventoryArchive);
+			UE_LOG(LogTemp, Warning, TEXT("Serialize Inventory"));
+			PlayerState->SetItemsData(TargetPlayer->InventoryComponent->GetInventory());
+		}
+
+		if (TargetPlayer->StatusComponent)
+		{
+			FMemoryWriter StatusWriter(PlayerSaveData.StatusBinaryData, true);
+			FObjectAndNameAsStringProxyArchive StatusArchive(StatusWriter, true);
+			StatusArchive.ArIsSaveGame = true;
+			TargetPlayer->StatusComponent->Serialize(StatusArchive);
+			UE_LOG(LogTemp, Warning, TEXT("Serialize Status"));
+			// 구조체 기반 저장도 같이 유지 (바이너리 Serialize 디버깅/호환 보강용)
+			PlayerSaveData.StatusData = TargetPlayer->StatusComponent->SaveStatus();
+			PlayerSaveData.HasStatusData = true;
+		}
 	}
 	
 	//아이템 데이터는 플레이어 스테이트에 있는 것을 저장.
@@ -667,6 +682,7 @@ void AMainGameMode::SavePlayers()
 {
 	//플레이어 데이터 저장
 	AMainGameState* GS = GetGameState<AMainGameState>();
+	if (!GS) return;
 	//월드에 있는 플레이어 순회
 	for (APlayerState* PS : GS->PlayerArray)
 	{
@@ -894,7 +910,13 @@ FTransform AMainGameMode::GetBossStageEnterPoint(AController* Controller)
 	if (Actors.Num() == 0)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] NO ACTORS"));
-		return FindPlayerStart(Controller)->GetActorTransform();
+		AActor* StartSpot = FindPlayerStart(Controller);
+		if (!StartSpot)
+		{
+			UE_LOG(LogTemp, Error, TEXT("[GAMEMODE] FindPlayerStart returned null!"));
+			return FTransform::Identity;
+		}
+		return StartSpot->GetActorTransform();
 	}
 	
 	return Actors[FMath::RandRange(0, Actors.Num() - 1)]->GetActorTransform();

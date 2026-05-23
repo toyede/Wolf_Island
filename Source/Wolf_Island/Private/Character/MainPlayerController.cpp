@@ -190,30 +190,34 @@ void AMainPlayerController::ExitChatMode()
 
 void AMainPlayerController::DisplayPauseMenu()
 {
+	if (!PauseMenu) return;
+
 	IsPause = true;
 	bool GamePause = !Cast<AMultiGameMode>(GetWorld()->GetAuthGameMode());
 	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE MULTI?] : %d"), GamePause)
 	bShowMouseCursor = true;
-	
+
 	FInputModeUIOnly Mode;
 	SetInputMode(Mode);
-	
+
 	UGameplayStatics::SetGamePaused(GetWorld(), GamePause);
-	
+
 	PauseMenu->SetVisibility(ESlateVisibility::Visible);
 	PauseMenu->SetKeyboardFocus();
 }
 
 void AMainPlayerController::HidePauseMenu()
 {
+	if (!PauseMenu) return;
+
 	IsPause = false;
 	bShowMouseCursor = false;
-	
+
 	FInputModeGameOnly Mode;
 	SetInputMode(Mode);
-	
+
 	UGameplayStatics::SetGamePaused(GetWorld(), false);
-	
+
 	PauseMenu->SetVisibility(ESlateVisibility::Collapsed);
 }
 
@@ -267,7 +271,11 @@ void AMainPlayerController::Client_EndSelection_Implementation()
 	FInputModeGameOnly Mode;
 	SetInputMode(Mode);
 	SetShowMouseCursor(false);
-	RoleSelectionWidget->RemoveFromParent();
+	if (RoleSelectionWidget)
+	{
+		RoleSelectionWidget->RemoveFromParent();
+		RoleSelectionWidget = nullptr;
+	}
 }
 
 void AMainPlayerController::OnRep_PlayerState()
@@ -357,9 +365,14 @@ void AMainPlayerController::Client_SetViewTargetWithBlend_Implementation(AActor*
 	if (!IsValid(NewTarget))
 	{
 		FTimerHandle RetryHandle;
-		GetWorldTimerManager().SetTimer(RetryHandle, [this, NewTarget, BlendTime]()
+		TWeakObjectPtr<AMainPlayerController> WeakThis(this);
+		TWeakObjectPtr<AActor> WeakTarget(NewTarget);
+		GetWorldTimerManager().SetTimer(RetryHandle, [WeakThis, WeakTarget, BlendTime]()
 			{
-				Client_SetViewTargetWithBlend(NewTarget, BlendTime);
+				if (WeakThis.IsValid() && WeakTarget.IsValid())
+				{
+					WeakThis->Client_SetViewTargetWithBlend(WeakTarget.Get(), BlendTime);
+				}
 			}, 0.1f, false);
 		return;
 	}
@@ -569,12 +582,13 @@ void AMainPlayerController::Client_SetSpectateTarget_Implementation(AActor* Targ
 	{
 		// 리플리케이션 대기 후 재시도
 		FTimerHandle RetryHandle;
-		TWeakObjectPtr<AActor> WeakTarget = TargetPlayer;
-		GetWorldTimerManager().SetTimer(RetryHandle, [this, WeakTarget]()
+		TWeakObjectPtr<AMainPlayerController> WeakThis(this);
+		TWeakObjectPtr<AActor> WeakTarget(TargetPlayer);
+		GetWorldTimerManager().SetTimer(RetryHandle, [WeakThis, WeakTarget]()
 			{
-				if (WeakTarget.IsValid())
+				if (WeakThis.IsValid() && WeakTarget.IsValid())
 				{
-					Client_SetSpectateTarget(WeakTarget.Get());
+					WeakThis->Client_SetSpectateTarget(WeakTarget.Get());
 				}
 			}, 0.1f, false);
 		return;
