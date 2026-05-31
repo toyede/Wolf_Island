@@ -392,6 +392,13 @@ void AMainGameMode::SetActorCache()
 
 void AMainGameMode::SaveWorld()
 {
+	//JWY-월드 종료 중 autosave가 뒤늦게 실행되면 GameState/Actor 접근으로 크래시가 날 수 있어 저장을 건너뜀
+	UWorld* World = GetWorld();
+	if (!World || World->bIsTearingDown)
+	{
+		return;
+	}
+
 	UMainSaveGame* Save = CurrentSaveData;
 	
 	if (!Save)
@@ -403,7 +410,7 @@ void AMainGameMode::SaveWorld()
 	//저장 가능 액터 데이터 저장
 	//저장 인터페이스를 가진 모든 액터 가져오기
 	TArray<AActor*> SaveActors;
-	UGameplayStatics::GetAllActorsWithInterface(GetWorld(), USaveInterface::StaticClass(), SaveActors);
+	UGameplayStatics::GetAllActorsWithInterface(World, USaveInterface::StaticClass(), SaveActors);
 	
 	Save->SavedActors.Empty();
 
@@ -417,6 +424,12 @@ void AMainGameMode::SaveWorld()
 	//각 액터의 저장 코드 실행
 	for (AActor* Actor : SaveActors)
 	{
+		//JWY-월드 teardown 중 이미 파괴 중인 저장 대상 actor를 건너뛰어 종료 시점 크래시를 방어
+		if (!IsValid(Actor))
+		{
+			continue;
+		}
+
 		if (ISaveInterface* Savable = Cast<ISaveInterface>(Actor))
 		{
 			FActorSaveData Data;
@@ -587,7 +600,9 @@ void AMainGameMode::LoadWorldFromSave(UMainSaveGame* Save)
 
 void AMainGameMode::SavePlayer(AMainPlayerState* PlayerState)
 {
-	if (!PlayerState) return;
+	//JWY-Logout/월드 종료 중 PlayerState나 World가 이미 정리된 경우 저장 로직이 죽은 객체를 접근하지 않도록 방어
+	UWorld* World = GetWorld();
+	if (!IsValid(PlayerState) || !World || World->bIsTearingDown) return;
 	
 	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] SAVE PLAYER [%s]"), *PlayerState->GetPersistantId());
 	
@@ -698,6 +713,9 @@ void AMainGameMode::SavePlayers()
 
 bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState, bool IsDead)
 {
+	//JWY-재접속/리스폰 중 PlayerState가 유효하지 않은 경우 이후 Pawn/컴포넌트 접근을 막기 위해 조기 반환
+	if (!IsValid(PlayerState)) return false;
+
 	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD PLAYER DATA"));
 	
 	ACharacter* PlayerCharacter = Cast<ACharacter>(PlayerState->GetPawn());
@@ -737,7 +755,11 @@ bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState, bool IsDead)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("LOAD PLAYER %s : Transform | %s"), *PlayerID, *PlayerSaveData.Transform.ToString())
 		PlayerCharacter->SetActorTransform(PlayerSaveData.Transform);
-		PlayerCharacter->GetCharacterMovement()->Velocity = PlayerSaveData.Velocity;
+		//JWY-종료/리스폰 경합 중 CharacterMovement가 없으면 Velocity 복원에서 null 접근하지 않도록 방어
+		if (UCharacterMovementComponent* MoveComp = PlayerCharacter->GetCharacterMovement())
+		{
+			MoveComp->Velocity = PlayerSaveData.Velocity;
+		}
 		if (PlayerCharacter->GetController())
 		{
 			PlayerCharacter->GetController()->SetControlRotation(PlayerSaveData.ControlRotation);
@@ -754,20 +776,29 @@ bool AMainGameMode::LoadPlayer(AMainPlayerState* PlayerState, bool IsDead)
 		TargetPlayer->Serialize(PlayerArchive);
 		UE_LOG(LogTemp, Warning, TEXT("Deserialize Character"));
 		
-		FMemoryReader MovementWriter(PlayerSaveData.MovementBinaryData, true);
-		FObjectAndNameAsStringProxyArchive MovementArchive(MovementWriter, true);
-		MovementArchive.ArIsSaveGame = false;
-		TargetPlayer->GetCharacterMovement()->Serialize(MovementArchive);
-		UE_LOG(LogTemp, Warning, TEXT("Deserialize Movement"));
+		//JWY-CharacterMovement가 이미 정리된 경우 이동 데이터 역직렬화가 크래시로 이어지지 않도록 방어
+		if (UCharacterMovementComponent* MoveComp = TargetPlayer->GetCharacterMovement())
+		{
+			FMemoryReader MovementWriter(PlayerSaveData.MovementBinaryData, true);
+			FObjectAndNameAsStringProxyArchive MovementArchive(MovementWriter, true);
+			MovementArchive.ArIsSaveGame = false;
+			MoveComp->Serialize(MovementArchive);
+			UE_LOG(LogTemp, Warning, TEXT("Deserialize Movement"));
+		}
 		
-		FMemoryReader InventoryReader(PlayerSaveData.InventoryBinaryData, true);
-		FObjectAndNameAsStringProxyArchive InventoryArchive(InventoryReader, true);
-		InventoryArchive.ArIsSaveGame = true;
-		TargetPlayer->InventoryComponent->Serialize(InventoryArchive);
-		TargetPlayer->InventoryComponent->InventoryChanged();
-		UE_LOG(LogTemp, Warning, TEXT("Deserialize Inventory"));
-	
-		if (!IsDead)
+		//JWY-인벤토리 컴포넌트가 정리된 상태에서는 저장 데이터 복원 시 null 접근하지 않도록 방어
+		if (TargetPlayer->InventoryComponent)
+		{
+			FMemoryReader InventoryReader(PlayerSaveData.InventoryBinaryData, true);
+			FObjectAndNameAsStringProxyArchive InventoryArchive(InventoryReader, true);
+			InventoryArchive.ArIsSaveGame = true;
+			TargetPlayer->InventoryComponent->Serialize(InventoryArchive);
+			TargetPlayer->InventoryComponent->InventoryChanged();
+			UE_LOG(LogTemp, Warning, TEXT("Deserialize Inventory"));
+		}
+	    
+		//JWY-사망 복원 또는 StatusComponent 정리 상태에서는 상태 역직렬화로 죽은 컴포넌트를 접근하지 않도록 방어
+		if (!IsDead && TargetPlayer->StatusComponent)
 		{
 			FMemoryReader StatusReader(PlayerSaveData.StatusBinaryData, true);
 			FObjectAndNameAsStringProxyArchive StatusArchive(StatusReader, true);

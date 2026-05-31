@@ -307,47 +307,10 @@ void AMainPlayer::ReportScent()
 void AMainPlayer::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] END REASON : %s"), *StaticEnum<EEndPlayReason::Type>()->GetNameStringByValue((int)EndPlayReason));
-	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
-	
-	// 인벤토리 위젯 바인딩 해제
-	if (InventoryWidget)
-	{
-		InventoryWidget->RemoveFromParent();
-		InventoryWidget = nullptr;
-	}
-	
-	// 인벤토리 컴포넌트 바인딩 해제
-	if (InventoryComponent)
-	{
-		InventoryComponent->OnInventoryUpdated.RemoveAll(this);
-		InventoryComponent->OnCurrentWeightChanged.RemoveAll(this);
-	}
-	
-	//바인딩 해제 코드
-	if(StatusComponent){
-		//서버에서 실행
-		if (HasAuthority())
-		{
-			//상태 델리게이트 바인딩
-			StatusComponent->OnStaminaZero.RemoveDynamic(this, &AMainPlayer::Request_StopRun);
-
-			//죽음 바인딩
-			StatusComponent->OnHPZero.RemoveDynamic(this, &AMainPlayer::OnDeath);
-
-			//강제 휴식 애님 바인딩 해제
-			StatusComponent->OnForcedRestStart.RemoveDynamic(this, &AMainPlayer::Multi_PlayForcedRestStart);
-			StatusComponent->OnForcedRestEnd.RemoveDynamic(this, &AMainPlayer::Multi_PlayForcedRestEnd);
-		}
-		
-		//산소 게이지 숨기기 바인딩(테스트용)
-		StatusComponent->OnAirFull.RemoveDynamic(this, &AMainPlayer::HideAirBar);
-	}
-	
-	if (BuoyancyComponent)
-	{
-		BuoyancyComponent->OnEnteredWaterDelegate.RemoveDynamic(this, &AMainPlayer::EnterWater);
-		BuoyancyComponent->OnExitedWaterDelegate.RemoveDynamic(this, &AMainPlayer::ExitWater);
-	}
+	//JWY-맵 전환/게임 종료 중 예약된 타이머가 파괴 중인 플레이어를 다시 호출하지 않도록 먼저 정리
+	ClearRuntimeTimers();
+	//JWY-컴포넌트 delegate가 EndPlay 이후 플레이어 함수를 다시 호출하지 않도록 바인딩 정리
+	UnbindRuntimeDelegates();
 	
 	Super::EndPlay(EndPlayReason);
 }
@@ -355,8 +318,62 @@ void AMainPlayer::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void AMainPlayer::Destroyed()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] DESTROYED"));
+	//JWY-Destroyed 경로로 먼저 들어와도 KnockOut/상호작용/제작 타이머가 남지 않도록 EndPlay와 같은 정리 실행
+	ClearRuntimeTimers();
+	//JWY-Destroyed 경로에서도 컴포넌트 delegate 연결을 끊어 종료 중 재호출을 막기 위해 실행
+	UnbindRuntimeDelegates();
 	
 	Super::Destroyed();
+}
+
+void AMainPlayer::ClearRuntimeTimers()
+{
+	//JWY-람다 타이머는 객체 자동 정리만으로 놓칠 수 있어 핸들 기반 타이머를 명시적으로 정리
+	if (UWorld* World = GetWorld())
+	{
+		FTimerManager& TimerManager = World->GetTimerManager();
+		TimerManager.ClearTimer(KnockOutTimer);
+		TimerManager.ClearTimer(ItemUseTimer);
+		TimerManager.ClearTimer(InteractionTimer);
+		TimerManager.ClearTimer(CraftTimer);
+		TimerManager.ClearTimer(SwimCheckHandle);
+		TimerManager.ClearTimer(ScentTimerHandle);
+		TimerManager.ClearAllTimersForObject(this);
+	}
+}
+
+void AMainPlayer::UnbindRuntimeDelegates()
+{
+	//JWY-로컬 UI가 남아 종료 중 플레이어/인벤토리를 다시 참조하지 않도록 제거
+	if (InventoryWidget)
+	{
+		InventoryWidget->RemoveFromParent();
+		InventoryWidget = nullptr;
+	}
+
+	//JWY-인벤토리 변경 delegate가 종료 중인 플레이어의 손 갱신/무게 갱신 함수를 호출하지 않도록 해제
+	if (InventoryComponent)
+	{
+		InventoryComponent->OnInventoryUpdated.RemoveAll(this);
+		InventoryComponent->OnCurrentWeightChanged.RemoveAll(this);
+	}
+
+	//JWY-상태 delegate broadcast가 EndPlay 이후 플레이어의 사망/스태미나/강제휴식 함수를 호출하지 않도록 해제
+	if (StatusComponent)
+	{
+		StatusComponent->OnStaminaZero.RemoveDynamic(this, &AMainPlayer::Request_StopRun);
+		StatusComponent->OnHPZero.RemoveDynamic(this, &AMainPlayer::OnDeath);
+		StatusComponent->OnForcedRestStart.RemoveDynamic(this, &AMainPlayer::Multi_PlayForcedRestStart);
+		StatusComponent->OnForcedRestEnd.RemoveDynamic(this, &AMainPlayer::Multi_PlayForcedRestEnd);
+		StatusComponent->OnAirFull.RemoveDynamic(this, &AMainPlayer::HideAirBar);
+	}
+
+	//JWY-부력 컴포넌트가 물 진입/이탈 delegate로 종료 중인 플레이어 수영 로직을 다시 호출하지 않도록 해제
+	if (BuoyancyComponent)
+	{
+		BuoyancyComponent->OnEnteredWaterDelegate.RemoveDynamic(this, &AMainPlayer::EnterWater);
+		BuoyancyComponent->OnExitedWaterDelegate.RemoveDynamic(this, &AMainPlayer::ExitWater);
+	}
 }
 
 // Called every frame
@@ -1156,36 +1173,51 @@ void AMainPlayer::KnockOut()
 	if (StatusComponent) StatusComponent->StopAutoHeal();
 	
 	//기절 타이머 실행 - 누가 소생시켜주지 않으면 10초 뒤 사망
-	GetWorld()->GetTimerManager().SetTimer(
-		KnockOutTimer,
-		[this]()
-		{
-			UE_LOG(LogTemp, Warning, TEXT("[PLAYER] KNOCK OUT TIMER ACTIVATED"));
-			if (HasAuthority())
+	//JWY-KnockOutTimer가 플레이어 파괴 이후 실행되어 raw this를 접근하지 않도록 weak pointer로 생존 여부를 확인
+	TWeakObjectPtr<AMainPlayer> WeakThis(this);
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(
+			KnockOutTimer,
+			[WeakThis]()
 			{
-				UE_LOG(LogTemp, Warning, TEXT("[PLAYER] SERVER PLAYER"));
-				//서버 캐릭터면 사망 카메라 세팅
-				if (IsLocallyControlled())
+				AMainPlayer* Player = WeakThis.Get();
+				if (!IsValid(Player))
 				{
-					FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
-					FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(0,0,0,0);
-		
-					if (InventoryWidget) InventoryWidget->SetVisibility(ESlateVisibility::Collapsed);
-					
-					if (AMainPlayerController* PC = GetController<AMainPlayerController>())
+					return;
+				}
+
+				UE_LOG(LogTemp, Warning, TEXT("[PLAYER] KNOCK OUT TIMER ACTIVATED"));
+				if (Player->HasAuthority())
+				{
+					UE_LOG(LogTemp, Warning, TEXT("[PLAYER] SERVER PLAYER"));
+					//서버 캐릭터면 사망 카메라 세팅
+					if (Player->IsLocallyControlled())
 					{
-						PC->OpenDeathScreen();
+						//JWY-종료 중 카메라가 먼저 정리된 경우 null 접근으로 크래시가 나지 않도록 방어
+						if (Player->FirstPersonCamera)
+						{
+							Player->FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
+							Player->FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(0,0,0,0);
+						}
+
+						if (Player->InventoryWidget) Player->InventoryWidget->SetVisibility(ESlateVisibility::Collapsed);
+						
+						if (AMainPlayerController* PC = Player->GetController<AMainPlayerController>())
+						{
+							PC->OpenDeathScreen();
+						}
+					}
+					//클라 캐릭터면 사망 카메라 클라 함수 실행
+					else
+					{
+						Player->Client_ShowDeathScreen();
 					}
 				}
-				//클라 캐릭터면 사망 카메라 클라 함수 실행
-				else
-				{
-					Client_ShowDeathScreen();
-				}
-			}
-		},
-		KnockOutToDeathTime,
-		false);
+			},
+			KnockOutToDeathTime,
+			false);
+	}
 	
 	//기절 상태로 전환
 	IsInability = true;

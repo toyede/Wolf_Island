@@ -529,6 +529,12 @@ protected:
 	
 	virtual void Destroyed() override;
 
+	//JWY-종료/파괴 경로가 달라도 플레이어를 나중에 다시 호출할 수 있는 타이머를 같은 방식으로 정리하기 위해 추가
+	void ClearRuntimeTimers();
+
+	//JWY-종료/파괴 경로가 달라도 컴포넌트 delegate가 사라지는 중인 플레이어를 다시 호출하지 않도록 정리하기 위해 추가
+	void UnbindRuntimeDelegates();
+
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

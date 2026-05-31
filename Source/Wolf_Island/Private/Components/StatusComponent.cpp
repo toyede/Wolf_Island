@@ -46,10 +46,8 @@ void UStatusComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	// 맵 전환 / 액터 소멸 시 모든 타이머를 항상 클리어 (Authority 여부 무관)
 	// 람다 기반 타이머는 ClearAllTimersForObject로 추적되지 않으므로 핸들 기반으로 직접 클리어
-	if (UWorld* World = GetWorld())
-	{
-		ClearAllTimers();
-	}
+	//JWY-ClearAllTimers 내부에서 World null을 방어하므로 EndPlay에서는 한 번만 호출해 모든 상태 타이머를 정리
+	ClearAllTimers();
 
 	if (GetOwner() && GetOwner()->HasAuthority())
 	{
@@ -68,11 +66,9 @@ void UStatusComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void UStatusComponent::DestroyComponent(bool bPromoteChildren)
 {
-	if (GetOwner()->HasAuthority())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[STATUS] CLEAR ALL TIMERS"));
-		ClearAllTimers();
-	}
+	//JWY-컴포넌트 파괴가 서버/클라이언트 어느 쪽에서 먼저 발생해도 남은 타이머가 죽은 컴포넌트를 호출하지 않도록 정리
+	UE_LOG(LogTemp, Warning, TEXT("[STATUS] CLEAR ALL TIMERS"));
+	ClearAllTimers();
 	
 	Super::DestroyComponent(bPromoteChildren);
 }
@@ -639,7 +635,16 @@ void UStatusComponent::StopAutoHeal()
 
 void UStatusComponent::ClearAllTimers()
 {
-	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+	//JWY-월드 teardown 중 GetWorld가 null일 수 있어 타이머 매니저 접근 전에 방어
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	FTimerManager& TimerManager = World->GetTimerManager();
+	//JWY-객체에 직접 바인딩된 타이머를 먼저 정리하고, 람다/핸들 기반 타이머는 아래에서 명시적으로 한 번 더 정리
+	TimerManager.ClearAllTimersForObject(this);
 	
 	TimerManager.ClearTimer(StaminaTimer);
 	TimerManager.ClearTimer(StaminaRecoverTimer);
