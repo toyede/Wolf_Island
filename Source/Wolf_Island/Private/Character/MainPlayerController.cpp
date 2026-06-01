@@ -544,8 +544,132 @@ void AMainPlayerController::OnSetting()
 void AMainPlayerController::OnQuit()
 {
 	UE_LOG(LogTemp, Warning, TEXT("QUIT BUTTON CLICKED"));
-	
+
+	//JWY-Quit 버튼 연타로 세션 정리와 맵 이동이 중복 실행되면 NetDriver 정리 순서가 꼬일 수 있어 한 번만 처리
+	if (bIsQuitting)
+	{
+		return;
+	}
+
+	bIsQuitting = true;
+	HidePauseMenu();
+
+	//JWY-싱글은 네트워크 연결 정리가 필요 없으므로 기존처럼 로컬에서 바로 메인 복귀 처리
+	if (!IsMultiplayerSession())
+	{
+		ReturnToMainMenuLocal();
+		return;
+	}
+
+	//JWY-호스트는 서버이므로 원격 클라이언트를 먼저 메인으로 보내고 잠깐 뒤 본인 세션을 정리
+	if (HasAuthority())
+	{
+		ReturnConnectedClientsToMainMenu();
+		GetWorldTimerManager().SetTimer(
+			HostReturnToMainMenuTimerHandle,
+			this,
+			&AMainPlayerController::ReturnToMainMenuLocal,
+			HostReturnToMainMenuDelay,
+			false);
+		return;
+	}
+
+	//JWY-멀티 클라이언트는 바로 OpenLevel하지 않고 서버가 Client RPC로 복귀를 지시하게 요청
+	Server_RequestReturnToMainMenu();
+
+	//JWY-서버 응답이 끊긴 예외 상황에서도 사용자가 게임 안에 갇히지 않도록 늦은 fallback을 둠
+	GetWorldTimerManager().SetTimer(
+		ClientReturnToMainMenuFallbackTimerHandle,
+		this,
+		&AMainPlayerController::ReturnToMainMenuLocal,
+		ClientReturnToMainMenuFallbackDelay,
+		false);
+}
+
+void AMainPlayerController::Server_RequestReturnToMainMenu_Implementation()
+{
+	//JWY-서버 쪽 PlayerController도 나가는 중 상태를 기록해 중복 요청을 무시하고 클라이언트 복귀 RPC만 보냄
+	if (bIsQuitting)
+	{
+		return;
+	}
+
+	bIsQuitting = true;
+	Client_ReturnToMainMenu();
+}
+
+void AMainPlayerController::Client_ReturnToMainMenu_Implementation()
+{
+	//JWY-서버/호스트가 지시한 정상 복귀 경로이므로 클라이언트는 세션 정리 후 메인 메뉴로 이동
+	bIsQuitting = true;
+	ReturnToMainMenuLocal();
+}
+
+void AMainPlayerController::ReturnToMainMenuLocal()
+{
+	//JWY-서버 RPC, fallback timer, 호스트 지연 timer가 겹쳐도 실제 메인 복귀는 한 번만 실행
+	if (bHasStartedReturnToMainMenu)
+	{
+		return;
+	}
+
+	bHasStartedReturnToMainMenu = true;
+	GetWorldTimerManager().ClearTimer(ClientReturnToMainMenuFallbackTimerHandle);
+	GetWorldTimerManager().ClearTimer(HostReturnToMainMenuTimerHandle);
+
+	HidePauseMenu();
+	if (SettingsWidget)
+	{
+		SettingsWidget->RemoveFromParent();
+		SettingsWidget = nullptr;
+	}
+
+	bShowMouseCursor = false;
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+
+	if (UMainGameInstance* GI = Cast<UMainGameInstance>(GetGameInstance()))
+	{
+		//JWY-BP_MainGameInstance에서 DestroySession 성공/실패 후 StartMap 이동을 연결할 수 있도록 공통 이벤트 호출
+		GI->DestroySessionAndReturnToMainMenu();
+		return;
+	}
+
+	//JWY-GameInstance를 못 찾는 예외 상황에서도 최소한 메인 메뉴로 복귀하도록 기존 SoftObject 이동을 fallback으로 유지
 	UGameplayStatics::OpenLevelBySoftObjectPtr(GetWorld(), MainMenuLevel);
+}
+
+void AMainPlayerController::ReturnConnectedClientsToMainMenu()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	//JWY-호스트 종료 시 원격 클라이언트가 서버 종료를 갑자기 맞지 않도록 먼저 메인 복귀 RPC를 전송
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		AMainPlayerController* PC = Cast<AMainPlayerController>(It->Get());
+		if (!PC || PC == this || PC->IsLocalController())
+		{
+			continue;
+		}
+
+		PC->Client_ReturnToMainMenu();
+	}
+}
+
+bool AMainPlayerController::IsMultiplayerSession() const
+{
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+
+	//JWY-Standalone이 아니면 클라이언트/리스닝 서버 모두 네트워크 Quit 정리 흐름을 타야 함
+	return World->GetNetMode() != NM_Standalone;
 }
 
 void AMainPlayerController::Respawn()

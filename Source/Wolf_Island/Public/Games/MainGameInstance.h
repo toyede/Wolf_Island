@@ -62,6 +62,10 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	void FindSession(const FString& SessionCode);
+
+	//JWY-인게임/로비 Quit이 같은 세션 정리 흐름을 쓰도록 BP_MainGameInstance에서 DestroySession 후 메인 이동을 연결하기 위해 추가
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void DestroySessionAndReturnToMainMenu();
 	
 	UFUNCTION(BlueprintCallable)
 	FString GenerateSessionCode();

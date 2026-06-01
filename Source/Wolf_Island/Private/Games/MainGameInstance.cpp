@@ -96,3 +96,9 @@ void UMainGameInstance::CreateSession_Implementation()
 void UMainGameInstance::FindSession_Implementation(const FString& SessionCode)
 {
 }
+
+void UMainGameInstance::DestroySessionAndReturnToMainMenu_Implementation()
+{
+	//JWY-BP에서 DestroySession을 아직 연결하지 않아도 최소한 메인 메뉴로 돌아갈 수 있게 하는 fallback
+	UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/JWY/Maps/StartMap")));
+}

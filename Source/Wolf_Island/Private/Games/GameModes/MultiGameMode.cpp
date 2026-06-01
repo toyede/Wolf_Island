@@ -173,6 +173,13 @@ void AMultiGameMode::BeginPlay()
 
 void AMultiGameMode::Logout(AController* Exiting)
 {
+	//JWY-클라이언트 연결 정리 중 Exiting이 이미 유효하지 않은 예외 상황에서 PlayerState 접근 크래시를 막기 위해 먼저 방어
+	if (!IsValid(Exiting))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[MULTI GAMEMODE] Logout called with invalid controller"));
+		return;
+	}
+
 	AMainPlayerState* PS = Cast<AMainPlayerState>(Exiting->PlayerState);
 
 	AMainGameState* GS = GetGameState<AMainGameState>();
@@ -183,8 +190,17 @@ void AMultiGameMode::Logout(AController* Exiting)
 		GS->AddChattingMessage(Chat);
 	}
 
-	AMoonlightInfectionSystem* InfectionSystem = Cast<AMoonlightInfectionSystem>(
-		UGameplayStatics::GetActorOfClass(GetWorld(), AMoonlightInfectionSystem::StaticClass()));
+	AMoonlightInfectionSystem* InfectionSystem = nullptr;
+	//JWY-월드 teardown 중 감염 시스템 조회가 죽은 World를 타지 않도록 World 유효성 확인 후 조회
+	if (UWorld* World = GetWorld())
+	{
+		if (!World->bIsTearingDown)
+		{
+			InfectionSystem = Cast<AMoonlightInfectionSystem>(
+				UGameplayStatics::GetActorOfClass(World, AMoonlightInfectionSystem::StaticClass()));
+		}
+	}
+
 	if (IsValid(InfectionSystem))
 	{
 		InfectionSystem->HandlePlayerLogout(Exiting);
@@ -201,6 +217,9 @@ void AMultiGameMode::Logout(AController* Exiting)
 bool AMultiGameMode::CheckRoleAvailable(ECharacterRole NewRole) const
 {
 	AMainGameState* GS = GetGameState<AMainGameState>();
+	//JWY-세션 종료/맵 전환 타이밍에 GameState가 없으면 역할 확인에서 null 접근하지 않도록 방어
+	if (!GS) return false;
+
 	for (auto Player : GS->PlayerArray)
 	{
 		AMainPlayerState* PS = Cast<AMainPlayerState>(Player);

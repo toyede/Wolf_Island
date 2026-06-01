@@ -102,6 +102,25 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	TSoftObjectPtr<UWorld> MainMenuLevel;
 
+	//JWY-Quit 버튼 연타로 서버 RPC/세션 정리/맵 이동이 중복 실행되지 않도록 막기 위한 플래그
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Network|Quit")
+	bool bIsQuitting = false;
+
+	//JWY-서버 RPC 응답과 fallback이 동시에 들어와도 실제 메인 복귀 로직은 한 번만 실행되도록 막기 위한 플래그
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Network|Quit")
+	bool bHasStartedReturnToMainMenu = false;
+
+	//JWY-호스트가 원격 클라이언트에게 메인 복귀 RPC를 보낸 뒤 본인이 세션을 정리하기 전 잠깐 기다리는 시간
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Network|Quit")
+	float HostReturnToMainMenuDelay = 0.5f;
+
+	//JWY-클라이언트가 서버에 Quit 요청을 보냈는데 응답을 못 받는 예외 상황에서 로컬 복귀를 보장하기 위한 대기 시간
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Network|Quit")
+	float ClientReturnToMainMenuFallbackDelay = 3.0f;
+
+	FTimerHandle HostReturnToMainMenuTimerHandle;
+	FTimerHandle ClientReturnToMainMenuFallbackTimerHandle;
+
 	UPROPERTY(BlueprintReadOnly)
 	bool IsChat = false;
 
@@ -181,6 +200,25 @@ public:
 	void OnSetting();
 	UFUNCTION(BlueprintCallable)
 	void OnQuit();
+
+	//JWY-클라이언트가 인게임 Quit을 누르면 바로 OpenLevel하지 않고 서버가 정리 순서를 잡도록 요청하기 위해 추가
+	UFUNCTION(Server, Reliable)
+	void Server_RequestReturnToMainMenu();
+
+	//JWY-서버/호스트가 클라이언트에게 안전하게 메인 메뉴로 돌아가라고 지시하기 위해 추가
+	UFUNCTION(Client, Reliable)
+	void Client_ReturnToMainMenu();
+
+	//JWY-싱글/멀티 공통으로 UI를 정리하고 GameInstance의 세션 정리 흐름을 호출하기 위해 추가
+	UFUNCTION(BlueprintCallable, Category="Network|Quit")
+	void ReturnToMainMenuLocal();
+
+	//JWY-호스트가 나갈 때 원격 클라이언트들을 먼저 메인 메뉴로 돌려보내기 위해 추가
+	void ReturnConnectedClientsToMainMenu();
+
+	//JWY-현재 플레이가 네트워크 세션인지 확인해 싱글과 멀티 Quit 흐름을 분리하기 위해 추가
+	UFUNCTION(BlueprintCallable, Category="Network|Quit")
+	bool IsMultiplayerSession() const;
 
 	//플레이어 사망 후 리스폰 버튼 클릭 시 실행할 리스폰 시퀀스
 	UFUNCTION(BlueprintCallable)
