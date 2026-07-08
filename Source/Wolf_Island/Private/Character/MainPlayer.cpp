@@ -41,6 +41,7 @@
 #include "Engine/DamageEvents.h"
 #include "Games/Damage/WolfAttackDamageType.h"
 #include "Widgets/Inventory/Inventory.h"
+#include "Components/HitParticleComponent.h"
 
 
 void AMainPlayer::PossessedBy(AController* NewController)
@@ -142,6 +143,8 @@ AMainPlayer::AMainPlayer()
 	NickName = CreateDefaultSubobject<UWidgetComponent>("NickNameWidget");
 	
 	EatingSoundPlayer = CreateDefaultSubobject<UAudioComponent>("EatingSoundPlayer");
+	
+	HitParticleComponent = CreateDefaultSubobject<UHitParticleComponent>("HitParticleComponent");
 
 	//손에 든 아이템 메쉬
 	ItemMesh = CreateDefaultSubobject<UStaticMeshComponent>("Item");
@@ -2285,11 +2288,13 @@ void AMainPlayer::TryConvertFoliageToActor(const FHitResult& HitResult, float Da
 			}
 		}
 		
-		UGameplayStatics::ApplyDamage(
-			NewTree, 
-			FinalDamage, 
-			GetController(), 
-			this, 
+		UGameplayStatics::ApplyPointDamage(
+			NewTree,
+			FinalDamage,
+			(NewTree->GetActorLocation() - GetActorLocation()).GetSafeNormal(),
+			HitResult,
+			GetController(),
+			this,
 			UDamageType::StaticClass());
         
 	}
@@ -2321,13 +2326,15 @@ void AMainPlayer::ProcessAttackHit(const FHitResult& HitResult, float DamageAmou
 			}
 		}
 		
-		
-		UGameplayStatics::ApplyDamage(
-			HitActor, 
-			FinalDamage, 
-			GetController(), 
-			this, 
-			UDamageType::StaticClass());
+		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Apply Point Damage"));
+		UGameplayStatics::ApplyPointDamage(
+			HitActor,
+            FinalDamage,
+            (HitActor->GetActorLocation() - GetActorLocation()).GetSafeNormal(),
+            HitResult,
+            GetController(),
+            this,
+            UDamageType::StaticClass());
 
 		if (UStatusComponent* HitStatus = HitActor->FindComponentByClass<UStatusComponent>())
 		{
