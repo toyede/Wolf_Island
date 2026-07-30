@@ -174,11 +174,17 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon")
 	bool bControlSunMoonVisibility;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon|Legacy", meta = (ToolTip = "Legacy interpolation value. The ver3 rotation path does not read this value."))
 	float SunHorizonPitch;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon|Legacy", meta = (ToolTip = "Legacy interpolation value. The ver3 rotation path does not read this value."))
 	float SunNoonPitch;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon|Ver3 Rotation")
+	float SunPitchAtDawn;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon|Ver3 Rotation")
+	float SunPitchAtDusk;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon")
 	float SunYaw;
@@ -186,11 +192,47 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon")
 	float MoonYaw;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon|Ver3 Rotation")
+	float SunRoll;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon|Ver3 Rotation")
+	float MoonRoll;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon")
 	FRotator SunRotationOffset;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon")
 	FRotator MoonRotationOffset;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|Materials|Moon Billboard")
+	bool bApplyMoonBillboardRotationStatic;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|Materials|Moon Billboard")
+	bool bUseVer3MoonBillboardFlipFix;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|Materials|Moon Billboard", meta = (ToolTip = "Moon pitch threshold used by the ver3-style moon billboard flip fix."))
+	float MoonBillboardFlipThresholdPitch;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|Materials|Moon Billboard")
+	bool bInvertMoonBillboardFlip;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|Materials|Moon Billboard")
+	float MoonBillboardRotationBeforeZenith;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|Materials|Moon Billboard")
+	float MoonBillboardRotationAfterZenith;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|Materials|Moon Billboard", meta = (ToolTip = "Fallback constant value used when the ver3-style flip fix is disabled."))
+	float MoonBillboardRotationStatic;
+
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "DynamicSky|Debug")
+	float LastAppliedSunPitch;
+
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "DynamicSky|Debug")
+	float LastAppliedMoonPitch;
+
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "DynamicSky|Debug")
+	float LastAppliedMoonBillboardRotationStatic;
 
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_CloudAccumulatedTime, SaveGame, Category = "DynamicSky|Clouds")
 	float CloudAccumulatedTime;
@@ -282,5 +324,6 @@ protected:
 	void UpdateDayNightState(bool bBroadcastEvents);
 	bool IsNightTime(float TestTimeOfDay) const;
 	float CalculateSunPitch(float TestTimeOfDay) const;
+	float CalculateMoonBillboardRotationStatic(float TestMoonPitch) const;
 	void EnsureSkyManagerTag();
 };

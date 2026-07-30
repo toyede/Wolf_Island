@@ -17,6 +17,7 @@ namespace DynamicSkyParameterNames
 	static constexpr float FullDayHours = 24.0f;
 	static constexpr float SecondsPerMinute = 60.0f;
 
+	static const FName MoonBillboardRotStatic(TEXT("MoonBillboardRotStatic"));
 	static const FName Panning(TEXT("Panning"));
 	static const FName PanningSpeed(TEXT("PanningSpeed"));
 
@@ -31,9 +32,31 @@ namespace DynamicSkyParameterNames
 		return NormalizedValue;
 	}
 
-	float GetHoursSince(float StartTime, float EndTime)
+	float MapTimeOfDayUnclamped(float TimeOfDay, float RangeStart, float RangeEnd, float OutStart, float OutEnd)
 	{
-		return NormalizeTimeOfDay(EndTime - StartTime);
+		float NormalizedTime = NormalizeTimeOfDay(TimeOfDay);
+		const float NormalizedStart = NormalizeTimeOfDay(RangeStart);
+		float NormalizedEnd = NormalizeTimeOfDay(RangeEnd);
+
+		if (FMath::IsNearlyEqual(NormalizedStart, NormalizedEnd))
+		{
+			return OutStart;
+		}
+
+		if (NormalizedEnd <= NormalizedStart)
+		{
+			NormalizedEnd += FullDayHours;
+		}
+
+		if (NormalizedTime < NormalizedStart)
+		{
+			NormalizedTime += FullDayHours;
+		}
+
+		return FMath::GetMappedRangeValueUnclamped(
+			FVector2D(NormalizedStart, NormalizedEnd),
+			FVector2D(OutStart, OutEnd),
+			NormalizedTime);
 	}
 }
 
@@ -52,10 +75,15 @@ ADynamicSky::ADynamicSky()
 	SunDirectionalLight = CreateDefaultSubobject<UDirectionalLightComponent>(TEXT("SunDirectionalLight"));
 	SunDirectionalLight->SetupAttachment(DefaultSceneRoot);
 	SunDirectionalLight->SetIntensity(10.0f);
+	SunDirectionalLight->SetAtmosphereSunLight(true);
+	SunDirectionalLight->SetAtmosphereSunLightIndex(0);
 
 	MoonDirectionalLight = CreateDefaultSubobject<UDirectionalLightComponent>(TEXT("MoonDirectionalLight"));
 	MoonDirectionalLight->SetupAttachment(DefaultSceneRoot);
 	MoonDirectionalLight->SetIntensity(1.0f);
+	MoonDirectionalLight->SetLightSourceAngle(0.0f);
+	MoonDirectionalLight->SetAtmosphereSunLight(true);
+	MoonDirectionalLight->SetAtmosphereSunLightIndex(1);
 	MoonDirectionalLight->SetVisibility(false);
 
 	SkyLight = CreateDefaultSubobject<USkyLightComponent>(TEXT("SkyLight"));
@@ -97,10 +125,24 @@ ADynamicSky::ADynamicSky()
 	bControlSunMoonVisibility = true;
 	SunHorizonPitch = 0.0f;
 	SunNoonPitch = -90.0f;
+	SunPitchAtDawn = -180.0f;
+	SunPitchAtDusk = 0.0f;
 	SunYaw = 180.0f;
 	MoonYaw = 0.0f;
+	SunRoll = -180.0f;
+	MoonRoll = 0.0f;
 	SunRotationOffset = FRotator::ZeroRotator;
 	MoonRotationOffset = FRotator::ZeroRotator;
+	bApplyMoonBillboardRotationStatic = true;
+	bUseVer3MoonBillboardFlipFix = true;
+	MoonBillboardFlipThresholdPitch = -90.0f;
+	bInvertMoonBillboardFlip = false;
+	MoonBillboardRotationBeforeZenith = 3.14f;
+	MoonBillboardRotationAfterZenith = 0.0f;
+	MoonBillboardRotationStatic = 3.14f;
+	LastAppliedSunPitch = 0.0f;
+	LastAppliedMoonPitch = 0.0f;
+	LastAppliedMoonBillboardRotationStatic = 0.0f;
 
 	CloudAccumulatedTime = 0.0f;
 	CloudSyncBaseTime = 0.0f;
@@ -390,21 +432,35 @@ void ADynamicSky::AdvanceTime(float DeltaTime)
 
 void ADynamicSky::ApplySunMoonSettings()
 {
+	const float SunPitch = CalculateSunPitch(TimeOfDay);
+	const float MoonPitch = -SunPitch;
+	LastAppliedSunPitch = SunPitch;
+	LastAppliedMoonPitch = MoonPitch;
+
 	if (bControlSunMoonRotation)
 	{
-		const float SunPitch = CalculateSunPitch(TimeOfDay);
-		const FRotator SunRotation = FRotator(SunPitch, SunYaw, 0.0f) + SunRotationOffset;
-		const FRotator MoonRotation = FRotator(-SunPitch, MoonYaw, 0.0f) + MoonRotationOffset;
+		const FRotator SunRotation = FRotator(SunPitch, SunYaw, SunRoll) + SunRotationOffset;
+		const FRotator MoonRotation = FRotator(MoonPitch, MoonYaw, MoonRoll) + MoonRotationOffset;
 
 		if (SunDirectionalLight)
 		{
-			SunDirectionalLight->SetRelativeRotation(SunRotation);
+			SunDirectionalLight->SetWorldRotation(SunRotation);
 		}
 
 		if (MoonDirectionalLight)
 		{
-			MoonDirectionalLight->SetRelativeRotation(MoonRotation);
+			MoonDirectionalLight->SetWorldRotation(MoonRotation);
 		}
+	}
+
+	if (SkySphereMID && bApplyMoonBillboardRotationStatic)
+	{
+		const float AppliedMoonBillboardRotationStatic = bUseVer3MoonBillboardFlipFix
+			? CalculateMoonBillboardRotationStatic(MoonPitch)
+			: MoonBillboardRotationStatic;
+
+		LastAppliedMoonBillboardRotationStatic = AppliedMoonBillboardRotationStatic;
+		SkySphereMID->SetScalarParameterValue(DynamicSkyParameterNames::MoonBillboardRotStatic, AppliedMoonBillboardRotationStatic);
 	}
 
 	if (bControlSunMoonVisibility)
@@ -489,48 +545,23 @@ bool ADynamicSky::IsNightTime(float TestTimeOfDay) const
 
 float ADynamicSky::CalculateSunPitch(float TestTimeOfDay) const
 {
-	const float NormalizedDawn = DynamicSkyParameterNames::NormalizeTimeOfDay(DawnTime);
-	const float NormalizedDusk = DynamicSkyParameterNames::NormalizeTimeOfDay(DuskTime);
-	const float DayDuration = DynamicSkyParameterNames::GetHoursSince(NormalizedDawn, NormalizedDusk);
+	return DynamicSkyParameterNames::MapTimeOfDayUnclamped(
+		TestTimeOfDay,
+		DawnTime,
+		DuskTime,
+		SunPitchAtDawn,
+		SunPitchAtDusk);
+}
 
-	if (DayDuration <= KINDA_SMALL_NUMBER)
+float ADynamicSky::CalculateMoonBillboardRotationStatic(float TestMoonPitch) const
+{
+	bool bMoonPassedZenith = TestMoonPitch <= MoonBillboardFlipThresholdPitch;
+	if (bInvertMoonBillboardFlip)
 	{
-		return SunHorizonPitch;
+		bMoonPassedZenith = !bMoonPassedZenith;
 	}
 
-	const float HoursSinceDawn = DynamicSkyParameterNames::GetHoursSince(NormalizedDawn, TestTimeOfDay);
-	const float HalfDayDuration = DayDuration * 0.5f;
-
-	if (HoursSinceDawn <= DayDuration)
-	{
-		if (HoursSinceDawn <= HalfDayDuration)
-		{
-			const float Alpha = HalfDayDuration <= KINDA_SMALL_NUMBER ? 0.0f : HoursSinceDawn / HalfDayDuration;
-			return FMath::Lerp(SunHorizonPitch, SunNoonPitch, Alpha);
-		}
-
-		const float Alpha = HalfDayDuration <= KINDA_SMALL_NUMBER ? 1.0f : (HoursSinceDawn - HalfDayDuration) / HalfDayDuration;
-		return FMath::Lerp(SunNoonPitch, SunHorizonPitch, Alpha);
-	}
-
-	const float NightDuration = DynamicSkyParameterNames::FullDayHours - DayDuration;
-	if (NightDuration <= KINDA_SMALL_NUMBER)
-	{
-		return SunHorizonPitch;
-	}
-
-	const float HoursSinceDusk = DynamicSkyParameterNames::GetHoursSince(NormalizedDusk, TestTimeOfDay);
-	const float HalfNightDuration = NightDuration * 0.5f;
-	const float MidnightPitch = SunHorizonPitch - (SunNoonPitch - SunHorizonPitch);
-
-	if (HoursSinceDusk <= HalfNightDuration)
-	{
-		const float Alpha = HalfNightDuration <= KINDA_SMALL_NUMBER ? 0.0f : HoursSinceDusk / HalfNightDuration;
-		return FMath::Lerp(SunHorizonPitch, MidnightPitch, Alpha);
-	}
-
-	const float Alpha = HalfNightDuration <= KINDA_SMALL_NUMBER ? 1.0f : (HoursSinceDusk - HalfNightDuration) / HalfNightDuration;
-	return FMath::Lerp(MidnightPitch, SunHorizonPitch, Alpha);
+	return bMoonPassedZenith ? MoonBillboardRotationAfterZenith : MoonBillboardRotationBeforeZenith;
 }
 
 void ADynamicSky::EnsureSkyManagerTag()
