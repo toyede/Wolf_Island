@@ -141,7 +141,14 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UAudioComponent* EatingSoundPlayer;
-	
+
+	// 먹는 동안 짧은 먹는 소리를 반복 재생하기 위한 타이머
+	FTimerHandle EatingSoundTimer;
+
+	// 씹는 소리 반복 간격에 더할 여유(초). 0이면 사운드 길이만큼 이어서 반복
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Sounds")
+	float EatingSoundGap = 0.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UHitParticleComponent* HitParticleComponent;
 	

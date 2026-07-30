@@ -382,6 +382,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	int32 GetItemAmountAtSlot(int32 Index)
 	{
+		if (!InventoryContents.IsValidIndex(Index)) return 0;
 		return InventoryContents[Index].ItemData.Amount;
 	}
 	
@@ -393,8 +394,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	bool CheckEmptySlotAtIndex(int32 Index)
 	{
+		if (!InventoryContents.IsValidIndex(Index)) return false;
 		return InventoryContents[Index].IsEmpty();
 	};
+
+	//요청 폰이 이 인벤토리를 조작할 권한이 있는지(자기 것 또는 자기가 점유한 상자) - 인벤토리 간 이동 검증용
+	bool CanAccessInventory(UInventoryComponent* Inv, APawn* RequestingPawn) const;
 	
 	//특정 인덱스의 아이템 데이터 반환
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Inventory")
@@ -679,6 +684,14 @@ public:
 		UInventoryComponent* SourceInventory, int32 SourceIndex, 
 		FItemBaseData Item);
 	
+	//빠른 이동 - 소스 슬롯의 아이템을 타겟 인벤토리의 첫 빈 슬롯으로 이동(서버 권위)
+	//라우팅은 owning connection이 있는 플레이어 인벤토리 컴포넌트에서 호출해야 함
+	UFUNCTION(Server, Reliable)
+	void Server_QuickMoveItem(UInventoryComponent* SourceInventory, int32 SourceIndex, UInventoryComponent* TargetInventory);
+	UFUNCTION()
+	void Request_QuickMoveItem(UInventoryComponent* SourceInventory, int32 SourceIndex, UInventoryComponent* TargetInventory);
+	void QuickMoveItem(UInventoryComponent* SourceInventory, int32 SourceIndex, UInventoryComponent* TargetInventory);
+
 	//월드 드롭 아이템 먹기
 	UFUNCTION(Server, Reliable)
 	void Server_PickUp(APickup* Item);

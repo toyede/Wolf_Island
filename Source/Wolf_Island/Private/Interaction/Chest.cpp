@@ -48,15 +48,22 @@ void AChest::OpenChest(AActor* Interactor)
 
 	//사용 중이라고 설정
 	IsOccupied = true;
-	
+
 	//오너 설정
 	SetOwner(Interactor);
-	
+
+	//점유자가 로그아웃/파괴되면 점유가 영구히 남지 않도록 EndPlay에 바인딩
+	CurrentInteractor = Interactor;
+	if (Interactor)
+	{
+		Interactor->OnEndPlay.AddDynamic(this, &AChest::OnInteractorEndPlay);
+	}
+
 	if (OpenAnim&&ChestOpenSound)
 	{
 		Multi_PlayAnimAndSound(OpenAnim, ChestOpenSound);
 	}
-	
+
 	Client_OpenChest(Interactor);
 }
 
@@ -64,14 +71,28 @@ void AChest::CloseChest()
 {
 	//사용 중 아니라고 설정
 	IsOccupied = false;
-	
+
+	//점유자 EndPlay 바인딩 해제
+	if (AActor* Interactor = CurrentInteractor.Get())
+	{
+		Interactor->OnEndPlay.RemoveDynamic(this, &AChest::OnInteractorEndPlay);
+	}
+	CurrentInteractor = nullptr;
+
 	if (CloseAnim&&ChestCloseSound)
 	{
 		Multi_PlayAnimAndSound(CloseAnim, ChestCloseSound);
 	}
-	
+
 	//오너 설정 해제
 	SetOwner(nullptr);
+}
+
+void AChest::OnInteractorEndPlay(AActor* Actor, EEndPlayReason::Type EndPlayReason)
+{
+	//상자를 연 플레이어가 로그아웃/파괴됨 -> 점유 해제하여 다른 플레이어가 열 수 있게 함
+	UE_LOG(LogTemp, Warning, TEXT("[CHEST] Interactor EndPlay - 점유 자동 해제"));
+	CloseChest();
 }
 
 //상자를 누군가 열었다!

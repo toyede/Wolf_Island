@@ -1036,7 +1036,28 @@ void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 		//아침 세이브로 플레이어 로드
 		RestartPlayer(DeadPlayerController);
 		AfterRestartPlayer(DeadPlayerController, true);
-	
+
+		//사망 리스폰은 LoadPlayer에서 위치를 복원하지 않으므로(IsDead=true), 아침 세이브의 플레이어
+		//위치로 명시적으로 배치한다. 이렇게 하지 않으면 FindPlayerStart 실패 시 원점(0,0,0)에 스폰된다.
+		if (AMainPlayerState* RespawnPS = Cast<AMainPlayerState>(DeadPlayerController->PlayerState))
+		{
+			const FString RespawnID = RespawnPS->GetPersistantId();
+			if (PlayersSaveData.Contains(RespawnID))
+			{
+				const FPlayerSaveData& MorningData = PlayersSaveData[RespawnID];
+				if (APawn* RespawnPawn = DeadPlayerController->GetPawn())
+				{
+					RespawnPawn->SetActorTransform(MorningData.Transform, false, nullptr, ETeleportType::TeleportPhysics);
+					DeadPlayerController->SetControlRotation(MorningData.ControlRotation);
+					UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] RESPAWN AT MORNING LOC | %s"), *MorningData.Transform.GetLocation().ToString());
+				}
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] RESPAWN: NO MORNING DATA FOR %s (원점 스폰 위험)"), *RespawnID);
+			}
+		}
+
 		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD MORNING COMPLETE"));
 	} else
 	{

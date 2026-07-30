@@ -71,6 +71,14 @@ public:
 	void OpenChest(AActor* Interactor);
 	UFUNCTION(BlueprintCallable)
 	void CloseChest();
+
+	//상자를 연 플레이어(점유자) 참조. 로그아웃/파괴 시 점유 자동 해제에 사용
+	UPROPERTY()
+	TWeakObjectPtr<AActor> CurrentInteractor;
+
+	//점유자가 EndPlay(로그아웃/파괴)되면 상자 점유를 자동 해제
+	UFUNCTION()
+	void OnInteractorEndPlay(AActor* Actor, EEndPlayReason::Type EndPlayReason);
 	
 	UFUNCTION()
 	TArray<FName> GetItemRowNames() const

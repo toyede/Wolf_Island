@@ -26,9 +26,11 @@ bool UChestScreen::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEven
 	UDragDropOperation* InOperation)
 {
 	const UItemDragDropOperation* ItemDragDrop = Cast<UItemDragDropOperation>(InOperation);
+	//우리 드래그 오퍼레이션이 아니면(널) 무시하여 널 역참조 크래시 방지
+	if (!ItemDragDrop) return false;
 
 	FItemBaseData ItemData = ItemDragDrop->SourceItemData;
-	
+
 	UE_LOG(LogTemp, Warning, TEXT("CHEST SCREEN DROP DETECTED"));
 	
 	if (PlayerRef)
@@ -56,7 +58,9 @@ bool UChestScreen::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEven
 					//TODO: 서버 호출 함수로 변경
 					ItemDragDrop->SourceInventory->Server_AddItemAmountAtSlot(ItemDragDrop->SourceIndex, ItemData.Amount);
 				}
-				return false;
+				//여기서 이미 복구/무시 처리했으므로 handled(true) 반환.
+				//false면 드래그 취소로 이어져 NativeOnDragCancelled가 한 번 더 복구(이중 복구)될 수 있음.
+				return true;
 			}
 		}
 

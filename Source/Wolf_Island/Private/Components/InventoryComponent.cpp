@@ -11,6 +11,7 @@
 #include "AdvancedFriendsGameInstance.h"
 #include "Character/MainPlayer.h"
 #include "Games/MainPlayerState.h"
+#include "Interaction/Chest.h"
 #include "Item/Pickup.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -112,6 +113,9 @@ int32 UInventoryComponent::GetItemTotalAmountByID(FName ItemID)
 
 void UInventoryComponent::SetItemAtIndex(FItemBaseData* Item, int32 Index)
 {
+	//인덱스 검증(OOB 크래시 방지)
+	if (!InventoryContents.IsValidIndex(Index)) return;
+
 	FItemBaseData RemovedItem = GetItemAtIndex(Index);
 	
 	if (RemovedItem.IsValid())
@@ -196,7 +200,10 @@ void UInventoryComponent::RemoveSingleInstanceOfItem(FItemBaseData& Item)
 
 void UInventoryComponent::RemoveItemAtSlot(int32 Index, FItemBaseData Item)
 {
-	
+	//인덱스 검증 후 해당 슬롯 비우기 (무게는 InventoryChanged->RefreshCurrentWeight가 재계산)
+	if (!InventoryContents.IsValidIndex(Index)) return;
+
+	InventoryContents[Index].Clear();
 }
 
 
@@ -414,34 +421,26 @@ int32 UInventoryComponent::HandleStackableItem(FItemBaseData& AddedItem, int32 R
 		ExistingItemStack = FindNextPartialStack(AddedItem);
 	}
 	
-	//남은 아이템 슬롯이 있는가
-	if (GetEmptySlotCount() > 0)
+	//남은 개수를 빈 슬롯들에 '최대 스택(MaxAmount)' 단위로 분배(여러 칸에 걸쳐 채움)
+	const int32 MaxStack = GetItemMaxAmount(AddedItem);
+	while (AmountToDistribute > 0 && GetEmptySlotCount() > 0)
 	{
-		//무게 고려 최대 넣을 수 있는 수량
-		const int32 WeightLimitAddAmount = CalculateWeightAddAmount(AddedItem, AmountToDistribute);
+		//한 슬롯에 넣을 개수: 남은 개수와 최대 스택 중 작은 값(오버스택 방지)
+		const int32 PerSlotAmount = (MaxStack > 0) ? FMath::Min(AmountToDistribute, MaxStack) : AmountToDistribute;
+		//무게 한도 고려한 실제 넣을 개수
+		const int32 WeightLimitAddAmount = CalculateWeightAddAmount(AddedItem, PerSlotAmount);
 
-		//무게 초과하지 않는 개수가 0개 초과면
-		if (WeightLimitAddAmount > 0)
-		{
-			//무게 초과하지 않는 개수가 넣으려는 개수보다 적으면
-			if (WeightLimitAddAmount < AmountToDistribute)
-			{
-				//넣으려는 개수에서 무게 초과하지 않는 개수 빼기
-				AmountToDistribute -= WeightLimitAddAmount;
-				//넣으려는 아이템 개수 수정
-				AddedItem.SetAmount(AmountToDistribute);
+		//무게가 다 차서 더 못 넣으면 종료
+		if (WeightLimitAddAmount <= 0) break;
 
-				//아이템 복사본을 무게 초과하지 않는 개수만큼 추가
-				AddNewItem(AddedItem, WeightLimitAddAmount);
-				//요청한 개수에서 넣으려는 개수 빼고 반환
-				UE_LOG(LogTemp, Warning, TEXT("WeightLimitAmount over 0"));
-				return RequestedAmount - AmountToDistribute;
-			}
-			//아니면 넣으려는 수 만큼 아이템 추가
-			UE_LOG(LogTemp, Warning, TEXT("Amount to Distribute : %d"), AmountToDistribute);
-			AddNewItem(AddedItem, AmountToDistribute);
-			return RequestedAmount;
-		}
+		//이 슬롯에 실제로 넣기
+		AddNewItem(AddedItem, WeightLimitAddAmount);
+		//분배 도중 무게 한도 계산이 맞도록 무게 임시 갱신(최종값은 InventoryChanged에서 재계산)
+		CurrentWeight += GetItemSingleWeight(AddedItem) * WeightLimitAddAmount;
+
+		//넣은 만큼 차감
+		AmountToDistribute -= WeightLimitAddAmount;
+		AddedItem.SetAmount(AmountToDistribute);
 	}
 
 	//OnInventoryUpdated.Broadcast();
@@ -658,12 +657,13 @@ bool UInventoryComponent::CheckCanMakeRecipe(FRecipeData Recipe)
 
 bool UInventoryComponent::CheckCanMakeRepair(FRepairRecipeData Recipe)
 {
-	bool pass1 = false, pass2 = false, pass3 = false;
+	bool pass1 = false, pass2 = false, pass3 = false, pass4 = false;
 
 	//재료 아이템이 비어있으면 그 칸은 패스
 	if (Recipe.Ingredient1ID.IsNone()) pass1 = true;
 	if (Recipe.Ingredient2ID.IsNone()) pass2 = true;
 	if (Recipe.Ingredient3ID.IsNone()) pass3 = true;
+	if (Recipe.Ingredient4ID.IsNone()) pass4 = true;
 
 	//첫번째 재료 인벤토리에서 체크
 	//레시피 개수보다 인벤토리에 아이템 개수가 같거나 많으면 패스
@@ -673,9 +673,11 @@ bool UInventoryComponent::CheckCanMakeRepair(FRepairRecipeData Recipe)
 	if (Recipe.Ingredient2Amount <= GetItemTotalAmountByID(Recipe.Ingredient2ID)) pass2 = true;
 	//세번째 재료 인벤토리에서 체크
 	//레시피 개수보다 인벤토리에 아이템 개수가 같거나 많으면 패스
-	if (Recipe.Ingredient3Amount <= GetItemTotalAmountByID(Recipe.Ingredient3ID)) pass3 = true;	
-	
-	return pass1 && pass2 && pass3;
+	if (Recipe.Ingredient3Amount <= GetItemTotalAmountByID(Recipe.Ingredient3ID)) pass3 = true;
+	//네번째 재료 인벤토리에서 체크 (RepairShip이 재료4를 소모하므로 반드시 검증)
+	if (Recipe.Ingredient4Amount <= GetItemTotalAmountByID(Recipe.Ingredient4ID)) pass4 = true;
+
+	return pass1 && pass2 && pass3 && pass4;
 }
 
 bool UInventoryComponent::MakeItem(FRecipeData Recipe)
@@ -762,6 +764,11 @@ void UInventoryComponent::InsertItemToIndex(int32 Index, FItemBaseData Item)
 //A가 옮기는 슬롯, B가 가만히 있는 슬롯
 void UInventoryComponent::SwapItems(int32 A, int32 B)
 {
+	//인덱스 검증(잘못된/stale 인덱스로 OOB 크래시 방지)
+	if (!InventoryContents.IsValidIndex(A) || !InventoryContents.IsValidIndex(B)) return;
+	//같은 슬롯이면 무시
+	if (A == B) return;
+
 	FItemSlot& SlotA = InventoryContents[A];
 	FItemSlot& SlotB = InventoryContents[B];
 	
@@ -826,6 +833,19 @@ void UInventoryComponent::Server_MakeItem_Implementation(FRecipeData Recipe)
 void UInventoryComponent::SwapItemBetweenInventory(UInventoryComponent* TargetInventory, int32 TargetIndex,
                                                    UInventoryComponent* SourceInventory, int32 SourceIndex)
 {
+	//포인터/인덱스 검증(OOB 크래시 방지)
+	if (!IsValid(SourceInventory) || !IsValid(TargetInventory)) return;
+	if (!SourceInventory->InventoryContents.IsValidIndex(SourceIndex)) return;
+	if (!TargetInventory->InventoryContents.IsValidIndex(TargetIndex)) return;
+
+	//요청 플레이어가 두 인벤토리를 조작할 권한이 있는지(자기 것 또는 자기가 연 상자) - 원격 탈취 방지
+	APawn* RequestingPawn = Cast<APawn>(GetOwner());
+	if (!CanAccessInventory(SourceInventory, RequestingPawn) || !CanAccessInventory(TargetInventory, RequestingPawn))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[INVENTORY] SwapItemBetweenInventory 거부 - 인벤토리 접근 권한 없음"));
+		return;
+	}
+
 	//외부에서 온 슬롯
 	FItemSlot& OriginSlot = SourceInventory->InventoryContents[SourceIndex];
 	//드롭 받는 슬롯
@@ -859,6 +879,19 @@ void UInventoryComponent::SwapItemBetweenInventory(UInventoryComponent* TargetIn
 void UInventoryComponent::DropItemBetweenInventory(UInventoryComponent* TargetInventory, int32 TargetIndex,
 	UInventoryComponent* SourceInventory, int32 SourceIndex, FItemBaseData Item)
 {
+	//포인터/인덱스 검증(OOB 크래시 방지)
+	if (!IsValid(SourceInventory) || !IsValid(TargetInventory)) return;
+	if (!SourceInventory->InventoryContents.IsValidIndex(SourceIndex)) return;
+	if (!TargetInventory->InventoryContents.IsValidIndex(TargetIndex)) return;
+
+	//요청 플레이어가 두 인벤토리를 조작할 권한이 있는지(자기 것 또는 자기가 연 상자) - 원격 탈취 방지
+	APawn* RequestingPawn = Cast<APawn>(GetOwner());
+	if (!CanAccessInventory(SourceInventory, RequestingPawn) || !CanAccessInventory(TargetInventory, RequestingPawn))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[INVENTORY] DropItemBetweenInventory 거부 - 인벤토리 접근 권한 없음"));
+		return;
+	}
+
 	//드래그 가져온 슬롯
 	FItemSlot& OriginSlot = SourceInventory->InventoryContents[SourceIndex];
 	//드롭 받는 슬롯
@@ -881,17 +914,20 @@ void UInventoryComponent::DropItemBetweenInventory(UInventoryComponent* TargetIn
 		return;
 	}
 	
-	//같은 아이템이면 연산 후 정리
-	//분배할 총 개수
-	int32 TotalAmount = OriginSlot.ItemData.Amount + Item.Amount;
+	//같은 아이템이면 타겟 슬롯의 '기존 개수' 기준으로 병합(타겟을 덮어쓰지 않음)
 	//최대 스택 개수
 	int32 MaxStack = GetItemMaxAmount(TargetSlot.ItemData.ItemID);
+	//타겟 슬롯의 남은 공간
+	int32 SpaceInTarget = FMath::Max(0, MaxStack - TargetSlot.ItemData.Amount);
+	//실제로 타겟에 들어갈 개수(드롭한 개수와 남은 공간 중 작은 것)
+	int32 ActualMoved = FMath::Clamp(Item.Amount, 0, SpaceInTarget);
 
-	//드롭 받는 슬롯에 총 개수와 최대 스택 개수 중 작은 것 할당
-	TargetSlot.ItemData.Amount = FMath::Min(TotalAmount, MaxStack);
-	//드래그 가져온 슬롯에 총 개수 - 드롭 받는 슬롯 개수 할당
-	OriginSlot.ItemData.Amount = TotalAmount - TargetSlot.ItemData.Amount;
-	
+	//타겟 슬롯에 더하기(기존 개수 유지)
+	TargetSlot.ItemData.Amount += ActualMoved;
+	//타겟에 못 들어간 나머지는 소스 잔량에 되돌리기(소스는 드래그 시작 시 이미 차감됨)
+	int32 Leftover = Item.Amount - ActualMoved;
+	OriginSlot.ItemData.Amount += Leftover;
+
 	if (OriginSlot.ItemData.Amount <= 0)
 	{
 		OriginSlot.Clear();
@@ -929,8 +965,22 @@ void UInventoryComponent::PickupItem(APickup* Item)
 
 void UInventoryComponent::SetItemAmountAtSlot(int32 Index, int32 Amount)
 {
-	//개수 강제 세팅 개수로 수정
-	InventoryContents[Index].ItemData.Amount = Amount;
+	//인덱스 검증 + 빈 슬롯이면 무시(유령 슬롯 방지)
+	if (!InventoryContents.IsValidIndex(Index)) return;
+	if (InventoryContents[Index].IsEmpty()) return;
+
+	//개수를 [0, MaxAmount]로 클램프(무한 복제/유령 슬롯 방지)
+	int32 Clamped = FMath::Max(0, Amount);
+	const int32 MaxStack = GetItemMaxAmount(InventoryContents[Index].ItemData);
+	if (MaxStack > 0) Clamped = FMath::Min(Clamped, MaxStack);
+
+	InventoryContents[Index].ItemData.Amount = Clamped;
+
+	//0개면 슬롯 비우기
+	if (InventoryContents[Index].ItemData.Amount <= 0)
+	{
+		InventoryContents[Index].Clear();
+	}
 }
 
 void UInventoryComponent::RemoveOnlyItemAmountAtSlot(int32 Index, int32 AddedAmount)
@@ -974,6 +1024,7 @@ void UInventoryComponent::RefreshCurrentWeight()
 
 bool UInventoryComponent::CheckSameItemAtIndex(int32 Index, FName ItemID)
 {
+	if (!InventoryContents.IsValidIndex(Index)) return false;
 	if (InventoryContents[Index].IsNotEmpty())
 	{
 		return InventoryContents[Index].ItemData.ItemID == ItemID;
@@ -1127,6 +1178,84 @@ void UInventoryComponent::Request_SwapItemBetweenInventory(UInventoryComponent* 
 	{
 		Server_SwapItemBetweenInventory(TargetInventory, TargetIndex, SourceInventory, SourceIndex);
 	}
+}
+
+bool UInventoryComponent::CanAccessInventory(UInventoryComponent* Inv, APawn* RequestingPawn) const
+{
+	if (!IsValid(Inv) || !IsValid(RequestingPawn)) return false;
+
+	AActor* InvOwner = Inv->GetOwner();
+	if (!IsValid(InvOwner)) return false;
+
+	//자기 자신의 인벤토리
+	if (InvOwner == RequestingPawn) return true;
+
+	//자기가 현재 점유(오픈)한 상자의 인벤토리
+	if (AChest* Chest = Cast<AChest>(InvOwner))
+	{
+		return Chest->IsOccupied && Chest->GetOwner() == RequestingPawn;
+	}
+
+	return false;
+}
+
+void UInventoryComponent::QuickMoveItem(UInventoryComponent* SourceInventory, int32 SourceIndex, UInventoryComponent* TargetInventory)
+{
+	if (!IsValid(SourceInventory) || !IsValid(TargetInventory)) return;
+	//소스와 타겟이 같은 인벤토리면 무의미
+	if (SourceInventory == TargetInventory) return;
+
+	//요청 플레이어가 두 인벤토리를 조작할 권한이 있는지(자기 것 또는 자기가 연 상자) - 원격 탈취 방지
+	APawn* RequestingPawn = Cast<APawn>(GetOwner());
+	if (!CanAccessInventory(SourceInventory, RequestingPawn) || !CanAccessInventory(TargetInventory, RequestingPawn))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[INVENTORY] QuickMoveItem 거부 - 인벤토리 접근 권한 없음"));
+		return;
+	}
+
+	//소스 슬롯 유효성 검사
+	if (!SourceInventory->InventoryContents.IsValidIndex(SourceIndex)) return;
+	if (SourceInventory->InventoryContents[SourceIndex].IsEmpty()) return;
+
+	//타겟 인벤토리에서 첫 빈 슬롯 탐색(서버 권위 - 클라 stale 인덱스 방지)
+	int32 EmptyIndex = INDEX_NONE;
+	for (int32 i = 0; i < TargetInventory->InventoryContents.Num(); ++i)
+	{
+		if (TargetInventory->InventoryContents[i].IsEmpty())
+		{
+			EmptyIndex = i;
+			break;
+		}
+	}
+
+	//빈 슬롯이 없으면 이동 불가
+	if (EmptyIndex == INDEX_NONE)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[INVENTORY] QuickMove 실패 - 타겟 인벤토리에 빈 슬롯 없음"));
+		return;
+	}
+
+	//타겟 슬롯이 비어있으므로 Swap이 곧 '이동'이 된다
+	SwapItemBetweenInventory(TargetInventory, EmptyIndex, SourceInventory, SourceIndex);
+	SourceInventory->InventoryChanged();
+	TargetInventory->InventoryChanged();
+}
+
+void UInventoryComponent::Request_QuickMoveItem(UInventoryComponent* SourceInventory, int32 SourceIndex, UInventoryComponent* TargetInventory)
+{
+	if (GetOwner()->HasAuthority())
+	{
+		QuickMoveItem(SourceInventory, SourceIndex, TargetInventory);
+	}
+	else
+	{
+		Server_QuickMoveItem(SourceInventory, SourceIndex, TargetInventory);
+	}
+}
+
+void UInventoryComponent::Server_QuickMoveItem_Implementation(UInventoryComponent* SourceInventory, int32 SourceIndex, UInventoryComponent* TargetInventory)
+{
+	QuickMoveItem(SourceInventory, SourceIndex, TargetInventory);
 }
 
 void UInventoryComponent::Request_DropItemBetweenInventory(UInventoryComponent* TargetInventory, int32 TargetIndex,

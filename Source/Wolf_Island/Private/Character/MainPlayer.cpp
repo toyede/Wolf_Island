@@ -337,6 +337,7 @@ void AMainPlayer::ClearRuntimeTimers()
 		FTimerManager& TimerManager = World->GetTimerManager();
 		TimerManager.ClearTimer(KnockOutTimer);
 		TimerManager.ClearTimer(ItemUseTimer);
+		TimerManager.ClearTimer(EatingSoundTimer);
 		TimerManager.ClearTimer(InteractionTimer);
 		TimerManager.ClearTimer(CraftTimer);
 		TimerManager.ClearTimer(SwimCheckHandle);
@@ -930,44 +931,48 @@ void AMainPlayer::UseItem(int32 SlotIndex)
 //타이머 시간을 0으로 하면 실행이 안되는 사실 발견...
 void AMainPlayer::StartUseItem()
 {
-	if (!IsUsingItem)
-	{
-		IsUsingItem = true;
-		
-		FItemBaseData TargetItem = InventoryComponent->GetItemAtIndex(HotBarIndex);
-		int32 TargetIndex = HotBarIndex;
-		if (!TargetItem.IsValid()) return;
-	
-		//사용 가능한 아이템이 아니면 암것두 안하긔.
-		if (!InventoryComponent->IsUsableItem(TargetItem)) return;
-	
-		if (!GetWorld()->GetTimerManager().IsTimerActive(ItemUseTimer))
-		{
-			FItemData* ItemData = InventoryComponent->GetItemData(TargetItem);
-			
-			if (!ItemData) return;
+	if (IsUsingItem) return;
 
-			//사용까지 꾹 눌러야 하는 시간
-			float UseDuration = ItemData->NumericData.UseDuration;
-			
-			//음식이면 먹는 소리 재생
-			if (TargetItem.Type == EItemType::FOOD)
-			{
-				Multi_PlayEatingSound();
-			}
-		
-			GetWorld()->GetTimerManager().SetTimer(
-			ItemUseTimer,
-			[this, TargetIndex]()
-			{
-				UseItem(HotBarIndex);
-				Multi_StopEatingSound();
-			},
-			UseDuration,
-			false
-			);
-		}
+	if (!InventoryComponent) return;
+
+	FItemBaseData TargetItem = InventoryComponent->GetItemAtIndex(HotBarIndex);
+	int32 TargetIndex = HotBarIndex;
+	if (!TargetItem.IsValid()) return;
+
+	//사용 가능한 아이템이 아니면 암것두 안하긔.
+	if (!InventoryComponent->IsUsableItem(TargetItem)) return;
+
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	if (World->GetTimerManager().IsTimerActive(ItemUseTimer)) return;
+
+	FItemData* ItemData = InventoryComponent->GetItemData(TargetItem);
+	if (!ItemData) return;
+
+	//사용까지 꾹 눌러야 하는 시간
+	float UseDuration = ItemData->NumericData.UseDuration;
+
+	//여기까지 통과했을 때만 사용 중으로 표시 (조기 return 시 상태가 박히는 것 방지)
+	IsUsingItem = true;
+
+	//음식이면 먹는 소리 재생
+	if (TargetItem.Type == EItemType::FOOD)
+	{
+		Multi_PlayEatingSound();
 	}
+
+	World->GetTimerManager().SetTimer(
+	ItemUseTimer,
+	[this, TargetIndex]()
+	{
+		UseItem(TargetIndex);
+		Multi_StopEatingSound();
+		IsUsingItem = false;
+	},
+	UseDuration,
+	false
+	);
 }
 
 void AMainPlayer::StopUseItem()
@@ -2971,13 +2976,31 @@ void AMainPlayer::Multi_PlayEatingSound_Implementation()
 		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Multicast Eating Sound On"));
 		EatingSoundPlayer->SetSound(DuringFoodSound);
 		EatingSoundPlayer->Play();
+
+		//짧은 원샷을 사운드 길이(+여유)만큼 간격을 두고 먹는 동안 반복 재생
+		const float Interval = FMath::Max(0.1f, DuringFoodSound->GetDuration() + EatingSoundGap);
+		GetWorldTimerManager().SetTimer(
+			EatingSoundTimer,
+			[this]()
+			{
+				if (EatingSoundPlayer && DuringFoodSound)
+				{
+					EatingSoundPlayer->Play();
+				}
+			},
+			Interval,
+			true);
 	}
 }
 
 void AMainPlayer::Multi_StopEatingSound_Implementation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Multicast Eating Sound Off"));
-	EatingSoundPlayer->Stop();
+	GetWorldTimerManager().ClearTimer(EatingSoundTimer);
+	if (EatingSoundPlayer)
+	{
+		EatingSoundPlayer->Stop();
+	}
 }
 
 void AMainPlayer::OnSitDownMontageEnded(UAnimMontage* Montage, bool bInterrupted)

@@ -83,7 +83,9 @@ void UInventoryPanel::RefreshInventory()
 			ItemSlot->SetIndex(Index++);
 			ItemSlot->SetOwner(PlayerRef);
 			ItemSlot->SetInventoryRef(InventoryRef);
-			
+			//빠른 이동 대상(상자 패널이면 상자 인벤, 일반 패널이면 null)
+			ItemSlot->SetLinkedInventory(GetCounterpartInventory());
+
 			//핫바 슬롯( 첫번째부터 6칸 ( 0 ~ 5 ) )
 			if (Index >= 1 && Index <= 6)
 			{

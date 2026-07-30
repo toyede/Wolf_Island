@@ -29,6 +29,9 @@ public:
 	UFUNCTION()
 	void RefreshChest();
 
+	//빠른 이동 대상: 플레이어 인벤 슬롯 -> 상자 인벤토리
+	virtual UInventoryComponent* GetCounterpartInventory() const override { return ChestInventoryRef; }
+
 protected:
 
 	virtual void NativeOnInitialized() override;
