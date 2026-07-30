@@ -31,6 +31,7 @@ public class Wolf_Island : ModuleRules
             "MovieScene",
             "MediaAssets",
             "UMG",
+            "PhysicsCore"
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[]
