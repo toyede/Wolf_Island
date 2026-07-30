@@ -91,6 +91,7 @@ public:
 	FDynamicSkyEvent OnEclipseTotalityEnded;
 
 protected:
+	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void BeginPlay() override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DynamicSky|Components")
@@ -174,6 +175,15 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon")
 	bool bControlSunMoonVisibility;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon|Visibility")
+	bool bShouldShowSun;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon|Visibility")
+	bool bShouldShowMoon;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon|Visibility")
+	bool bShouldShowStars;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon|Legacy", meta = (ToolTip = "Legacy interpolation value. The ver3 rotation path does not read this value."))
 	float SunHorizonPitch;
 
@@ -249,6 +259,21 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, ReplicatedUsing = OnRep_CurrentCloudMode, SaveGame, Category = "DynamicSky|Clouds")
 	EDynamicSkyCloudMode CurrentCloudMode;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|Clouds|2D", meta = (ClampMin = "0.01", DisplayName = "2D Clouds Tiling"))
+	float TwoDCloudsTiling;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|Clouds|2D", meta = (DisplayName = "2D Clouds Panning Speed"))
+	float TwoDCloudsPanningSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|Clouds|2D", meta = (ClampMin = "0.0", DisplayName = "2D Clouds Brightness"))
+	float TwoDCloudsBrightness;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|Clouds|2D", meta = (ClampMin = "0.0", ClampMax = "1.0", DisplayName = "2D Clouds Day Time Sky Tint Strength"))
+	float TwoDCloudsDayTimeSkyTintStrength;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|Clouds|2D", meta = (ClampMin = "0.0", ClampMax = "1.0", DisplayName = "2D Clouds Night Time Sky Tint Strength"))
+	float TwoDCloudsNightTimeSkyTintStrength;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|Clouds")
 	float VolumCloudMovingSpeed;
 
@@ -320,10 +345,17 @@ protected:
 
 	void AdvanceTime(float DeltaTime);
 	void ApplySunMoonSettings();
+	void ApplySkyMaterialVisibilitySettings();
 	void ApplyCloudComponentSettings();
+	void ApplyCloudTimeToMaterial();
+	void AdvanceCloudTime(float DeltaTime);
+	void ResetCloudSyncBase();
 	void UpdateDayNightState(bool bBroadcastEvents);
 	bool IsNightTime(float TestTimeOfDay) const;
+	float CalculateCurrentCloudTime() const;
 	float CalculateSunPitch(float TestTimeOfDay) const;
 	float CalculateMoonBillboardRotationStatic(float TestMoonPitch) const;
 	void EnsureSkyManagerTag();
+
+	float CloudSyncUpdateElapsed;
 };

@@ -17,8 +17,13 @@ namespace DynamicSkyParameterNames
 	static constexpr float FullDayHours = 24.0f;
 	static constexpr float SecondsPerMinute = 60.0f;
 
+	static const FName IsMoonVisible(TEXT("IsMoonVisible"));
+	static const FName IsStarVisible(TEXT("IsStarVisible"));
+	static const FName IsSunVisible(TEXT("IsSunVisible"));
+	static const FName Is2DCloudVisible(TEXT("Is2DCloudVisible"));
+	static const FName TwoDCloudSettings(TEXT("2DCloudSettings"));
 	static const FName MoonBillboardRotStatic(TEXT("MoonBillboardRotStatic"));
-	static const FName Panning(TEXT("Panning"));
+	static const FName CloudSyncTime(TEXT("CloudSyncTime"));
 	static const FName PanningSpeed(TEXT("PanningSpeed"));
 
 	float NormalizeTimeOfDay(float Value)
@@ -123,6 +128,9 @@ ADynamicSky::ADynamicSky()
 
 	bControlSunMoonRotation = true;
 	bControlSunMoonVisibility = true;
+	bShouldShowSun = true;
+	bShouldShowMoon = true;
+	bShouldShowStars = true;
 	SunHorizonPitch = 0.0f;
 	SunNoonPitch = -90.0f;
 	SunPitchAtDawn = -180.0f;
@@ -148,7 +156,13 @@ ADynamicSky::ADynamicSky()
 	CloudSyncBaseTime = 0.0f;
 	CloudSyncBaseLocalTime = 0.0f;
 	CloudSyncInterval = 2.0f;
+	CloudSyncUpdateElapsed = 0.0f;
 	CurrentCloudMode = EDynamicSkyCloudMode::None;
+	TwoDCloudsTiling = 1.0f;
+	TwoDCloudsPanningSpeed = 1.0f;
+	TwoDCloudsBrightness = 1.0f;
+	TwoDCloudsDayTimeSkyTintStrength = 0.1f;
+	TwoDCloudsNightTimeSkyTintStrength = 0.9f;
 	VolumCloudMovingSpeed = 0.5f;
 	VolumCloudLayerBottomAltitude = 7.0f;
 	VolumCloudLayerHeight = 8.0f;
@@ -162,12 +176,26 @@ ADynamicSky::ADynamicSky()
 	EnsureSkyManagerTag();
 }
 
+void ADynamicSky::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	EnsureSkyManagerTag();
+	InitializeDynamicMaterials();
+	ResetCloudSyncBase();
+	UpdateDayNightState(false);
+	ApplySunMoonSettings();
+	ApplySkyMaterialVisibilitySettings();
+	ApplyCloudComponentSettings();
+}
+
 void ADynamicSky::BeginPlay()
 {
 	Super::BeginPlay();
 
 	EnsureSkyManagerTag();
 	InitializeDynamicMaterials();
+	ResetCloudSyncBase();
 	UpdateDayNightState(false);
 	RefreshSkyFromState();
 	BP_OnSkyInitialized();
@@ -180,7 +208,10 @@ void ADynamicSky::Tick(float DeltaTime)
 	if (HasAuthority())
 	{
 		AdvanceTime(DeltaTime);
+		AdvanceCloudTime(DeltaTime);
 	}
+
+	ApplyCloudTimeToMaterial();
 }
 
 void ADynamicSky::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -204,6 +235,12 @@ void ADynamicSky::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 
 void ADynamicSky::SaveData_Implementation(FActorSaveData& OutData)
 {
+	if (HasAuthority())
+	{
+		CloudAccumulatedTime = CalculateCurrentCloudTime();
+		ResetCloudSyncBase();
+	}
+
 	Super::SaveData_Implementation(OutData);
 }
 
@@ -213,6 +250,7 @@ void ADynamicSky::LoadData_Implementation(const FActorSaveData& InData)
 
 	EnsureSkyManagerTag();
 	InitializeDynamicMaterials();
+	ResetCloudSyncBase();
 	UpdateDayNightState(false);
 	RefreshSkyFromState();
 	BP_OnSkyStateRestored();
@@ -276,7 +314,11 @@ void ADynamicSky::InitializeDynamicMaterials()
 			SourceMaterial = SkySphereMaterial;
 		}
 
-		if (SourceMaterial)
+		if (UMaterialInstanceDynamic* ExistingMID = Cast<UMaterialInstanceDynamic>(SourceMaterial))
+		{
+			SkySphereMID = ExistingMID;
+		}
+		else if (SourceMaterial)
 		{
 			SkySphereMID = SkySphereMesh->CreateDynamicMaterialInstance(0, SourceMaterial);
 		}
@@ -306,6 +348,7 @@ void ADynamicSky::InitializeDynamicMaterials()
 void ADynamicSky::RefreshSkyFromState()
 {
 	ApplySunMoonSettings();
+	ApplySkyMaterialVisibilitySettings();
 	ApplyCloudComponentSettings();
 	BP_OnSkyStateApplied();
 }
@@ -375,12 +418,7 @@ void ADynamicSky::OnRep_IsCurrentlyNight()
 
 void ADynamicSky::OnRep_CloudAccumulatedTime()
 {
-	CloudSyncBaseTime = CloudAccumulatedTime;
-	if (const UWorld* World = GetWorld())
-	{
-		CloudSyncBaseLocalTime = World->GetTimeSeconds();
-	}
-
+	ResetCloudSyncBase();
 	RefreshSkyFromState();
 }
 
@@ -465,37 +503,131 @@ void ADynamicSky::ApplySunMoonSettings()
 
 	if (bControlSunMoonVisibility)
 	{
-		const bool bShouldShowMoon = bIsCurrentlyNight;
-		const bool bShouldShowSun = !bIsCurrentlyNight;
+		const bool bShowMoonLight = bIsCurrentlyNight && bShouldShowMoon;
+		const bool bShowSunLight = !bIsCurrentlyNight && bShouldShowSun;
 
 		if (SunDirectionalLight)
 		{
-			SunDirectionalLight->SetVisibility(bShouldShowSun, true);
-			SunDirectionalLight->SetHiddenInGame(!bShouldShowSun);
+			SunDirectionalLight->SetVisibility(bShowSunLight, true);
+			SunDirectionalLight->SetHiddenInGame(!bShowSunLight);
 		}
 
 		if (MoonDirectionalLight)
 		{
-			MoonDirectionalLight->SetVisibility(bShouldShowMoon, true);
-			MoonDirectionalLight->SetHiddenInGame(!bShouldShowMoon);
+			MoonDirectionalLight->SetVisibility(bShowMoonLight, true);
+			MoonDirectionalLight->SetHiddenInGame(!bShowMoonLight);
 		}
 	}
 }
 
+void ADynamicSky::ApplySkyMaterialVisibilitySettings()
+{
+	if (!SkySphereMID || !bControlSunMoonVisibility)
+	{
+		return;
+	}
+
+	const bool bShowSun = !bIsCurrentlyNight && bShouldShowSun;
+	const bool bShowMoon = bIsCurrentlyNight && bShouldShowMoon;
+	const bool bShowStars = bIsCurrentlyNight && bShouldShowStars;
+
+	SkySphereMID->SetScalarParameterValue(DynamicSkyParameterNames::IsSunVisible, bShowSun ? 1.0f : 0.0f);
+	SkySphereMID->SetScalarParameterValue(DynamicSkyParameterNames::IsMoonVisible, bShowMoon ? 1.0f : 0.0f);
+	SkySphereMID->SetScalarParameterValue(DynamicSkyParameterNames::IsStarVisible, bShowStars ? 1.0f : 0.0f);
+}
+
 void ADynamicSky::ApplyCloudComponentSettings()
 {
+	const bool bShow2DClouds = CurrentCloudMode == EDynamicSkyCloudMode::TwoDClouds;
+	if (SkySphereMID)
+	{
+		SkySphereMID->SetScalarParameterValue(
+			DynamicSkyParameterNames::Is2DCloudVisible,
+			bShow2DClouds ? 1.0f : 0.0f);
+
+		const float SkyTintStrength = bIsCurrentlyNight
+			? TwoDCloudsNightTimeSkyTintStrength
+			: TwoDCloudsDayTimeSkyTintStrength;
+		const FLinearColor TwoDCloudSettings(
+			TwoDCloudsTiling,
+			TwoDCloudsPanningSpeed,
+			TwoDCloudsBrightness,
+			SkyTintStrength);
+		SkySphereMID->SetVectorParameterValue(DynamicSkyParameterNames::TwoDCloudSettings, TwoDCloudSettings);
+	}
+
 	if (VolumetricCloud)
 	{
 		const bool bShowVolumetricCloud = CurrentCloudMode == EDynamicSkyCloudMode::VolumetricClouds;
 		VolumetricCloud->SetVisibility(bShowVolumetricCloud, true);
 		VolumetricCloud->SetHiddenInGame(!bShowVolumetricCloud);
+		VolumetricCloud->SetLayerBottomAltitude(VolumCloudLayerBottomAltitude);
+		VolumetricCloud->SetLayerHeight(VolumCloudLayerHeight);
 	}
 
 	if (VolumetricCloudMID)
 	{
 		VolumetricCloudMID->SetScalarParameterValue(DynamicSkyParameterNames::PanningSpeed, VolumCloudMovingSpeed);
-		VolumetricCloudMID->SetScalarParameterValue(DynamicSkyParameterNames::Panning, CloudAccumulatedTime);
 	}
+
+	ApplyCloudTimeToMaterial();
+}
+
+void ADynamicSky::ApplyCloudTimeToMaterial()
+{
+	if (!VolumetricCloudMID)
+	{
+		return;
+	}
+
+	VolumetricCloudMID->SetScalarParameterValue(
+		DynamicSkyParameterNames::CloudSyncTime,
+		CalculateCurrentCloudTime());
+}
+
+void ADynamicSky::AdvanceCloudTime(float DeltaTime)
+{
+	if (DeltaTime <= 0.0f)
+	{
+		return;
+	}
+
+	CloudSyncUpdateElapsed += DeltaTime;
+	const float EffectiveSyncInterval = FMath::Max(CloudSyncInterval, 0.05f);
+	if (CloudSyncUpdateElapsed < EffectiveSyncInterval)
+	{
+		return;
+	}
+
+	CloudAccumulatedTime = CalculateCurrentCloudTime();
+	ResetCloudSyncBase();
+	ForceNetUpdate();
+}
+
+void ADynamicSky::ResetCloudSyncBase()
+{
+	CloudSyncBaseTime = CloudAccumulatedTime;
+	CloudSyncUpdateElapsed = 0.0f;
+
+	if (const UWorld* World = GetWorld())
+	{
+		CloudSyncBaseLocalTime = World->GetTimeSeconds();
+	}
+	else
+	{
+		CloudSyncBaseLocalTime = 0.0f;
+	}
+}
+
+float ADynamicSky::CalculateCurrentCloudTime() const
+{
+	if (const UWorld* World = GetWorld())
+	{
+		const float ElapsedLocalTime = FMath::Max(World->GetTimeSeconds() - CloudSyncBaseLocalTime, 0.0f);
+		return CloudSyncBaseTime + ElapsedLocalTime;
+	}
+
+	return CloudAccumulatedTime;
 }
 
 void ADynamicSky::UpdateDayNightState(bool bBroadcastEvents)
