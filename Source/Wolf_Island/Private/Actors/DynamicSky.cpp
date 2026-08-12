@@ -1,5 +1,7 @@
 #include "Actors/DynamicSky.h"
 
+#include "AI/Enemy_Character/EnemyAIBase.h"
+#include "Camera/PlayerCameraManager.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/PostProcessComponent.h"
@@ -8,14 +10,20 @@
 #include "Components/SkyLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/VolumetricCloudComponent.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
+#include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Moon/EclipseManagerComponent.h"
+#include "Moon/MoonlightInfectionSystem.h"
 #include "Net/UnrealNetwork.h"
+#include "TimerManager.h"
 
 namespace DynamicSkyParameterNames
 {
 	static constexpr float FullDayHours = 24.0f;
 	static constexpr float SecondsPerMinute = 60.0f;
+	static constexpr float Ver3DayNightTransitionOffsetHours = 0.15f;
 
 	static const FName IsMoonVisible(TEXT("IsMoonVisible"));
 	static const FName IsStarVisible(TEXT("IsStarVisible"));
@@ -80,6 +88,7 @@ ADynamicSky::ADynamicSky()
 	SunDirectionalLight = CreateDefaultSubobject<UDirectionalLightComponent>(TEXT("SunDirectionalLight"));
 	SunDirectionalLight->SetupAttachment(DefaultSceneRoot);
 	SunDirectionalLight->SetIntensity(10.0f);
+	SunDirectionalLight->SetLightSourceAngle(0.0f);
 	SunDirectionalLight->SetAtmosphereSunLight(true);
 	SunDirectionalLight->SetAtmosphereSunLightIndex(0);
 
@@ -119,18 +128,32 @@ ADynamicSky::ADynamicSky()
 	DawnTime = 6.0f;
 	DuskTime = 18.0f;
 	MorningTime = 6.0f;
+	FadeDuration = 1.5f;
 	DayLengthMinutes = 24.0f;
 	DaysPassed = 0;
 	CurrentDay = 0;
 	bTimePaused = false;
 	bIsCurrentlyNight = false;
 	bMidnightTriggered = false;
+	MoonlightInfectionSystem = nullptr;
+	bNightSystemActivated = false;
+	bEnemyFormRefreshScheduled = false;
+	bMorningSkipInProgress = false;
 
 	bControlSunMoonRotation = true;
 	bControlSunMoonVisibility = true;
 	bShouldShowSun = true;
 	bShouldShowMoon = true;
 	bShouldShowStars = true;
+	MoonLightIntensity = 1.0f;
+	MoonLightColor = FLinearColor(193.0f, 193.0f, 193.0f, 255.0f);
+	MoonLightSourceAngle = 0.0f;
+	MoonLightTemperature = 8000.0f;
+	bUseMoonLightTemperature = true;
+	DaytimeRayleighScattering = FLinearColor(0.175287f, 0.409607f, 1.0f, 30.211479f);
+	DaytimeMultiScatteringFactor = 1.0f;
+	NighttimeRayleighScattering = FLinearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	NighttimeMultiScatteringFactor = 0.5f;
 	SunHorizonPitch = 0.0f;
 	SunNoonPitch = -90.0f;
 	SunPitchAtDawn = -180.0f;
@@ -185,6 +208,7 @@ void ADynamicSky::OnConstruction(const FTransform& Transform)
 	ResetCloudSyncBase();
 	UpdateDayNightState(false);
 	ApplySunMoonSettings();
+	ApplyDayNightEnvironmentSettings();
 	ApplySkyMaterialVisibilitySettings();
 	ApplyCloudComponentSettings();
 }
@@ -197,8 +221,39 @@ void ADynamicSky::BeginPlay()
 	InitializeDynamicMaterials();
 	ResetCloudSyncBase();
 	UpdateDayNightState(false);
+
+	if (HasAuthority())
+	{
+		if (UWorld* World = GetWorld())
+		{
+			ActorSpawnedDelegateHandle = World->AddOnActorSpawnedHandler(
+				FOnActorSpawned::FDelegate::CreateUObject(this, &ADynamicSky::HandleActorSpawned));
+		}
+
+		RegisterExistingEnemies();
+		UpdateNightSystemActivation(bIsCurrentlyNight);
+	}
+
 	RefreshSkyFromState();
 	BP_OnSkyInitialized();
+}
+
+void ADynamicSky::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (UWorld* World = GetWorld())
+	{
+		if (ActorSpawnedDelegateHandle.IsValid())
+		{
+			World->RemoveOnActorSpawnedHandler(ActorSpawnedDelegateHandle);
+			ActorSpawnedDelegateHandle.Reset();
+		}
+
+		World->GetTimerManager().ClearAllTimersForObject(this);
+	}
+
+	bEnemyFormRefreshScheduled = false;
+	bMorningSkipInProgress = false;
+	Super::EndPlay(EndPlayReason);
 }
 
 void ADynamicSky::Tick(float DeltaTime)
@@ -263,7 +318,7 @@ void ADynamicSky::LoadData_Implementation(const FActorSaveData& InData)
 
 void ADynamicSky::RemoveEnemy_Implementation(AActor* EnemyActor)
 {
-	if (!EnemyActor)
+	if (!HasAuthority() || !EnemyActor)
 	{
 		return;
 	}
@@ -273,13 +328,39 @@ void ADynamicSky::RemoveEnemy_Implementation(AActor* EnemyActor)
 
 void ADynamicSky::SkipToMorning_Implementation()
 {
-	if (!HasAuthority())
+	if (!HasAuthority() || bMorningSkipInProgress)
 	{
 		return;
 	}
 
+	bMorningSkipInProgress = true;
+	bTimePaused = true;
+
 	OnMorningSkipStarted.Broadcast();
-	BP_OnMorningSkipStarted();
+	MulticastStartMorningSkipFade();
+	ForceNetUpdate();
+
+	const float ClampedFadeDuration = FMath::Max(FadeDuration, 0.0f);
+	if (ClampedFadeDuration <= KINDA_SMALL_NUMBER)
+	{
+		CompleteMorningSkipAfterFadeOut();
+		return;
+	}
+
+	GetWorldTimerManager().SetTimer(
+		MorningSkipFadeOutTimerHandle,
+		this,
+		&ADynamicSky::CompleteMorningSkipAfterFadeOut,
+		ClampedFadeDuration,
+		false);
+}
+
+void ADynamicSky::CompleteMorningSkipAfterFadeOut()
+{
+	if (!HasAuthority() || !bMorningSkipInProgress)
+	{
+		return;
+	}
 
 	if (TimeOfDay > MorningTime)
 	{
@@ -289,18 +370,70 @@ void ADynamicSky::SkipToMorning_Implementation()
 
 	TimeOfDay = DynamicSkyParameterNames::NormalizeTimeOfDay(MorningTime);
 	DynamicTimeOfDay = TimeOfDay;
-	bIsCurrentlyNight = false;
 	bMidnightTriggered = false;
 
+	UpdateDayNightState(true);
 	RefreshSkyFromState();
-
-	OnDayStarted.Broadcast();
-	BP_OnDayStarted();
 
 	ForceNetUpdate();
 
 	OnMorningSkipFinished.Broadcast();
+	MulticastFinishMorningSkipFade();
+
+	const float ClampedFadeDuration = FMath::Max(FadeDuration, 0.0f);
+	if (ClampedFadeDuration <= KINDA_SMALL_NUMBER)
+	{
+		CompleteMorningSkipAfterFadeIn();
+		return;
+	}
+
+	GetWorldTimerManager().SetTimer(
+		MorningSkipFadeInTimerHandle,
+		this,
+		&ADynamicSky::CompleteMorningSkipAfterFadeIn,
+		ClampedFadeDuration,
+		false);
+}
+
+void ADynamicSky::CompleteMorningSkipAfterFadeIn()
+{
+	if (!HasAuthority() || !bMorningSkipInProgress)
+	{
+		return;
+	}
+
+	bTimePaused = false;
+	bMorningSkipInProgress = false;
+	ForceNetUpdate();
+}
+
+void ADynamicSky::MulticastStartMorningSkipFade_Implementation()
+{
+	ApplyMorningSkipCameraFade(0.0f, 1.0f, true);
+	BP_OnMorningSkipStarted();
+}
+
+void ADynamicSky::MulticastFinishMorningSkipFade_Implementation()
+{
+	ApplyMorningSkipCameraFade(1.0f, 0.0f, false);
 	BP_OnMorningSkipFinished();
+}
+
+void ADynamicSky::ApplyMorningSkipCameraFade(float FromAlpha, float ToAlpha, bool bHoldWhenFinished)
+{
+	APlayerCameraManager* PlayerCameraManager = UGameplayStatics::GetPlayerCameraManager(this, 0);
+	if (!IsValid(PlayerCameraManager))
+	{
+		return;
+	}
+
+	PlayerCameraManager->StartCameraFade(
+		FromAlpha,
+		ToAlpha,
+		FMath::Max(FadeDuration, 0.0f),
+		FLinearColor::Black,
+		true,
+		bHoldWhenFinished);
 }
 
 void ADynamicSky::InitializeDynamicMaterials()
@@ -348,6 +481,7 @@ void ADynamicSky::InitializeDynamicMaterials()
 void ADynamicSky::RefreshSkyFromState()
 {
 	ApplySunMoonSettings();
+	ApplyDayNightEnvironmentSettings();
 	ApplySkyMaterialVisibilitySettings();
 	ApplyCloudComponentSettings();
 	BP_OnSkyStateApplied();
@@ -379,12 +513,17 @@ float ADynamicSky::GetTimeSpeedHoursPerSecond() const
 
 void ADynamicSky::RegisterEnemy(AActor* EnemyActor)
 {
-	if (!EnemyActor)
+	if (!HasAuthority() || !IsValid(Cast<AEnemyAIBase>(EnemyActor)))
 	{
 		return;
 	}
 
 	RegisteredEnemies.AddUnique(EnemyActor);
+
+	if (HasActorBegunPlay())
+	{
+		ScheduleEnemyFormRefresh();
+	}
 }
 
 void ADynamicSky::SetCloudMode(EDynamicSkyCloudMode NewCloudMode)
@@ -520,6 +659,30 @@ void ADynamicSky::ApplySunMoonSettings()
 	}
 }
 
+void ADynamicSky::ApplyDayNightEnvironmentSettings()
+{
+	if (MoonDirectionalLight)
+	{
+		MoonDirectionalLight->SetUseTemperature(bUseMoonLightTemperature);
+
+		if (bIsCurrentlyNight)
+		{
+			MoonDirectionalLight->SetIntensity(MoonLightIntensity);
+			MoonDirectionalLight->SetLightColor(MoonLightColor);
+			MoonDirectionalLight->SetLightSourceAngle(MoonLightSourceAngle);
+			MoonDirectionalLight->SetTemperature(MoonLightTemperature);
+		}
+	}
+
+	if (SkyAtmosphere)
+	{
+		SkyAtmosphere->SetRayleighScattering(
+			bIsCurrentlyNight ? NighttimeRayleighScattering : DaytimeRayleighScattering);
+		SkyAtmosphere->SetMultiScatteringFactor(
+			bIsCurrentlyNight ? NighttimeMultiScatteringFactor : DaytimeMultiScatteringFactor);
+	}
+}
+
 void ADynamicSky::ApplySkyMaterialVisibilitySettings()
 {
 	if (!SkySphereMID || !bControlSunMoonVisibility)
@@ -633,44 +796,163 @@ float ADynamicSky::CalculateCurrentCloudTime() const
 void ADynamicSky::UpdateDayNightState(bool bBroadcastEvents)
 {
 	const bool bNewNightState = IsNightTime(TimeOfDay);
-	if (bIsCurrentlyNight == bNewNightState)
+	const bool bStateChanged = bIsCurrentlyNight != bNewNightState;
+
+	if (bStateChanged)
+	{
+		bIsCurrentlyNight = bNewNightState;
+	}
+
+	if (bStateChanged && bBroadcastEvents)
+	{
+		if (bIsCurrentlyNight)
+		{
+			OnNightStarted.Broadcast();
+			BP_OnNightStarted();
+		}
+		else
+		{
+			OnDayStarted.Broadcast();
+			BP_OnDayStarted();
+		}
+	}
+
+	if (HasAuthority() && HasActorBegunPlay())
+	{
+		UpdateNightSystemActivation(bIsCurrentlyNight);
+
+		if (bStateChanged)
+		{
+			ApplyEnemyFormsToRegisteredEnemies();
+		}
+	}
+}
+
+void ADynamicSky::UpdateNightSystemActivation(bool bShouldActivate)
+{
+	if (!HasAuthority() || bNightSystemActivated == bShouldActivate)
 	{
 		return;
 	}
 
-	bIsCurrentlyNight = bNewNightState;
-
-	if (!bBroadcastEvents)
+	AMoonlightInfectionSystem* InfectionSystem = ResolveMoonlightInfectionSystem();
+	if (!IsValid(InfectionSystem))
 	{
 		return;
 	}
 
-	if (bIsCurrentlyNight)
+	if (bShouldActivate)
 	{
-		OnNightStarted.Broadcast();
-		BP_OnNightStarted();
+		InfectionSystem->ActivateInfectionCheck();
 	}
 	else
 	{
-		OnDayStarted.Broadcast();
-		BP_OnDayStarted();
+		InfectionSystem->DeactivateInfectionCheck();
 	}
+
+	bNightSystemActivated = bShouldActivate;
+}
+
+AMoonlightInfectionSystem* ADynamicSky::ResolveMoonlightInfectionSystem()
+{
+	if (IsValid(MoonlightInfectionSystem))
+	{
+		return MoonlightInfectionSystem;
+	}
+
+	MoonlightInfectionSystem = Cast<AMoonlightInfectionSystem>(
+		UGameplayStatics::GetActorOfClass(GetWorld(), AMoonlightInfectionSystem::StaticClass()));
+
+	return MoonlightInfectionSystem;
+}
+
+void ADynamicSky::RegisterExistingEnemies()
+{
+	if (!HasAuthority() || !GetWorld())
+	{
+		return;
+	}
+
+	for (TActorIterator<AEnemyAIBase> EnemyIterator(GetWorld()); EnemyIterator; ++EnemyIterator)
+	{
+		RegisterEnemy(*EnemyIterator);
+	}
+}
+
+void ADynamicSky::HandleActorSpawned(AActor* SpawnedActor)
+{
+	if (!HasAuthority() || !IsValid(Cast<AEnemyAIBase>(SpawnedActor)))
+	{
+		return;
+	}
+
+	RegisterEnemy(SpawnedActor);
+}
+
+void ADynamicSky::ScheduleEnemyFormRefresh()
+{
+	if (!HasAuthority() || bEnemyFormRefreshScheduled || !GetWorld())
+	{
+		return;
+	}
+
+	bEnemyFormRefreshScheduled = true;
+	GetWorldTimerManager().SetTimerForNextTick(
+		FTimerDelegate::CreateUObject(this, &ADynamicSky::HandleScheduledEnemyFormRefresh));
+}
+
+void ADynamicSky::HandleScheduledEnemyFormRefresh()
+{
+	bEnemyFormRefreshScheduled = false;
+	ApplyEnemyFormsToRegisteredEnemies();
+}
+
+void ADynamicSky::ApplyEnemyFormsToRegisteredEnemies()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	for (int32 EnemyIndex = RegisteredEnemies.Num() - 1; EnemyIndex >= 0; --EnemyIndex)
+	{
+		AEnemyAIBase* EnemyActor = Cast<AEnemyAIBase>(RegisteredEnemies[EnemyIndex]);
+		if (!IsValid(EnemyActor))
+		{
+			RegisteredEnemies.RemoveAtSwap(EnemyIndex);
+			continue;
+		}
+
+		ApplyEnemyForm(EnemyActor);
+	}
+}
+
+void ADynamicSky::ApplyEnemyForm(AEnemyAIBase* EnemyActor) const
+{
+	if (!HasAuthority() || !IsValid(EnemyActor))
+	{
+		return;
+	}
+
+	EnemyActor->ServerChangeForm(bIsCurrentlyNight ? EEnemyForm::Wolf : EEnemyForm::Human);
 }
 
 bool ADynamicSky::IsNightTime(float TestTimeOfDay) const
 {
 	const float NormalizedTime = DynamicSkyParameterNames::NormalizeTimeOfDay(TestTimeOfDay);
-	const float NormalizedDawn = DynamicSkyParameterNames::NormalizeTimeOfDay(DawnTime);
-	const float NormalizedDusk = DynamicSkyParameterNames::NormalizeTimeOfDay(DuskTime);
+	const float NormalizedDayStart = DynamicSkyParameterNames::NormalizeTimeOfDay(
+		DawnTime - DynamicSkyParameterNames::Ver3DayNightTransitionOffsetHours);
+	const float NormalizedDayEnd = DynamicSkyParameterNames::NormalizeTimeOfDay(
+		DuskTime + DynamicSkyParameterNames::Ver3DayNightTransitionOffsetHours);
 
-	if (FMath::IsNearlyEqual(NormalizedDawn, NormalizedDusk))
+	if (FMath::IsNearlyEqual(NormalizedDayStart, NormalizedDayEnd))
 	{
 		return false;
 	}
 
-	const bool bIsDaytime = NormalizedDawn < NormalizedDusk
-		? NormalizedTime >= NormalizedDawn && NormalizedTime < NormalizedDusk
-		: NormalizedTime >= NormalizedDawn || NormalizedTime < NormalizedDusk;
+	const bool bIsDaytime = NormalizedDayStart < NormalizedDayEnd
+		? NormalizedTime > NormalizedDayStart && NormalizedTime < NormalizedDayEnd
+		: NormalizedTime > NormalizedDayStart || NormalizedTime < NormalizedDayEnd;
 
 	return !bIsDaytime;
 }

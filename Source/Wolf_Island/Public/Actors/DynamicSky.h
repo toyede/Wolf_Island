@@ -16,6 +16,8 @@ class UStaticMeshComponent;
 class UVolumetricCloudComponent;
 class UEclipseManagerComponent;
 class FLifetimeProperty;
+class AEnemyAIBase;
+class AMoonlightInfectionSystem;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDynamicSkyEvent);
 
@@ -93,6 +95,7 @@ public:
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DynamicSky|Components")
 	USceneComponent* DefaultSceneRoot;
@@ -151,6 +154,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|Time", meta = (ClampMin = "0.0", ClampMax = "24.0"))
 	float MorningTime;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|Time|Morning Skip", meta = (ClampMin = "0.0"))
+	float FadeDuration;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, SaveGame, Category = "DynamicSky|Time", meta = (ClampMin = "0.001", UIMin = "1.0"))
 	float DayLengthMinutes;
 
@@ -183,6 +189,33 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon|Visibility")
 	bool bShouldShowStars;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon|Moon Light", meta = (ClampMin = "0.0"))
+	float MoonLightIntensity;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon|Moon Light")
+	FLinearColor MoonLightColor;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon|Moon Light", meta = (ClampMin = "0.0"))
+	float MoonLightSourceAngle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon|Moon Light", meta = (ClampMin = "0.0"))
+	float MoonLightTemperature;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon|Moon Light")
+	bool bUseMoonLightTemperature;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|Atmosphere|Day")
+	FLinearColor DaytimeRayleighScattering;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|Atmosphere|Day", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float DaytimeMultiScatteringFactor;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|Atmosphere|Night")
+	FLinearColor NighttimeRayleighScattering;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|Atmosphere|Night", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float NighttimeMultiScatteringFactor;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|SunMoon|Legacy", meta = (ToolTip = "Legacy interpolation value. The ver3 rotation path does not read this value."))
 	float SunHorizonPitch;
@@ -301,6 +334,15 @@ protected:
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "DynamicSky|Enemies")
 	TArray<AActor*> RegisteredEnemies;
 
+	UPROPERTY(Transient)
+	TObjectPtr<AMoonlightInfectionSystem> MoonlightInfectionSystem;
+
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "DynamicSky|Night")
+	bool bNightSystemActivated;
+
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "DynamicSky|Time|Morning Skip")
+	bool bMorningSkipInProgress;
+
 	UFUNCTION()
 	void OnRep_TimeOfDay();
 
@@ -318,6 +360,12 @@ protected:
 
 	UFUNCTION()
 	void OnRep_EclipseState();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastStartMorningSkipFade();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastFinishMorningSkipFade();
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "DynamicSky|Events")
 	void BP_OnSkyInitialized();
@@ -345,12 +393,24 @@ protected:
 
 	void AdvanceTime(float DeltaTime);
 	void ApplySunMoonSettings();
+	void ApplyDayNightEnvironmentSettings();
 	void ApplySkyMaterialVisibilitySettings();
 	void ApplyCloudComponentSettings();
 	void ApplyCloudTimeToMaterial();
 	void AdvanceCloudTime(float DeltaTime);
 	void ResetCloudSyncBase();
 	void UpdateDayNightState(bool bBroadcastEvents);
+	void UpdateNightSystemActivation(bool bShouldActivate);
+	AMoonlightInfectionSystem* ResolveMoonlightInfectionSystem();
+	void RegisterExistingEnemies();
+	void HandleActorSpawned(AActor* SpawnedActor);
+	void ScheduleEnemyFormRefresh();
+	void HandleScheduledEnemyFormRefresh();
+	void ApplyEnemyFormsToRegisteredEnemies();
+	void ApplyEnemyForm(AEnemyAIBase* EnemyActor) const;
+	void CompleteMorningSkipAfterFadeOut();
+	void CompleteMorningSkipAfterFadeIn();
+	void ApplyMorningSkipCameraFade(float FromAlpha, float ToAlpha, bool bHoldWhenFinished);
 	bool IsNightTime(float TestTimeOfDay) const;
 	float CalculateCurrentCloudTime() const;
 	float CalculateSunPitch(float TestTimeOfDay) const;
@@ -358,4 +418,8 @@ protected:
 	void EnsureSkyManagerTag();
 
 	float CloudSyncUpdateElapsed;
+	FDelegateHandle ActorSpawnedDelegateHandle;
+	bool bEnemyFormRefreshScheduled;
+	FTimerHandle MorningSkipFadeOutTimerHandle;
+	FTimerHandle MorningSkipFadeInTimerHandle;
 };
