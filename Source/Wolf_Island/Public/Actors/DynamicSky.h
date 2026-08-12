@@ -86,10 +86,10 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "DynamicSky|Events")
 	FDynamicSkyEvent OnMorningSkipFinished;
 
-	UPROPERTY(BlueprintAssignable, Category = "DynamicSky|Events")
+	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "DynamicSky|Events")
 	FDynamicSkyEvent OnEclipseTotalityStarted;
 
-	UPROPERTY(BlueprintAssignable, Category = "DynamicSky|Events")
+	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "DynamicSky|Events")
 	FDynamicSkyEvent OnEclipseTotalityEnded;
 
 protected:
