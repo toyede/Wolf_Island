@@ -391,6 +391,11 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "DynamicSky|Events")
 	void BP_OnEclipseStateChanged(EDynamicSkyEclipseState NewState);
 
+	// Runs on the authoritative sky actor. BP_DynamicSky_ver4 should use this
+	// event only to call its existing Reliable NetMulticast StartEclipse event.
+	UFUNCTION(BlueprintImplementableEvent, Category = "DynamicSky|Eclipse")
+	void BP_RequestEclipseStart();
+
 	void AdvanceTime(float DeltaTime);
 	void ApplySunMoonSettings();
 	void ApplyDayNightEnvironmentSettings();
@@ -408,6 +413,11 @@ protected:
 	void HandleScheduledEnemyFormRefresh();
 	void ApplyEnemyFormsToRegisteredEnemies();
 	void ApplyEnemyForm(AEnemyAIBase* EnemyActor) const;
+	void HandleNewDay();
+	void SynchronizeEclipseStateFromManager();
+	void RestoreEclipseManagerFromSavedState();
+	void SetEclipseState(EDynamicSkyEclipseState NewState);
+	void TryStartScheduledEclipse();
 	void CompleteMorningSkipAfterFadeOut();
 	void CompleteMorningSkipAfterFadeIn();
 	void ApplyMorningSkipCameraFade(float FromAlpha, float ToAlpha, bool bHoldWhenFinished);

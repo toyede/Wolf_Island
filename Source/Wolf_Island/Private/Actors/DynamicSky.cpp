@@ -24,6 +24,7 @@ namespace DynamicSkyParameterNames
 	static constexpr float FullDayHours = 24.0f;
 	static constexpr float SecondsPerMinute = 60.0f;
 	static constexpr float Ver3DayNightTransitionOffsetHours = 0.15f;
+	static constexpr float EclipseStartHour = 12.0f;
 
 	static const FName IsMoonVisible(TEXT("IsMoonVisible"));
 	static const FName IsStarVisible(TEXT("IsStarVisible"));
@@ -263,6 +264,8 @@ void ADynamicSky::Tick(float DeltaTime)
 	if (HasAuthority())
 	{
 		AdvanceTime(DeltaTime);
+		SynchronizeEclipseStateFromManager();
+		TryStartScheduledEclipse();
 		AdvanceCloudTime(DeltaTime);
 	}
 
@@ -292,6 +295,7 @@ void ADynamicSky::SaveData_Implementation(FActorSaveData& OutData)
 {
 	if (HasAuthority())
 	{
+		SynchronizeEclipseStateFromManager();
 		CloudAccumulatedTime = CalculateCurrentCloudTime();
 		ResetCloudSyncBase();
 	}
@@ -302,6 +306,11 @@ void ADynamicSky::SaveData_Implementation(FActorSaveData& OutData)
 void ADynamicSky::LoadData_Implementation(const FActorSaveData& InData)
 {
 	Super::LoadData_Implementation(InData);
+
+	if (HasAuthority())
+	{
+		RestoreEclipseManagerFromSavedState();
+	}
 
 	EnsureSkyManagerTag();
 	InitializeDynamicMaterials();
@@ -362,10 +371,12 @@ void ADynamicSky::CompleteMorningSkipAfterFadeOut()
 		return;
 	}
 
-	if (TimeOfDay > MorningTime)
+	const bool bAdvancedToNextDay = TimeOfDay > MorningTime;
+	if (bAdvancedToNextDay)
 	{
 		++DaysPassed;
 		++CurrentDay;
+		HandleNewDay();
 	}
 
 	TimeOfDay = DynamicSkyParameterNames::NormalizeTimeOfDay(MorningTime);
@@ -498,6 +509,8 @@ void ADynamicSky::SetTimeOfDay(float NewTimeOfDay)
 	DynamicTimeOfDay = TimeOfDay;
 	UpdateDayNightState(true);
 	RefreshSkyFromState();
+	SynchronizeEclipseStateFromManager();
+	TryStartScheduledEclipse();
 	ForceNetUpdate();
 }
 
@@ -597,6 +610,7 @@ void ADynamicSky::AdvanceTime(float DeltaTime)
 		DaysPassed += WrappedDays;
 		CurrentDay += WrappedDays;
 		bMidnightTriggered = true;
+		HandleNewDay();
 	}
 	else if (TimeOfDay >= PreviousTime)
 	{
@@ -935,6 +949,90 @@ void ADynamicSky::ApplyEnemyForm(AEnemyAIBase* EnemyActor) const
 	}
 
 	EnemyActor->ServerChangeForm(bIsCurrentlyNight ? EEnemyForm::Wolf : EEnemyForm::Human);
+}
+
+void ADynamicSky::HandleNewDay()
+{
+	if (!HasAuthority() || !IsValid(EclipseManager))
+	{
+		return;
+	}
+
+	EclipseManager->Server_OnNewDay(CurrentDay);
+	SynchronizeEclipseStateFromManager();
+}
+
+void ADynamicSky::SynchronizeEclipseStateFromManager()
+{
+	if (!HasAuthority() || !IsValid(EclipseManager))
+	{
+		return;
+	}
+
+	const bool bPreviousEclipseOccurred = bEclipseOccurred;
+	const bool bPreviousEclipseTodayConfirmed = bEclipseTodayConfirmed;
+	bEclipseOccurred = EclipseManager->bEclipseOccurred;
+	bEclipseTodayConfirmed = EclipseManager->bEclipseTodayConfirmed;
+
+	EDynamicSkyEclipseState NewState = EclipseState;
+	if (bEclipseOccurred)
+	{
+		NewState = EDynamicSkyEclipseState::Finished;
+	}
+	else if (EclipseState != EDynamicSkyEclipseState::InProgress
+		&& EclipseState != EDynamicSkyEclipseState::Totality)
+	{
+		NewState = bEclipseTodayConfirmed
+			? EDynamicSkyEclipseState::Scheduled
+			: EDynamicSkyEclipseState::None;
+	}
+
+	SetEclipseState(NewState);
+
+	if (bPreviousEclipseOccurred != bEclipseOccurred
+		|| bPreviousEclipseTodayConfirmed != bEclipseTodayConfirmed)
+	{
+		ForceNetUpdate();
+	}
+}
+
+void ADynamicSky::RestoreEclipseManagerFromSavedState()
+{
+	if (!HasAuthority() || !IsValid(EclipseManager))
+	{
+		return;
+	}
+
+	EclipseManager->bEclipseOccurred = bEclipseOccurred;
+	EclipseManager->bEclipseTodayConfirmed = bEclipseTodayConfirmed;
+}
+
+void ADynamicSky::SetEclipseState(EDynamicSkyEclipseState NewState)
+{
+	if (!HasAuthority() || EclipseState == NewState)
+	{
+		return;
+	}
+
+	EclipseState = NewState;
+	BP_OnEclipseStateChanged(EclipseState);
+	ForceNetUpdate();
+}
+
+void ADynamicSky::TryStartScheduledEclipse()
+{
+	if (!HasAuthority()
+		|| !IsValid(EclipseManager)
+		|| TimeOfDay < DynamicSkyParameterNames::EclipseStartHour
+		|| EclipseState != EDynamicSkyEclipseState::Scheduled
+		|| !EclipseManager->bEclipseTodayConfirmed
+		|| EclipseManager->bEclipseOccurred)
+	{
+		return;
+	}
+
+	SetEclipseState(EDynamicSkyEclipseState::InProgress);
+	BP_RequestEclipseStart();
 }
 
 bool ADynamicSky::IsNightTime(float TestTimeOfDay) const
