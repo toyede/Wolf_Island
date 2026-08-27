@@ -633,6 +633,10 @@ public:
 	//리스폰 처리 함수
 	UFUNCTION(BlueprintCallable)
 	void OnRespawn();
+
+	//KSH-폰 파괴/리스폰 직전에 진행 중이던 동작(타이머, 몽타주, 인터랙션 참조)을 모두 정리하는 함수
+	UFUNCTION(BlueprintCallable)
+	void CancelAllActions();
 	
 	//카메라 복구 함수
 	UFUNCTION(Client, Reliable, BlueprintCallable)
