@@ -578,7 +578,15 @@ void AEnemyAIBase::OnAttackHit(const FHitResult& HitResult)
         DamageTypeClass = WolfAttackDamageType;
     }
     
-    UGameplayStatics::ApplyDamage(HitActor, AttackDamage, GetController(), this, DamageTypeClass);
+    //KSH-HitParticleComponent가 피격 지점/노멀을 쓸 수 있도록 PointDamage로 전달
+    UGameplayStatics::ApplyPointDamage(
+        HitActor,
+        AttackDamage,
+        -HitResult.ImpactNormal,
+        HitResult,
+        GetController(),
+        this,
+        DamageTypeClass);
 }
 
 float AEnemyAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -589,6 +597,14 @@ float AEnemyAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
     {
         return 0.f;
     }
+
+    //KSH-널가드: StatusComponent가 없으면 아래 전부가 크래시
+    if (!IsValid(StatusComponent))
+    {
+        UE_LOG(LogTemp, Error, TEXT("[EnemyAIBase] TakeDamage: StatusComponent is null on %s"), *GetName());
+        return ActualDamage;
+    }
+
     float OldHP = StatusComponent->CurrentHP;
     StatusComponent->DecreaseHP(ActualDamage);
     float NewHP = StatusComponent->CurrentHP;
@@ -607,7 +623,11 @@ float AEnemyAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
     {
         if (AEnemyAIController* AIC = Cast<AEnemyAIController>(GetController()))
         {
-			AIC->GetBlackboardComponent()->SetValueAsBool(FName("bIsHalfHP"), true);
+            //KSH-널가드: 비헤이비어 트리가 아직 안 돌거나 정지된 상태면 블랙보드가 null이다
+            if (UBlackboardComponent* BB = AIC->GetBlackboardComponent())
+            {
+                BB->SetValueAsBool(FName("bIsHalfHP"), true);
+            }
         }
     }
 
@@ -619,8 +639,12 @@ float AEnemyAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
         }
 
         FOnMontageEnded EmptyDelegate;
-        if (UAnimInstance* HumanAnim = GetMesh()->GetAnimInstance())
-            HumanAnim->Montage_SetEndDelegate(EmptyDelegate, nullptr);
+        //KSH-널가드: 메시가 없는 경우 방어
+        if (USkeletalMeshComponent* HumanMesh = GetMesh())
+        {
+            if (UAnimInstance* HumanAnim = HumanMesh->GetAnimInstance())
+                HumanAnim->Montage_SetEndDelegate(EmptyDelegate, nullptr);
+        }
 
         if (WolfMesh)
         {

@@ -21,6 +21,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 #include "AI/Enemy_Character/EnemyAIBoss.h"
+#include "Moon/MoonlightInfectionSystem.h" //KSH-아침 롤백 시 야간 상태 정리용
 #include "AI/Animal/AnimalBase.h"
 #include "Actors/AnimalSpawnPoint.h"
 #include "BehaviorTree/BlackboardComponent.h"
@@ -228,6 +229,15 @@ void AMainGameMode::SpawnBossForPortal(APortalActor* TriggeredPortal, const TArr
 	{
 		SpawnedBoss->OnBossCombatEnd.AddDynamic(TriggeredPortal->ExitPortal, &APortalActor::OnBossDefeated);
 	}
+	else
+	{
+		//KSH-여기서 바인딩에 실패하면 보스를 잡아도 탈출 포탈이 영영 열리지 않는다.
+		//(보스 처치 후 포탈 이동이 "될 때도 있고 안 될 때도 있는" 증상의 원인)
+		//HandleManagedBossDestroyed에서 보완 처리하므로 여기서는 원인 추적용 로그만 남긴다.
+		UE_LOG(LogTemp, Error,
+			TEXT("[GAMEMODE] Boss spawned but ExitPortal is invalid on portal %s - will fall back on boss death"),
+			*TriggeredPortal->GetName());
+	}
 
 	SpawnedBoss->BossParticipants.Reset();
 	for (AMainPlayer* PartyMember : PartyMembers)
@@ -267,6 +277,27 @@ void AMainGameMode::HandleManagedBossDestroyed(AActor* DestroyedActor)
 	{
 		if (It.Value().Get() == DestroyedBoss)
 		{
+			//KSH-보스 스폰 시점에 ExitPortal이 유효하지 않으면 OnBossCombatEnd 바인딩이 안 된다.
+			//보스가 "사망" 상태로 파괴됐다면 여기서 탈출 포탈을 직접 열어 준다.
+			//(전멸로 인한 FailBossCombat 경로는 bIsDead가 false이므로 열리지 않는다)
+			if (DestroyedBoss->bIsDead)
+			{
+				if (APortalActor* EntryPortal = It.Key().Get())
+				{
+					if (IsValid(EntryPortal->ExitPortal))
+					{
+						EntryPortal->ExitPortal->OnBossDefeated();
+						UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] Boss defeated - ExitPortal opened (fallback)"));
+					}
+					else
+					{
+						UE_LOG(LogTemp, Error,
+							TEXT("[GAMEMODE] Boss defeated but ExitPortal is still invalid on portal %s"),
+							*EntryPortal->GetName());
+					}
+				}
+			}
+
 			It.RemoveCurrent();
 			break;
 		}
@@ -329,12 +360,32 @@ void AMainGameMode::HandleStartingNewPlayer_Implementation(APlayerController* Ne
 void AMainGameMode:: RestartPlayer(AController* NewPlayer)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] MAINGAMEMODE RestartPlayer"))
-	if (NewPlayer->GetPawn())
+
+	//KSH-컨트롤러 널가드
+	if (!IsValid(NewPlayer))
 	{
-		NewPlayer->GetPawn()->Destroy();
-		NewPlayer->SetPawn(nullptr);
+		UE_LOG(LogTemp, Error, TEXT("[GAMEMODE] RestartPlayer: invalid controller"));
+		return;
 	}
-	
+
+	if (APawn* OldPawn = NewPlayer->GetPawn())
+	{
+		//KSH-사망 리스폰은 폰 자신의 콜스택(몽타주 콜백, 인터랙션 타이머, 공격 트레이스) 안에서
+		//호출되는 경우가 많다. 여기서 즉시 Destroy하면 반환 후 파괴된 폰에 접근해 파탈 에러가 난다.
+		//진행 중이던 동작을 먼저 끊고, 실제 파괴는 다음 프레임으로 미룬다.
+		if (AMainPlayer* OldMainPlayer = Cast<AMainPlayer>(OldPawn))
+		{
+			OldMainPlayer->CancelAllActions();
+		}
+
+		NewPlayer->UnPossess();
+		NewPlayer->SetPawn(nullptr);
+
+		OldPawn->SetActorEnableCollision(false);
+		OldPawn->SetActorHiddenInGame(true);
+		OldPawn->SetLifeSpan(0.05f);
+	}
+
 	Super::RestartPlayer(NewPlayer);
 }
 
@@ -915,11 +966,31 @@ void AMainGameMode::BackToMorning()
 	
 	//1. 월드 로드
 	LoadWorldFromSave(Save);
-	
+
+	//KSH-야간 상태(늑대인간 세션, 변신한 AI) 정리
+	ResetNightState();
+
 	//2. 플레이어 로드
 	LoadPlayers();
-	
+
 	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] LOAD MORNING COMPLETE"));
+}
+
+//KSH-월드를 아침으로 되돌릴 때 달빛 감염 시스템의 야간 상태를 함께 정리한다
+void AMainGameMode::ResetNightState()
+{
+	if (!HasAuthority()) return;
+
+	AMoonlightInfectionSystem* System = Cast<AMoonlightInfectionSystem>(
+		UGameplayStatics::GetActorOfClass(GetWorld(), AMoonlightInfectionSystem::StaticClass()));
+
+	if (!System)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] ResetNightState: MoonlightInfectionSystem not found in world"));
+		return;
+	}
+
+	System->ResetNightStateForRollback();
 }
 
 void AMainGameMode::LoadCurrentSave()
@@ -957,6 +1028,13 @@ FTransform AMainGameMode::GetBossStageEnterPoint(AController* Controller)
 void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE][SINGLE] HANDLE PLAYER DEATH"));
+
+	//KSH-널가드: 컨트롤러가 이미 정리 중일 수 있음
+	if (!IsValid(DeadPlayerController))
+	{
+		UE_LOG(LogTemp, Error, TEXT("[GAMEMODE][SINGLE] HandlePlayerDeath: invalid controller"));
+		return;
+	}
 
 	// 보스 참가자 명단에서 제거 및 블랙보드 타겟 클리어
 	if (IsValid(BossRef) && DeadPlayerController->GetPawn())
@@ -1014,6 +1092,13 @@ void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 	}
 
 	//사망한 당일 아침으로 부활(아침으로 월드 롤백)
+	//KSH-널가드: 세이브 데이터가 없으면 롤백 자체가 불가능
+	if (!CurrentSaveData)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[GAMEMODE][SINGLE] HandlePlayerDeath: CurrentSaveData is null. Skip morning rollback."));
+		return;
+	}
+
 	//아침 데이터 슬롯 구하기
 	FString MorningSlotName = CurrentSaveData->SlotName+TEXT("_morning");
 	UE_LOG(LogTemp, Warning, TEXT("[GAMEMODE] SEARCH SLOT : %s"), *MorningSlotName);
@@ -1032,7 +1117,11 @@ void AMainGameMode::HandlePlayerDeath(AController* DeadPlayerController)
 		
 		//아침 세이브로 월드 로드
 		LoadWorldFromSave(Save);
-	
+
+		//KSH-세이브 롤백은 SaveInterface 액터만 복원하므로 야간에 스폰된 늑대인간/변신한 AI가 그대로 남는다.
+		//아침으로 되돌린 시점에 야간 상태를 함께 정리한다.
+		ResetNightState();
+
 		//아침 세이브로 플레이어 로드
 		RestartPlayer(DeadPlayerController);
 		AfterRestartPlayer(DeadPlayerController, true);

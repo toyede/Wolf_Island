@@ -15,6 +15,7 @@
 #include "Character/MainPlayer.h"
 #include "Components/StatusComponent.h"
 #include "Character/WerewolfInfected.h"
+#include "AI/Enemy_Character/EnemyAIBase.h" //KSH-롤백 시 적 AI를 인간 폼으로 되돌리기 위해 추가
 #include "Character/MainPlayerController.h"
 #include "GameFramework/PlayerStart.h"
 #include "Actors/SpectatorCameraActor.h"
@@ -455,6 +456,60 @@ void AMoonlightInfectionSystem::RestorePlayerAtDawn(APlayerController* PC)
 	//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Cyan, 
 	//	FString::Printf(TEXT("[Restore DONE] Final: %.0f, %.0f, %.0f"), 
 	//		OriginalPlayer->GetActorLocation().X, OriginalPlayer->GetActorLocation().Y, OriginalPlayer->GetActorLocation().Z));
+}
+
+void AMoonlightInfectionSystem::ResetNightStateForRollback()
+{
+	if (!HasAuthority()) return;
+
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] ResetNightStateForRollback START"));
+
+	// 1) 활성 늑대인간 세션이 있으면 먼저 정상 복귀시킨다 (멀티)
+	OnMorningStarted();
+
+	// 2) 야간 누적/트리거 상태 초기화
+	for (auto& Pair : NightlyExposure)
+	{
+		if (AMainPlayer* Player = Pair.Key.Get())
+		{
+			Player->NightlyExposure = 0.0f;
+		}
+	}
+	NightlyExposure.Empty();
+	TriggeredThisNight.Empty();
+	TriggeredInfectionSnapshot.Empty();
+	bMorningSkipTriggeredThisNight = false;
+
+	// 3) 밤에 스폰된 늑대인간 액터 제거
+	//    (파괴는 다른 액터의 콜스택 안에서 일어날 수 있으므로 지연 파괴)
+	TArray<AActor*> Werewolves;
+	UGameplayStatics::GetAllActorsOfClass(World, AWerewolfInfected::StaticClass(), Werewolves);
+	for (AActor* Werewolf : Werewolves)
+	{
+		if (!IsValid(Werewolf)) continue;
+
+		Werewolf->SetActorEnableCollision(false);
+		Werewolf->SetActorHiddenInGame(true);
+		Werewolf->SetLifeSpan(0.05f);
+	}
+	UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] Rollback: removed %d werewolves"), Werewolves.Num());
+
+	// 4) 남아있는 적 AI는 낮 상태(인간 폼)로 되돌린다
+	TArray<AActor*> Enemies;
+	UGameplayStatics::GetAllActorsOfClass(World, AEnemyAIBase::StaticClass(), Enemies);
+	for (AActor* Actor : Enemies)
+	{
+		if (AEnemyAIBase* Enemy = Cast<AEnemyAIBase>(Actor))
+		{
+			Enemy->ServerChangeForm(EEnemyForm::Human);
+		}
+	}
+	UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] Rollback: reverted %d enemies to Human form"), Enemies.Num());
+
+	UE_LOG(LogTemp, Warning, TEXT("[MoonlightSystem] ResetNightStateForRollback COMPLETE"));
 }
 
 void AMoonlightInfectionSystem::Debug_ForceRestoreAll()
