@@ -194,6 +194,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void OnCloseDeathScreen();
 
+	//사망화면 위젯을 확실히 제거하고 게임 입력으로 복구
+	UFUNCTION(BlueprintCallable)
+	void CloseDeathScreen();
+
 	UFUNCTION(BlueprintCallable)
 	void OnResume();
 	UFUNCTION(BlueprintCallable)

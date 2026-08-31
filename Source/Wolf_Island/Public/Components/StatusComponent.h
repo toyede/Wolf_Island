@@ -431,6 +431,14 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ClearAllTimers();
 
+	//사망/기절 진입 시: 생존 스탯 감소·사망 타이머를 정지(사망 후 스탯 변화/부활 후 재사망/강제휴식 충돌 방지)
+	UFUNCTION(BlueprintCallable)
+	void PauseSurvivalStats();
+
+	//부활/소생 시: 사망 타이머 정리 + MaxStamina 복원 + 생존 스탯 감소 재개
+	UFUNCTION(BlueprintCallable)
+	void ResumeSurvivalStats();
+
 	//아이템 사용 스탯 적용 함수
 	UFUNCTION(BlueprintCallable)
 	void ApplyItem(FItemData Item);

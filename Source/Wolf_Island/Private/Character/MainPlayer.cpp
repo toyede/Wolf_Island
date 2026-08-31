@@ -789,6 +789,8 @@ void AMainPlayer::ToggleCrouch()
 void AMainPlayer::ToggleInventory()
 {
 	if (IsBuildingInputBlocked()) return;
+	//기절/사망 중에는 인벤토리 열기 불가
+	if (IsInability) return;
 
 	
 	if (IsLocallyControlled() && InventoryWidgetClass)
@@ -1042,7 +1044,10 @@ void AMainPlayer::SetHotbarIndex(int32 Index)
 }
 
 void AMainPlayer::OnDeath_Implementation()
-{	
+{
+	//사망 진입 시 생존 스탯 감소·사망 타이머 정지(사망 후 스탯 변화/부활 후 재사망 방지)
+	if (StatusComponent) StatusComponent->PauseSurvivalStats();
+
 	//멀티 플레이 죽음 시
 	//1. 10초간 기절 : 다른 플레이어가 붕대로 상호작용 시 회복
 	//2. 10초 뒤 사망 후 리스폰 지역에서 부활
@@ -1055,6 +1060,8 @@ void AMainPlayer::OnDeath_Implementation()
 	else
 	{
 		UE_LOG(LogTemp, Display, TEXT("[SINGLE]Player Dead"));
+		//싱글 사망도 무력 상태로 표시(사망 중 공격/행동 방지). OnRespawn에서 해제됨
+		IsInability = true;
 		Client_ShowDeathScreen();
 	}
 }
@@ -1177,9 +1184,9 @@ void AMainPlayer::KnockOut()
 	
 	Request_StopEmotion();
 	
-	//자동 회복 기능 정지
-	if (StatusComponent) StatusComponent->StopAutoHeal();
-	
+	//자동 회복 + 생존 스탯 감소·사망 타이머 정지(기절 중 스탯 변화/부활 후 재사망/스태미나0 강제휴식 방지)
+	if (StatusComponent) StatusComponent->PauseSurvivalStats();
+
 	//기절 타이머 실행 - 누가 소생시켜주지 않으면 10초 뒤 사망
 	//JWY-KnockOutTimer가 플레이어 파괴 이후 실행되어 raw this를 접근하지 않도록 weak pointer로 생존 여부를 확인
 	TWeakObjectPtr<AMainPlayer> WeakThis(this);
@@ -1237,11 +1244,16 @@ void AMainPlayer::KnockOut()
 void AMainPlayer::Revive()
 {
 	GetWorld()->GetTimerManager().ClearTimer(KnockOutTimer);
+	//소생 시 사망 타이머 정리 + MaxStamina 복원 + 생존 스탯 감소 재개(부활 후 재사망 루프 방지)
+	if (StatusComponent) StatusComponent->ResumeSurvivalStats();
 	StatusComponent->IncreaseHP(20.0f);
 	IsInability = false;
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	CanInteract = false;
 	InteractableData.CanInteract = CanInteract;
+
+	//사망화면이 이미 떠 있었다면(기절 타이머 만료 후 소생) 닫아서 조작 불가 소프트락 방지
+	Client_CloseDeathScreen();
 
 	// 만약 변신했다가 기절해서 돌아온 상태라면, 세션 데이터 삭제 필요
 	if (HasAuthority())
@@ -1260,10 +1272,12 @@ void AMainPlayer::OnRespawn()
 {
 	if (StatusComponent)
 	{
+		//부활 시 사망 타이머 정리 + MaxStamina 복원 + 생존 스탯 감소 재개(재사망 루프 방지)
+		StatusComponent->ResumeSurvivalStats();
 		StatusComponent->IncreaseHP(20.0f);
 		StatusComponent->StartAutoHeal();
 	}
-	
+
 	//안 기절 상태로 전환
 	IsInability = false;
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
@@ -1535,6 +1549,8 @@ void AMainPlayer::BeginInteract()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] BeginInteract"));
 	if (IsBuildingInputBlocked()) return;
+	//기절/사망 중에는 스스로 상호작용(상자/포탈/제작대 등) 불가
+	if (IsInability) return;
 
 	//인터랙션이 시작됐을 때부터 인터렉션 상태가 변하지 않는 것을 체크
 	CheckInteraction();
@@ -1881,6 +1897,8 @@ void AMainPlayer::EndWeaponAttack()
 void AMainPlayer::DropItemOnHotBar()
 {
 	if (IsBuildingInputBlocked()) return;
+	//기절/사망 중에는 아이템 드롭 불가
+	if (IsInability) return;
 
 	FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
 	if (Item.IsValid())
@@ -2448,6 +2466,8 @@ void AMainPlayer::StopCraft()
 void AMainPlayer::Emotion(const FInputActionInstance& Instance)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Emotion"));
+	//기절/사망 중에는 감정표현 불가
+	if (IsInability) return;
 	APlayerController* PC = Cast<APlayerController>(GetController());
 	if (PC)
 	{
@@ -2762,6 +2782,8 @@ void AMainPlayer::Request_DropItem(UInventoryComponent* SourceInventory, int32 S
 
 void AMainPlayer::Request_StartUseItem()
 {
+	//기절/사망 중에는 아이템 사용 불가
+	if (IsInability) return;
 	if (UBuildingComponent* BuildComp = FindComponentByClass<UBuildingComponent>())
 	{
 		const EBuildingState State = BuildComp->GetCurrentState();
@@ -2802,6 +2824,8 @@ void AMainPlayer::Request_StopUseItem()
 
 void AMainPlayer::Request_StartCraft(FRecipeData RecipeData)
 {
+	//기절/사망 중에는 제작 불가
+	if (IsInability) return;
 	if (HasAuthority())
 	{
 		StartCraft(RecipeData);
@@ -2940,6 +2964,24 @@ void AMainPlayer::Client_ShowDeathScreen_Implementation()
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Main Player Controller Not Connected"));	
 		}
+	}
+}
+
+void AMainPlayer::Client_CloseDeathScreen_Implementation()
+{
+	if (!IsLocallyControlled()) return;
+
+	//흑백 화면 복구
+	if (FirstPersonCamera)
+	{
+		FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
+		FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(1, 1, 1, 1);
+	}
+
+	//사망화면 위젯 제거 + 게임 입력 복구
+	if (AMainPlayerController* MPC = GetController<AMainPlayerController>())
+	{
+		MPC->CloseDeathScreen();
 	}
 }
 

@@ -3,7 +3,9 @@
 
 #include "Components/WeaponComponent.h"
 
+#include "Animation/AnimInstance.h"
 #include "Character/MainPlayer.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/Character.h"
 #include "Item/ItemBase.h"
 #include "Kismet/GameplayStatics.h"
@@ -52,34 +54,43 @@ void UWeaponComponent::CheckWeapon(FItemBaseData HandedItem)
 		if (WeaponData)
 		{
 			EquipeWeapon(*WeaponData);
-			
-			if (WeaponData->AnimLayerBlueprint)
-			{
-				ACharacter* Owner = Cast<ACharacter>(GetOwner());
-				Owner->GetMesh()->LinkAnimClassLayers(WeaponData->AnimLayerBlueprint);
-			}
+			LinkWeaponAnimLayer(WeaponData->AnimLayerBlueprint);
 		} else
 		{
 			FWeaponData* DefaultData = WeaponDataTable->FindRow<FWeaponData>(FName("EQ000"), "DefaultWeapon");
 			CurrentWeapon = *DefaultData;
 			UnequipeWeapon();
-			
-			if (DefaultData->AnimLayerBlueprint)
-			{
-				ACharacter* Owner = Cast<ACharacter>(GetOwner());
-				Owner->GetMesh()->LinkAnimClassLayers(DefaultData->AnimLayerBlueprint);
-			}
+			LinkWeaponAnimLayer(DefaultData->AnimLayerBlueprint);
 		}
 	} else
 	{
 		FWeaponData* DefaultData = WeaponDataTable->FindRow<FWeaponData>(FName("EQ000"), "DefaultWeapon");
 		CurrentWeapon = *DefaultData;
 		UnequipeWeapon();
-		
-		if (DefaultData->AnimLayerBlueprint)
+		LinkWeaponAnimLayer(DefaultData->AnimLayerBlueprint);
+	}
+}
+
+void UWeaponComponent::LinkWeaponAnimLayer(TSubclassOf<UAnimInstance> LayerClass)
+{
+	if (!LayerClass) return;
+
+	ACharacter* Owner = Cast<ACharacter>(GetOwner());
+	if (!Owner) return;
+
+	USkeletalMeshComponent* Mesh = Owner->GetMesh();
+	if (!Mesh) return;
+
+	//애님 레이어 교체(즉시)
+	Mesh->LinkAnimClassLayers(LayerClass);
+
+	//교체로 인한 포즈 튐을 기존 Inertialization 노드로 부드럽게 블렌딩
+	//(RequestSlotGroupInertialization이 그래프에 인어셜라이제이션 요청을 보내 다운스트림 노드가 반응)
+	if (WeaponSwitchBlendTime > 0.0f)
+	{
+		if (UAnimInstance* AnimInst = Mesh->GetAnimInstance())
 		{
-			ACharacter* Owner = Cast<ACharacter>(GetOwner());
-			Owner->GetMesh()->LinkAnimClassLayers(DefaultData->AnimLayerBlueprint);
+			AnimInst->RequestSlotGroupInertialization(WeaponSwitchInertialGroup, WeaponSwitchBlendTime);
 		}
 	}
 }

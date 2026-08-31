@@ -52,6 +52,14 @@ public:
 	UPROPERTY()
 	TObjectPtr<UAnimMontage> AttackMontage;
 
+	//무기 교체 시 애님 레이어를 부드럽게 블렌딩하는 시간(초). 0이면 즉시 교체(기존 동작)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Anim")
+	float WeaponSwitchBlendTime = 0.2f;
+
+	//인어셜라이제이션 요청을 보낼 슬롯 그룹 이름(AnimBP의 DefaultSlot 그룹). 필요 시 에디터에서 변경
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Anim")
+	FName WeaponSwitchInertialGroup = FName("DefaultGroup");
+
 	UFUNCTION(BlueprintCallable)
 	void CheckWeapon(FItemBaseData HandedItem);
 	UFUNCTION(BlueprintCallable)
@@ -69,6 +77,9 @@ public:
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
+
+	//무기 애님 레이어를 링크하고, 기존 Inertialization 노드를 깨워 포즈 튐을 부드럽게 처리
+	void LinkWeaponAnimLayer(TSubclassOf<UAnimInstance> LayerClass);
 
 public:	
 	// Called every frame

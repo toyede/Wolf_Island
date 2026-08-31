@@ -872,7 +872,11 @@ public:
 	
 	UFUNCTION(Client, Reliable)
 	void Client_ShowDeathScreen();
-	
+
+	//소생 시 사망화면을 닫고 게임 입력/화면을 복구(사망화면 표시 후 소생 시 조작 불가 방지)
+	UFUNCTION(Client, Reliable)
+	void Client_CloseDeathScreen();
+
 	UFUNCTION(Client, Reliable)
 	void Client_BlinkEdge(FColor Color);
 	

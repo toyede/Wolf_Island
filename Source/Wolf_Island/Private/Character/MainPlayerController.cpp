@@ -525,6 +525,19 @@ void AMainPlayerController::OnCloseDeathScreen()
 	SetInputMode(InputMode);
 }
 
+void AMainPlayerController::CloseDeathScreen()
+{
+	//위젯이 남아있으면 확실히 제거(OnCloseDeathScreen은 RemoveFromParent를 안 하므로 소생 경로용으로 별도 제공)
+	if (DeathScreenWidget)
+	{
+		DeathScreenWidget->RemoveFromParent();
+		DeathScreenWidget = nullptr;
+	}
+	bShowMouseCursor = false;
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+}
+
 void AMainPlayerController::OnResume()
 {
 	HidePauseMenu();
