@@ -139,6 +139,11 @@ public:
 	UFUNCTION()
 	void OnMorningStarted();
 
+	//KSH-사망으로 아침 세이브까지 월드를 롤백할 때 야간 상태를 통째로 정리한다.
+	//(세이브 롤백은 SaveInterface를 가진 액터만 복원하므로 야간 스폰 AI/늑대인간 세션이 그대로 남는다)
+	UFUNCTION(BlueprintCallable, Category = "Moonlight System")
+	void ResetNightStateForRollback();
+
 	void RestorePlayerAtDawn(APlayerController* PC);
 
 	// ����׿� - �����Ϳ��� ȣ���ϰų� Ű ���ε�

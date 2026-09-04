@@ -301,7 +301,15 @@ void ASummonedWolf::OnAttackHit(const FHitResult& HitResult)
 		return;
 	}
 
-	UGameplayStatics::ApplyDamage(HitActor, AttackDamage, GetController(), this, UDamageType::StaticClass());
+	//KSH-HitParticleComponent가 피격 지점/노멀을 쓸 수 있도록 PointDamage로 전달
+	UGameplayStatics::ApplyPointDamage(
+		HitActor,
+		AttackDamage,
+		-HitResult.ImpactNormal,
+		HitResult,
+		GetController(),
+		this,
+		UDamageType::StaticClass());
 }
 
 void ASummonedWolf::HandleHPZero()

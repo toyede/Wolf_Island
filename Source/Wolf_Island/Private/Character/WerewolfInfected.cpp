@@ -278,7 +278,15 @@ void AWerewolfInfected::OnAttackHit(const FHitResult& HitResult)
         DamageTypeClass = InfectedAttackDamageType;
     }
 
-    UGameplayStatics::ApplyDamage(HitActor, AttackDamage, GetController(), this, DamageTypeClass);
+    //KSH-HitParticleComponent가 피격 지점/노멀을 쓸 수 있도록 PointDamage로 전달
+    UGameplayStatics::ApplyPointDamage(
+        HitActor,
+        AttackDamage,
+        -HitResult.ImpactNormal,
+        HitResult,
+        GetController(),
+        this,
+        DamageTypeClass);
 }
 
 void AWerewolfInfected::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)

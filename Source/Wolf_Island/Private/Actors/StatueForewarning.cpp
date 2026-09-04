@@ -5,6 +5,7 @@
 #include "TimerManager.h"
 #include "Engine/DamageEvents.h"
 #include "DrawDebugHelpers.h"
+#include "Kismet/GameplayStatics.h" //KSH-경고 사운드 재생용
 
 AStatueForewarning::AStatueForewarning()
 {
@@ -43,7 +44,26 @@ void AStatueForewarning::BeginPlay()
 	if (ForewarningEffect && ForewarningEffectComponent)
 	{
 		ForewarningEffectComponent->SetAsset(ForewarningEffect);
+
+		//KSH-이펙트 크기를 실제 즉사 반경에 맞춰 표시 (경고 범위와 판정 범위 불일치 방지)
+		if (bMatchEffectScaleToKillZone && KillZone && EffectBaseRadius > 0.0f)
+		{
+			const float Scale = KillZone->GetScaledSphereRadius() / EffectBaseRadius;
+			ForewarningEffectComponent->SetWorldScale3D(FVector(Scale));
+		}
+
 		ForewarningEffectComponent->Activate();
+	}
+	else
+	{
+		//KSH-이펙트가 지정되지 않으면 플레이어에게 경고가 전혀 보이지 않는다
+		UE_LOG(LogTemp, Error, TEXT("[StatueForewarning] ForewarningEffect is NOT set - player gets no visual warning!"));
+	}
+
+	//KSH-경고 사운드 재생
+	if (ForewarningSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, ForewarningSound, GetActorLocation());
 	}
 
 	OnTelegraphStarted.Broadcast();

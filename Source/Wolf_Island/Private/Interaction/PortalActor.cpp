@@ -309,12 +309,18 @@ bool APortalActor::IsRecordUnlocked() const
 
 void APortalActor::UpdatePortalState()
 {
-	bool bUnlocked = IsRecordUnlocked();
+	const bool bRecordUnlocked = IsRecordUnlocked();
+	bool bUnlocked = bRecordUnlocked;
 
 	if (bUnlocked && bRequiresBossDefeat)
 	{
 		bUnlocked = bBossDefeated;
 	}
+
+	//KSH-포탈이 안 열릴 때 원인(기록 해금 / 보스 처치)을 로그로 구분할 수 있게 함
+	UE_LOG(LogTemp, Warning,
+		TEXT("[PORTAL] %s UpdatePortalState - RecordUnlocked=%d RequiresBoss=%d BossDefeated=%d => Unlocked=%d"),
+		*GetName(), bRecordUnlocked ? 1 : 0, bRequiresBossDefeat ? 1 : 0, bBossDefeated ? 1 : 0, bUnlocked ? 1 : 0);
 
 	if (HasAuthority())
 	{

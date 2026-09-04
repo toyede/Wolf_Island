@@ -3,6 +3,7 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Engine/DamageEvents.h"
 #include "Character/MainPlayer.h"
+#include "Kismet/GameplayStatics.h" //KSH-ApplyPointDamage 사용
 
 AStoneProjectile::AStoneProjectile()
 {
@@ -74,8 +75,24 @@ void AStoneProjectile::OnOverlap(
 
     if (AMainPlayer* Player = Cast<AMainPlayer>(OtherActor))
     {
-        FDamageEvent DamageEvent;
-        OtherActor->TakeDamage(Damage, DamageEvent, nullptr, this);
+        //KSH-HitParticleComponent가 피격 지점/노멀을 쓸 수 있도록 PointDamage로 전달.
+        //bFromSweep이 false면 SweepResult가 비어 있으므로 투사체 위치 기준으로 히트 정보를 구성한다.
+        const FVector ShootDirection = GetVelocity().GetSafeNormal();
+
+        FHitResult ImpactHit = SweepResult;
+        if (!bFromSweep)
+        {
+            ImpactHit = FHitResult(OtherActor, OtherComp, GetActorLocation(), -ShootDirection);
+        }
+
+        UGameplayStatics::ApplyPointDamage(
+            OtherActor,
+            Damage,
+            ShootDirection,
+            ImpactHit,
+            nullptr,
+            this,
+            UDamageType::StaticClass());
     }
 
     Destroy();

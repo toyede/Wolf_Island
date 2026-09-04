@@ -766,11 +766,38 @@ void AMainPlayerController::Client_ExitSpectateMode_Implementation()
 
 void AMainPlayerController::Client_RestoreHUDAfterTransform_Implementation()
 {
+	RestoreHUDAfterTransformInternal(0);
+}
+
+void AMainPlayerController::RestoreHUDAfterTransformInternal(int32 RetryCount)
+{
 	// OnUnPossess에서 PlayerHUD가 파괴되므로 복귀 후 재생성 필요
 	AMainPlayer* RestoredPlayer = Cast<AMainPlayer>(GetPawn());
-	if (!RestoredPlayer) return;
 
-	// PlayerHUD 재생성
+	//KSH-서버가 Possess한 직후 이 RPC가 도착하면 클라이언트에는 아직 새 폰이 복제되지 않아
+	//GetPawn()이 null이거나 이전 늑대 폰이다. 기존 코드는 여기서 그냥 리턴해서
+	//핫바가 영영 갱신되지 않았다. 폰이 들어올 때까지 재시도한다.
+	if (!RestoredPlayer)
+	{
+		if (RetryCount >= MaxHUDRestoreRetry)
+		{
+			UE_LOG(LogTemp, Error, TEXT("[MPC] RestoreHUDAfterTransform: pawn never replicated (retry %d)"), RetryCount);
+			return;
+		}
+
+		FTimerHandle RetryHandle;
+		TWeakObjectPtr<AMainPlayerController> WeakThis(this);
+		GetWorldTimerManager().SetTimer(RetryHandle, [WeakThis, RetryCount]()
+			{
+				if (WeakThis.IsValid())
+				{
+					WeakThis->RestoreHUDAfterTransformInternal(RetryCount + 1);
+				}
+			}, 0.1f, false);
+		return;
+	}
+
+	// PlayerHUD 재생성 (SetPlayerRef 안에서 RefreshHotBar 실행)
 	SetPlayerHUD(RestoredPlayer);
 
 	// 인벤토리 컴포넌트 갱신 (UI 브로드캐스트)
@@ -778,6 +805,15 @@ void AMainPlayerController::Client_RestoreHUDAfterTransform_Implementation()
 	{
 		Inv->InventoryChanged();
 	}
+
+	//KSH-핫바 슬롯이 새 인벤토리를 참조하도록 재구성 + 선택 슬롯 표시 갱신
+	if (PlayerHUD)
+	{
+		PlayerHUD->RefreshHotBar();
+		PlayerHUD->UpdateHotBar();
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[MPC] RestoreHUDAfterTransform complete (retry %d)"), RetryCount);
 }
 
 void AMainPlayerController::Client_SetSpectateTarget_Implementation(AActor* TargetPlayer)
