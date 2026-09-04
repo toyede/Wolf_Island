@@ -92,6 +92,17 @@ public:
 	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "DynamicSky|Events")
 	FDynamicSkyEvent OnEclipseTotalityEnded;
 
+	//KSH-외부 블루프린트(BP_MainPlayer, BP_Native, BP_Clipping_Test)가 레퍼런스로 읽는 값이라 public에 둔다.
+	//protected로 두면 UE가 외부 BP의 변수 접근을 막아 BP 컴파일 에러가 난다.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, ReplicatedUsing = OnRep_TimeOfDay, SaveGame, Category = "DynamicSky|Time", meta = (ClampMin = "0.0", ClampMax = "24.0"))
+	float TimeOfDay;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, ReplicatedUsing = OnRep_DynamicTimeOfDay, SaveGame, Category = "DynamicSky|Time", meta = (ClampMin = "0.0", ClampMax = "24.0"))
+	float DynamicTimeOfDay;
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_IsCurrentlyNight, SaveGame, Category = "DynamicSky|Time")
+	bool bIsCurrentlyNight;
+
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void BeginPlay() override;
@@ -139,12 +150,6 @@ protected:
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "DynamicSky|Materials")
 	UMaterialInstanceDynamic* VolumetricCloudMID;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, ReplicatedUsing = OnRep_TimeOfDay, SaveGame, Category = "DynamicSky|Time", meta = (ClampMin = "0.0", ClampMax = "24.0"))
-	float TimeOfDay;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, ReplicatedUsing = OnRep_DynamicTimeOfDay, SaveGame, Category = "DynamicSky|Time", meta = (ClampMin = "0.0", ClampMax = "24.0"))
-	float DynamicTimeOfDay;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DynamicSky|Time", meta = (ClampMin = "0.0", ClampMax = "24.0"))
 	float DawnTime;
 
@@ -168,9 +173,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, SaveGame, Category = "DynamicSky|Time")
 	bool bTimePaused;
-
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_IsCurrentlyNight, SaveGame, Category = "DynamicSky|Time")
-	bool bIsCurrentlyNight;
 
 	UPROPERTY(BlueprintReadOnly, Replicated, SaveGame, Category = "DynamicSky|Time")
 	bool bMidnightTriggered;
