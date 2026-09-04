@@ -12,6 +12,7 @@
 #include "Engine/DataTable.h"
 #include "MainPlayer.generated.h"
 
+class UHitParticleComponent;
 class UInventory;
 class ATorch;
 class UWidgetComponent;
@@ -140,6 +141,9 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UAudioComponent* EatingSoundPlayer;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UHitParticleComponent* HitParticleComponent;
 	
 	//횃불
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Torch")
