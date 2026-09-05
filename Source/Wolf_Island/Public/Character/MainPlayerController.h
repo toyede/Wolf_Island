@@ -194,6 +194,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void OnCloseDeathScreen();
 
+	//사망화면 위젯을 확실히 제거하고 게임 입력으로 복구
+	UFUNCTION(BlueprintCallable)
+	void CloseDeathScreen();
+
 	UFUNCTION(BlueprintCallable)
 	void OnResume();
 	UFUNCTION(BlueprintCallable)
@@ -267,6 +271,13 @@ public:
 	// 늑대 변신 복귀 후 PlayerHUD 재생성 + 인벤토리 UI 갱신
 	UFUNCTION(Client, Reliable)
 	void Client_RestoreHUDAfterTransform();
+
+	//KSH-Possess 직후에는 클라이언트에 새 폰이 아직 복제되지 않았을 수 있어 재시도가 필요하다
+	void RestoreHUDAfterTransformInternal(int32 RetryCount);
+
+	//KSH-HUD 복구 재시도 최대 횟수 (0.1초 간격)
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	int32 MaxHUDRestoreRetry = 30;
 
 	// 플레이어 UI 끄고 키는 함수
 	UFUNCTION(BlueprintCallable, Category = "UI")

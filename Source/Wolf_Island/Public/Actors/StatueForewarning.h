@@ -60,6 +60,18 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Forewarning|Effects")
 	UNiagaraComponent* ForewarningEffectComponent;
 
+	//KSH-경고 사운드 (플레이어가 위험 지역을 인지할 수 있도록)
+	UPROPERTY(EditAnywhere, Category = "Forewarning|Effects")
+	USoundBase* ForewarningSound;
+
+	//KSH-이펙트 스케일을 KillZone 반경에 맞출지 여부
+	UPROPERTY(EditAnywhere, Category = "Forewarning|Effects")
+	bool bMatchEffectScaleToKillZone = true;
+
+	//KSH-스케일 1일 때 이펙트가 표현하는 반경(cm). 나이아가라 에셋에 맞춰 조정
+	UPROPERTY(EditAnywhere, Category = "Forewarning|Effects", meta = (ClampMin = "1.0"))
+	float EffectBaseRadius = 150.0f;
+
 	UPROPERTY(EditAnywhere, Category = "Forewarning|Debug")
 	bool bDebugDrawWarning = true;
 

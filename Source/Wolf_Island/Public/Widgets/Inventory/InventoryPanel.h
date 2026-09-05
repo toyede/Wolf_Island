@@ -45,6 +45,9 @@ public:
 	UFUNCTION()
 	void InventorySetting(AMainPlayer* Owner);
 
+	//빠른 이동 시 이 패널 슬롯들이 옮겨갈 반대편 인벤토리. 기본 패널은 없음(null), 상자 패널에서 오버라이드
+	virtual UInventoryComponent* GetCounterpartInventory() const { return nullptr; }
+
 protected:
 
 	UFUNCTION()

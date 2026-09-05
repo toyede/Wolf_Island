@@ -141,7 +141,14 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UAudioComponent* EatingSoundPlayer;
-	
+
+	// 먹는 동안 짧은 먹는 소리를 반복 재생하기 위한 타이머
+	FTimerHandle EatingSoundTimer;
+
+	// 씹는 소리 반복 간격에 더할 여유(초). 0이면 사운드 길이만큼 이어서 반복
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Sounds")
+	float EatingSoundGap = 0.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UHitParticleComponent* HitParticleComponent;
 	
@@ -637,6 +644,10 @@ public:
 	//리스폰 처리 함수
 	UFUNCTION(BlueprintCallable)
 	void OnRespawn();
+
+	//KSH-폰 파괴/리스폰 직전에 진행 중이던 동작(타이머, 몽타주, 인터랙션 참조)을 모두 정리하는 함수
+	UFUNCTION(BlueprintCallable)
+	void CancelAllActions();
 	
 	//카메라 복구 함수
 	UFUNCTION(Client, Reliable, BlueprintCallable)
@@ -865,7 +876,11 @@ public:
 	
 	UFUNCTION(Client, Reliable)
 	void Client_ShowDeathScreen();
-	
+
+	//소생 시 사망화면을 닫고 게임 입력/화면을 복구(사망화면 표시 후 소생 시 조작 불가 방지)
+	UFUNCTION(Client, Reliable)
+	void Client_CloseDeathScreen();
+
 	UFUNCTION(Client, Reliable)
 	void Client_BlinkEdge(FColor Color);
 	

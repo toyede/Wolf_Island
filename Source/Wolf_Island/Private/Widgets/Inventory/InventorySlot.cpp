@@ -146,6 +146,12 @@ FReply UInventorySlot::NativeOnMouseButtonDown(const FGeometry& InGeometry, cons
 	//왼쪽 마우스 클릭이면
 	if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
 	{
+		//Shift+좌클릭이면 반대편 인벤토리로 빠른 이동(드래그 대신)
+		if (InMouseEvent.IsShiftDown())
+		{
+			TryQuickMove();
+			return Reply.Handled();
+		}
 		return Reply.Handled().DetectDrag(TakeWidget(), EKeys::LeftMouseButton);
 	}
 	//오른쪽 마우스 클릭이면
@@ -160,8 +166,29 @@ FReply UInventorySlot::NativeOnMouseButtonDown(const FGeometry& InGeometry, cons
 FReply UInventorySlot::NativeOnMouseButtonDoubleClick(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[INVEN SLOT] DOUBLE CLICKED"))
-	
+
+	//더블클릭 시 반대편 인벤토리로 빠른 이동
+	TryQuickMove();
+
 	return Super::NativeOnMouseButtonDoubleClick(InGeometry, InMouseEvent);
+}
+
+void UInventorySlot::TryQuickMove()
+{
+	if (!CanDragDrop) return;
+
+	//반대편 인벤토리가 없으면(일반 인벤토리 등) 빠른 이동 비활성
+	if (!IsValid(OwnerInventoryRef) || !IsValid(LinkedInventoryRef)) return;
+
+	//빈 슬롯이면 무시
+	if (!ItemRef.IsValid()) return;
+
+	//라우팅용 플레이어 인벤토리(항상 owning connection 보유). OwnerActor는 두 패널 모두 플레이어로 세팅됨
+	UInventoryComponent* PlayerInventory = OwnerActor ? OwnerActor->GetComponentByClass<UInventoryComponent>() : nullptr;
+	if (!IsValid(PlayerInventory)) return;
+
+	//자기 슬롯(OwnerInventoryRef[Index]) -> 반대편 인벤토리(LinkedInventoryRef) 빈 슬롯으로 이동
+	PlayerInventory->Request_QuickMoveItem(OwnerInventoryRef, Index, LinkedInventoryRef);
 }
 
 void UInventorySlot::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
@@ -233,7 +260,9 @@ void UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPo
 			DragItemOperation->SourceItemData = ItemRef;
 			DragItemOperation->SourceItemData.Amount = MovedAmount;
 			DragItemOperation->SourceIndex = Index;
-			
+			//소스에서 미리 뺐으므로 드래그 취소 시 되돌려야 함
+			DragItemOperation->bWasSplit = true;
+
 			DragItemOperation->DefaultDragVisual = DragVisual;
 			DragItemOperation->Pivot = EDragPivot::MouseDown;
 
@@ -249,14 +278,31 @@ void UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPo
 	}
 }
 
+void UInventorySlot::NativeOnDragCancelled(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+{
+	Super::NativeOnDragCancelled(InDragDropEvent, InOperation);
+
+	//우클릭 반갈처럼 드래그 시작 시 소스에서 미리 뺀 경우, 취소되면 되돌린다(개수 유실 방지)
+	const UItemDragDropOperation* ItemDragDrop = Cast<UItemDragDropOperation>(InOperation);
+	if (!ItemDragDrop) return;
+	if (!ItemDragDrop->bWasSplit) return;
+	if (!IsValid(ItemDragDrop->SourceInventory)) return;
+
+	//무게 제외 수량만 원위치(반갈 시 무게는 안 건드렸으므로)
+	ItemDragDrop->SourceInventory->Request_AddOnlyItemAmountAtSlot(
+		ItemDragDrop->SourceIndex, ItemDragDrop->SourceItemData.Amount);
+}
+
 bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,
 	UDragDropOperation* InOperation)
 {
 	if (!CanDragDrop) return false;
 	
 	const UItemDragDropOperation* ItemDragDrop = Cast<UItemDragDropOperation>(InOperation);
+	//우리 드래그 오퍼레이션이 아니면(널) 무시하여 널 역참조 크래시 방지
+	if (!ItemDragDrop) return false;
 	UE_LOG(LogTemp, Warning, TEXT("SLOT DROP DETECTED"));
-	
+
 	UInventoryComponent* OriginInventoryRef = ItemDragDrop->SourceInventory;
 	
 	if (OriginInventoryRef)

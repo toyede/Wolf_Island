@@ -82,16 +82,20 @@ bool UCraftPanel::StartCraft(FRecipeData RecipeData)
 {
 	if (OwnerInventory && CurrentRecipeData.ResultID != NAME_None)
 	{
-		GetWorld()->GetTimerManager().SetTimer(
+		UWorld* World = GetWorld();
+		if (!World) return true;
+
+		//위젯이 파괴되면 발동하지 않도록 WeakLambda로 this를 약한 참조로 캡처
+		World->GetTimerManager().SetTimer(
 		CraftingTimer,
-		[this, RecipeData]()
+		FTimerDelegate::CreateWeakLambda(this, [this, RecipeData]()
 		{
 			MakeItem(RecipeData);
-		},
+		}),
 		RecipeData.Duration,
 		false);
 	}
-	
+
 	return true;
 }
 

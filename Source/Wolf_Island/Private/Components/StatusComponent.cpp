@@ -98,7 +98,8 @@ void UStatusComponent::IncreaseHP(float amount)
 	if (CurrentHP <= 0)
 	{
 		CurrentHP = 0;
-		OnHPZero.Broadcast();
+		//체력 '증가'로는 사망 델리게이트를 발동하지 않음.
+		//(HP 0에서 IncreaseHP(0) 등으로 OnHPZero가 재브로드캐스트되어 재사망/재기절하는 것을 방지)
 	}
 	OnHPPercentChanged.Broadcast(GetHPPercent());
 }
@@ -659,6 +660,52 @@ void UStatusComponent::ClearAllTimers()
 	TimerManager.ClearTimer(AirTimer);
 	TimerManager.ClearTimer(AutoHealStartTimer);
 	TimerManager.ClearTimer(AutoHealTimer);
+}
+
+void UStatusComponent::PauseSurvivalStats()
+{
+	//사망/기절 중에는 생존 스탯이 계속 깎이거나 사망 타이머가 발동하면 안 됨.
+	//감소 타이머 정지
+	StopStamina();
+	StopRecoverStamina();
+	StopHunger();
+	StopHydration();
+	StopAir();
+	StopRecoverAir();
+	StopAutoHeal();
+
+	//사망 타이머 정지(부활 후 뒤늦게 발동하는 것 방지)
+	if (UWorld* World = GetWorld())
+	{
+		FTimerManager& TM = World->GetTimerManager();
+		TM.ClearTimer(HungerDeathTimer);
+		TM.ClearTimer(HydrationDeathTimer);
+		TM.ClearTimer(AirDeathTimer);
+	}
+}
+
+void UStatusComponent::ResumeSurvivalStats()
+{
+	//부활/소생 시 남아있을 수 있는 사망 타이머 정리
+	if (UWorld* World = GetWorld())
+	{
+		FTimerManager& TM = World->GetTimerManager();
+		TM.ClearTimer(HungerDeathTimer);
+		TM.ClearTimer(HydrationDeathTimer);
+		TM.ClearTimer(AirDeathTimer);
+	}
+
+	//배고픔 사망 타이머로 5로 고정됐던 MaxStamina 복원(타이머가 이미 발동해 비활성이어도 복원)
+	if (TempMaxStamina > 0.0f)
+	{
+		MaxStamina = TempMaxStamina;
+		TempMaxStamina = 0.0f;
+	}
+
+	//생존 스탯 감소 재개(스태미나/산소는 달리기/수영 시 각각 시작되므로 여기선 재개하지 않음)
+	StartHunger();
+	StartHydration();
+	StartRecoverStamina();
 }
 
 void UStatusComponent::DebugGetStatus(float &HP, float& Stamina, float& Hunger, float& Hydration)

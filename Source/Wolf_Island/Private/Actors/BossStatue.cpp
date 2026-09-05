@@ -136,7 +136,7 @@ void ABossStatue::Die()
 {
 	GetWorldTimerManager().ClearTimer(HealTimerHandle);
 
-	// �ı� ����Ʈ
+	// 파괴 이펙트
 	if (DestroyEffect)
 	{
 		/*UGameplayStatics::SpawnEmitterAtLocation(
@@ -144,10 +144,27 @@ void ABossStatue::Die()
 			DestroyEffect,
 			GetActorLocation()
 		);*/
-		// ���̾ư��� ������
+		// 나이아가라 적용 예정
 	}
 
-	OnStatueDestroyed.Broadcast();
+	//KSH-Die()는 플레이어의 인터랙션 콜스택 안에서 호출된다.
+	//여기서 즉시 Destroy하면 호출자가 파괴된 석상을 다시 참조해 파탈 에러가 난다.
+	//즉시 상호작용/충돌만 끄고 실제 파괴는 다음 프레임으로 미룬다.
+	InteractableData.CanInteract = false;
 
-	Destroy();
+	if (BoxCollision)
+	{
+		BoxCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+	if (BlockingCollision)
+	{
+		BlockingCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+	SetActorEnableCollision(false);
+	SetActorHiddenInGame(true);
+
+	OnStatueDestroyed.Broadcast();
+	OnStatueDestroyed.Clear();
+
+	SetLifeSpan(0.05f);
 }

@@ -28,4 +28,9 @@ public:
 
 	UPROPERTY()
 	class UInventoryComponent* SourceInventory;
+
+	//우클릭 반갈처럼 드래그 시작 시 소스에서 미리 개수를 뺀 경우 true.
+	//드래그가 취소되면 SourceItemData.Amount만큼 소스에 되돌려야 함.
+	UPROPERTY()
+	bool bWasSplit = false;
 };

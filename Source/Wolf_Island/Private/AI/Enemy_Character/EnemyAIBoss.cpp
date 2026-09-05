@@ -134,12 +134,23 @@ void AEnemyAIBoss::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	GetWorldTimerManager().ClearTimer(SpawnRetryTimerHandle);
 	GetWorldTimerManager().ClearAllTimersForObject(this);
 
+	//KSH-EndPlay는 다른 액터의 콜스택 안에서 실행될 수 있어 즉시 Destroy는 위험하다.
+	//충돌만 즉시 끄고 실제 파괴는 다음 프레임으로 미룬다.
+	auto DeferredDestroy = [](AActor* Target)
+	{
+		if (!IsValid(Target)) return;
+
+		Target->SetActorEnableCollision(false);
+		Target->SetActorHiddenInGame(true);
+		Target->SetLifeSpan(0.05f);
+	};
+
 	// 석상 제거
 	TArray<AActor*> Statues;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABossStatue::StaticClass(), Statues);
 	for (AActor* Statue : Statues)
 	{
-		Statue->Destroy();
+		DeferredDestroy(Statue);
 	}
 
 	// 전조 이펙트 제거
@@ -147,7 +158,7 @@ void AEnemyAIBoss::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AStatueForewarning::StaticClass(), Forewarnings);
 	for (AActor* FW : Forewarnings)
 	{
-		FW->Destroy();
+		DeferredDestroy(FW);
 	}
 
 	// 소환된 늑대 제거
@@ -155,7 +166,7 @@ void AEnemyAIBoss::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	{
 		if (ASummonedWolf* Wolf = WolfWeak.Get())
 		{
-			Wolf->Destroy();
+			DeferredDestroy(Wolf);
 		}
 	}
 	AliveSummonedWolves.Empty();
@@ -216,6 +227,14 @@ void AEnemyAIBoss::SpawnStatueSequence()
 			Forewarning->OnForewarningResolved.AddUObject(this, &AEnemyAIBoss::OnForewarningResolved);
 			return;
 		}
+
+		UE_LOG(LogTemp, Error, TEXT("[Boss] Forewarning spawn FAILED - statue will spawn without warning"));
+	}
+	else
+	{
+		//KSH-ForewarningClass가 비어 있으면 경고 없이 즉시 석상이 소환되어 플레이어가 즉사한다.
+		//보스 BP에서 반드시 지정해야 함.
+		UE_LOG(LogTemp, Error, TEXT("[Boss] ForewarningClass is NOT set - statue spawns with NO warning! Set it in the Boss Blueprint."));
 	}
 
 	TrySpawnStatueWithRetry();
@@ -658,8 +677,15 @@ void AEnemyAIBoss::OnAttackHit(const FHitResult& HitResult)
 	// 소환된 늑대는 보스 공격 대상에서 제외
 	if (HitActor->IsA<ASummonedWolf>()) return;
 
-	FDamageEvent DamageEvent(UDamageType::StaticClass());
-	HitActor->TakeDamage(CurrentDamage, DamageEvent, GetController(), this);
+	//KSH-HitParticleComponent가 피격 지점/노멀을 쓸 수 있도록 PointDamage로 전달
+	UGameplayStatics::ApplyPointDamage(
+		HitActor,
+		CurrentDamage,
+		-HitResult.ImpactNormal,
+		HitResult,
+		GetController(),
+		this,
+		UDamageType::StaticClass());
 }
 
 void AEnemyAIBoss::ExecuteAttack(int32 AttackIndex)
@@ -931,8 +957,22 @@ void AEnemyAIBoss::OnThrustImpact()
 		// 데미지
 		if (ThrustImpactDamage > 0.f)
 		{
-			FDamageEvent DamageEvent;
-			Target->TakeDamage(ThrustImpactDamage, DamageEvent, GetController(), this);
+			//KSH-충격파는 트레이스 결과가 없으므로 보스→타겟 방향으로 히트 정보를 구성해 PointDamage로 전달
+			const FVector ShootDirection = (Target->GetActorLocation() - Origin).GetSafeNormal();
+			const FHitResult ThrustHit(
+				Target,
+				Target->GetCapsuleComponent(),
+				Target->GetActorLocation(),
+				-ShootDirection);
+
+			UGameplayStatics::ApplyPointDamage(
+				Target,
+				ThrustImpactDamage,
+				ShootDirection,
+				ThrustHit,
+				GetController(),
+				this,
+				UDamageType::StaticClass());
 		}
 
 		// 넉백 방향: 보스 → 타겟 (수평) + 상방
@@ -1094,7 +1134,15 @@ void AEnemyAIBoss::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimit
 
 		if (ABossStatue* Statue = Cast<ABossStatue>(Other))
 		{
-			Statue->TakeDamage(RushDamage, FDamageEvent(), GetController(), this);
+			//KSH-돌진 충돌은 NotifyHit의 Hit 정보를 그대로 PointDamage로 전달
+			UGameplayStatics::ApplyPointDamage(
+				Statue,
+				RushDamage,
+				GetActorForwardVector(),
+				Hit,
+				GetController(),
+				this,
+				UDamageType::StaticClass());
 		}
 
 		Multicast_StopMontage(0.2f);
@@ -1120,6 +1168,13 @@ float AEnemyAIBoss::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 		return 0.f;
 	}
 
+	//KSH-널가드: StatusComponent가 없으면 아래 페이즈 판정까지 전부 크래시
+	if (!IsValid(StatusComponent))
+	{
+		UE_LOG(LogTemp, Error, TEXT("[Boss] TakeDamage: StatusComponent is null"));
+		return ActualDamage;
+	}
+
 	StatusComponent->DecreaseHP(ActualDamage);
 
 	// 피격 이펙트 — Unreliable Multicast (cosmetic)
@@ -1141,7 +1196,8 @@ float AEnemyAIBoss::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 		OnPhaseChanged.Broadcast(CurrentPhase);
 	}
 
-	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Boss HP : %.0f"), StatusComponent->CurrentHP));
+	//KSH-사용자 테스트 빌드에 보스 HP 디버그 텍스트가 노출되고 있어 로그로 대체
+	UE_LOG(LogTemp, Verbose, TEXT("[Boss] HP : %.0f"), StatusComponent->CurrentHP);
 
 	if (StatusComponent->CurrentHP <= 0)
 	{

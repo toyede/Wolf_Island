@@ -44,6 +44,8 @@ void UChestPanel::SetInventoryComponent(AChest* Chest, AActor* Interactor)
 		UE_LOG(LogTemp, Error, TEXT("CHEST PANEL : INTERACTOR PLAYER NOT FOUND"));
 	}
 
+	//ChestInventoryRef가 세팅된 후 플레이어 슬롯을 다시 빌드해야 각 슬롯이 상자 인벤을 반대편으로 갖게 됨
+	RefreshInventory();
 	RefreshChest();
 }
 
@@ -62,7 +64,9 @@ void UChestPanel::RefreshChest()
 			ItemSlot->SetIndex(Index++);
 			ItemSlot->SetOwner(PlayerRef);
 			ItemSlot->SetInventoryRef(ChestInventoryRef);
-			
+			//상자 슬롯의 빠른 이동 대상은 플레이어 인벤토리
+			ItemSlot->SetLinkedInventory(InventoryRef);
+
 			ChestPanel->AddChildToWrapBox(ItemSlot);
 			
 			ItemSlot->RefreshSlot();

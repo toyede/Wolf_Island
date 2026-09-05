@@ -26,6 +26,9 @@
 #include "Components/AudioComponent.h"
 #include "Components/BillboardComponent.h"
 #include "WaterBodyComponent.h"
+#include "WaterBodyActor.h"
+#include "WaterBodyTypes.h"
+#include "Engine/OverlapResult.h"
 #include "Actors/RespawnableFoliage.h"
 #include "Character/MainPlayerController.h"
 #include "Character/Torch.h"
@@ -39,6 +42,7 @@
 #include "Games/WolfGameUserSettings.h" //JWY - 저장된 마우스 감도 설정을 Look 입력에 적용하기 위해 추가
 #include "AI/Sense/AISense_Scent.h"
 #include "Engine/DamageEvents.h"
+#include "Animation/AnimInstance.h" //KSH-CancelAllActions에서 몽타주 중단용
 #include "Games/Damage/WolfAttackDamageType.h"
 #include "Widgets/Inventory/Inventory.h"
 #include "Components/HitParticleComponent.h"
@@ -337,6 +341,7 @@ void AMainPlayer::ClearRuntimeTimers()
 		FTimerManager& TimerManager = World->GetTimerManager();
 		TimerManager.ClearTimer(KnockOutTimer);
 		TimerManager.ClearTimer(ItemUseTimer);
+		TimerManager.ClearTimer(EatingSoundTimer);
 		TimerManager.ClearTimer(InteractionTimer);
 		TimerManager.ClearTimer(CraftTimer);
 		TimerManager.ClearTimer(SwimCheckHandle);
@@ -788,6 +793,8 @@ void AMainPlayer::ToggleCrouch()
 void AMainPlayer::ToggleInventory()
 {
 	if (IsBuildingInputBlocked()) return;
+	//기절/사망 중에는 인벤토리 열기 불가
+	if (IsInability) return;
 
 	
 	if (IsLocallyControlled() && InventoryWidgetClass)
@@ -930,44 +937,48 @@ void AMainPlayer::UseItem(int32 SlotIndex)
 //타이머 시간을 0으로 하면 실행이 안되는 사실 발견...
 void AMainPlayer::StartUseItem()
 {
-	if (!IsUsingItem)
-	{
-		IsUsingItem = true;
-		
-		FItemBaseData TargetItem = InventoryComponent->GetItemAtIndex(HotBarIndex);
-		int32 TargetIndex = HotBarIndex;
-		if (!TargetItem.IsValid()) return;
-	
-		//사용 가능한 아이템이 아니면 암것두 안하긔.
-		if (!InventoryComponent->IsUsableItem(TargetItem)) return;
-	
-		if (!GetWorld()->GetTimerManager().IsTimerActive(ItemUseTimer))
-		{
-			FItemData* ItemData = InventoryComponent->GetItemData(TargetItem);
-			
-			if (!ItemData) return;
+	if (IsUsingItem) return;
 
-			//사용까지 꾹 눌러야 하는 시간
-			float UseDuration = ItemData->NumericData.UseDuration;
-			
-			//음식이면 먹는 소리 재생
-			if (TargetItem.Type == EItemType::FOOD)
-			{
-				Multi_PlayEatingSound();
-			}
-		
-			GetWorld()->GetTimerManager().SetTimer(
-			ItemUseTimer,
-			[this, TargetIndex]()
-			{
-				UseItem(HotBarIndex);
-				Multi_StopEatingSound();
-			},
-			UseDuration,
-			false
-			);
-		}
+	if (!InventoryComponent) return;
+
+	FItemBaseData TargetItem = InventoryComponent->GetItemAtIndex(HotBarIndex);
+	int32 TargetIndex = HotBarIndex;
+	if (!TargetItem.IsValid()) return;
+
+	//사용 가능한 아이템이 아니면 암것두 안하긔.
+	if (!InventoryComponent->IsUsableItem(TargetItem)) return;
+
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	if (World->GetTimerManager().IsTimerActive(ItemUseTimer)) return;
+
+	FItemData* ItemData = InventoryComponent->GetItemData(TargetItem);
+	if (!ItemData) return;
+
+	//사용까지 꾹 눌러야 하는 시간
+	float UseDuration = ItemData->NumericData.UseDuration;
+
+	//여기까지 통과했을 때만 사용 중으로 표시 (조기 return 시 상태가 박히는 것 방지)
+	IsUsingItem = true;
+
+	//음식이면 먹는 소리 재생
+	if (TargetItem.Type == EItemType::FOOD)
+	{
+		Multi_PlayEatingSound();
 	}
+
+	World->GetTimerManager().SetTimer(
+	ItemUseTimer,
+	[this, TargetIndex]()
+	{
+		UseItem(TargetIndex);
+		Multi_StopEatingSound();
+		IsUsingItem = false;
+	},
+	UseDuration,
+	false
+	);
 }
 
 void AMainPlayer::StopUseItem()
@@ -1037,7 +1048,10 @@ void AMainPlayer::SetHotbarIndex(int32 Index)
 }
 
 void AMainPlayer::OnDeath_Implementation()
-{	
+{
+	//사망 진입 시 생존 스탯 감소·사망 타이머 정지(사망 후 스탯 변화/부활 후 재사망 방지)
+	if (StatusComponent) StatusComponent->PauseSurvivalStats();
+
 	//멀티 플레이 죽음 시
 	//1. 10초간 기절 : 다른 플레이어가 붕대로 상호작용 시 회복
 	//2. 10초 뒤 사망 후 리스폰 지역에서 부활
@@ -1050,6 +1064,8 @@ void AMainPlayer::OnDeath_Implementation()
 	else
 	{
 		UE_LOG(LogTemp, Display, TEXT("[SINGLE]Player Dead"));
+		//싱글 사망도 무력 상태로 표시(사망 중 공격/행동 방지). OnRespawn에서 해제됨
+		IsInability = true;
 		Client_ShowDeathScreen();
 	}
 }
@@ -1172,9 +1188,9 @@ void AMainPlayer::KnockOut()
 	
 	Request_StopEmotion();
 	
-	//자동 회복 기능 정지
-	if (StatusComponent) StatusComponent->StopAutoHeal();
-	
+	//자동 회복 + 생존 스탯 감소·사망 타이머 정지(기절 중 스탯 변화/부활 후 재사망/스태미나0 강제휴식 방지)
+	if (StatusComponent) StatusComponent->PauseSurvivalStats();
+
 	//기절 타이머 실행 - 누가 소생시켜주지 않으면 10초 뒤 사망
 	//JWY-KnockOutTimer가 플레이어 파괴 이후 실행되어 raw this를 접근하지 않도록 weak pointer로 생존 여부를 확인
 	TWeakObjectPtr<AMainPlayer> WeakThis(this);
@@ -1232,11 +1248,16 @@ void AMainPlayer::KnockOut()
 void AMainPlayer::Revive()
 {
 	GetWorld()->GetTimerManager().ClearTimer(KnockOutTimer);
+	//소생 시 사망 타이머 정리 + MaxStamina 복원 + 생존 스탯 감소 재개(부활 후 재사망 루프 방지)
+	if (StatusComponent) StatusComponent->ResumeSurvivalStats();
 	StatusComponent->IncreaseHP(20.0f);
 	IsInability = false;
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	CanInteract = false;
 	InteractableData.CanInteract = CanInteract;
+
+	//사망화면이 이미 떠 있었다면(기절 타이머 만료 후 소생) 닫아서 조작 불가 소프트락 방지
+	Client_CloseDeathScreen();
 
 	// 만약 변신했다가 기절해서 돌아온 상태라면, 세션 데이터 삭제 필요
 	if (HasAuthority())
@@ -1255,10 +1276,12 @@ void AMainPlayer::OnRespawn()
 {
 	if (StatusComponent)
 	{
+		//부활 시 사망 타이머 정리 + MaxStamina 복원 + 생존 스탯 감소 재개(재사망 루프 방지)
+		StatusComponent->ResumeSurvivalStats();
 		StatusComponent->IncreaseHP(20.0f);
 		StatusComponent->StartAutoHeal();
 	}
-	
+
 	//안 기절 상태로 전환
 	IsInability = false;
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
@@ -1268,11 +1291,107 @@ void AMainPlayer::OnRespawn()
 	RestoreCamera();
 }
 
+//KSH-사망/리스폰 시 폰이 자기 콜스택(몽타주 콜백, 인터랙션 타이머 등) 안에서 파괴되면
+//반환 후 파괴된 폰에 접근해 크래시가 난다. 파괴 직전에 진행 중이던 동작을 모두 끊는다.
+void AMainPlayer::CancelAllActions()
+{
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	FTimerManager& TM = World->GetTimerManager();
+
+	//진행 중이던 지연 동작 정지 (파괴 이후 콜백 실행 방지)
+	TM.ClearTimer(InteractionTimer);
+	TM.ClearTimer(ItemUseTimer);
+	TM.ClearTimer(WeaponAttackTimer);
+	TM.ClearTimer(CraftTimer);
+	TM.ClearTimer(KnockOutTimer);
+	TM.ClearTimer(SwimCheckHandle);
+	TM.ClearTimer(ScentTimerHandle);
+	TM.ClearAllTimersForObject(this);
+
+	//재생 중이던 몽타주 중단
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		if (UAnimInstance* AnimInstance = MeshComp->GetAnimInstance())
+		{
+			AnimInstance->StopAllMontages(0.0f);
+		}
+	}
+
+	//인터랙션 참조 해제 (파괴된 액터를 계속 들고 있지 않도록)
+	InteractionData.CurrentInteractable = nullptr;
+	InteractionData.CurrentFoliageComponent = nullptr;
+	InteractionData.FoliageInstanceIndex = INDEX_NONE;
+	InteractionData.CurrentWaterComponent = nullptr;
+	TargetInteractionInterface = nullptr;
+
+	//스탯 컴포넌트 타이머 정지
+	if (IsValid(StatusComponent))
+	{
+		StatusComponent->ClearAllTimers();
+	}
+}
+
 void AMainPlayer::RestoreCamera_Implementation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] RESTORE CAMERA"));
 	FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
 	FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(1, 1,1,1);
+}
+
+namespace
+{
+	// 지정한 지점이 잠겨 있는 워터바디를 돌려준다. 잠겨 있지 않으면 nullptr.
+	//
+	// QueryWaterInfoClosestToWorldLocation만으로는 판정할 수 없다. 호수/바다처럼 평평한 수면은
+	// 수면 높이를 GetComponentLocation().Z로 잡고 ImmersionDepth = 수면Z - 조회Z 로만 계산해서
+	// (WaterBodyComponent.cpp:649,805) 수평 범위를 전혀 보지 않는다. 즉 월드 어디에 있든
+	// 수면 Z보다 낮기만 하면 "물속"이 되어버린다. 그래서 콜리전 볼륨 포함 여부를 먼저 확인한다.
+	UWaterBodyComponent* FindSubmergedWaterBody(const UWorld* World, const FVector& Location, const AActor* IgnoredActor)
+	{
+		if (!World)
+		{
+			return nullptr;
+		}
+
+		TArray<FOverlapResult> Overlaps;
+		FCollisionQueryParams Params;
+		if (IgnoredActor)
+		{
+			Params.AddIgnoredActor(IgnoredActor);
+		}
+
+		// WaterBodyCollision 프로필은 WorldDynamic에 Overlap으로 응답한다.
+		// 블로킹이 아니라 겹침이므로 반환값이 아니라 결과 배열을 본다.
+		World->OverlapMultiByChannel(Overlaps, Location, FQuat::Identity, ECC_WorldDynamic,
+			FCollisionShape::MakeSphere(1.0f), Params);
+
+		for (const FOverlapResult& Overlap : Overlaps)
+		{
+			const AWaterBody* WaterBody = Cast<AWaterBody>(Overlap.GetActor());
+			if (!WaterBody)
+			{
+				continue;
+			}
+
+			UWaterBodyComponent* WaterBodyComponent = WaterBody->GetWaterBodyComponent();
+			if (!WaterBodyComponent)
+			{
+				continue;
+			}
+
+			const FWaterBodyQueryResult QueryResult =
+				WaterBodyComponent->QueryWaterInfoClosestToWorldLocation(Location, EWaterBodyQueryFlags::ComputeImmersionDepth);
+
+			if (QueryResult.IsInWater())
+			{
+				return WaterBodyComponent;
+			}
+		}
+
+		return nullptr;
+	}
 }
 
 void AMainPlayer::CheckInteraction()
@@ -1380,31 +1499,6 @@ void AMainPlayer::CheckInteraction()
 					return;
 				}
 			}
-			// 물 체크
-			AActor* HitActor = HitResult.GetActor();
-			UPrimitiveComponent* HitComp = HitResult.GetComponent();
-			
-			if (HitActor && !IsSwimming)
-			{
-				FString ClassName = HitActor->GetClass()->GetName();
-				if (ClassName.Contains(TEXT("WaterBodyOcean")) || 
-					ClassName.Contains(TEXT("WaterBodyRiver")) || 
-					ClassName.Contains(TEXT("WaterBodyLake")))
-				{
-					//UE_LOG(LogTemp, Warning, TEXT("[PLAYER] FIND WATER : %s"), *ClassName);
-					if (GetWorld()->GetTimeSeconds() >= LastDrinkTime + DrinkCooldown)
-					{
-						if (InteractionData.CurrentWaterComponent != HitComp)
-						{
-							FoundInteractableWater(HitComp);
-							if (HUD) HUD->DisplayInteractableInfoTextByComponent(HitComp);
-							
-						}
-						return;
-					}
-					return;
-				}
-			}
 		}
 		/*
 		else
@@ -1412,6 +1506,39 @@ void AMainPlayer::CheckInteraction()
 			HUD->HideTargetHP();
 		}
 		*/
+
+		// 물 체크
+		// 인터랙션 트레이스로는 워터바디를 맞출 수 없다. ECC_GameTraceChannel6이 콜리전 설정에
+		// 선언돼 있지 않아 ConvertToTraceType이 TraceTypeQuery_MAX를 돌려주고, 결국 유효하지 않은
+		// 채널(ECC_MAX)로 스윕된다(CollisionProfile.cpp:804,764).
+		// 트레이스 거동은 그대로 두고 조준 지점에서 워터바디를 직접 찾는다.
+		if (!IsSwimming)
+		{
+			const FVector WaterProbeLocation = HitResult.bBlockingHit ? HitResult.ImpactPoint : TraceEnd;
+
+			if (UWaterBodyComponent* WaterComp = FindSubmergedWaterBody(GetWorld(), WaterProbeLocation, this))
+			{
+				// Server_DrinkWater가 처리하는 종류와 반드시 같아야 한다.
+				// 바다도 처리 대상이다(수분이 깎이는 페널티). 여기서 빠뜨리면 바닷물을 못 마신다.
+				const AActor* WaterActor = WaterComp->GetOwner();
+				const FString ClassName = WaterActor ? WaterActor->GetClass()->GetName() : FString();
+
+				if (ClassName.Contains(TEXT("WaterBodyOcean")) ||
+					ClassName.Contains(TEXT("WaterBodyRiver")) ||
+					ClassName.Contains(TEXT("WaterBodyLake")))
+				{
+					if (GetWorld()->GetTimeSeconds() >= LastDrinkTime + DrinkCooldown)
+					{
+						if (InteractionData.CurrentWaterComponent != WaterComp)
+						{
+							FoundInteractableWater(WaterComp);
+							if (HUD) HUD->DisplayInteractableInfoTextByComponent(WaterComp);
+						}
+					}
+					return;
+				}
+			}
+		}
 	}
 	NotFoundInteractable();
 }
@@ -1478,18 +1605,24 @@ void AMainPlayer::NotFoundInteractable()
 	}
 
 	// 1. 기존에 바라보던 액터가 있었다면 포커스 해제
-	if (IsValid(InteractionData.CurrentInteractable)) 
-	{		
-		if (AActor* Target = Cast<AActor>(TargetInteractionInterface.GetObject()))
+	//KSH-대상이 이미 파괴된 경우에도 참조는 반드시 끊어야 한다.
+	//(기존에는 IsValid 실패 시 CurrentInteractable/TargetInteractionInterface가 그대로 남아
+	// GC 이후 댕글링 참조로 파탈 에러가 발생했다 - 석상 파괴 후 지연 크래시 원인)
+	if (InteractionData.CurrentInteractable)
+	{
+		if (IsValid(InteractionData.CurrentInteractable))
 		{
-			Request_EndInteractPlayer(Target);
+			if (AActor* Target = Cast<AActor>(TargetInteractionInterface.GetObject()))
+			{
+				Request_EndInteractPlayer(Target);
+			}
+
+			if (IsValid(TargetInteractionInterface.GetObject()))
+			{
+				TargetInteractionInterface->Execute_EndFocus(InteractionData.CurrentInteractable);
+			}
 		}
-		
-		if (IsValid(TargetInteractionInterface.GetObject()))
-		{
-			TargetInteractionInterface->Execute_EndFocus(InteractionData.CurrentInteractable);			
-		}
-		
+
 		InteractionData.CurrentInteractable = nullptr;
 		TargetInteractionInterface = nullptr;
 	}
@@ -1530,6 +1663,8 @@ void AMainPlayer::BeginInteract()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] BeginInteract"));
 	if (IsBuildingInputBlocked()) return;
+	//기절/사망 중에는 스스로 상호작용(상자/포탈/제작대 등) 불가
+	if (IsInability) return;
 
 	//인터랙션이 시작됐을 때부터 인터렉션 상태가 변하지 않는 것을 체크
 	CheckInteraction();
@@ -1575,11 +1710,16 @@ void AMainPlayer::BeginInteract()
 				}
 					
 					//인터랙션 실행 시간 만큼 대기 후 인터랙션 실행
+					//KSH-대기 도중 대상 액터나 플레이어가 파괴될 수 있으므로 weak 캡처로 변경
+					TWeakObjectPtr<AMainPlayer> WeakThis(this);
+					TWeakObjectPtr<AActor> WeakTarget(Target);
 					GetWorldTimerManager().SetTimer(InteractionTimer,
-						[this, Target]()
+						[WeakThis, WeakTarget]()
 						{
+							if (!WeakThis.IsValid() || !WeakTarget.IsValid()) return;
+
 							//인터랙션 실행
-							Interaction(Target);
+							WeakThis->Interaction(WeakTarget.Get());
 						},
 						TargetInteractionInterface->InteractableData.InteractionDuration,
 						false);
@@ -1655,14 +1795,23 @@ void AMainPlayer::Interaction_Implementation(AActor* Target)
 	//인터랙션 액터가 유효한 지 체크
 	if (IsValid(Target))
 	{
-		TargetInteractionInterface = Target;	
+		TargetInteractionInterface = Target;
 		//인터랙션 액터가 인터랙션 가능한 상태이면
 		if (TargetInteractionInterface->InteractableData.CanInteract)
 		{
 			//인터랙션 액터의 인터랙션 함수 실행
 			TargetInteractionInterface->Execute_Interact(Target, this);
-			
-			Request_EndInteractPlayer(Target);
+
+			//KSH-Interact 실행 중에 대상이 파괴될 수 있다(예: 보스 석상).
+			//파괴됐으면 더 만지지 말고 참조를 끊는다.
+			if (IsValid(Target))
+			{
+				Request_EndInteractPlayer(Target);
+			}
+			else
+			{
+				NotFoundInteractable();
+			}
 		}
 	}
 }
@@ -1876,6 +2025,8 @@ void AMainPlayer::EndWeaponAttack()
 void AMainPlayer::DropItemOnHotBar()
 {
 	if (IsBuildingInputBlocked()) return;
+	//기절/사망 중에는 아이템 드롭 불가
+	if (IsInability) return;
 
 	FItemBaseData Item = InventoryComponent->GetItemAtIndex(HotBarIndex);
 	if (Item.IsValid())
@@ -2443,6 +2594,8 @@ void AMainPlayer::StopCraft()
 void AMainPlayer::Emotion(const FInputActionInstance& Instance)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Emotion"));
+	//기절/사망 중에는 감정표현 불가
+	if (IsInability) return;
 	APlayerController* PC = Cast<APlayerController>(GetController());
 	if (PC)
 	{
@@ -2757,6 +2910,8 @@ void AMainPlayer::Request_DropItem(UInventoryComponent* SourceInventory, int32 S
 
 void AMainPlayer::Request_StartUseItem()
 {
+	//기절/사망 중에는 아이템 사용 불가
+	if (IsInability) return;
 	if (UBuildingComponent* BuildComp = FindComponentByClass<UBuildingComponent>())
 	{
 		const EBuildingState State = BuildComp->GetCurrentState();
@@ -2797,6 +2952,8 @@ void AMainPlayer::Request_StopUseItem()
 
 void AMainPlayer::Request_StartCraft(FRecipeData RecipeData)
 {
+	//기절/사망 중에는 제작 불가
+	if (IsInability) return;
 	if (HasAuthority())
 	{
 		StartCraft(RecipeData);
@@ -2938,6 +3095,24 @@ void AMainPlayer::Client_ShowDeathScreen_Implementation()
 	}
 }
 
+void AMainPlayer::Client_CloseDeathScreen_Implementation()
+{
+	if (!IsLocallyControlled()) return;
+
+	//흑백 화면 복구
+	if (FirstPersonCamera)
+	{
+		FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = true;
+		FirstPersonCamera->PostProcessSettings.ColorSaturation = FVector4(1, 1, 1, 1);
+	}
+
+	//사망화면 위젯 제거 + 게임 입력 복구
+	if (AMainPlayerController* MPC = GetController<AMainPlayerController>())
+	{
+		MPC->CloseDeathScreen();
+	}
+}
+
 void AMainPlayer::Server_StopCraft_Implementation()
 {
 	StopCraft();
@@ -2971,13 +3146,31 @@ void AMainPlayer::Multi_PlayEatingSound_Implementation()
 		UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Multicast Eating Sound On"));
 		EatingSoundPlayer->SetSound(DuringFoodSound);
 		EatingSoundPlayer->Play();
+
+		//짧은 원샷을 사운드 길이(+여유)만큼 간격을 두고 먹는 동안 반복 재생
+		const float Interval = FMath::Max(0.1f, DuringFoodSound->GetDuration() + EatingSoundGap);
+		GetWorldTimerManager().SetTimer(
+			EatingSoundTimer,
+			[this]()
+			{
+				if (EatingSoundPlayer && DuringFoodSound)
+				{
+					EatingSoundPlayer->Play();
+				}
+			},
+			Interval,
+			true);
 	}
 }
 
 void AMainPlayer::Multi_StopEatingSound_Implementation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[PLAYER] Multicast Eating Sound Off"));
-	EatingSoundPlayer->Stop();
+	GetWorldTimerManager().ClearTimer(EatingSoundTimer);
+	if (EatingSoundPlayer)
+	{
+		EatingSoundPlayer->Stop();
+	}
 }
 
 void AMainPlayer::OnSitDownMontageEnded(UAnimMontage* Montage, bool bInterrupted)

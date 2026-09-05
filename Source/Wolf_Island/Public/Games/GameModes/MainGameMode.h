@@ -121,6 +121,10 @@ public:
 	//최신 저장 로드하기
 	UFUNCTION(BlueprintCallable)
 	void LoadCurrentSave();
+
+	//KSH-아침으로 롤백할 때 야간 상태(늑대인간 세션, 변신한 AI, 야간 스폰 적) 정리
+	UFUNCTION(BlueprintCallable)
+	void ResetNightState();
 	
 	//보스전 입구 리스폰 지점 찾기
 	UFUNCTION(BlueprintCallable, BlueprintPure)
