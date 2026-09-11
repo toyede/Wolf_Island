@@ -38,6 +38,21 @@ void UPlayerCard::UpdateCard(AMainPlayerState* PlayerState)
 	FString ID = PlayerState->GetPersistantId();
 	PlayerName->SetText(FText::FromString(ID));
 	SetReady(PlayerState->GetReady());
+	
+	// 1. 현재 로컬 플레이어 및 월드 정보 가져오기
+	APlayerController* LocalPC = GetOwningPlayer();
+	AGameModeBase* AuthGameMode = GetWorld() ? GetWorld()->GetAuthGameMode() : nullptr;
+
+	// 2. 조건 확인
+	// - AuthGameMode가 존재해야 서버/호스트임
+	// - TargetPlayerState가 로컬 플레이어(자기 자신)의 PlayerState가 아니어야 함
+	const bool bIsServer = (AuthGameMode != nullptr);
+	const bool bIsSelf = (LocalPC && LocalPC->PlayerState == PlayerState);
+
+	// 호스트이면서 '다른 플레이어'의 카드일 때만 강퇴 버튼 노출
+	const bool bShouldShowKick = bIsServer && !bIsSelf;
+    
+	SetKickButton(bShouldShowKick);
 }
 
 void UPlayerCard::OnKickButtonClicked()
