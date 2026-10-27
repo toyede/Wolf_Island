@@ -40,6 +40,7 @@ public class Wolf_Island : ModuleRules
 			"SlateCore", 
 			"AdvancedSessions", 
 			"AdvancedSteamSessions", "LevelSequence", "LevelSequence",
+			"AsyncLoadingScreen", "MoviePlayer",
 			"AIModule"
 			//"OnlineSubsystem", 
 			//"OnlineSubsystemUtils",
