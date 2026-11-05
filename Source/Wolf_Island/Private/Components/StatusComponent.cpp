@@ -751,6 +751,7 @@ void UStatusComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(UStatusComponent, CurrentHP);
+	DOREPLIFETIME(UStatusComponent, MaxHP);
 	DOREPLIFETIME(UStatusComponent, CurrentStamina);
 	DOREPLIFETIME(UStatusComponent, CurrentHunger);
 	DOREPLIFETIME(UStatusComponent, CurrentHydration);

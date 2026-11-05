@@ -130,7 +130,7 @@ public:
 	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	float CurrentHP = 100.0f;
 	//최대 체력
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	float MaxHP = 100.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", SaveGame)
 	bool IsDead = false;
